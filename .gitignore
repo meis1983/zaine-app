@@ -1,0 +1,90 @@
+# Flutter/Dart
+.dart_tool/
+.packages
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub/
+.pub-cache/
+.pub-log/
+
+# Symbolication related
+app.*.symbols
+
+# Obfuscation related
+app.*.map.json
+
+# Android Studio/IntelliJ related
+/android/app/debug
+/android/app/profile
+/android/app/release
+
+# iOS build artifacts
+ios/Flutter/.last_build_id
+ios/Pods/
+ios/.symlinks/
+ios/*.dSYM.zip
+ios/*.ipa
+ios/*.xcarchive
+
+# Xcode workspace data
+ios/DerivedData/
+ios/build/
+
+# CocoaPods cache
+ios/Podfile.lock
+
+# macOS
+macos/Flutter/.last_build_id
+macos/Pods/
+macos/.symlinks/
+
+# Windows
+windows/Flutter/.last_build_id
+
+# Linux
+linux/Flutter/.last_build_id
+
+# Coverage
+coverage/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# IDEs
+.idea/
+.vscode/
+*.iml
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Debug logs
+*.log
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.bak
+*.swp
+*~
+
+# Generated files
+*.g.dart
+*.freezed.dart
+
+# Sensitive data (keys, secrets)
+*.p12
+*.mobileprovision
+*.keystore
+
+# Firebase
+google-services.json
+GoogleService-Info.plist
+
+# Test results
+test-results/

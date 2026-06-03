@@ -1,0 +1,61 @@
+{
+  "identifier" : "Zaine IAP Configuration",
+  "nonRenewingSubscriptionProductIdentifiers" : [],
+  "products" : [
+    {
+      "displayPrice" : "9.00",
+      "familyShareable" : false,
+      "groupNumber" : 1,
+      "id" : "com.zaine.smart_monthly",
+      "internalDescription" : "智能版月度订阅 - 同时在呢+智能版",
+      "localizations" : [
+        {
+          "description" : "同时通知3位守护人，更安心的守护",
+          "displayName" : "在呢智能版月度",
+          "locale" : "zh_CN"
+        }
+      ],
+      "subscription" : {
+        "autoRenewal" : {
+          "enabled" : true,
+          "products" : [
+            "com.zaine.smart_yearly"
+          ]
+        },
+        "familyShareable" : false,
+        "groupNumber" : 1,
+        "introductoryOffer" : null,
+        "subscriptionDuration" : "P1M"
+      },
+      "type" : "subscription.autorenewable"
+    },
+    {
+      "displayPrice" : "88.00",
+      "familyShareable" : false,
+      "groupNumber" : 1,
+      "id" : "com.zaine.smart_yearly",
+      "internalDescription" : "智能版年度订阅 - 全年在呢+智能版守护",
+      "localizations" : [
+        {
+          "description" : "全年守护，省18%。前3位联系人自动接收紧急通知",
+          "displayName" : "在呢智能版年度",
+          "locale" : "zh_CN"
+        }
+      ],
+      "subscription" : {
+        "autoRenewal" : {
+          "enabled" : true,
+          "products" : [
+            "com.zaine.smart_monthly"
+          ]
+        },
+        "familyShareable" : false,
+        "groupNumber" : 1,
+        "introductoryOffer" : null,
+        "subscriptionDuration" : "P1Y"
+      },
+      "type" : "subscription.autorenewable"
+    }
+  ],
+  "version" : 1
+}

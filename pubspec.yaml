@@ -1,0 +1,64 @@
+name: zaine
+description: 在呢 - 独居守护App
+
+publish_to: 'none'
+
+version: 1.9.86+55
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.6
+  # 本地存储
+  shared_preferences: ^2.2.2
+  # 位置服务
+  geolocator: ^11.0.0
+  geocoding: ^3.0.0
+  # 权限管理
+  permission_handler: ^11.1.0
+  # 通知
+  flutter_local_notifications: ^16.3.0
+  timezone: ^0.9.4
+  # 打电话发短信
+  url_launcher: ^6.2.2
+  # 日期格式化
+  intl: ^0.18.1
+  # 分享功能
+  image_gallery_saver: ^2.0.3
+  share_plus: ^7.2.1
+  path_provider: ^2.1.2
+  # 头像选择
+  image_picker: ^1.0.7
+  # 二维码生成
+  qr_flutter: ^4.1.0
+  # HTTP 请求
+  http: ^1.1.0
+  # 环境变量管理
+  flutter_dotenv: ^5.1.0
+  # Deep link 处理（守护卡裂变落地页）
+  app_links: ^6.1.1
+  # HMAC-SHA256 签名（IAP 凭证防伪造）
+  crypto: ^3.0.5
+  # 图片处理（色彩饱和度校正）
+  image: ^4.5.1
+  in_app_purchase: ^3.2.3
+  # 健康数据接口 (Apple Watch / HealthKit)
+  health: ^10.1.0
+  # Apple Watch 通信
+  watch_connectivity: ^0.2.8
+  # 版本号读取（从 pubspec.yaml 自动同步，根治版本号不一致问题）
+  package_info_plus: ^8.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.1
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+    - .env
