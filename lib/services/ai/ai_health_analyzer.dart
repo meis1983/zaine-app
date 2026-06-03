@@ -255,7 +255,6 @@ class AIHealthAnalyzer {
     if (heartRate == null) return;
 
     final hr = (heartRate is num) ? heartRate.toDouble() : double.tryParse(heartRate.toString()) ?? 0;
-    final age = profile['age'] as int? ?? 30;
 
     if (hr > 100) {
       anomalies.add(HealthAnomaly(

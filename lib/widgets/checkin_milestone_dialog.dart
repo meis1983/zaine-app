@@ -65,13 +65,6 @@ class _CheckinMilestoneDialogState extends State<CheckinMilestoneDialog>
     super.dispose();
   }
 
-  // ========== 分享文案生成 ==========
-
-  String _getDateStr() {
-    final now = DateTime.now();
-    return '${now.year}-${now.month.toString().padLeft(2,'0')}-${now.day.toString().padLeft(2,'0')}';
-  }
-
   // ========== 分享动作 ==========
 
   /// 保存图片到相册

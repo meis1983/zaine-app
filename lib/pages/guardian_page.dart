@@ -7,6 +7,7 @@ import 'dart:async';
 import 'contacts_page.dart';
 import 'guardian_card_page.dart';
 import 'health_overview_page.dart'; // 新增
+import '../config/feature_flags.dart';
 import 'social_page.dart';
 import 'package:intl/intl.dart';
 import '../theme/theme_helper.dart';
@@ -620,8 +621,9 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                         ),
                       ),
                       const SizedBox(height: 16),
-                      // ====== 社交互动快捷入口 ======
-                      Row(
+                      // ====== 社交互动快捷入口（v1.0 隐藏）=====
+                      if (FeatureFlags.enableSocial)
+                        Row(
                         children: [
                           Expanded(
                             child: _buildSocialQuickAction(
@@ -651,6 +653,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                           ),
                         ],
                       ),
+                      // end FeatureFlags.enableSocial
                     ],
                   ),
                 ),

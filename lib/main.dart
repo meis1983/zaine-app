@@ -13,6 +13,7 @@ import 'services/deep_link_service.dart';
 import 'services/silent_login_service.dart';
 import 'services/membership_service.dart';
 import 'data/app_constants.dart';
+import 'config/feature_flags.dart';
 
 // 主题模式枚举
 // 0 = 浅色（默认）, 1 = 深色, 2 = 柔光
@@ -439,14 +440,14 @@ class MainNavigation extends StatefulWidget {
 class _MainNavigationState extends State<MainNavigation> {
   int _currentIndex = 0;
 
-  // 按需创建页面，避免 const 导致状态丢失和黑屏
+  // 按需创建页面，根据 Feature Flag 控制显隐
   late final List<Widget> _pages = [
-    HomePage(),
-    GuardianPage(),
-    const StatisticsPage(),
+    const HomePage(),
+    const GuardianPage(),
+    if (FeatureFlags.enableStatistics) const StatisticsPage(),
     const SafetySettingsPage(),
     const HelpPage(),
-    ProfilePage(),
+    const ProfilePage(),
   ];
 
   @override
@@ -488,7 +489,7 @@ class _MainNavigationState extends State<MainNavigation> {
             setState(() => _currentIndex = index);
             debugPrint('[MainNavigation] 切换到底部导航: index=$index');
             // 切换到求助时给一个触觉反馈
-            if (index == 3) { // 求助 tab
+            if (index == 2) { // 安全(SOS) tab
               HapticFeedback.mediumImpact();
             }
           },
@@ -504,11 +505,12 @@ class _MainNavigationState extends State<MainNavigation> {
               selectedIcon: _buildGuardianIcon(isSelected: true),
               label: '守护圈',
             ),
-            const NavigationDestination(
-              icon: Icon(Icons.bar_chart_outlined, size: 22),
-              selectedIcon: Icon(Icons.bar_chart, size: 24),
-              label: '统计',
-            ),
+            if (FeatureFlags.enableStatistics)
+              const NavigationDestination(
+                icon: Icon(Icons.bar_chart_outlined, size: 22),
+                selectedIcon: Icon(Icons.bar_chart, size: 24),
+                label: '统计',
+              ),
             const NavigationDestination(
               icon: Icon(Icons.security_outlined, size: 22),
               selectedIcon: Icon(Icons.security, size: 24),
