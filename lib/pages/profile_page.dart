@@ -14,6 +14,7 @@ import '../utils/avatar_helper.dart';
 import '../services/api_service.dart';
 import 'redeem_card_page.dart';
 import 'settings_page.dart';
+import 'safety_settings_page.dart';
 
 class ProfilePage extends StatefulWidget {
   /// 是否为 push 模式（需要返回按钮）
@@ -912,6 +913,11 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
 
                   const SizedBox(height: 8),
 
+                  // ====== 2.5 安全中心入口（从底部Tab降级） ======
+                  _buildSafetyCenterEntry(isDark),
+
+                  const SizedBox(height: 8),
+
                   // ====== 3. 基本信息表单 ======
                   _buildFormSection(isDark),
 
@@ -1083,6 +1089,68 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
   }
 
   // ==================== 快捷功能 ====================
+  /// 安全中心入口卡片（从底部Tab降级至此）
+  Widget _buildSafetyCenterEntry(bool isDark) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: ZaiNeColors.cardBg(),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.12 : 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: InkWell(
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const SafetySettingsPage()),
+          );
+        },
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+          child: Row(
+            children: [
+              // 左侧图标
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Colors.blue.shade400, Colors.blue.shade600],
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.security_rounded, color: Colors.white, size: 22),
+              ),
+              const SizedBox(width: 14),
+              // 中间文字
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('安全中心', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: ZaiNeColors.textPrimary())),
+                    const SizedBox(height: 3),
+                    Text(
+                      '定时平安确认 · 位置共享 · 跌倒检测',
+                      style: TextStyle(fontSize: 12, color: ZaiNeColors.textSecondary()),
+                    ),
+                  ],
+                ),
+              ),
+              // 右侧箭头
+              Icon(Icons.chevron_right_rounded, color: ZaiNeColors.textSecondary(), size: 22),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildQuickActions(bool isDark) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),

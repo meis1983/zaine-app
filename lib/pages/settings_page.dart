@@ -12,6 +12,7 @@ import '../theme/theme_helper.dart';
 import '../data/app_constants.dart';
 import '../services/membership_service.dart';
 import '../widgets/developer_mode.dart';
+import '../config/feature_flags.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -32,6 +33,7 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
   bool _systemReminderEnabled = true; // 系统提醒：未签到时额外提醒
   String? _userName;
   bool _isLoggedIn = false;
+  bool _isProfileComplete = false; // 【修复 v1.17.1】健康档案完整性标记
   ZaiNeThemeMode _currentTheme = ZaiNeThemeMode.light;
 
   @override
@@ -59,6 +61,9 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
       final profile = jsonDecode(profileJson);
       _userName = profile['name'];
     }
+    // 【修复 v1.17.1】检查健康档案是否真正填写完整（与 newbie_task_card 逻辑一致）
+    _isProfileComplete = _checkProfileComplete(profileJson);
+
     if (!mounted) return;
     setState(() {
       _isLoggedIn = prefs.getBool('is_logged_in') ?? false;
@@ -367,6 +372,33 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
     ).then((_) => _loadSettings());
   }
 
+  /// 【修复 v1.17.1】检查健康档案是否已真正填写完整
+  /// 复用 newbie_task_card 的字段级判断逻辑，确保一致性
+  static bool _checkProfileComplete(String? profileJson) {
+    if (profileJson == null || profileJson.isEmpty) return false;
+    try {
+      final profile = jsonDecode(profileJson) as Map<String, dynamic>;
+      final name = profile['name']?.toString();
+      final bloodType = profile['bloodType']?.toString();
+      final allergy = profile['allergy']?.toString();
+      final disease = profile['disease']?.toString();
+      final medicine = profile['medicine']?.toString();
+      final emergencyNote = profile['emergencyNote']?.toString();
+      final ageRaw = profile['age'];
+      final age = ageRaw is int ? ageRaw : int.tryParse(ageRaw?.toString() ?? '');
+      // 任一关键字段有实际内容即视为已完善
+      return (name != null && name.isNotEmpty) ||
+          (bloodType != null && bloodType.isNotEmpty && bloodType != '未知') ||
+          (allergy != null && allergy.isNotEmpty) ||
+          (disease != null && disease.isNotEmpty) ||
+          (medicine != null && medicine.isNotEmpty) ||
+          (emergencyNote != null && emergencyNote.isNotEmpty) ||
+          (age != null && age > 0);
+    } catch (e) {
+      return false;
+    }
+  }
+
   Future<void> _logout() async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -587,9 +619,9 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
     );
   }
 
-  /// 【修复 v1.9.78】隐私政策改为外部网页链接（苹果审核要求必须可公开访问）
+  /// 【修复 v1.16.0】隐私政策链接改用正式域名
   Future<void> _showPrivacyPolicy() async {
-    final uri = Uri.parse('https://zaine-api-skhntjskvp.cn-hangzhou.fcapp.run/privacy');
+    final uri = Uri.parse('https://zaine.love/privacy');
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } else {
@@ -902,8 +934,8 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
         child: ListView(
           padding: const EdgeInsets.all(16),
         children: [
-          // 用户信息卡片
-          if (_isLoggedIn && _userName != null)
+          // 用户信息卡片（【修复 v1.17.1】用档案完整性判断代替登录状态判断）
+          if (_isProfileComplete)
             Container(
               padding: const EdgeInsets.all(16),
               margin: const EdgeInsets.only(bottom: 24),
@@ -1322,6 +1354,8 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
                         )
                       : null,
                   onTap: () {
+                    // 【v1.13.0】Release 包屏蔽开发者模式入口
+                    if (!FeatureFlags.enableDeveloperMode) return;
                     if (handleVersionTap()) {
                       showDeveloperMenu();
                     }

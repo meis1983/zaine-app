@@ -8,7 +8,6 @@ import 'package:flutter/services.dart';
 import 'package:image_gallery_saver/image_gallery_saver.dart';
 import 'package:image/image.dart' as img;
 import 'package:qr_flutter/qr_flutter.dart';
-import '../data/app_constants.dart';
 import '../theme/theme_helper.dart';
 import '../utils/badge_generator.dart';
 import '../utils/share_card_generator.dart';
@@ -457,7 +456,7 @@ class _CheckinMilestoneDialogState extends State<CheckinMilestoneDialog>
                                             ],
                                           ),
                                           child: QrImageView(
-                                            data: AppConstants.appStoreUrl,
+                                            data: 'https://zaine.love/landing/checkin_milestone',
                                             version: QrVersions.auto,
                                             size: 58,
                                             backgroundColor: Colors.white,

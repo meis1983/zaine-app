@@ -16,6 +16,7 @@ class GuardianCardEnvelope extends StatefulWidget {
   final String? cardCode;
   final VoidCallback? onComplete;
   final SeasonTheme? customTheme; // 自定义主题（可选）
+  final bool isWelcomeMode; // 【修复 v1.17.1】是否为欢迎卡模式
 
   const GuardianCardEnvelope({
     super.key,
@@ -28,6 +29,7 @@ class GuardianCardEnvelope extends StatefulWidget {
     this.cardCode,
     this.onComplete,
     this.customTheme,
+    this.isWelcomeMode = false,
   });
 
   @override
@@ -204,6 +206,7 @@ class _GuardianCardEnvelopeState extends State<GuardianCardEnvelope>
                   recipientName: widget.recipientName,
                   totalGuardians: widget.totalGuardians,
                   cardCode: widget.cardCode,
+                  isWelcomeMode: widget.isWelcomeMode,
                 ),
               ),
 

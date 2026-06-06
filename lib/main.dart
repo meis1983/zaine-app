@@ -7,8 +7,6 @@ import 'pages/guardian_page.dart';
 import 'pages/help_page.dart';
 import 'pages/profile_page.dart';
 import 'pages/onboarding_page.dart';
-import 'pages/statistics_page.dart';
-import 'pages/safety_settings_page.dart';
 import 'services/deep_link_service.dart';
 import 'services/silent_login_service.dart';
 import 'services/membership_service.dart';
@@ -444,8 +442,6 @@ class _MainNavigationState extends State<MainNavigation> {
   late final List<Widget> _pages = [
     const HomePage(),
     const GuardianPage(),
-    if (FeatureFlags.enableStatistics) const StatisticsPage(),
-    const SafetySettingsPage(),
     const HelpPage(),
     const ProfilePage(),
   ];
@@ -489,7 +485,7 @@ class _MainNavigationState extends State<MainNavigation> {
             setState(() => _currentIndex = index);
             debugPrint('[MainNavigation] 切换到底部导航: index=$index');
             // 切换到求助时给一个触觉反馈
-            if (index == 2) { // 安全(SOS) tab
+            if (index == 2) { // 求助(SOS) tab
               HapticFeedback.mediumImpact();
             }
           },
@@ -504,17 +500,6 @@ class _MainNavigationState extends State<MainNavigation> {
               icon: _buildGuardianIcon(isSelected: false),
               selectedIcon: _buildGuardianIcon(isSelected: true),
               label: '守护圈',
-            ),
-            if (FeatureFlags.enableStatistics)
-              const NavigationDestination(
-                icon: Icon(Icons.bar_chart_outlined, size: 22),
-                selectedIcon: Icon(Icons.bar_chart, size: 24),
-                label: '统计',
-              ),
-            const NavigationDestination(
-              icon: Icon(Icons.security_outlined, size: 22),
-              selectedIcon: Icon(Icons.security, size: 24),
-              label: '安全',
             ),
             NavigationDestination(
               icon: _buildHelpIcon(isSelected: false),

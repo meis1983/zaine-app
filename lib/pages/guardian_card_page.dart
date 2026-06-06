@@ -20,8 +20,6 @@ import '../services/api/auth_service.dart';
 import '../theme/theme_helper.dart';
 import '../utils/avatar_helper.dart';
 import '../widgets/guardian_card_painter.dart';
-import '../widgets/guardian_card_envelope.dart'; // 新增：3D 信封动画
-import '../data/app_constants.dart';
 
 /// 守护卡页面 — 制作守护卡分享给在乎的人
 ///
@@ -67,6 +65,7 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
   // 状态
   bool _isSharing = false;
   bool _needsLogin = false;
+  bool _isLoadingData = false;  // 【修复 v1.14.0】区分"加载中"和"真的待解锁"
 
   // 展开状态（方案C：显示待注册卡片列表）
   bool _isExpanded = false;
@@ -101,6 +100,8 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
   }
 
   Future<void> _loadData() async {
+    // 【修复 v1.14.0】标记加载状态，避免后端未返回时错误显示"待解锁"
+    if (mounted) setState(() => _isLoadingData = true);
     final prefs = await SharedPreferences.getInstance();
 
     // 【修复 v1.9.7】统一使用 AuthService 判断登录状态，避免与首页标准不一致
@@ -240,8 +241,8 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
                 final backendAvailable = (stats['available_cards'] as int?) ?? _availableCards;
                 if (backendAvailable != _availableCards) {
                   _availableCards = backendAvailable;
-                  final prefs2 = await SharedPreferences.getInstance();
-                  await prefs2.setInt('guardian_card_gift_remaining', _availableCards);
+                  // 【修复 v1.12.0】使用服务层统一方法写入，确保 key 带 syncId
+                  await GuardianCardService.updateLocalCache(_availableCards);
                 }
               }
             }
@@ -252,18 +253,19 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
       }(),
     ]);
 
-    // Future.wait 完成后，统一清除 skipSync 标记
+    // Future.wait 完成后，统一清除 skipSync 标记，并结束加载状态
     if (skipSync) {
       await prefs.remove('guardian_card_skip_sync_once');
       debugPrint('[GuardianCardPage] skipSync 标记已清除');
     }
+    if (mounted) setState(() => _isLoadingData = false);
   }
 
   String get _currentMessage =>
       _isCustomMessage ? _customMsgController.text.trim() : _presetMessages[_selectedMessageIndex];
 
-  /// 从全局常量获取 App Store 下载链接
-  String get _appStoreUrl => AppConstants.appStoreUrl;
+  /// 【修复 v1.16.0】fallback URL 改为 landing 页，不再指向 App Store
+  String get _appStoreUrl => 'https://zaine.love/landing/welcome';
 
   int get _totalAvailable => _availableCards;
 
@@ -457,9 +459,13 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
       }
 
       final cardCode = sendResult['cardCode']?.toString() ?? '';
+      // 构建 landing 页 URL（扫码后打开精美H5落地页）
+      final landingUrl = cardCode.isNotEmpty
+          ? 'https://zaine.love/landing/$cardCode'
+          : 'https://zaine.love';
       if (mounted) {
         setState(() {
-          _currentShareUrl = AppConstants.appStoreUrl;
+          _currentShareUrl = landingUrl;
           _currentCardCode = cardCode;
           debugPrint('[GuardianCard] 二维码URL已更新: $_currentShareUrl, 安全码: $_currentCardCode');
           final newAvailable = sendResult['available_cards'] as int?;
@@ -467,49 +473,8 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
         });
       }
 
-      // ====== 第三步：展示 3D 翻盖动画 (概念设计) ======
-      if (mounted) {
-        await showGeneralDialog(
-          context: context,
-          barrierDismissible: false,
-          barrierColor: Colors.black.withOpacity(0.85),
-          transitionDuration: const Duration(milliseconds: 300),
-          pageBuilder: (ctx, anim1, anim2) {
-            return Scaffold(
-              backgroundColor: Colors.transparent,
-              body: Stack(
-                children: [
-                  GuardianCardEnvelope(
-                    senderName: _userName,
-                    senderAvatar: _userAvatar,
-                    message: _currentMessage,
-                    recipientName: _recipientName,
-                    totalGuardians: _totalRegistered,
-                    cardCode: _currentCardCode,
-                    appStoreUrl: _currentShareUrl.isNotEmpty ? _currentShareUrl : _appStoreUrl,
-                    onComplete: () {
-                      // 【优化 v2.0】动画结束后停留 3.5 秒（原 1.5 秒），让用户充分感受仪式感和查看卡片细节
-                      Future.delayed(const Duration(milliseconds: 3500), () {
-                        if (ctx.mounted) Navigator.pop(ctx);
-                      });
-                    },
-                  ),
-                  Positioned(
-                    top: 50,
-                    right: 20,
-                    child: IconButton(
-                      icon: const Icon(Icons.close, color: Colors.white, size: 30),
-                      onPressed: () => Navigator.pop(ctx),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      }
-
-      // 给一帧让 setState 后的卡片重绘生效
+      // ====== 第三步：直接截图守护卡（不再展示信封动画——动画留给接收端H5落地页） ======
+      // 给一帧让 setState 后的卡片重绘生效（使用新的 landing URL 作为二维码内容）
       await Future.delayed(const Duration(milliseconds: 100));
 
       // ====== 第四步：截图守护卡（用用户输入的昵称） ======
@@ -1314,7 +1279,39 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
           ],
         ),
       );
-    } else {
+    } else if (_isLoadingData) {
+      // 【修复 v1.14.0】后端数据加载中，不应显示"待解锁"
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade50,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 8,
+              height: 8,
+              child: CircularProgressIndicator(
+                strokeWidth: 1.5,
+                color: Colors.grey[400],
+              ),
+            ),
+            const SizedBox(width: 4),
+            Text(
+              '加载中',
+              style: TextStyle(
+                fontSize: 11,
+                color: Colors.grey[400],
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      );
+    } else if (_availableCards == 0) {
+      // 【修复 v1.14.0】只有真正无卡时才显示待解锁
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         decoration: BoxDecoration(
@@ -1328,6 +1325,30 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
             color: Colors.grey[500],
             fontWeight: FontWeight.w500,
           ),
+        ),
+      );
+    } else {
+      // 有卡但数据不完整（边缘情况），显示剩余数量兜底
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: Colors.green.shade50,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.check_circle, size: 10, color: Colors.green.shade700),
+            const SizedBox(width: 4),
+            Text(
+              '$_availableCards 张可用',
+              style: TextStyle(
+                fontSize: 11,
+                color: Colors.green.shade700,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
         ),
       );
     }
@@ -1824,14 +1845,18 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
   /// 【v1.9.63】默认方案A + "换一句"循环切换，减少用户决策负担
   /// 【修复 v1.9.78】ICP 备案完成前改用 App Store 直链，备案通过后恢复 landing 页链接
   void _remindViaWeChat(String receiverName, String cardCode) async {
-    final shareUrl = AppConstants.appStoreUrl;
+    // 【修复 v1.16.0】统一使用 landing 页链接，不再使用 App Store 直链
+    // 根因：ICP 备案已完成，应引导接收者先看到精美 H5 落地页，再决定是否下载
+    final shareUrl = cardCode.isNotEmpty
+        ? 'https://zaine.love/landing/$cardCode'
+        : 'https://zaine.love';
 
     // 4种文案模板 —— 默认展示方案A（温柔关切）
     final messageTemplates = [
-      '我发了一张守护卡给你，还没收到吗？\n👇 下载「在呢」App 接受我的守护\n$shareUrl',
-      '给你发的守护卡快过期啦～\n下载「在呢」让我知道你在呢 💛\n$shareUrl',
-      '守护卡都要过期了，你人呢？😂\n赶紧下载「在呢」，让我继续守护你！\n$shareUrl',
-      '我发了一张守护卡给你 👇\n下载「在呢」App 领取\n$shareUrl',
+      '我发了一张守护卡给你，还没收到吗？\n👇 点击链接接受我的守护\n$shareUrl',
+      '给你发的守护卡快过期啦～\n点击链接让我知道你在呢 💛\n$shareUrl',
+      '守护卡都要过期了，你人呢？😂\n赶紧点击链接，让我继续守护你！\n$shareUrl',
+      '我发了一张守护卡给你 👇\n点击链接领取\n$shareUrl',
     ];
 
     if (!mounted) return;

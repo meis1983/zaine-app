@@ -132,7 +132,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                 senderAvatar: cardData['sender_avatar'],
                 message: cardData['message'] ?? '想和你建立守护关系',
                 cardCode: code,
-                appStoreUrl: '', 
+                appStoreUrl: '',
+                isWelcomeMode: true, // 【修复 v1.17.1】收卡人登录后展示欢迎卡 
                 onComplete: () {
                   // 【优化 v2.0】仪式感结束后，自动清理 pending 状态并刷新统计 (停留 3.5秒)
                   Future.delayed(const Duration(milliseconds: 3500), () {

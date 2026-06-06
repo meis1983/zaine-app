@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -22,7 +23,11 @@ mixin DeveloperMode<T extends StatefulWidget> on State<T> {
 
   /// 版本号连击处理 —— 快速连击3次激活开发者调试菜单
   /// 返回 true 表示已激活，调用方应弹出开发者菜单
+  /// 【正式版安全】Release 模式下完全屏蔽，防止用户绕过订阅/签到体系
   bool handleVersionTap() {
+    // 🔒 Release 模式下：连击版本号无任何反应
+    if (kReleaseMode) return false;
+
     final now = DateTime.now();
     if (devLastTapTime != null && now.difference(devLastTapTime!).inSeconds > 3) {
       devTapCount = 0; // 超过3秒重置
@@ -39,7 +44,11 @@ mixin DeveloperMode<T extends StatefulWidget> on State<T> {
   }
 
   /// 显示开发者菜单 —— 完整版，包含所有调试工具
+  /// 【正式版安全】Release 模式下直接返回，不弹出任何内容
   void showDeveloperMenu() {
+    // 🔒 Release 模式下：完全屏蔽开发者菜单
+    if (kReleaseMode) return;
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,

@@ -6,7 +6,6 @@ import 'package:permission_handler/permission_handler.dart';
 import 'dart:convert';
 import '../services/platform/location_service.dart';
 import '../services/membership_service.dart';
-import '../services/api_service.dart';
 import '../theme/theme_helper.dart';
 import '../widgets/help_result_dialog.dart';
 import '../widgets/help_demo_mode.dart';
@@ -1111,37 +1110,15 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
     // 获取用户自己的手机号
     _myPhone = prefs.getString('user_phone') ?? '';
 
-    // 生成 SOS 短链（优先使用短链，失败则回退到直接URL）
-    String? sosShortUrl;
+    // 解析坐标（用于短信模板中的导航链接）
+    String? latStr, lngStr;
     if (_coordLat != null && _coordLng != null) {
-      try {
-        // 解析坐标（格式如 "40.007595,116.495028"）
-        final latStr = _coordLat!.replaceAll('北纬 ', '').replaceAll('°', '').replaceAll(' ', '');
-        final lngStr = _coordLng!.replaceAll('东经 ', '').replaceAll('°', '').replaceAll(' ', '');
-        final lat = double.tryParse(latStr);
-        final lng = double.tryParse(lngStr);
-        if (lat != null && lng != null) {
-          final result = await ApiService.createSosLink(
-            lat: lat,
-            lng: lng,
-            address: _address ?? '',
-            userName: _userName,
-            userPhone: _myPhone ?? '',
-          );
-          if (result['success'] == true && result['short_url'] != null) {
-            sosShortUrl = result['short_url'] as String;
-            debugPrint('[Help] SOS短链生成成功: $sosShortUrl');
-          } else {
-            debugPrint('[Help] SOS短链生成失败: ${result['error'] ?? result}');
-          }
-        }
-      } catch (e) {
-        debugPrint('[Help] SOS短链生成异常: $e');
-      }
+      latStr = _coordLat!.replaceAll('北纬 ', '').replaceAll('°', '').replaceAll(' ', '');
+      lngStr = _coordLng!.replaceAll('东经 ', '').replaceAll('°', '').replaceAll(' ', '');
     }
 
     // 生成完整短信内容（用于预览）
-    final helpMessage = _generateHelpMessage(_myPhone ?? '', sosShortUrl);
+    final helpMessage = _generateHelpMessage(_myPhone ?? '', latStr, lngStr);
     debugPrint('[Help] 短信模板:\n$helpMessage');
 
     // 标记位置已获取
@@ -1161,13 +1138,13 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
     if (await canLaunchUrl(uri)) await launchUrl(uri);
   }
 
-  String _generateHelpMessage(String myPhone, [String? sosShortUrl]) {
+  String _generateHelpMessage(String myPhone, [String? latStr, String? lngStr]) {
     final now = DateTime.now();
     final timeStr = '${now.year}-${now.month.toString().padLeft(2,'0')}-${now.day.toString().padLeft(2,'0')} ${now.hour.toString().padLeft(2,'0')}:${now.minute.toString().padLeft(2,'0')}';
     final addrPart = (_address != null && _address!.isNotEmpty) ? _address! : '未知地址';
     // 坐标格式：无空格，确保 iOS SMS 能正确识别为 URL
-    final coordPart = (_coordLat != null && _coordLng != null)
-        ? '${_coordLat!.replaceAll('北纬 ', '').replaceAll('°', '').replaceAll(' ', '')},${_coordLng!.replaceAll('东经 ', '').replaceAll('°', '').replaceAll(' ', '')}'
+    final coordPart = (latStr != null && lngStr != null)
+        ? '$latStr,$lngStr'
         : '';
 
     final sb = StringBuffer();
@@ -1189,22 +1166,14 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
     final addrObfuscated = addrPart.split('').join('\u200B');
     sb.writeln('地址：$addrObfuscated');
     if (coordPart.isNotEmpty) {
-      sb.writeln('坐标：$coordPart');
-      if (sosShortUrl != null && sosShortUrl.isNotEmpty) {
-        // 短链方案：只发一个超短链接，iMessage/SMS 都能识别
-        sb.writeln('');
-        sb.writeln('点击导航（自动打开地图）');
-        sb.writeln(sosShortUrl);
-      } else {
-        // 降级方案：直接输出地图链接（短链生成失败时）
-        final parts = coordPart.split(',');
-        final lat = parts[0];
-        final lng = parts[1];
-        sb.writeln('苹果地图导航：');
-        sb.writeln('https://maps.apple.com/?q=$lat,$lng');
-        sb.writeln('高德地图导航：');
-        sb.writeln('https://uri.amap.com/navigation?to=$lng,$lat');
-      }
+      sb.writeln('');
+      sb.writeln('🍎 点击跳转苹果地图导航');
+      sb.writeln('');
+      sb.writeln('https://maps.apple.com/?q=$coordPart');
+      sb.writeln('');
+      sb.writeln('📍 点击跳转高德地图导航');
+      sb.writeln('');
+      sb.writeln('https://uri.amap.com/marker?position=$lngStr,$latStr');
     }
     sb.writeln('');
     sb.writeln('请立即联系我或拨打120！');
@@ -1251,6 +1220,9 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
           Navigator.pop(ctx);
           setState(() => _isTriggering = false);
         },
+        onStatusChanged: (String status) {
+          debugPrint('[HelpPage] Status changed: $status');
+        },
         data: HelpDataSnapshot(
           userName: _userName,
           myPhone: _myPhone,
@@ -1266,12 +1238,6 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
           smsSent: _smsSent,
           locationObtained: _locationObtained,
         ),
-        onStatusChanged: (status) {
-          setState(() {
-            if (status == 'smsSent') _smsSent = true;
-            if (status == 'calledContact') _calledContact = true;
-          });
-        },
       ),
     );
   }

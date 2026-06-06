@@ -113,19 +113,36 @@ class _StatisticsPageState extends State<StatisticsPage> with SingleTickerProvid
   Future<void> _loadCheckinData() async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      final uid = prefs.getString('user_id') ?? '';
 
-      // 从本地加载签到历史
-      final checkinHistoryJson = prefs.getString('checkin_history');
-      if (checkinHistoryJson != null) {
-        final history = jsonDecode(checkinHistoryJson) as List<dynamic>;
-        _checkinDates = history
-            .map((item) => DateTime.parse(item['date'] as String))
+      // 【修复 v1.16.0】签到数据按用户隔离读取，与 home_page / sync_service 保持一致
+      final historyKey = uid.isNotEmpty ? 'checkin_history_$uid' : 'checkin_history';
+      final totalKey = uid.isNotEmpty ? 'total_check_in_days_$uid' : 'total_check_in_days';
+      final streakKey = uid.isNotEmpty ? 'continuous_days_$uid' : 'continuous_days';
+
+      // 从本地加载签到历史（sync_service 保存的是纯字符串列表）
+      final checkinHistoryList = prefs.getStringList(historyKey);
+      if (checkinHistoryList != null && checkinHistoryList.isNotEmpty) {
+        _checkinDates = checkinHistoryList
+            .map((item) {
+              try {
+                // 兼容两种格式：纯字符串 "2024-01-15" 或 JSON Map {"date":"2024-01-15"}
+                if (item.contains('{')) {
+                  final parsed = jsonDecode(item) as Map<String, dynamic>;
+                  return DateTime.parse(parsed['date'] as String);
+                }
+                return DateTime.parse(item);
+              } catch (_) {
+                return null;
+              }
+            })
+            .whereType<DateTime>()
             .toList();
       }
 
       // 加载统计数据
-      _totalCheckins = prefs.getInt('checkin_total_days') ?? 0;
-      _currentStreak = prefs.getInt('checkin_continuous_days') ?? 0;
+      _totalCheckins = prefs.getInt(totalKey) ?? 0;
+      _currentStreak = prefs.getInt(streakKey) ?? 0;
       _maxStreak = prefs.getInt('checkin_max_streak') ?? 0;
 
       // 计算本周签到

@@ -118,8 +118,19 @@ class _SubscriptionPageState extends State<SubscriptionPage>
 
   /// 发起购买
   Future<void> _purchaseSmart() async {
+    setState(() { _isPurchasing = true; _errorMessage = null; });
+
+    // 【v1.13.0】产品未加载时自动刷新一次
+    if (_products.isEmpty) {
+      debugPrint('[IAP] 产品未加载，自动刷新...');
+      await _initIap(forceReload: true);
+    }
+
     if (!_iapAvailable) {
-      setState(() => _errorMessage = 'App Store 购买服务不可用，请稍后再试');
+      setState(() {
+        _isPurchasing = false;
+        _errorMessage = 'App Store 购买服务不可用，请稍后再试';
+      });
       return;
     }
 
@@ -129,15 +140,13 @@ class _SubscriptionPageState extends State<SubscriptionPage>
     final product = _products.firstWhere(
       (p) => p.id == productId,
       orElse: () {
-        setState(() => _errorMessage = '未找到订阅产品，请刷新重试');
+        setState(() {
+          _isPurchasing = false;
+          _errorMessage = '订阅产品尚未就绪，请稍后再试（内购产品需提交审核后沙盒环境方可使用）';
+        });
         throw Exception('产品未找到: $productId');
       },
     );
-
-    setState(() {
-      _isPurchasing = true;
-      _errorMessage = null;
-    });
 
     final success = await _iapService.purchaseProduct(product);
     if (!success) {
@@ -778,81 +787,9 @@ class _SubscriptionPageState extends State<SubscriptionPage>
   //  购买区卡片（核心转化）
   // ═══════════════════════════════════════════════════════════════
   Widget _buildPurchaseCard() {
-    if (_products.isEmpty) {
-      return Container(
-        padding: const EdgeInsets.all(28),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFF5F2),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: const Icon(
-                Icons.shield_moon_rounded,
-                size: 40,
-                color: Color(0xFFFF7043),
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              '开启智能守护',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF2D2D3A),
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              '正在连接 App Store...',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[500],
-              ),
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: 180,
-              child: ElevatedButton.icon(
-                onPressed: () => _initIap(forceReload: true),
-                icon: const Icon(Icons.refresh_rounded, size: 18),
-                label: const Text('重新加载'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFFF7043),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              '若持续无法加载，请检查网络或重启应用',
-              style: TextStyle(
-                fontSize: 11,
-                color: Colors.grey[400],
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      );
-    }
+    // 【v1.13.0】始终显示价格购买区（不再因产品未加载而隐藏）
+    // 产品未就绪时使用默认价格显示，购买时再提示刷新
+    final bool productsReady = _products.isNotEmpty;
 
     return Container(
       padding: const EdgeInsets.all(24),
@@ -933,7 +870,25 @@ class _SubscriptionPageState extends State<SubscriptionPage>
           _buildGradientButton(),
           const SizedBox(height: 16),
           _buildSubscriptionTerms(),
-          if (!_iapAvailable)
+          if (!productsReady)
+            Padding(
+              padding: const EdgeInsets.only(top: 10),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.info_outline, size: 14, color: Colors.orange[400]),
+                  const SizedBox(width: 4),
+                  Text(
+                    '订阅产品加载中，点击购买将自动刷新',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.orange[600],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          if (!_iapAvailable && productsReady)
             Padding(
               padding: const EdgeInsets.only(top: 10),
               child: Text(

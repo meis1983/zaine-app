@@ -34,8 +34,8 @@ class FeatureFlags {
 
   // ========== v1.0 首版隐藏（后续版本逐个开放）==========
 
-  /// HealthKit / Apple Watch 健康数据同步
-  static const bool enableHealthKit = false;
+  /// HealthKit / Apple Watch 健康数据同步（生命体征守护）
+  static const bool enableHealthKit = true;
 
   /// 情绪感知引擎
   static const bool enableEmotion = false;
@@ -69,4 +69,8 @@ class FeatureFlags {
 
   /// 营销展示页
   static const bool enablePromotionalShowcase = false;
+
+  /// 开发者模式（Release 包自动屏蔽）
+  static const bool enableDeveloperMode =
+      !bool.fromEnvironment('dart.vm.product');
 }

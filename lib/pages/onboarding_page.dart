@@ -778,32 +778,6 @@ class _OnboardingPageState extends State<OnboardingPage> {
       backgroundColor: const Color(0xFFF8F9FA),
       body: Stack(
         children: [
-          // 背景：隐约的守护卡轮廓（仪式感承接）
-          if (_currentPage == _totalPages - 1)
-            Positioned(
-              top: 100,
-              left: 20,
-              right: 20,
-              child: IgnorePointer(
-                ignoring: true,
-                child: Opacity(
-                  opacity: 0.05,
-                  child: Transform.rotate(
-                    angle: -0.1,
-                    child: Container(
-                      height: 400,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFCFAF2),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                            color: const Color(0xFF8B4513), width: 2),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-
           SafeArea(
             child: Column(
               children: [
@@ -1145,71 +1119,129 @@ class _OnboardingPageState extends State<OnboardingPage> {
         debugPrint('[Onboarding] quickLogin 成功, userId=${res['userId']}');
 
         // ====== 增强：仪式感动画展示 ======
-        if (_pendingCardCode != null && _pendingCardCode!.isNotEmpty) {
-          try {
-            final cardRes = await CardService.checkCard(_pendingCardCode!);
-            if (cardRes['success'] == true && mounted) {
-              final cardData = cardRes;
+      // 【修复 v1.17.1】优先使用 quickLogin 返回的 card_info（首次下载注册场景）
+      // 兜底：_pendingCardCode（DeepLink 唤醒场景）
+      final cardInfo = res['card_info'];
+      if (cardInfo != null && cardInfo is Map) {
+        // 场景A：H5注册后首次下载App，后端通过 quickLogin 返回卡片信息
+        try {
+          final cardData = cardInfo as Map<String, dynamic>;
+          debugPrint('[Onboarding] 展示守护礼动画（来自登录返回）');
 
-              // 先执行拉取数据，让背景静默准备
-              await SyncService.pullFromServer();
-
-              if (!mounted) return;
-
-              // 展示精美 3D 动画
-              await showGeneralDialog(
-                context: context,
-                barrierDismissible: false,
-                barrierColor: Colors.black.withOpacity(0.92), // 加深背景，更有仪式感
-                transitionDuration:
-                    const Duration(milliseconds: 800), // 慢一点，更优雅
-                pageBuilder: (ctx, anim1, anim2) {
-                  return Scaffold(
-                    backgroundColor: Colors.transparent,
-                    body: Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          FadeTransition(
-                            opacity: anim1,
-                            child: const Text(
-                              '开启你的守护礼',
-                              style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 18,
-                                  letterSpacing: 4,
-                                  fontWeight: FontWeight.w300),
-                            ),
-                          ),
-                          const SizedBox(height: 60),
-                          GuardianCardEnvelope(
-                            senderName: cardData['sender_name'] ?? '你的好友',
-                            senderAvatar: cardData['sender_avatar'],
-                            message: cardData['message'] ?? '想和你建立守护关系',
-                            cardCode: _pendingCardCode!,
-                            appStoreUrl: '',
-                            onComplete: () {
-                              // 停留久一点，让温情传递 (延时 3.5秒)
-                              Future.delayed(const Duration(milliseconds: 3500),
-                                  () {
-                                if (ctx.mounted) Navigator.pop(ctx);
-                              });
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              );
-            }
-          } catch (e) {
-            debugPrint('[Onboarding] 登录仪式感展示失败: $e');
-          }
-        } else {
-          // 普通登录，直接拉取数据
+          // 先执行拉取数据，让背景静默准备
           await SyncService.pullFromServer();
+
+          if (!mounted) return;
+
+          // 展示精美 3D 动画
+          await showGeneralDialog(
+            context: context,
+            barrierDismissible: false,
+            barrierColor: Colors.black.withOpacity(0.92),
+            transitionDuration: const Duration(milliseconds: 800),
+            pageBuilder: (ctx, anim1, anim2) {
+              return Scaffold(
+                backgroundColor: Colors.transparent,
+                body: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      FadeTransition(
+                        opacity: anim1,
+                        child: const Text(
+                          '开启你的守护礼',
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              letterSpacing: 4,
+                              fontWeight: FontWeight.w300),
+                        ),
+                      ),
+                      const SizedBox(height: 60),
+                      GuardianCardEnvelope(
+                        senderName: cardData['sender_name'] ?? '你的好友',
+                        senderAvatar: cardData['sender_avatar'],
+                        message: cardData['message'] ?? '想和你建立守护关系',
+                        cardCode: cardData['card_code'] ?? '',
+                        appStoreUrl: '',
+                        isWelcomeMode: true, // 【修复 v1.17.1】收卡人登录后展示欢迎卡
+                        onComplete: () {
+                          Future.delayed(const Duration(milliseconds: 3500), () {
+                            if (ctx.mounted) Navigator.pop(ctx);
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          );
+        } catch (e) {
+          debugPrint('[Onboarding] 守护礼动画失败（登录返回）: $e');
         }
+      } else if (_pendingCardCode != null && _pendingCardCode!.isNotEmpty) {
+        // 场景B：已装App，通过 DeepLink 唤醒（兜底逻辑）
+        try {
+          final cardRes = await CardService.checkCard(_pendingCardCode!);
+          if (cardRes['success'] == true && mounted) {
+            final cardData = cardRes;
+            debugPrint('[Onboarding] 展示守护礼动画（来自DeepLink）');
+
+            await SyncService.pullFromServer();
+            if (!mounted) return;
+
+            await showGeneralDialog(
+              context: context,
+              barrierDismissible: false,
+              barrierColor: Colors.black.withOpacity(0.92),
+              transitionDuration: const Duration(milliseconds: 800),
+              pageBuilder: (ctx, anim1, anim2) {
+                return Scaffold(
+                  backgroundColor: Colors.transparent,
+                  body: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        FadeTransition(
+                          opacity: anim1,
+                          child: const Text(
+                            '开启你的守护礼',
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                letterSpacing: 4,
+                                fontWeight: FontWeight.w300),
+                          ),
+                        ),
+                        const SizedBox(height: 60),
+                        GuardianCardEnvelope(
+                          senderName: cardData['sender_name'] ?? '你的好友',
+                          senderAvatar: cardData['sender_avatar'],
+                          message: cardData['message'] ?? '想和你建立守护关系',
+                          cardCode: _pendingCardCode!,
+                          appStoreUrl: '',
+                          isWelcomeMode: true, // 【修复 v1.17.1】收卡人登录后展示欢迎卡
+                          onComplete: () {
+                            Future.delayed(const Duration(milliseconds: 3500), () {
+                              if (ctx.mounted) Navigator.pop(ctx);
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            );
+          }
+        } catch (e) {
+          debugPrint('[Onboarding] 守护礼动画失败（DeepLink）: $e');
+        }
+      } else {
+        // 普通登录，直接拉取数据
+        await SyncService.pullFromServer();
+      }
 
         if (mounted) {
           _loginCompleted = true;

@@ -17,7 +17,6 @@ import '../services/api/user_service.dart';
 import '../services/api/contact_service.dart';
 import '../services/api/card_service.dart';
 import '../services/api/notify_service.dart';
-import '../data/app_constants.dart';
 
 class GuardianPage extends StatefulWidget {
   const GuardianPage({super.key});
@@ -480,14 +479,14 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
       debugPrint('[GuardianPage] 创建免费守护卡失败: $e');
     }
 
-    // 【修复 v1.9.78】紧急联系人邀请直接跳 App Store，不经过 landing 页
-    // 根因：ICP 备案未完成，landing 页链接在微信/浏览器中被拦截
-    // 备案通过后如需恢复裂变绑定，可改回 landing 链接
-    final landingUrl = AppConstants.appStoreUrl;
+    // 【修复 v1.16.0】统一使用 landing 页链接
+    // ICP 备案已完成，引导接收者先看 H5 落地页，再决定是否下载
+    // 注意：此函数没有 userId 变量，使用通用守护圈落地页
+    final landingUrl = 'https://zaine.love/landing/guardian_invite';
 
     // 【文案 v1.9.7】守护圈再次邀请：强调对方的重要性，简短有温度
     final message = '$name，一直想跟你说件事。\n\n我在「在呢」建了个守护圈，你是我第一个想到要加进来的人。每天报个平安，有事也能第一时间找到彼此。就差你了，来吗？\n\n👉 $landingUrl';
-    final uri = Uri.parse('sms:$phone?body=${Uri.encodeComponent(message)}');
+    final uri = Uri(scheme: 'sms', path: phone, queryParameters: {'body': message});
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri);
     }

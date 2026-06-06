@@ -38,7 +38,9 @@ class GuardianCardService {
   }
 
   /// 初始化新用户赠送（仅在首次启动时调用）
-  /// 【修复 v1.9.6】初始化后立即同步后端，避免本地默认值与后端不一致
+  /// 【修复 v1.12.0】本地写入初始额度后不立即同步后端，
+  /// 避免新用户后端无记录返回0覆盖本地默认值。
+  /// 后端同步由进入发卡页面时触发 syncQuotaFromBackend() 负责。
   static Future<void> initGiftCards() async {
     final prefs = await SharedPreferences.getInstance();
     final syncId = await _getCurrentSyncIdAsync();
@@ -48,11 +50,10 @@ class GuardianCardService {
     if (!hasInitialized) {
       final today = DateTime.now().toString().split(' ')[0];
       await prefs.setString(firstLaunchKey, today);
-      // 使用用户特定的键存储额度
+      // 使用用户特定的键存储额度（新用户初始 3 张）
       await prefs.setInt('guardian_card_gift_remaining_$syncId', giftCardCount);
       debugPrint('[GuardianCard] 新用户赠送 $giftCardCount 张守护卡 (syncId=$syncId)');
-      // 初始化后立即同步后端真实额度（覆盖本地默认值）
-      await syncQuotaFromBackend();
+      // 不再立即调用 syncQuotaFromBackend()，避免后端返回 0 覆盖本地值
     }
   }
 

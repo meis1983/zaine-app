@@ -35,10 +35,10 @@ class AppConstants {
       'https://zaine-share.oss-cn-hangzhou.aliyuncs.com/landing.html';
   static const String backendBaseUrl =
       'https://zaine-api-skhntjskvp.cn-hangzhou.fcapp.run';
-  /// 【临时方案】landing 页基础域名
-  /// ICP 备案完成前使用阿里云 FC 默认域名，备案通过后切回 https://zaine.love
+  /// 【已修复 v1.16.0】landing 页基础域名
+  /// ICP 备案已完成，正式使用 zaine.love 域名
   static const String landingBaseUrl =
-      'https://zaine-api-skhntjskvp.cn-hangzhou.fcapp.run';
+      'https://zaine.love';
 
   /// 高德地图 Web 服务 API Key（逆地理编码等）
   /// 从 .env 文件读取，不硬编码在源码中

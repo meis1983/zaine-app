@@ -388,6 +388,19 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
     );
   }
 
+  // ==================== SMS 编码辅助 ====================
+  /// 在传给 Uri.queryParameters 之前，先做【字符替换】
+  /// （Uri 构造器会自动做 percent-encoding，这里只需处理「语义冲突」的字符）
+  String _safeSmsBody(String body) {
+    return body
+        .replaceAll('【', '[')
+        .replaceAll('】', ']')
+        .replaceAll('─', '-')       // 特殊横线 → 普通横线
+        .replaceAll('…', '...')     // 省略号 → 三个点
+        .replaceAll('\r', '')       // 去掉 \r，防止编码出 %0D
+        .trim();
+  }
+
   Future<void> _sendCurrentSMS() async {
     final autoNotify = _getAutoNotifyContacts();
     if (_currentSmsIndex >= autoNotify.length) return;
@@ -400,12 +413,31 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
     }
 
     try {
-      // 【修复 v1.9.7】改用 Uri.parse + encodeComponent，避免 Uri() 构造函数将空格编码为 + 导致 iOS 解析错误
-      final smsUri = Uri.parse('sms:$phone?body=${Uri.encodeComponent(widget.smsContent)}');
-      if (await canLaunchUrl(smsUri)) {
+      // 【v1.16.0 修复】使用 Uri 构造器替代 Uri.parse + encodeComponent
+      //
+      // 旧方案问题：
+      //   Uri.parse('sms:$phone?body=${Uri.encodeComponent(body)}')
+      //   → encodeComponent 把空格变成 +，iOS 收到后 + 变空格，URL 可能被截断
+      //   → 手动拼接字符串容易出各种编码问题
+      //
+      // 新方案（Dart 标准库，RFC 3986 标准）：
+      //   Uri(scheme:'sms', path: phone, queryParameters: {'body': body})
+      //   → 自动编码 ? & = + % 空格 换行
+      //   → https:// 中的 : / 保持原样（query value 内的 / 不需要编码）
+      //   → iOS 收到后自动解码，Data Detector 能识别完整 URL → 可点击！
+      final safeBody = _safeSmsBody(widget.smsContent);
+      final uri = Uri(
+        scheme: 'sms',
+        path: phone,
+        queryParameters: {'body': safeBody},
+      );
+
+      debugPrint('[Help] SMS URI: $uri');
+
+      if (await canLaunchUrl(uri)) {
         _justLaunchedExternal = true;
         _launchedType = 'sms';
-        await launchUrl(smsUri);
+        await launchUrl(uri);
         HapticFeedback.mediumImpact();
       }
     } catch (e) {

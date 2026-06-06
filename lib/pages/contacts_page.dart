@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:convert';
-import '../data/app_constants.dart';
 import '../theme/theme_helper.dart';
 import '../utils/contact_parser.dart';
 import '../services/membership_service.dart';
@@ -392,9 +391,8 @@ class _ContactsPageState extends State<ContactsPage> {
             final senderName = senderController.text.trim();
             final recipientName = recipientController.text.trim();
 
-            // 构建短信模板：收信人在前，发信人在后
-            // 模板格式：【在呢】嗨 {收信人}！我是{发信人}，刚把你设为我的紧急联系人
-            final smsBody = '【在呢】嗨 ${recipientName.isNotEmpty ? recipientName : name}！我是$senderName，刚把你设为我的紧急联系人 🛡️\n\n我在用「在呢」App 守护自己的安全——每天签到报平安，遇到紧急情况一键求助 会自动通知你我的实时位置。\n\n如果你也下载「在呢」，我们可以互相守护，让彼此都更安心。❤️\n\n下载：${AppConstants.appStoreUrl}';
+            // 【修复 v1.16.0】使用 landing 页链接，不再使用 App Store 直链
+            final smsBody = '【在呢】嗨 ${recipientName.isNotEmpty ? recipientName : name}！我是$senderName，刚把你设为我的紧急联系人 🛡️\n\n我在用「在呢」App 守护自己的安全——每天签到报平安，遇到紧急情况一键求助 会自动通知你我的实时位置。\n\n如果你也下载「在呢」，我们可以互相守护，让彼此都更安心。❤️\n\n点击链接接受邀请：https://zaine.love/landing/contacts_${phone.replaceAll(RegExp(r'[^0-9]'), '')}';
 
             return AlertDialog(
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -509,10 +507,10 @@ class _ContactsPageState extends State<ContactsPage> {
                       debugPrint('[ContactsPage] 创建免费守护卡失败: $e');
                     }
 
-                    // 【修复 v1.9.78】紧急联系人邀请直接跳 App Store，不经过 landing 页
-                    // 根因：ICP 备案未完成，landing 页链接在微信/浏览器中被拦截
-                    final landingUrl = AppConstants.appStoreUrl;
-                    final finalBody = '【在呢】嗨 $recipientDisplayName！我是$finalSender，刚把你设为我的紧急联系人 🛡️\n\n我在用「在呢」App 守护自己的安全——每天签到报平安，遇到紧急情况一键求助 会自动通知你我的实时位置。\n\n如果你也下载「在呢」，我们可以互相守护，让彼此都更安心。❤️\n\n下载：$landingUrl';
+                    // 【修复 v1.16.0】统一使用 landing 页链接
+                    // ICP 备案已完成，引导接收者先看 H5 落地页
+                    final landingUrl = 'https://zaine.love/landing/contacts_${phone.replaceAll(RegExp(r'[^0-9]'), '')}';
+                    final finalBody = '【在呢】嗨 $recipientDisplayName！我是$finalSender，刚把你设为我的紧急联系人 🛡️\n\n我在用「在呢」App 守护自己的安全——每天签到报平安，遇到紧急情况一键求助 会自动通知你我的实时位置。\n\n如果你也下载「在呢」，我们可以互相守护，让彼此都更安心。❤️\n\n点击链接接受邀请：$landingUrl';
                     _sendInviteSms(phone, recipientDisplayName, finalBody);
                     senderController.dispose();
                     recipientController.dispose();
@@ -533,17 +531,22 @@ class _ContactsPageState extends State<ContactsPage> {
     );
   }
 
-  /// 通过系统短信界面发送邀请（修复 URI 格式）
+  /// 通过系统短信界面发送邀请（v1.16.0 修复）
+  /// 【重要】使用 Uri 构造器 + queryParameters 自动标准编码
+  /// 旧方案 Uri.parse + encodeComponent 对 ? 等字符编码后，iOS Data Detector 可能无法识别 URL
   Future<void> _sendInviteSms(String phone, String recipientName, String smsBody) async {
-    // 【修复 v1.9.7】改用 Uri.parse + encodeComponent，避免 Uri() 构造函数将空格编码为 + 导致 iOS 解析错误
-    // 根因：Uri() 的 queryParameters 使用 application/x-www-form-urlencoded，空格编码为 +，iOS 16 无法正确解析
-    final smsUri = Uri.parse('sms:$phone?body=${Uri.encodeComponent(smsBody)}');
+    // 【v1.16.0】使用 Uri 构造器替代手动拼接
+    final uri = Uri(
+      scheme: 'sms',
+      path: phone,
+      queryParameters: {'body': smsBody},
+    );
 
-    debugPrint('[ContactsPage] 短信 URI: $smsUri');
+    debugPrint('[ContactsPage] 短信 URI: $uri');
 
     try {
-      if (await canLaunchUrl(smsUri)) {
-        await launchUrl(smsUri);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri);
         if (mounted) {
           HapticFeedback.lightImpact();
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -556,7 +559,11 @@ class _ContactsPageState extends State<ContactsPage> {
       } else {
         // canLaunchUrl 返回 false，尝试直接 launch（兼容部分机型）
         debugPrint('[ContactsPage] canLaunchUrl 返回 false，尝试直接 launch');
-        final altUri = Uri.parse('sms:$phone?body=${Uri.encodeComponent(smsBody)}');
+        final altUri = Uri(
+          scheme: 'sms',
+          path: phone,
+          queryParameters: {'body': smsBody},
+        );
         if (await canLaunchUrl(altUri)) {
           await launchUrl(altUri);
         } else {

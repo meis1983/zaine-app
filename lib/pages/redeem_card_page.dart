@@ -6,7 +6,6 @@ import 'package:flutter/services.dart';
 import '../theme/theme_helper.dart';
 import '../services/api/card_service.dart';
 import '../services/api/sync_service.dart';
-import '../widgets/guardian_card_envelope.dart'; // 新增：3D 动画组件
 
 class RedeemCardPage extends StatefulWidget {
   const RedeemCardPage({super.key});
@@ -48,36 +47,17 @@ class _RedeemCardPageState extends State<RedeemCardPage> {
 
       if (res['success'] == true) {
         final senderName = res['sender_name']?.toString() ?? 'TA';
-        
-        // ====== 核心优化：展示 3D 仪式感动画 ======
-        if (mounted) {
-          await showGeneralDialog(
-            context: context,
-            barrierDismissible: false,
-            barrierColor: Colors.black.withOpacity(0.9),
-            transitionDuration: const Duration(milliseconds: 300),
-            pageBuilder: (ctx, anim1, anim2) {
-              return Scaffold(
-                backgroundColor: Colors.transparent,
-                body: GuardianCardEnvelope(
-                  senderName: senderName,
-                  senderAvatar: res['sender_avatar'],
-                  message: res['message'] ?? '想和你建立守护关系',
-                  cardCode: code,
-                  appStoreUrl: '', // 兑换页不需要商店链接
-                  onComplete: () {
-                    // 动画结束 2秒后自动进入确认环节
-                    Future.delayed(const Duration(milliseconds: 2000), () {
-                      if (ctx.mounted) Navigator.pop(ctx);
-                    });
-                  },
-                ),
-              );
-            },
-          );
-        }
 
-        // 动画结束后，弹出确认框
+        // 【修改 v1.17.1】去掉信封动画，兑换成功后直接弹出确认框
+        // 信封动画保留在 onboarding（落地页注册）和 home_page（DeepLink唤醒）两个场景
+        try {
+          await SyncService.pullFromServer();
+        } catch (_) {
+          // 静默失败，不影响用户体验
+        }
+        if (!mounted) return;
+
+        // 直接弹出确认框
         _showSuccessDialog(senderName);
       } else {
         final message = res['message']?.toString() ?? '兑换失败';

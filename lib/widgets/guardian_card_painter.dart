@@ -60,6 +60,7 @@ class GuardianCardPainter {
     String? recipientName,
     int? totalGuardians,
     String? cardCode,
+    bool isWelcomeMode = false,
   }) {
     // 根据安全码的首字母或随机数决定模板，确保同一张卡模板固定
     final int themeIdx = (cardCode != null && cardCode.isNotEmpty) 
@@ -74,6 +75,7 @@ class GuardianCardPainter {
       recipientName: recipientName,
       totalGuardians: totalGuardians,
       cardCode: cardCode,
+      isWelcomeMode: isWelcomeMode,
       template: GuardianCardTemplate.themes[themeIdx],
     );
   }
@@ -87,6 +89,7 @@ class _GuardianCardWidget extends StatefulWidget {
   final String? recipientName;
   final int? totalGuardians;
   final String? cardCode;
+  final bool isWelcomeMode; // 【修复 v1.17.1】欢迎卡模式（收卡人登录后）
   final GuardianCardTemplate template;
 
   const _GuardianCardWidget({
@@ -97,6 +100,7 @@ class _GuardianCardWidget extends StatefulWidget {
     this.recipientName,
     this.totalGuardians,
     this.cardCode,
+    this.isWelcomeMode = false,
     required this.template,
   });
 
@@ -127,6 +131,14 @@ class _GuardianCardWidgetState extends State<_GuardianCardWidget> {
   @override
   Widget build(BuildContext context) {
     final theme = widget.template;
+    if (widget.isWelcomeMode) {
+      return _buildWelcomeCard(theme);
+    }
+    return _buildInvitationCard(theme);
+  }
+
+  /// 邀请卡（面向尚未领取守护卡的人）
+  Widget _buildInvitationCard(GuardianCardTemplate theme) {
     return Container(
       width: 340,
       padding: const EdgeInsets.all(28),
@@ -214,7 +226,7 @@ class _GuardianCardWidgetState extends State<_GuardianCardWidget> {
           const SizedBox(height: 20),
 
           Text(
-            '“${widget.message}”',
+            '"${widget.message}"',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 19,
@@ -229,44 +241,45 @@ class _GuardianCardWidgetState extends State<_GuardianCardWidget> {
             mainAxisSize: MainAxisSize.min,
             children: [
               QrImageView(
-                data: widget.appStoreUrl.isNotEmpty ? widget.appStoreUrl : 'https://apps.apple.com/app/zaine/id6763441206',
-                size: 96,
+                data: widget.appStoreUrl.isNotEmpty ? widget.appStoreUrl : 'https://zaine.love/landing/welcome',
+                size: 90,
                 eyeStyle: QrEyeStyle(color: theme.accentColor, eyeShape: QrEyeShape.square),
                 dataModuleStyle: QrDataModuleStyle(color: theme.accentColor, dataModuleShape: QrDataModuleShape.square),
               ),
               const SizedBox(height: 10),
               Text(
-                '扫一扫，开启守护',
+                '扫一扫，领取守护',
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
                   color: theme.accentColor.withOpacity(0.9),
-                  letterSpacing: 1.2,
+                  letterSpacing: 1.5,
                 ),
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 4),
               Text(
-                '在呢+ · 跨越距离的守护',
+                '在呢+ · 收到一份温暖的牵挂',
                 style: TextStyle(fontSize: 12, color: theme.textColor.withOpacity(0.55)),
               ),
             ],
           ),
 
-          const SizedBox(height: 18),
+          const SizedBox(height: 16),
 
+          // 安全码（醒目展示 — 扫码失败时的备用绑定方案）
           if (widget.cardCode != null && widget.cardCode!.isNotEmpty)
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.65),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: theme.accentColor.withOpacity(0.18)),
+                color: Colors.white.withOpacity(0.8),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: theme.accentColor.withOpacity(0.35), width: 1.2),
               ),
               child: Column(
                 children: [
                   Text(
-                    '24 小时内完成绑定',
+                    '守护安全码',
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
@@ -276,7 +289,7 @@ class _GuardianCardWidgetState extends State<_GuardianCardWidget> {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    '扫码下载在呢+ → 自动建立守护关系\n如扫码失败，再使用备用守护码绑定',
+                    '扫码失败？在 App 内输入此码绑定',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 12,
@@ -299,29 +312,30 @@ class _GuardianCardWidgetState extends State<_GuardianCardWidget> {
               ),
             ),
 
+          // 安全码大字展示（金色醒目）
           if (widget.cardCode != null && widget.cardCode!.isNotEmpty) ...[
-            const SizedBox(height: 18),
+            const SizedBox(height: 16),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.7),
+                color: Colors.white.withOpacity(0.8),
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: const Color(0xFFD4AF37).withOpacity(0.45), width: 1.2),
+                border: Border.all(color: const Color(0xFFD4AF37).withOpacity(0.5), width: 1.2),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    '备用守护码：',
-                    style: TextStyle(fontSize: 12, color: theme.textColor.withOpacity(0.6)),
+                    '安全码 ',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: theme.textColor.withOpacity(0.7)),
                   ),
                   Text(
                     widget.cardCode!.toUpperCase(),
                     style: const TextStyle(
-                      fontSize: 16,
+                      fontSize: 17,
                       fontWeight: FontWeight.bold,
                       color: Color(0xFFD4AF37),
-                      letterSpacing: 3,
+                      letterSpacing: 3.5,
                       fontFamily: 'Courier',
                     ),
                   ),
@@ -329,6 +343,174 @@ class _GuardianCardWidgetState extends State<_GuardianCardWidget> {
               ),
             ),
           ],
+        ],
+      ),
+    );
+  }
+
+  /// 欢迎卡（面向已经领取守护卡的收卡人 — 登录后展示）
+  Widget _buildWelcomeCard(GuardianCardTemplate theme) {
+    return Container(
+      width: 340,
+      padding: const EdgeInsets.all(28),
+      decoration: BoxDecoration(
+        color: theme.bgColor,
+        borderRadius: BorderRadius.circular(4),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.12),
+            blurRadius: 25,
+            offset: const Offset(0, 10),
+          ),
+        ],
+        image: DecorationImage(
+          image: NetworkImage(theme.paperTexture),
+          repeat: ImageRepeat.repeat,
+          opacity: 0.25,
+        ),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // 顶部装饰线
+          Container(
+            width: 40,
+            height: 2,
+            decoration: BoxDecoration(
+              color: theme.accentColor.withOpacity(0.4),
+              borderRadius: BorderRadius.circular(1),
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // 发送者头像（居中、适中大小、无旋转 — 修复遮挡问题）
+          Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: theme.accentColor.withOpacity(0.2),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+              border: Border.all(color: theme.accentColor.withOpacity(0.3), width: 2),
+            ),
+            child: ClipOval(
+              child: widget.senderAvatar != null && widget.senderAvatar!.isNotEmpty
+                  ? Image(
+                      image: _getAvatarImageProvider(widget.senderAvatar!),
+                      fit: BoxFit.cover,
+                    )
+                  : Center(
+                      child: Text(
+                        widget.senderName.isNotEmpty ? widget.senderName[0] : '?',
+                        style: TextStyle(fontSize: 24, color: theme.accentColor, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          Text(
+            widget.senderName,
+            style: TextStyle(
+              fontSize: 14,
+              color: theme.textColor.withOpacity(0.7),
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // 标题
+          Text(
+            '· 在呢 · 守护已建立 ·',
+            style: TextStyle(
+              fontSize: 14,
+              color: theme.accentColor,
+              letterSpacing: 4,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // 主标题
+          Text(
+            '守护关系已建立',
+            style: TextStyle(
+              fontSize: 24,
+              color: theme.textColor,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1.2,
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // 副标题
+          Text(
+            '${widget.senderName} 想守护你',
+            style: TextStyle(
+              fontSize: 16,
+              color: theme.textColor.withOpacity(0.7),
+              fontWeight: FontWeight.w400,
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // 发送者的消息
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.7),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              '"${widget.message}"',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 15,
+                color: theme.textColor.withOpacity(0.85),
+                fontStyle: FontStyle.italic,
+                height: 1.6,
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // 温馨说明
+          Text(
+            '从今天起，你们将互相收到每日签到提醒',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 12,
+              color: theme.textColor.withOpacity(0.55),
+              height: 1.5,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            '让在乎的人知道你很好 💌',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 12,
+              color: theme.accentColor.withOpacity(0.7),
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // 底部装饰线
+          Container(
+            width: 40,
+            height: 2,
+            decoration: BoxDecoration(
+              color: theme.accentColor.withOpacity(0.4),
+              borderRadius: BorderRadius.circular(1),
+            ),
+          ),
         ],
       ),
     );
