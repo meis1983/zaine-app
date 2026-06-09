@@ -6,6 +6,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'dart:convert';
 import '../services/platform/location_service.dart';
 import '../services/membership_service.dart';
+import '../services/api_service.dart';
 import '../theme/theme_helper.dart';
 import '../widgets/help_result_dialog.dart';
 import '../widgets/help_demo_mode.dart';
@@ -1112,13 +1113,36 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
 
     // 解析坐标（用于短信模板中的导航链接）
     String? latStr, lngStr;
+    double? latVal, lngVal;
     if (_coordLat != null && _coordLng != null) {
       latStr = _coordLat!.replaceAll('北纬 ', '').replaceAll('°', '').replaceAll(' ', '');
       lngStr = _coordLng!.replaceAll('东经 ', '').replaceAll('°', '').replaceAll(' ', '');
+      latVal = double.tryParse(latStr);
+      lngVal = double.tryParse(lngStr);
+    }
+
+    // 【修复 v1.17.3-Bug3】生成 SOS 短链，替代长地图链接
+    String? sosShortUrl;
+    if (latVal != null && lngVal != null) {
+      try {
+        final linkRes = await ApiService.createSosLink(
+          lat: latVal,
+          lng: lngVal,
+          address: _address ?? '',
+          userName: _userName,
+          userPhone: _myPhone ?? '',
+        );
+        if (linkRes['success'] == true) {
+          sosShortUrl = linkRes['short_url']?.toString();
+          debugPrint('[Help] SOS 短链生成成功: $sosShortUrl');
+        }
+      } catch (e) {
+        debugPrint('[Help] SOS 短链生成失败，降级使用长链接: $e');
+      }
     }
 
     // 生成完整短信内容（用于预览）
-    final helpMessage = _generateHelpMessage(_myPhone ?? '', latStr, lngStr);
+    final helpMessage = _generateHelpMessage(_myPhone ?? '', latStr, lngStr, sosShortUrl);
     debugPrint('[Help] 短信模板:\n$helpMessage');
 
     // 标记位置已获取
@@ -1138,7 +1162,7 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
     if (await canLaunchUrl(uri)) await launchUrl(uri);
   }
 
-  String _generateHelpMessage(String myPhone, [String? latStr, String? lngStr]) {
+  String _generateHelpMessage(String myPhone, [String? latStr, String? lngStr, String? shortUrl]) {
     final now = DateTime.now();
     final timeStr = '${now.year}-${now.month.toString().padLeft(2,'0')}-${now.day.toString().padLeft(2,'0')} ${now.hour.toString().padLeft(2,'0')}:${now.minute.toString().padLeft(2,'0')}';
     final addrPart = (_address != null && _address!.isNotEmpty) ? _address! : '未知地址';
@@ -1167,13 +1191,21 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
     sb.writeln('地址：$addrObfuscated');
     if (coordPart.isNotEmpty) {
       sb.writeln('');
-      sb.writeln('🍎 点击跳转苹果地图导航');
-      sb.writeln('');
-      sb.writeln('https://maps.apple.com/?q=$coordPart');
-      sb.writeln('');
-      sb.writeln('📍 点击跳转高德地图导航');
-      sb.writeln('');
-      sb.writeln('https://uri.amap.com/marker?position=$lngStr,$latStr');
+      if (shortUrl != null && shortUrl.isNotEmpty) {
+        // 【修复 v1.17.3-Bug3】使用短链替代长地图链接
+        sb.writeln('🍎 点击跳转苹果地图导航');
+        sb.writeln('');
+        sb.writeln(shortUrl);
+      } else {
+        // 降级：使用完整长链接（短链生成失败时的兜底）
+        sb.writeln('🍎 点击跳转苹果地图导航');
+        sb.writeln('');
+        sb.writeln('https://maps.apple.com/?q=$coordPart');
+        sb.writeln('');
+        sb.writeln('📍 点击跳转高德地图导航');
+        sb.writeln('');
+        sb.writeln('https://uri.amap.com/marker?position=$lngStr,$latStr');
+      }
     }
     sb.writeln('');
     sb.writeln('请立即联系我或拨打120！');

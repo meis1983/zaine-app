@@ -249,6 +249,46 @@ class _ContactsPageState extends State<ContactsPage> {
   }
 
   Future<void> _addContact() async {
+    // 【修复 v1.17.3-Bug1】添加前校验数量上限，超限直接提示升级
+    final maxContacts = MembershipService.getMaxContacts();
+    if (_contacts.length >= maxContacts) {
+      if (mounted) {
+        final isSmart = MembershipService.isSmartMember();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.workspace_premium_rounded, color: Colors.amber.shade700, size: 20),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    isSmart
+                        ? '智能版最多添加 $maxContacts 位联系人'
+                        : '体验版最多添加 $maxContacts 位联系人，升级智能版可添加 ${MembershipService.smartMaxContacts} 位',
+                    style: const TextStyle(fontSize: 13),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.amber.shade50,
+            behavior: SnackBarBehavior.floating,
+            shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+            duration: const Duration(seconds: 4),
+            showCloseIcon: true,
+            closeIconColor: Colors.grey,
+            action: isSmart
+                ? null
+                : SnackBarAction(
+                    label: '去升级',
+                    textColor: Colors.orange.shade800,
+                    onPressed: () => Navigator.pushNamed(context, '/subscription'),
+                  ),
+          ),
+        );
+      }
+      return;
+    }
+
     final result = await showDialog<Map<String, dynamic>>(
       context: context,
       builder: (context) => const AddContactDialog(),
@@ -343,6 +383,38 @@ class _ContactsPageState extends State<ContactsPage> {
         }
       } else {
         debugPrint('[ContactsPage] 后端添加失败: ${res['error'] ?? res}');
+        // 【修复 v1.17.3-Bug1】后端拒绝时弹提示（如超限）
+        final errorCode = res['error']?.toString() ?? '';
+        final errorDetail = res['detail'];
+        final bool isLimitExceeded = errorCode.contains('contact_limit_exceeded') ||
+            (errorDetail is Map && (errorDetail['error']?.toString().contains('contact_limit_exceeded') ?? false));
+        if (isLimitExceeded && mounted) {
+          final upgradeHint = errorDetail is Map
+              ? (errorDetail['upgrade_hint']?.toString() ?? '升级智能版可添加更多联系人')
+              : '升级智能版可添加更多联系人';
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  Icon(Icons.workspace_premium_rounded, color: Colors.amber.shade700, size: 20),
+                  const SizedBox(width: 10),
+                  Expanded(child: Text(upgradeHint, style: const TextStyle(fontSize: 13))),
+                ],
+              ),
+              backgroundColor: Colors.amber.shade50,
+              behavior: SnackBarBehavior.floating,
+              shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+              duration: const Duration(seconds: 5),
+              showCloseIcon: true,
+              closeIconColor: Colors.grey,
+              action: SnackBarAction(
+                label: '去升级',
+                textColor: Colors.orange.shade800,
+                onPressed: () => Navigator.pushNamed(context, '/subscription'),
+              ),
+            ),
+          );
+        }
       }
     } catch (e) {
       debugPrint('[ContactsPage] _syncAddToBackend 异常: $e');
@@ -507,10 +579,28 @@ class _ContactsPageState extends State<ContactsPage> {
                       debugPrint('[ContactsPage] 创建免费守护卡失败: $e');
                     }
 
-                    // 【修复 v1.16.0】统一使用 landing 页链接
-                    // ICP 备案已完成，引导接收者先看 H5 落地页
-                    final landingUrl = 'https://zaine.love/landing/contacts_${phone.replaceAll(RegExp(r'[^0-9]'), '')}';
-                    final finalBody = '【在呢】嗨 $recipientDisplayName！我是$finalSender，刚把你设为我的紧急联系人 🛡️\n\n我在用「在呢」App 守护自己的安全——每天签到报平安，遇到紧急情况一键求助 会自动通知你我的实时位置。\n\n如果你也下载「在呢」，我们可以互相守护，让彼此都更安心。❤️\n\n点击链接接受邀请：$landingUrl';
+                    // 【修复 v1.17.3-Bug4】生成通用短链替代长链接
+                    String inviteShortUrl;
+                    try {
+                      final targetUrl = 'https://zaine.love/landing/contacts_${phone.replaceAll(RegExp(r'[^0-9]'), '')}';
+                      final linkRes = await ApiService.createShortLink(
+                        targetUrl: targetUrl,
+                        linkType: 'invite',
+                        meta: '{"sender":"$finalSender","recipient":"$recipientDisplayName"}',
+                      );
+                      if (linkRes['success'] == true) {
+                        inviteShortUrl = linkRes['short_url']?.toString() ?? targetUrl;
+                        debugPrint('[ContactsPage] 邀请短链生成成功: $inviteShortUrl');
+                      } else {
+                        inviteShortUrl = targetUrl;
+                        debugPrint('[ContactsPage] 邀请短链生成失败，降级使用长链接');
+                      }
+                    } catch (e) {
+                      inviteShortUrl = 'https://zaine.love/landing/contacts_${phone.replaceAll(RegExp(r'[^0-9]'), '')}';
+                      debugPrint('[ContactsPage] 邀请短链异常，降级使用长链接: $e');
+                    }
+
+                    final finalBody = '【在呢】嗨 $recipientDisplayName！我是$finalSender，刚把你设为我的紧急联系人 🛡️\n\n我在用「在呢」App 守护自己的安全——每天签到报平安，遇到紧急情况一键求助 会自动通知你我的实时位置。\n\n如果你也下载「在呢」，我们可以互相守护，让彼此都更安心。❤️\n\n点击链接接受邀请：$inviteShortUrl';
                     _sendInviteSms(phone, recipientDisplayName, finalBody);
                     senderController.dispose();
                     recipientController.dispose();
@@ -613,8 +703,9 @@ class _ContactsPageState extends State<ContactsPage> {
       if (contactId != null) {
         _syncEditToBackend(contactId, result);
       } else {
-        // 本地有但后端没有的记录（不太可能，但做兜底处理）
-        debugPrint('[ContactsPage] 编辑的联系人无后端 id，跳过后端同步');
+        // 【修复 v1.17.3-Bug2】本地有但后端无 id → 改为新增而非跳过
+        debugPrint('[ContactsPage] 编辑的联系人无后端 id，改为调用新增 API');
+        _syncAddToBackend(result);
       }
     }
   }
@@ -635,9 +726,30 @@ class _ContactsPageState extends State<ContactsPage> {
         debugPrint('[ContactsPage] 后端编辑成功 id=$contactId');
       } else {
         debugPrint('[ContactsPage] 后端编辑失败: ${res['error'] ?? res}');
+        // 【修复 v1.17.3-Bug2】编辑失败时提示用户
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('保存失败: ${res['error'] ?? '请检查网络后重试'}'),
+              backgroundColor: Colors.orange.shade700,
+              behavior: SnackBarBehavior.floating,
+              shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+            ),
+          );
+        }
       }
     } catch (e) {
       debugPrint('[ContactsPage] _syncEditToBackend 异常: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('保存异常: $e'),
+            backgroundColor: Colors.red.shade700,
+            behavior: SnackBarBehavior.floating,
+            shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+          ),
+        );
+      }
     }
   }
 

@@ -133,6 +133,19 @@ class ApiService {
     }, auth: true);
   }
 
+  // 生成通用短链（邀请短信等场景）
+  static Future<Map<String, dynamic>> createShortLink({
+    required String targetUrl,
+    String linkType = 'general',
+    String meta = '',
+  }) async {
+    return post('/api/shortlink', body: {
+      'target_url': targetUrl,
+      'link_type': linkType,
+      'meta': meta,
+    }, auth: true);
+  }
+
   // DELETE 请求（含冷启动重试）【P0修复 v1.9.83】
   static Future<Map<String, dynamic>> delete(String path,
       {bool auth = true}) async {
