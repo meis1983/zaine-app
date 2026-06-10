@@ -8,6 +8,7 @@ import '../utils/contact_parser.dart';
 import '../services/membership_service.dart';
 import '../services/api/contact_service.dart';
 import '../services/api/card_service.dart';
+import '../services/api_service.dart';
 
 /// 预设关系选项
 const List<String> kRelationOptions = [
@@ -264,8 +265,8 @@ class _ContactsPageState extends State<ContactsPage> {
                   child: Text(
                     isSmart
                         ? '智能版最多添加 $maxContacts 位联系人'
-                        : '体验版最多添加 $maxContacts 位联系人，升级智能版可添加 ${MembershipService.smartMaxContacts} 位',
-                    style: const TextStyle(fontSize: 13),
+                        : '体验版最多 $maxContacts 位，升级智能版可添加 ${MembershipService.smartMaxContacts} 位联系人 ❤️',
+                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
                   ),
                 ),
               ],
@@ -281,7 +282,11 @@ class _ContactsPageState extends State<ContactsPage> {
                 : SnackBarAction(
                     label: '去升级',
                     textColor: Colors.orange.shade800,
-                    onPressed: () => Navigator.pushNamed(context, '/subscription'),
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (context) => const SubscriptionPage()),
+                      );
+                    },
                   ),
           ),
         );
@@ -410,7 +415,11 @@ class _ContactsPageState extends State<ContactsPage> {
               action: SnackBarAction(
                 label: '去升级',
                 textColor: Colors.orange.shade800,
-                onPressed: () => Navigator.pushNamed(context, '/subscription'),
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (context) => const SubscriptionPage()),
+                  );
+                },
               ),
             ),
           );

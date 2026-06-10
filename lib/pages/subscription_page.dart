@@ -905,23 +905,16 @@ class _SubscriptionPageState extends State<SubscriptionPage>
   }
 
   Widget _buildPriceDisplay() {
-    final price = _selectedPlan == 'monthly' ? '9' : IapService().getYearlyPrice();
+    final price = _selectedPlan == 'monthly' ? '9' : IapService().getYearlyPrice().replaceAll('¥', '');
     final unit = _selectedPlan == 'monthly' ? '/月' : '/年';
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.baseline,
+      textBaseline: TextBaseline.alphabetic,
       children: [
-        const Text(
-          '¥',
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFFFF7043),
-          ),
-        ),
         Text(
-          price,
+          '¥$price',
           style: const TextStyle(
             fontSize: 52,
             fontWeight: FontWeight.bold,
@@ -930,7 +923,7 @@ class _SubscriptionPageState extends State<SubscriptionPage>
           ),
         ),
         Padding(
-          padding: const EdgeInsets.only(top: 10),
+          padding: const EdgeInsets.only(bottom: 4),
           child: Text(
             unit,
             style: TextStyle(
