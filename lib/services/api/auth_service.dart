@@ -51,7 +51,7 @@ class AuthService {
     if (token != null && token.isNotEmpty) return token;
 
     // 2. Keychain 失败，尝试从 SP 恢复（兼容旧版本，不安全）
-    // TODO: 在 v1.78.0 中移除 SP 备份恢复逻辑
+    // TODO: 在 v1.19.0 中移除 SP 备份恢复逻辑
     try {
       final prefs = await SharedPreferences.getInstance();
       // 尝试 auth_token_sp（v1.75.0+ 备份键）
@@ -95,7 +95,7 @@ class AuthService {
     if (userId != null && userId.isNotEmpty) return userId;
 
     // 2. Keychain 失败，尝试从 SP 恢复（兼容旧版本，不安全）
-    // TODO: 在 v1.78.0 中移除 SP 备份恢复逻辑
+    // TODO: 在 v1.19.0 中移除 SP 备份恢复逻辑
     try {
       final prefs = await SharedPreferences.getInstance();
       userId = prefs.getString('user_id');
@@ -124,7 +124,7 @@ class AuthService {
     if (phone != null && phone.isNotEmpty) return phone;
 
     // 2. Keychain 失败，尝试从 SP 恢复（兼容旧版本，不安全）
-    // TODO: 在 v1.78.0 中移除 SP 备份恢复逻辑
+    // TODO: 在 v1.19.0 中移除 SP 备份恢复逻辑
     try {
       final prefs = await SharedPreferences.getInstance();
       phone = prefs.getString('user_phone');
@@ -187,7 +187,7 @@ class AuthService {
         // 【修复 v1.77.0】敏感信息存储到 Keychain（安全，主存储）
         await _secureStorage.write(key: 'user_phone', value: phone);
         await _secureStorage.write(key: 'user_id', value: res['userId'] ?? '');
-        // 【兼容 v1.77.0】双写 SP（兼容现有 40+ 处读取，v1.78.0 逐步迁移到 Keychain）
+        // 【兼容 v1.77.0】双写 SP（兼容现有 40+ 处读取，v1.19.0 逐步迁移到 Keychain）
         await prefs.setString('user_phone', phone);
         await prefs.setString('user_id', res['userId'] ?? '');
         await prefs.setBool('is_logged_in', true); // 非敏感，保留在 SP
@@ -275,7 +275,7 @@ class AuthService {
       // 【修复 v1.77.0】敏感信息存储到 Keychain（安全，主存储）
       await _secureStorage.write(key: 'user_id', value: res['userId'] ?? '');
       await _secureStorage.write(key: 'user_phone', value: phone);
-      // 【兼容 v1.77.0】双写 SP（兼容现有 40+ 处读取，v1.78.0 逐步迁移到 Keychain）
+      // 【兼容 v1.77.0】双写 SP（兼容现有 40+ 处读取，v1.19.0 逐步迁移到 Keychain）
       await prefs.setString('user_id', res['userId'] ?? '');
       await prefs.setString('user_phone', phone);
       await prefs.setBool('is_logged_in', true); // 非敏感，保留在 SP
@@ -337,7 +337,7 @@ class AuthService {
     }
 
     // 2. Keychain 读取失败，尝试从 SharedPreferences 恢复（迁移到 Keychain）
-    // TODO: 在 v1.78.0 中移除 SP 备份恢复逻辑
+    // TODO: 在 v1.19.0 中移除 SP 备份恢复逻辑
     try {
       final prefs = await SharedPreferences.getInstance();
       final spToken = prefs.getString('auth_token_sp');

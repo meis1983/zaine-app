@@ -763,6 +763,7 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
           smsSent: _smsSent,
           locationObtained: _locationObtained,
         ),
+        isPremium: MembershipService.isSmartMember(),
       ),
     );
   }

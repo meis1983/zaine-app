@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../services/membership_service.dart';
+import '../pages/subscription_page.dart';
 import '../theme/theme_helper.dart';
 
 /// 求助触发时的数据快照（用于解耦弹窗组件与 HelpPage 父组件）
@@ -55,24 +55,27 @@ class HelpResultDialog extends StatefulWidget {
   final HelpDataSnapshot data;
   /// 当弹窗内更新了某个状态时回调给父组件
   final ValueChanged<String> onStatusChanged;
-  /// 当前会员等级的自动通知上限（体验版=1，智能版=3）
+    /// 当前会员等级的自动通知上限（体验版=1，智能版=3）
   final int autoCallLimit;
+    /// 是否为智能版会员（已升级则不显示升级提示）
+    final bool isPremium;
 
-  const HelpResultDialog({
-    super.key,
-    required this.contacts,
-    required this.contactCount,
-    required this.firstContactName,
-    required this.firstContactPhone,
-    required this.smsContent,
-    required this.onSendSMS,
-    required this.onCallContact,
-    required this.onCall120,
-    required this.onCancel,
-    required this.data,
-    required this.onStatusChanged,
-    this.autoCallLimit = 1, // 默认体验版
-  });
+    const HelpResultDialog({
+      super.key,
+      required this.contacts,
+      required this.contactCount,
+      required this.firstContactName,
+      required this.firstContactPhone,
+      required this.smsContent,
+      required this.onSendSMS,
+      required this.onCallContact,
+      required this.onCall120,
+      required this.onCancel,
+      required this.data,
+      required this.onStatusChanged,
+      this.autoCallLimit = 1, // 默认体验版
+      this.isPremium = false, // 默认非会员
+    });
 
   @override
   State<HelpResultDialog> createState() => _HelpResultDialogState();
@@ -269,8 +272,8 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
             const SizedBox(height: 8),
           ],
 
-          // ---- 锁定联系人分区 ----
-          if (lockedContacts.isNotEmpty) ...[
+          // ---- 锁定联系人分区（非会员时显示升级提示）---
+          if (!widget.isPremium && lockedContacts.isNotEmpty) ...[
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 6),
               child: Row(children: [
@@ -311,19 +314,9 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
               padding: const EdgeInsets.only(top: 6, bottom: 2),
               child: GestureDetector(
                 onTap: () {
-                  // TODO: 跳转会员升级页（Phase 4 StoreKit 集成后实现）
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Row(children: [
-                        Icon(Icons.workspace_premium_rounded, color: Colors.amber.shade700, size: 18),
-                        const SizedBox(width: 8),
-                        const Expanded(child: Text(
-                          '升级智能版后，前${MembershipService.smartAutoCallLimit}位联系人将自动接收紧急通知 ❤️',
-                          style: TextStyle(fontSize: 13),
-                        )),
-                      ]),
-                      duration: const Duration(seconds: 3),
-                    ),
+                  // 跳转会员升级页
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const SubscriptionPage()),
                   );
                 },
                 child: Container(

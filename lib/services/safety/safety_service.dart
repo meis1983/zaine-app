@@ -418,9 +418,10 @@ class SafetyService {
     await saveReminderConfig(updated);
 
     // 如果连续错过3次，发送通知给守护人
-    if (updated.missedCount >= 3) {
-      await _notifyGuardiansAboutMissedCheckIn(updated.missedCount);
-    }
+    // TODO (v1.20.0+): 守护人通知功能（需营业执照申请短信模板或接入微信订阅消息）
+    // if (updated.missedCount >= 3) {
+    //   await _notifyGuardiansAboutMissedCheckIn(updated.missedCount);
+    // }
   }
 
   Future<void> _showReminderNotification() async {
@@ -449,10 +450,21 @@ class SafetyService {
     );
   }
 
-  Future<void> _notifyGuardiansAboutMissedCheckIn(int missedCount) async {
-    if (kDebugMode) debugPrint('[SafetyService] 连续$missedCount次未确认，通知守护人');
-    // TODO: 调用通知服务通知守护人
-  }
+  // TODO(v1.20.0+): 守护人通知功能（需营业执照申请短信模板或接入微信订阅消息）
+  // Future<void> _notifyGuardiansAboutMissedCheckIn(int missedCount) async {
+  //   if (kDebugMode) debugPrint('[SafetyService] 连续$missedCount次未确认，通知守护人');
+  //   try {
+  //     final res = await ApiService.post(
+  //       '/safety/notify-guardians',
+  //       body: {'missed_count': missedCount},
+  //     );
+  //     if (kDebugMode) {
+  //       debugPrint('[SafetyService] 守护人通知结果: $res');
+  //     }
+  //   } catch (e) {
+  //     if (kDebugMode) debugPrint('[SafetyService] 通知守护人失败: $e');
+  //   }
+  // }
 
   DateTime _calculateNextReminder(DateTime now, List<int> hours) {
     hours.sort();
