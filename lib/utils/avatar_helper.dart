@@ -2,12 +2,13 @@
 // 头像存储工具 — 用用户ID隔离 key，防止切换账号时头像串用
 
 import 'package:shared_preferences/shared_preferences.dart';
+import '../services/api/auth_service.dart';
 
 class AvatarHelper {
   /// 获取当前用户ID（可能为空）
   static Future<String> _getUserId() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('user_id') ?? '';
+    final userId = await AuthService.getUserId();
+    return userId ?? '';
   }
 
   /// 获取用户隔离的 avatar_path key

@@ -35,16 +35,16 @@ class HealthTipWidget extends StatelessWidget {
     return GestureDetector(
       onTap: () {}, // 点击反馈由父组件处理
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.lg, vertical: ZaiNeSpacing.lg),
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: [
-              (tip['color'] as Color).withOpacity(0.08),
-              (tip['color'] as Color).withOpacity(0.04),
+              (tip['color'] as Color).withValues(alpha: 0.08),
+              (tip['color'] as Color).withValues(alpha: 0.04),
             ],
           ),
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: (tip['color'] as Color).withOpacity(0.15)),
+          border: Border.all(color: (tip['color'] as Color).withValues(alpha: 0.15)),
         ),
         child: Row(
           children: [
@@ -52,13 +52,13 @@ class HealthTipWidget extends StatelessWidget {
               width: 38,
               height: 38,
               decoration: BoxDecoration(
-                color: (tip['color'] as Color).withOpacity(0.12),
+                color: (tip['color'] as Color).withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(tip['icon'] as IconData,
                   size: 20, color: tip['color'] as Color),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: ZaiNeSpacing.md),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -71,7 +71,7 @@ class HealthTipWidget extends StatelessWidget {
                       color: ZaiNeColors.textPrimary(),
                     ),
                   ),
-                  const SizedBox(height: 3),
+                  const SizedBox(height: ZaiNeSpacing.xs),
                   Text(
                     tip['desc'] as String,
                     style: TextStyle(fontSize: 12, color: ZaiNeColors.textSecondary()),

@@ -19,6 +19,7 @@ import 'silent_login_service.dart';
 class DeepLinkService {
   static const _pendingCardKey = 'pending_card_code';
   static const _pendingCardKeyCompat = 'pending-card-code';
+  static const _pendingInvitePhoneKey = 'pending_invite_phone'; // [v1.76.0] 紧急联系人邀请
 
   static final AppLinks _appLinks = AppLinks();
   static StreamSubscription<Uri>? _sub;
@@ -31,17 +32,17 @@ class DeepLinkService {
     try {
       final initial = await _appLinks.getInitialLink();
       if (initial != null) {
-        debugPrint('[DeepLink] 冷启动链接: $initial');
+        if (kDebugMode) debugPrint('[DeepLink] 冷启动链接: $initial');
         await _handleLink(initial);
       }
     } catch (e) {
-      debugPrint('[DeepLink] 获取初始链接失败: $e');
+      if (kDebugMode) debugPrint('[DeepLink] 获取初始链接失败: $e');
     }
 
     // 监听热启动链接（App 在后台，通过链接唤起）
     _sub = _appLinks.uriLinkStream.listen(
       (uri) async {
-        debugPrint('[DeepLink] 热启动链接: $uri');
+        if (kDebugMode) debugPrint('[DeepLink] 热启动链接: $uri');
         await _handleLink(uri);
       },
       onError: (e) => debugPrint('[DeepLink] 链接监听错误: $e'),
@@ -57,16 +58,28 @@ class DeepLinkService {
   /// 解析 URI 并处理不同类型的深度链接
   ///
   /// 支持格式：
-  ///   - https://zaine.love/landing/abc123xyz → 保存 card_code
+  ///   - https://zaine.love/landing/abc123xyz → 保存 card_code（守护卡邀请）
+  ///   - https://zaine.love/i/c13126917574 → 保存 invite_phone（紧急联系人邀请）[v1.76.0]
   ///   - zaine://download?token=xxx&phone=xxx → 保存静默登录凭证
   static Future<void> _handleLink(Uri uri) async {
     final path = uri.path;
+
+    // [v1.76.0] 紧急联系人邀请链接：/i/c{phone}
+    if (path.startsWith('/i/c') && path.length > 4) {
+      final phone = path.substring(4); // 去掉 /i/c 前缀
+      if (phone.isNotEmpty && phone.contains(RegExp(r'^\d+$'))) {
+        if (kDebugMode) debugPrint('[DeepLink] 发现紧急联系人邀请: phone=$phone');
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(_pendingInvitePhoneKey, phone);
+        return;
+      }
+    }
 
     // 检查是否是下载链接（静默登录）
     if (path.endsWith('/download') || path.contains('download')) {
       final (token, phone) = SilentLoginService.parseDownloadParams(uri);
       if (token != null && phone != null) {
-        debugPrint('[DeepLink] 发现下载链接登录凭证: phone=$phone');
+        if (kDebugMode) debugPrint('[DeepLink] 发现下载链接登录凭证: phone=$phone');
         await SilentLoginService.savePendingAuth(token, phone);
         return;
       }
@@ -75,11 +88,11 @@ class DeepLinkService {
     // 原有的守护卡逻辑
     final cardCode = _extractCardCode(uri);
     if (cardCode == null || cardCode.isEmpty) {
-      debugPrint('[DeepLink] 链接中未包含有效参数，忽略');
+      if (kDebugMode) debugPrint('[DeepLink] 链接中未包含有效参数，忽略');
       return;
     }
 
-    debugPrint('[DeepLink] 提取到 card_code: $cardCode');
+    if (kDebugMode) debugPrint('[DeepLink] 提取到 card_code: $cardCode');
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_pendingCardKey, cardCode);
   }
@@ -108,13 +121,13 @@ class DeepLinkService {
     if (cardCode == null || cardCode.isEmpty) return;
     await prefs.setString(_pendingCardKey, cardCode);
 
-    debugPrint('[DeepLink] 发现待处理 card_code: $cardCode，执行裂变绑定...');
+    if (kDebugMode) debugPrint('[DeepLink] 发现待处理 card_code: $cardCode，执行裂变绑定...');
 
     final normalized = cardCode.trim().replaceAll(' ', '').toUpperCase();
     final res = await CardService.redeemCard(cardCode: normalized);
 
     if (res['success'] == true) {
-      debugPrint('[DeepLink] ✅ 守护卡自动绑定成功');
+      if (kDebugMode) debugPrint('[DeepLink] ✅ 守护卡自动绑定成功');
       await SyncService.pullFromServer();
       await prefs.remove(_pendingCardKey);
       await prefs.remove(_pendingCardKeyCompat);
@@ -122,11 +135,11 @@ class DeepLinkService {
     }
 
     if (res['offline'] == true || res['statusCode'] == 401) {
-      debugPrint('[DeepLink] ⚠️ 守护卡自动绑定失败（离线或未登录），保留 card_code 下次重试');
+      if (kDebugMode) debugPrint('[DeepLink] ⚠️ 守护卡自动绑定失败（离线或未登录），保留 card_code 下次重试');
       return;
     }
 
-    debugPrint('[DeepLink] ❌ 守护卡自动绑定失败: ${res['error'] ?? res['message']}');
+    if (kDebugMode) debugPrint('[DeepLink] ❌ 守护卡自动绑定失败: ${res['error'] ?? res['message']}');
     await prefs.remove(_pendingCardKey);
     await prefs.remove(_pendingCardKeyCompat);
   }
@@ -139,5 +152,31 @@ class DeepLinkService {
       await prefs.setString(_pendingCardKey, code);
     }
     return code != null && code.isNotEmpty;
+  }
+
+  /// [v1.76.0] 是否有待处理的紧急联系人邀请
+  static Future<bool> hasPendingInvite() async {
+    final prefs = await SharedPreferences.getInstance();
+    final phone = prefs.getString(_pendingInvitePhoneKey);
+    return phone != null && phone.isNotEmpty;
+  }
+
+  /// [v1.76.0] 获取待处理的邀请手机号
+  static Future<String?> getPendingInvitePhone() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_pendingInvitePhoneKey);
+  }
+
+  /// [v1.76.0] 清除待处理的邀请手机号
+  static Future<void> clearPendingInvitePhone() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_pendingInvitePhoneKey);
+  }
+
+  /// [v1.76.0] 清除待处理的 card_code（守护卡仪式完成后调用）
+  static Future<void> clearPendingCardCode() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_pendingCardKey);
+    await prefs.remove(_pendingCardKeyCompat);
   }
 }

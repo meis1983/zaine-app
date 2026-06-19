@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../theme/theme_helper.dart';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../widgets/health_trend_chart.dart';
 import '../widgets/checkin_heatmap.dart';
@@ -106,7 +108,7 @@ class _StatisticsPageState extends State<StatisticsPage> with SingleTickerProvid
         });
       }
     } catch (e) {
-      debugPrint('[Statistics] 加载健康数据失败: $e');
+      if (kDebugMode) debugPrint('[Statistics] 加载健康数据失败: $e');
     }
   }
 
@@ -153,7 +155,7 @@ class _StatisticsPageState extends State<StatisticsPage> with SingleTickerProvid
             date.isBefore(now.add(const Duration(days: 1)));
       }).length;
     } catch (e) {
-      debugPrint('[Statistics] 加载签到数据失败: $e');
+      if (kDebugMode) debugPrint('[Statistics] 加载签到数据失败: $e');
     }
   }
 
@@ -184,23 +186,23 @@ class _StatisticsPageState extends State<StatisticsPage> with SingleTickerProvid
         _predictedNextDate = DateTime.tryParse(predictedDateStr);
       }
     } catch (e) {
-      debugPrint('[Statistics] 加载经期数据失败: $e');
+      if (kDebugMode) debugPrint('[Statistics] 加载经期数据失败: $e');
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: ZaiNeColors.scaffoldBg(),
       appBar: AppBar(
         title: const Text('数据统计'),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black87,
+        backgroundColor: ZaiNeColors.cardBg(),
+        foregroundColor: ZaiNeColors.textPrimary(),
         elevation: 0,
         bottom: TabBar(
           controller: _tabController,
           labelColor: Theme.of(context).primaryColor,
-          unselectedLabelColor: Colors.grey,
+          unselectedLabelColor: ZaiNeColors.textHint(),
           indicatorColor: Theme.of(context).primaryColor,
           tabs: const [
             Tab(icon: Icon(Icons.favorite), text: '健康'),
@@ -235,7 +237,7 @@ class _StatisticsPageState extends State<StatisticsPage> with SingleTickerProvid
         children: [
           // AI 健康分析入口
           _buildAIAnalysisCard(),
-          const SizedBox(height: 16),
+          const SizedBox(height: ZaiNeSpacing.lg),
           // 心率趋势
           HealthTrendChart(
             data: _heartRateData,
@@ -246,7 +248,7 @@ class _StatisticsPageState extends State<StatisticsPage> with SingleTickerProvid
             minY: 50,
             maxY: 120,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: ZaiNeSpacing.lg),
           // 血氧趋势
           HealthTrendChart(
             data: _bloodOxygenData,
@@ -257,7 +259,7 @@ class _StatisticsPageState extends State<StatisticsPage> with SingleTickerProvid
             minY: 90,
             maxY: 100,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: ZaiNeSpacing.lg),
           // 睡眠趋势
           HealthTrendChart(
             data: _sleepData,
@@ -277,7 +279,7 @@ class _StatisticsPageState extends State<StatisticsPage> with SingleTickerProvid
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(ZaiNeRadius.card),
         side: BorderSide(color: Colors.purple.shade200),
       ),
       child: InkWell(
@@ -287,7 +289,7 @@ class _StatisticsPageState extends State<StatisticsPage> with SingleTickerProvid
             MaterialPageRoute(builder: (context) => const AIHealthAnalysisPage()),
           );
         },
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(ZaiNeRadius.card),
         child: Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
@@ -299,7 +301,7 @@ class _StatisticsPageState extends State<StatisticsPage> with SingleTickerProvid
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(ZaiNeRadius.card),
           ),
           child: Row(
             children: [
@@ -307,7 +309,7 @@ class _StatisticsPageState extends State<StatisticsPage> with SingleTickerProvid
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: Colors.purple.shade100,
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(ZaiNeRadius.card),
                 ),
                 child: Icon(
                   Icons.psychology,
@@ -315,7 +317,7 @@ class _StatisticsPageState extends State<StatisticsPage> with SingleTickerProvid
                   size: 32,
                 ),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: ZaiNeSpacing.lg),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -323,15 +325,15 @@ class _StatisticsPageState extends State<StatisticsPage> with SingleTickerProvid
                     const Text(
                       'AI 健康分析',
                       style: TextStyle(
-                        fontSize: 18,
+                        fontSize: ZaiNeFontSize.subtitle,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: ZaiNeSpacing.xs),
                     Text(
                       '智能分析您的健康数据，提供个性化建议',
                       style: TextStyle(
-                        fontSize: 13,
+                        fontSize: ZaiNeFontSize.caption,
                         color: Colors.grey.shade600,
                       ),
                     ),
@@ -362,7 +364,7 @@ class _StatisticsPageState extends State<StatisticsPage> with SingleTickerProvid
             maxStreak: _maxStreak,
             weeklyDays: _weeklyCheckins,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: ZaiNeSpacing.lg),
           // 签到热力图
           CheckinHeatmap(
             checkinDates: _checkinDates,
@@ -383,7 +385,7 @@ class _StatisticsPageState extends State<StatisticsPage> with SingleTickerProvid
             predictedNextDate: _predictedNextDate,
             averageCycleLength: _averageCycleLength,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: ZaiNeSpacing.lg),
           // 经期周期图表
           MenstruationCycleChart(
             periodRecords: _periodRecords,

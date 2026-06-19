@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:math' show Random;
 import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import '../data/app_constants.dart';
 
 /// 守护卡模板配置
 class GuardianCardTemplate {
@@ -122,7 +123,7 @@ class _GuardianCardWidgetState extends State<_GuardianCardWidget> {
       child: Center(
         child: Text(
           widget.senderName.isNotEmpty ? widget.senderName[0] : '?',
-          style: TextStyle(fontSize: 32, color: widget.template.accentColor.withOpacity(0.5), fontWeight: FontWeight.bold),
+          style: TextStyle(fontSize: 32, color: widget.template.accentColor.withValues(alpha: 0.5), fontWeight: FontWeight.bold),
         ),
       ),
     );
@@ -147,7 +148,7 @@ class _GuardianCardWidgetState extends State<_GuardianCardWidget> {
         borderRadius: BorderRadius.circular(4),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.12),
+            color: Colors.black.withValues(alpha: 0.12),
             blurRadius: 25,
             offset: const Offset(0, 10),
           ),
@@ -181,7 +182,7 @@ class _GuardianCardWidgetState extends State<_GuardianCardWidget> {
                 color: Colors.white,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
+                    color: Colors.black.withValues(alpha: 0.1),
                     blurRadius: 10,
                     offset: const Offset(2, 4),
                   ),
@@ -204,7 +205,7 @@ class _GuardianCardWidgetState extends State<_GuardianCardWidget> {
                   const SizedBox(height: 10),
                   Text(
                     widget.senderName,
-                    style: TextStyle(fontSize: 13, color: theme.textColor.withOpacity(0.6), fontWeight: FontWeight.w500),
+                    style: TextStyle(fontSize: 13, color: theme.textColor.withValues(alpha: 0.6), fontWeight: FontWeight.w500),
                   ),
                 ],
               ),
@@ -230,7 +231,7 @@ class _GuardianCardWidgetState extends State<_GuardianCardWidget> {
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 19,
-              color: theme.textColor.withOpacity(0.85),
+              color: theme.textColor.withValues(alpha: 0.85),
               fontStyle: FontStyle.italic,
               height: 1.7,
             ),
@@ -241,7 +242,7 @@ class _GuardianCardWidgetState extends State<_GuardianCardWidget> {
             mainAxisSize: MainAxisSize.min,
             children: [
               QrImageView(
-                data: widget.appStoreUrl.isNotEmpty ? widget.appStoreUrl : 'https://zaine.love/landing/welcome',
+                data: widget.appStoreUrl.isNotEmpty ? widget.appStoreUrl : AppConstants.welcomeUrl,
                 size: 90,
                 eyeStyle: QrEyeStyle(color: theme.accentColor, eyeShape: QrEyeShape.square),
                 dataModuleStyle: QrDataModuleStyle(color: theme.accentColor, dataModuleShape: QrDataModuleShape.square),
@@ -252,14 +253,14 @@ class _GuardianCardWidgetState extends State<_GuardianCardWidget> {
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
-                  color: theme.accentColor.withOpacity(0.9),
+                  color: theme.accentColor.withValues(alpha: 0.9),
                   letterSpacing: 1.5,
                 ),
               ),
               const SizedBox(height: 4),
               Text(
                 '在呢+ · 收到一份温暖的牵挂',
-                style: TextStyle(fontSize: 12, color: theme.textColor.withOpacity(0.55)),
+                style: TextStyle(fontSize: 12, color: theme.textColor.withValues(alpha: 0.55)),
               ),
             ],
           ),
@@ -272,9 +273,9 @@ class _GuardianCardWidgetState extends State<_GuardianCardWidget> {
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.8),
+                color: Colors.white.withValues(alpha: 0.8),
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: theme.accentColor.withOpacity(0.35), width: 1.2),
+                border: Border.all(color: theme.accentColor.withValues(alpha: 0.35), width: 1.2),
               ),
               child: Column(
                 children: [
@@ -283,7 +284,7 @@ class _GuardianCardWidgetState extends State<_GuardianCardWidget> {
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
-                      color: theme.accentColor.withOpacity(0.9),
+                      color: theme.accentColor.withValues(alpha: 0.9),
                       letterSpacing: 1.5,
                     ),
                   ),
@@ -293,7 +294,7 @@ class _GuardianCardWidgetState extends State<_GuardianCardWidget> {
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 12,
-                      color: theme.textColor.withOpacity(0.7),
+                      color: theme.textColor.withValues(alpha: 0.7),
                       height: 1.4,
                     ),
                   ),
@@ -303,7 +304,7 @@ class _GuardianCardWidgetState extends State<_GuardianCardWidget> {
                       '已有 ${widget.totalGuardians} 人加入守护圈',
                       style: TextStyle(
                         fontSize: 11,
-                        color: theme.textColor.withOpacity(0.55),
+                        color: theme.textColor.withValues(alpha: 0.55),
                         letterSpacing: 1,
                       ),
                     ),
@@ -318,16 +319,16 @@ class _GuardianCardWidgetState extends State<_GuardianCardWidget> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.8),
+                color: Colors.white.withValues(alpha: 0.8),
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: const Color(0xFFD4AF37).withOpacity(0.5), width: 1.2),
+                border: Border.all(color: const Color(0xFFD4AF37).withValues(alpha: 0.5), width: 1.2),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     '安全码 ',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: theme.textColor.withOpacity(0.7)),
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: theme.textColor.withValues(alpha: 0.7)),
                   ),
                   Text(
                     widget.cardCode!.toUpperCase(),
@@ -358,7 +359,7 @@ class _GuardianCardWidgetState extends State<_GuardianCardWidget> {
         borderRadius: BorderRadius.circular(4),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.12),
+            color: Colors.black.withValues(alpha: 0.12),
             blurRadius: 25,
             offset: const Offset(0, 10),
           ),
@@ -377,7 +378,7 @@ class _GuardianCardWidgetState extends State<_GuardianCardWidget> {
             width: 40,
             height: 2,
             decoration: BoxDecoration(
-              color: theme.accentColor.withOpacity(0.4),
+              color: theme.accentColor.withValues(alpha: 0.4),
               borderRadius: BorderRadius.circular(1),
             ),
           ),
@@ -392,12 +393,12 @@ class _GuardianCardWidgetState extends State<_GuardianCardWidget> {
               color: Colors.white,
               boxShadow: [
                 BoxShadow(
-                  color: theme.accentColor.withOpacity(0.2),
+                  color: theme.accentColor.withValues(alpha: 0.2),
                   blurRadius: 12,
                   offset: const Offset(0, 4),
                 ),
               ],
-              border: Border.all(color: theme.accentColor.withOpacity(0.3), width: 2),
+              border: Border.all(color: theme.accentColor.withValues(alpha: 0.3), width: 2),
             ),
             child: ClipOval(
               child: widget.senderAvatar != null && widget.senderAvatar!.isNotEmpty
@@ -419,7 +420,7 @@ class _GuardianCardWidgetState extends State<_GuardianCardWidget> {
             widget.senderName,
             style: TextStyle(
               fontSize: 14,
-              color: theme.textColor.withOpacity(0.7),
+              color: theme.textColor.withValues(alpha: 0.7),
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -454,7 +455,7 @@ class _GuardianCardWidgetState extends State<_GuardianCardWidget> {
             '${widget.senderName} 想守护你',
             style: TextStyle(
               fontSize: 16,
-              color: theme.textColor.withOpacity(0.7),
+              color: theme.textColor.withValues(alpha: 0.7),
               fontWeight: FontWeight.w400,
             ),
           ),
@@ -464,7 +465,7 @@ class _GuardianCardWidgetState extends State<_GuardianCardWidget> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.7),
+              color: Colors.white.withValues(alpha: 0.7),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
@@ -472,7 +473,7 @@ class _GuardianCardWidgetState extends State<_GuardianCardWidget> {
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 15,
-                color: theme.textColor.withOpacity(0.85),
+                color: theme.textColor.withValues(alpha: 0.85),
                 fontStyle: FontStyle.italic,
                 height: 1.6,
               ),
@@ -486,7 +487,7 @@ class _GuardianCardWidgetState extends State<_GuardianCardWidget> {
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 12,
-              color: theme.textColor.withOpacity(0.55),
+              color: theme.textColor.withValues(alpha: 0.55),
               height: 1.5,
             ),
           ),
@@ -496,7 +497,7 @@ class _GuardianCardWidgetState extends State<_GuardianCardWidget> {
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 12,
-              color: theme.accentColor.withOpacity(0.7),
+              color: theme.accentColor.withValues(alpha: 0.7),
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -507,7 +508,7 @@ class _GuardianCardWidgetState extends State<_GuardianCardWidget> {
             width: 40,
             height: 2,
             decoration: BoxDecoration(
-              color: theme.accentColor.withOpacity(0.4),
+              color: theme.accentColor.withValues(alpha: 0.4),
               borderRadius: BorderRadius.circular(1),
             ),
           ),

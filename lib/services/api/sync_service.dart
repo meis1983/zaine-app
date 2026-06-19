@@ -49,7 +49,7 @@ class SyncService {
             body: {'contacts': contacts});
       }
     } catch (e) {
-      debugPrint('SyncService.syncAll error: $e');
+      if (kDebugMode) debugPrint('SyncService.syncAll error: $e');
     }
   }
 
@@ -93,7 +93,7 @@ class SyncService {
               await File(path).writeAsBytes(bytes);
               await prefs.setString('avatar_path${uid.isNotEmpty ? '_$uid' : ''}', path);
             } catch (e) {
-              debugPrint('[SyncService] ⚠️ 保存远端头像文件失败（base64 已保留）: $e');
+              if (kDebugMode) debugPrint('[SyncService] ⚠️ 保存远端头像文件失败（base64 已保留）: $e');
             }
           }
         }
@@ -144,7 +144,7 @@ class SyncService {
           }
         }
       } catch (e) {
-        debugPrint('[SyncService] ⚠️ 拉取签到状态失败: $e');
+        if (kDebugMode) debugPrint('[SyncService] ⚠️ 拉取签到状态失败: $e');
       }
 
       // 【v1.9.72】拉取签到历史列表（供日历视图 + 周统计使用）
@@ -157,13 +157,13 @@ class SyncService {
               .where((s) => s.isNotEmpty)
               .toList();
           await prefs.setStringList(historyKey, dateStrings);
-          debugPrint('[SyncService] ✅ 拉取签到历史 ${dateStrings.length} 条');
+          if (kDebugMode) debugPrint('[SyncService] ✅ 拉取签到历史 ${dateStrings.length} 条');
         }
       } catch (e) {
-        debugPrint('[SyncService] ⚠️ 拉取签到历史失败: $e');
+        if (kDebugMode) debugPrint('[SyncService] ⚠️ 拉取签到历史失败: $e');
       }
     } catch (e) {
-      debugPrint('SyncService.pullFromServer error: $e');
+      if (kDebugMode) debugPrint('SyncService.pullFromServer error: $e');
     }
   }
 }

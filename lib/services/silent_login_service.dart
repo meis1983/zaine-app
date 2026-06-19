@@ -10,7 +10,15 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:path_provider/path_provider.dart';
+
+/// 安全存储实例（用于 Token）
+const _secureStorage = FlutterSecureStorage(
+  iOptions: IOSOptions(
+    accessibility: KeychainAccessibility.first_unlock_this_device,
+  ),
+);
 
 class SilentLoginService {
   static const String _pendingTokenKey = 'pending_token';
@@ -41,42 +49,42 @@ class SilentLoginService {
       try {
         phone = utf8.decode(base64Decode(phoneBase64));
       } catch (e) {
-        debugPrint('[SilentLogin] Base64解码手机号失败: $e');
+        if (kDebugMode) debugPrint('[SilentLogin] Base64解码手机号失败: $e');
       }
     }
 
-    debugPrint('[SilentLogin] 解析下载参数: token=${token.substring(0, token.length > 10 ? 10 : token.length)}..., phone=$phone');
+    if (kDebugMode) debugPrint('[SilentLogin] 解析下载参数: token=${token.substring(0, token.length > 10 ? 10 : token.length)}..., phone=$phone');
     return (token, phone);
   }
 
-  /// 保存待处理的 Token 和 Phone
+  /// 保存待处理的 Token 和 Phone（使用 SharedPreferences，非敏感）
   static Future<void> savePendingAuth(String token, String phone) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_pendingTokenKey, token);
     await prefs.setString(_pendingPhoneKey, phone);
-    debugPrint('[SilentLogin] 已保存待处理登录凭证: phone=$phone');
+    if (kDebugMode) debugPrint('[SilentLogin] 已保存待处理登录凭证: phone=$phone');
   }
 
   /// 执行静默登录
-  /// 将 pending_token 和 pending_phone 写入正式存储
+  /// 将 pending_token 写入安全存储
   static Future<bool> performSilentLogin() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString(_pendingTokenKey);
     final phone = prefs.getString(_pendingPhoneKey);
 
     if (token == null || token.isEmpty) {
-      debugPrint('[SilentLogin] 无待处理Token，跳过静默登录');
+      if (kDebugMode) debugPrint('[SilentLogin] 无待处理Token，跳过静默登录');
       return false;
     }
 
     // 验证Token格式（JWT: header.payload.signature）
     if (!_isValidToken(token)) {
-      debugPrint('[SilentLogin] Token格式无效，清除并跳过静默登录');
+      if (kDebugMode) debugPrint('[SilentLogin] Token格式无效，清除并跳过静默登录');
       await clearPendingLogin();
       return false;
     }
 
-    // 写入正式存储
+    // 写入安全存储
     // 【修复 v1.9.61】静默登录前清除旧账号残留的头像数据（防止切换账号后头像串用）
     final oldUid = prefs.getString('user_id');
     if (oldUid != null && oldUid.isNotEmpty) {
@@ -91,7 +99,7 @@ class SilentLoginService {
       if (await f.exists()) await f.delete();
     } catch (_) {}
 
-    await prefs.setString('auth_token', token);
+    await _secureStorage.write(key: 'auth_token', value: token);
     await prefs.setString('user_phone', phone ?? '');
     await prefs.setBool('is_logged_in', true);
     await prefs.setBool('onboarding_completed', true); // 跳过引导页
@@ -100,7 +108,7 @@ class SilentLoginService {
     await prefs.remove(_pendingTokenKey);
     await prefs.remove(_pendingPhoneKey);
 
-    debugPrint('[SilentLogin] ✅ 静默登录完成: phone=$phone');
+    if (kDebugMode) debugPrint('[SilentLogin] ✅ 静默登录完成: phone=$phone');
     return true;
   }
 
@@ -116,7 +124,7 @@ class SilentLoginService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_pendingTokenKey);
     await prefs.remove(_pendingPhoneKey);
-    debugPrint('[SilentLogin] 已清除待处理登录凭证');
+    if (kDebugMode) debugPrint('[SilentLogin] 已清除待处理登录凭证');
   }
 
   /// 验证Token格式是否有效

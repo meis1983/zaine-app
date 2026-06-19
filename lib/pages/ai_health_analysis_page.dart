@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../theme/theme_helper.dart';
+import 'package:flutter/foundation.dart';
 import '../services/ai/ai_health_analyzer.dart';
 import '../services/platform/health_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -66,7 +68,7 @@ class _AIHealthAnalysisPageState extends State<AIHealthAnalysisPage> {
         });
       }
     } catch (e) {
-      debugPrint('[AIHealthPage] 分析失败: $e');
+      if (kDebugMode) debugPrint('[AIHealthPage] 分析失败: $e');
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -85,11 +87,11 @@ class _AIHealthAnalysisPageState extends State<AIHealthAnalysisPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: ZaiNeColors.scaffoldBg(),
       appBar: AppBar(
         title: const Text('AI 健康分析'),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black87,
+        backgroundColor: ZaiNeColors.cardBg(),
+        foregroundColor: ZaiNeColors.textPrimary(),
         elevation: 0,
         actions: [
           if (_isAnalyzing)
@@ -126,18 +128,18 @@ class _AIHealthAnalysisPageState extends State<AIHealthAnalysisPage> {
           Icon(
             Icons.psychology_outlined,
             size: 80,
-            color: Colors.grey.shade300,
+            color: ZaiNeColors.textHint(),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: ZaiNeSpacing.xl),
           Text(
             '暂无分析数据',
             style: TextStyle(
-              fontSize: 18,
-              color: Colors.grey.shade500,
+              fontSize: ZaiNeFontSize.subtitle,
+              color: ZaiNeColors.textSecondary(),
               fontWeight: FontWeight.w500,
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: ZaiNeSpacing.md),
           ElevatedButton.icon(
             onPressed: _performAnalysis,
             icon: const Icon(Icons.analytics),
@@ -161,30 +163,30 @@ class _AIHealthAnalysisPageState extends State<AIHealthAnalysisPage> {
           children: [
             // 健康评分卡片
             _buildScoreCard(result.overallScore),
-            const SizedBox(height: 20),
+            const SizedBox(height: ZaiNeSpacing.xl),
 
             // 异常提醒
             if (result.anomalies.isNotEmpty) ...[
               _buildSectionTitle('⚠️ 需要关注', Colors.orange),
-              const SizedBox(height: 12),
+              const SizedBox(height: ZaiNeSpacing.md),
               ...result.anomalies.map((a) => _buildAnomalyCard(a)),
-              const SizedBox(height: 20),
+              const SizedBox(height: ZaiNeSpacing.xl),
             ],
 
             // 健康洞察
             if (result.insights.isNotEmpty) ...[
               _buildSectionTitle('💡 健康洞察', Colors.blue),
-              const SizedBox(height: 12),
+              const SizedBox(height: ZaiNeSpacing.md),
               ...result.insights.map((i) => _buildInsightCard(i)),
-              const SizedBox(height: 20),
+              const SizedBox(height: ZaiNeSpacing.xl),
             ],
 
             // 个性化建议
             if (result.recommendations.isNotEmpty) ...[
               _buildSectionTitle('🎯 个性化建议', Colors.green),
-              const SizedBox(height: 12),
+              const SizedBox(height: ZaiNeSpacing.md),
               ...result.recommendations.map((r) => _buildRecommendationCard(r)),
-              const SizedBox(height: 20),
+              const SizedBox(height: ZaiNeSpacing.xl),
             ],
 
             // 分析时间
@@ -192,8 +194,8 @@ class _AIHealthAnalysisPageState extends State<AIHealthAnalysisPage> {
               child: Text(
                 '分析时间: ${_formatTime(result.analysisTime)}',
                 style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey.shade400,
+                  fontSize: ZaiNeFontSize.caption,
+                  color: ZaiNeColors.textHint(),
                 ),
               ),
             ),
@@ -227,15 +229,16 @@ class _AIHealthAnalysisPageState extends State<AIHealthAnalysisPage> {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            scoreColor.withOpacity(0.15),
-            scoreColor.withOpacity(0.05),
+            scoreColor.withValues(alpha: 0.15),
+            scoreColor.withValues(alpha: 0.05),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: scoreColor.withOpacity(0.3)),
-      ),
+        borderRadius: BorderRadius.circular(ZaiNeRadius.card),
+        border: Border.all(color: scoreColor.withValues(alpha: 0.3)),
+      
+        boxShadow: ZaiNeShadows.card,),
       child: Column(
         children: [
           Row(
@@ -247,36 +250,37 @@ class _AIHealthAnalysisPageState extends State<AIHealthAnalysisPage> {
                     const Text(
                       '健康评分',
                       style: TextStyle(
-                        fontSize: 16,
+                        fontSize: ZaiNeFontSize.body,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: ZaiNeSpacing.xs),
                     Text(
                       '基于您的健康数据分析',
                       style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.grey.shade600,
+                        fontSize: ZaiNeFontSize.caption,
+                        color: ZaiNeColors.textSecondary(),
                       ),
                     ),
                   ],
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.md, vertical: ZaiNeSpacing.sm),
                 decoration: BoxDecoration(
-                  color: scoreColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(20),
-                ),
+                  color: scoreColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(ZaiNeRadius.card),
+                
+                  boxShadow: ZaiNeShadows.card,),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(scoreEmoji, style: const TextStyle(fontSize: 16)),
-                    const SizedBox(width: 4),
+                    Text(scoreEmoji, style: const TextStyle(fontSize: ZaiNeFontSize.body)),
+                    const SizedBox(width: ZaiNeSpacing.xs),
                     Text(
                       scoreLabel,
                       style: TextStyle(
-                        fontSize: 14,
+                        fontSize: ZaiNeFontSize.bodySm,
                         fontWeight: FontWeight.w600,
                         color: scoreColor,
                       ),
@@ -286,7 +290,7 @@ class _AIHealthAnalysisPageState extends State<AIHealthAnalysisPage> {
               ),
             ],
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: ZaiNeSpacing.xl),
           // 大分数显示
           Stack(
             alignment: Alignment.center,
@@ -306,7 +310,7 @@ class _AIHealthAnalysisPageState extends State<AIHealthAnalysisPage> {
                   Text(
                     score.toStringAsFixed(0),
                     style: TextStyle(
-                      fontSize: 56,
+                      fontSize: ZaiNeFontSize.title,
                       fontWeight: FontWeight.bold,
                       color: scoreColor,
                     ),
@@ -314,8 +318,8 @@ class _AIHealthAnalysisPageState extends State<AIHealthAnalysisPage> {
                   Text(
                     '/ 100',
                     style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey.shade400,
+                      fontSize: ZaiNeFontSize.body,
+                      color: ZaiNeColors.textHint(),
                     ),
                   ),
                 ],
@@ -331,7 +335,7 @@ class _AIHealthAnalysisPageState extends State<AIHealthAnalysisPage> {
     return Text(
       title,
       style: TextStyle(
-        fontSize: 18,
+        fontSize: ZaiNeFontSize.subtitle,
         fontWeight: FontWeight.bold,
         color: color,
       ),
@@ -343,7 +347,7 @@ class _AIHealthAnalysisPageState extends State<AIHealthAnalysisPage> {
       margin: const EdgeInsets.only(bottom: 12),
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(ZaiNeRadius.card),
         side: BorderSide(color: Colors.orange.shade200),
       ),
       child: Padding(
@@ -354,26 +358,27 @@ class _AIHealthAnalysisPageState extends State<AIHealthAnalysisPage> {
             Row(
               children: [
                 Icon(Icons.warning_amber, color: Colors.orange.shade400, size: 24),
-                const SizedBox(width: 12),
+                const SizedBox(width: ZaiNeSpacing.md),
                 Expanded(
                   child: Text(
                     anomaly.title,
                     style: const TextStyle(
-                      fontSize: 16,
+                      fontSize: ZaiNeFontSize.body,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.sm, vertical: ZaiNeSpacing.xs),
                   decoration: BoxDecoration(
-                    color: _getSeverityColor(anomaly.severity).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
+                    color: _getSeverityColor(anomaly.severity).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(ZaiNeRadius.small),
+                  
+                    boxShadow: ZaiNeShadows.card,),
                   child: Text(
                     _getSeverityLabel(anomaly.severity),
                     style: TextStyle(
-                      fontSize: 11,
+                      fontSize: ZaiNeFontSize.micro,
                       color: _getSeverityColor(anomaly.severity),
                       fontWeight: FontWeight.w600,
                     ),
@@ -381,36 +386,37 @@ class _AIHealthAnalysisPageState extends State<AIHealthAnalysisPage> {
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: ZaiNeSpacing.sm),
             Text(
               anomaly.description,
               style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey.shade700,
+                fontSize: ZaiNeFontSize.bodySm,
+                color: ZaiNeColors.textSecondary(),
               ),
             ),
             if (anomaly.relatedValue != null && anomaly.threshold != null) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: ZaiNeSpacing.sm),
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
                   color: Colors.grey.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                ),
+                  borderRadius: BorderRadius.circular(ZaiNeRadius.small),
+                
+                  boxShadow: ZaiNeShadows.card,),
                 child: Row(
                   children: [
                     Text(
                       '当前: ${anomaly.relatedValue}',
                       style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.grey.shade600,
+                        fontSize: ZaiNeFontSize.caption,
+                        color: ZaiNeColors.textSecondary(),
                       ),
                     ),
-                    const SizedBox(width: 16),
+                    const SizedBox(width: ZaiNeSpacing.lg),
                     Text(
                       '建议: ${anomaly.threshold}',
                       style: TextStyle(
-                        fontSize: 13,
+                        fontSize: ZaiNeFontSize.caption,
                         color: Colors.green.shade600,
                       ),
                     ),
@@ -429,7 +435,7 @@ class _AIHealthAnalysisPageState extends State<AIHealthAnalysisPage> {
       margin: const EdgeInsets.only(bottom: 12),
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(ZaiNeRadius.card),
         side: BorderSide(color: Colors.blue.shade200),
       ),
       child: Padding(
@@ -440,11 +446,12 @@ class _AIHealthAnalysisPageState extends State<AIHealthAnalysisPage> {
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
                 color: Colors.blue.shade50,
-                borderRadius: BorderRadius.circular(12),
-              ),
+                borderRadius: BorderRadius.circular(ZaiNeRadius.small),
+              
+                boxShadow: ZaiNeShadows.card,),
               child: Icon(Icons.lightbulb, color: Colors.blue.shade400, size: 20),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: ZaiNeSpacing.md),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -452,16 +459,16 @@ class _AIHealthAnalysisPageState extends State<AIHealthAnalysisPage> {
                   Text(
                     insight.title,
                     style: const TextStyle(
-                      fontSize: 15,
+                      fontSize: ZaiNeFontSize.body,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: ZaiNeSpacing.xs),
                   Text(
                     insight.description,
                     style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.grey.shade600,
+                      fontSize: ZaiNeFontSize.caption,
+                      color: ZaiNeColors.textSecondary(),
                     ),
                   ),
                 ],
@@ -478,7 +485,7 @@ class _AIHealthAnalysisPageState extends State<AIHealthAnalysisPage> {
       margin: const EdgeInsets.only(bottom: 12),
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(ZaiNeRadius.card),
         side: BorderSide(color: Colors.green.shade200),
       ),
       child: Padding(
@@ -492,16 +499,17 @@ class _AIHealthAnalysisPageState extends State<AIHealthAnalysisPage> {
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
                     color: Colors.green.shade50,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
+                    borderRadius: BorderRadius.circular(ZaiNeRadius.small),
+                  
+                    boxShadow: ZaiNeShadows.card,),
                   child: Icon(Icons.check_circle, color: Colors.green.shade400, size: 18),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: ZaiNeSpacing.md),
                 Expanded(
                   child: Text(
                     recommendation.title,
                     style: const TextStyle(
-                      fontSize: 15,
+                      fontSize: ZaiNeFontSize.body,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -509,16 +517,16 @@ class _AIHealthAnalysisPageState extends State<AIHealthAnalysisPage> {
                 _buildPriorityBadge(recommendation.priority),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: ZaiNeSpacing.sm),
             Text(
               recommendation.description,
               style: TextStyle(
-                fontSize: 13,
-                color: Colors.grey.shade600,
+                fontSize: ZaiNeFontSize.caption,
+                color: ZaiNeColors.textSecondary(),
               ),
             ),
             if (recommendation.actionText != null) ...[
-              const SizedBox(height: 12),
+              const SizedBox(height: ZaiNeSpacing.md),
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(
@@ -558,15 +566,16 @@ class _AIHealthAnalysisPageState extends State<AIHealthAnalysisPage> {
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.sm, vertical: ZaiNeSpacing.xs),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-      ),
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(ZaiNeRadius.small),
+      
+        boxShadow: ZaiNeShadows.card,),
       child: Text(
         label,
         style: TextStyle(
-          fontSize: 11,
+          fontSize: ZaiNeFontSize.micro,
           color: color,
           fontWeight: FontWeight.w600,
         ),

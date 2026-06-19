@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -127,7 +128,7 @@ class _NewbieTaskCardState extends State<NewbieTaskCard>
             (emergencyNote != null && emergencyNote.isNotEmpty) ||
             (age != null && age > 0);
       } catch (e) {
-        debugPrint('[NewbieTask] 解析 user_profile 失败: $e');
+        if (kDebugMode) debugPrint('[NewbieTask] 解析 user_profile 失败: $e');
       }
     }
 
@@ -229,12 +230,12 @@ class _NewbieTaskCardState extends State<NewbieTaskCard>
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: _allCompleted
-              ? Colors.green.withOpacity(0.3)
-              : const Color(0xFFFF7F50).withOpacity(0.2),
+              ? Colors.green.withValues(alpha: 0.3)
+              : const Color(0xFFFF7F50).withValues(alpha: 0.2),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -271,7 +272,7 @@ class _NewbieTaskCardState extends State<NewbieTaskCard>
         bottom: _isExpanded ? Radius.zero : const Radius.circular(16),
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.lg, vertical: ZaiNeSpacing.lg),
         child: Row(
           children: [
             // 图标
@@ -280,17 +281,18 @@ class _NewbieTaskCardState extends State<NewbieTaskCard>
               height: 36,
               decoration: BoxDecoration(
                 color: allDone
-                    ? Colors.green.withOpacity(0.1)
-                    : const Color(0xFFFF7F50).withOpacity(0.1),
+                    ? Colors.green.withValues(alpha: 0.1)
+                    : const Color(0xFFFF7F50).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10),
-              ),
+              
+                boxShadow: ZaiNeShadows.card,),
               child: Icon(
                 allDone ? Icons.emoji_events : Icons.shield_outlined,
                 size: 20,
                 color: allDone ? Colors.green : const Color(0xFFFF7F50),
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: ZaiNeSpacing.md),
 
             // 标题 + 进度
             Expanded(
@@ -305,7 +307,7 @@ class _NewbieTaskCardState extends State<NewbieTaskCard>
                       color: ZaiNeColors.textPrimary(),
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: ZaiNeSpacing.xs),
                   Row(
                     children: [
                       Expanded(
@@ -321,7 +323,7 @@ class _NewbieTaskCardState extends State<NewbieTaskCard>
                           ),
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: ZaiNeSpacing.sm),
                       Text(
                         '$done/5',
                         style: TextStyle(
@@ -422,27 +424,28 @@ class _NewbieTaskCardState extends State<NewbieTaskCard>
         mainAxisSize: MainAxisSize.min,
         children: [
           Divider(height: 1, color: ZaiNeColors.dividerColor()),
-          const SizedBox(height: 12),
+          const SizedBox(height: ZaiNeSpacing.md),
 
           // 任务列表
           ...tasks.map((task) => _buildTaskItem(task)),
 
           // 全部完成后的徽章
           if (_allCompleted) ...[
-            const SizedBox(height: 12),
+            const SizedBox(height: ZaiNeSpacing.md),
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 12),
+              padding: const EdgeInsets.symmetric(vertical: ZaiNeSpacing.md),
               decoration: BoxDecoration(
-                color: Colors.green.withOpacity(0.08),
+                color: Colors.green.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.green.withOpacity(0.2)),
-              ),
+                border: Border.all(color: Colors.green.withValues(alpha: 0.2)),
+              
+                boxShadow: ZaiNeShadows.card,),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const Icon(Icons.verified, size: 18, color: Colors.green),
-                  const SizedBox(width: 6),
+                  const SizedBox(width: ZaiNeSpacing.sm),
                   Text(
                     '解锁徽章：守护先锋',
                     style: TextStyle(
@@ -478,15 +481,15 @@ class _NewbieTaskCardState extends State<NewbieTaskCard>
             margin: const EdgeInsets.only(top: 2),
             decoration: BoxDecoration(
               color: done
-                  ? Colors.green.withOpacity(0.1)
+                  ? Colors.green.withValues(alpha: 0.1)
                   : inProgress
-                      ? Colors.orange.withOpacity(0.1)
+                      ? Colors.orange.withValues(alpha: 0.1)
                       : Colors.grey[200],
               shape: BoxShape.circle,
               border: done
-                  ? Border.all(color: Colors.green.withOpacity(0.3))
+                  ? Border.all(color: Colors.green.withValues(alpha: 0.3))
                   : inProgress
-                      ? Border.all(color: Colors.orange.withOpacity(0.4))
+                      ? Border.all(color: Colors.orange.withValues(alpha: 0.4))
                       : Border.all(color: Colors.grey[300]!),
             ),
             child: done
@@ -494,7 +497,7 @@ class _NewbieTaskCardState extends State<NewbieTaskCard>
                 : inProgress
                     ? Center(
                         child: Text(
-                          '${_getTaskProgress(task)}',
+                          _getTaskProgress(task),
                           style: TextStyle(
                             fontSize: 9,
                             fontWeight: FontWeight.bold,
@@ -508,7 +511,7 @@ class _NewbieTaskCardState extends State<NewbieTaskCard>
                         color: Colors.grey[500],
                       ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: ZaiNeSpacing.md),
 
           // 文字内容
           Expanded(
@@ -532,13 +535,14 @@ class _NewbieTaskCardState extends State<NewbieTaskCard>
                       ),
                     ),
                     if (inProgress) ...[
-                      const SizedBox(width: 6),
+                      const SizedBox(width: ZaiNeSpacing.sm),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                        padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.xs, vertical: ZaiNeSpacing.xs),
                         decoration: BoxDecoration(
-                          color: Colors.orange.withOpacity(0.1),
+                          color: Colors.orange.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(4),
-                        ),
+                        
+                          boxShadow: ZaiNeShadows.card,),
                         child: Text(
                           '进行中',
                           style: TextStyle(
@@ -551,7 +555,7 @@ class _NewbieTaskCardState extends State<NewbieTaskCard>
                     ],
                   ],
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: ZaiNeSpacing.xs),
                 Text(
                   task['subtitle'] as String,
                   style: TextStyle(
@@ -569,13 +573,14 @@ class _NewbieTaskCardState extends State<NewbieTaskCard>
               onTap: action,
               child: Container(
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                    const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.md, vertical: ZaiNeSpacing.xs),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFF7F50).withOpacity(0.1),
+                  color: const Color(0xFFFF7F50).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                   border:
-                      Border.all(color: const Color(0xFFFF7F50).withOpacity(0.3)),
-                ),
+                      Border.all(color: const Color(0xFFFF7F50).withValues(alpha: 0.3)),
+                
+                  boxShadow: ZaiNeShadows.card,),
                 child: Text(
                   btnText,
                   style: const TextStyle(
@@ -588,7 +593,7 @@ class _NewbieTaskCardState extends State<NewbieTaskCard>
             )
           else if (done)
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.sm, vertical: ZaiNeSpacing.xs),
               child: Text(
                 '已完成',
                 style: TextStyle(
@@ -617,16 +622,17 @@ class _NewbieTaskCardState extends State<NewbieTaskCard>
       onTap: _toggleExpand,
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.lg, vertical: ZaiNeSpacing.md),
         decoration: BoxDecoration(
-          color: Colors.green.withOpacity(0.06),
+          color: Colors.green.withValues(alpha: 0.06),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.green.withOpacity(0.15)),
-        ),
+          border: Border.all(color: Colors.green.withValues(alpha: 0.15)),
+        
+          boxShadow: ZaiNeShadows.card,),
         child: Row(
           children: [
             Icon(Icons.verified, size: 18, color: Colors.green[600]),
-            const SizedBox(width: 8),
+            const SizedBox(width: ZaiNeSpacing.sm),
             Text(
               '守护先锋 · 新手任务全部完成',
               style: TextStyle(
@@ -637,7 +643,7 @@ class _NewbieTaskCardState extends State<NewbieTaskCard>
             ),
             const Spacer(),
             Icon(Icons.keyboard_arrow_down,
-                size: 18, color: Colors.green.withOpacity(0.5)),
+                size: 18, color: Colors.green.withValues(alpha: 0.5)),
           ],
         ),
       ),

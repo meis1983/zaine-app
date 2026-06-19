@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'dart:io';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -20,7 +21,13 @@ import '../widgets/guardian_card_envelope.dart'; // 新增
 import '../main.dart';
 import '../theme/theme_helper.dart';
 import '../utils/avatar_helper.dart';
-import '../utils/badge_generator.dart';
+import '../widgets/stats_row_widget.dart';
+import '../widgets/home_header.dart';
+import '../widgets/peace_request_banner.dart';
+import '../widgets/help_card_widget.dart';
+import '../widgets/guard_status_widget.dart';
+import '../widgets/check_in_button_widget.dart';
+import '../services/api/auth_service.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -49,6 +56,9 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
 
   /// 待确认的平安确认请求列表
   List<Map<String, dynamic>> _pendingPeaceRequests = [];
+
+  /// 【修复 v1.76.0】防止守护卡弹窗重复弹出的标志位
+  bool _hasShownCardRitual = false;
 
   /// 【P2修复 v1.9.83】缓存 SharedPreferences 实例，避免日历组件重复IO
   SharedPreferences? _prefs;
@@ -90,19 +100,21 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     await Future.delayed(const Duration(seconds: 3));
     
     try {
-      debugPrint('[HomePage] 开始静默同步 HealthKit 数据...');
+      if (kDebugMode) debugPrint('[HomePage] 开始静默同步 HealthKit 数据...');
       await HealthService.performSilentHeartbeatCheckin();
       // 如果签到成功，刷新一下首页状态
       _loadCheckInStatus();
     } catch (e) {
-      debugPrint('[HomePage] 健康数据同步失败: $e');
+      if (kDebugMode) debugPrint('[HomePage] 健康数据同步失败: $e');
     }
   }
 
   /// 检查是否有待处理的守护卡（来自 Deep Link），并展示 3D 开封仪式
   Future<void> _checkPendingCardRitual() async {
     if (!_isLoggedIn) return;
-    
+
+    // 【修复 v1.76.0】防止重复弹出：单次会话只展示一次
+    if (_hasShownCardRitual) return;
     final hasPending = await DeepLinkService.hasPendingCardCode();
     if (!hasPending) return;
 
@@ -113,16 +125,23 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       final res = await CardService.checkCard(code);
       if (res['success'] == true && mounted) {
         final cardData = res;
-        
+
+        // 【修复 v1.76.0】立即清理 pending_card_code，避免延迟期间页面重建导致重复弹出
+        await _prefs?.remove('pending_card_code');
+        await DeepLinkService.clearPendingCardCode();
+
+        // 设置标志位，防止本次会话重复触发
+        _hasShownCardRitual = true;
+
         // 延迟 1 秒展示，等首页 UI 加载稳定
         await Future.delayed(const Duration(milliseconds: 1000));
-        
+
         if (!mounted) return;
-        
+
         await showGeneralDialog(
           context: context,
           barrierDismissible: false,
-          barrierColor: Colors.black.withOpacity(0.9),
+          barrierColor: Colors.black.withValues(alpha: 0.9),
           transitionDuration: const Duration(milliseconds: 300),
           pageBuilder: (ctx, anim1, anim2) {
             return Scaffold(
@@ -133,17 +152,18 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                 message: cardData['message'] ?? '想和你建立守护关系',
                 cardCode: code,
                 appStoreUrl: '',
-                isWelcomeMode: true, // 【修复 v1.17.1】收卡人登录后展示欢迎卡 
+                isWelcomeMode: true,
                 onComplete: () {
-                  // 【优化 v2.0】仪式感结束后，自动清理 pending 状态并刷新统计 (停留 3.5秒)
-                  Future.delayed(const Duration(milliseconds: 3500), () {
+                  // 【修复】pending_card_code 已在弹窗前清理，这里只需关闭弹窗和刷新统计
+                  Future.delayed(const Duration(milliseconds: 3500), () async {
                     if (ctx.mounted) {
                       Navigator.pop(ctx);
                       _loadInviteStats();
-                      // 仪式结束后，可以弹出一个简单的欢迎提示
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('守护关系已建立，感谢你的加入')),
-                      );
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('守护关系已建立，感谢你的加入')),
+                        );
+                      }
                     }
                   });
                 },
@@ -153,7 +173,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         );
       }
     } catch (e) {
-      debugPrint('[HomePage] 仪式感加载失败: $e');
+      if (kDebugMode) debugPrint('[HomePage] 仪式感加载失败: $e');
     }
   }
 
@@ -166,10 +186,10 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         setState(() {
           _totalRegistered = (res['total_registered'] as int?) ?? 0;
         });
-        debugPrint('[HomePage] ✅ 获取邀请统计: total_registered=$_totalRegistered');
+        if (kDebugMode) debugPrint('[HomePage] ✅ 获取邀请统计: total_registered=$_totalRegistered');
       }
     } catch (e) {
-      debugPrint('[HomePage] 加载邀请统计失败: $e');
+      if (kDebugMode) debugPrint('[HomePage] 加载邀请统计失败: $e');
     }
   }
 
@@ -183,7 +203,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      debugPrint('[HomePage] App resumed, triggering health sync...');
+      if (kDebugMode) debugPrint('[HomePage] App resumed, triggering health sync...');
       _syncHealthData();
     }
   }
@@ -198,7 +218,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       if (await File(avatarPath).exists()) {
         validAvatarPath = avatarPath;
       } else {
-        debugPrint('[Home] 头像文件不存在，尝试从 base64 恢复...');
+        if (kDebugMode) debugPrint('[Home] 头像文件不存在，尝试从 base64 恢复...');
       }
     }
 
@@ -214,20 +234,22 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           await File(restorePath).writeAsBytes(bytes);
           await AvatarHelper.setPath(prefs, restorePath);
           validAvatarPath = restorePath;
-          debugPrint('[Home] ✅ 头像已从 base64 备份恢复');
+          if (kDebugMode) debugPrint('[Home] ✅ 头像已从 base64 备份恢复');
         } catch (e) {
-          debugPrint('[Home] ⚠️ base64 头像恢复失败: $e');
+          if (kDebugMode) debugPrint('[Home] ⚠️ base64 头像恢复失败: $e');
           await AvatarHelper.clear(prefs);
         }
       } else if (avatarPath != null && avatarPath.isNotEmpty) {
-        debugPrint('[Home] 头像文件不存在，清除路径: $avatarPath');
+        if (kDebugMode) debugPrint('[Home] 头像文件不存在，清除路径: $avatarPath');
         await AvatarHelper.clear(prefs);
       }
     }
     // 读取守护人数量（与 contacts_page.dart 保持一致的 key 规则）
     int guardianCount = 0;
+    String? userId;
+    String? phone;
     try {
-      final userId = prefs.getString('user_id');
+      userId = await AuthService.getUserId();
       final contactsKey = (userId != null && userId.isNotEmpty)
           ? 'emergency_contacts_$userId'
           : 'emergency_contacts';
@@ -236,14 +258,16 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         final contacts = jsonDecode(contactsJson) as List<dynamic>?;
         guardianCount = contacts?.length ?? 0;
       }
+      // 提前读取 user_phone（供 setState 内使用）
+      phone = await AuthService.getUserPhone();
     } catch (_) {}
 
     setState(() {
       _isLoggedIn = prefs.getBool('is_logged_in') ?? false;
       // 【修复 v1.9.73】从 per‑user 档案读姓名，避免切账号串名
       String? userName;
-      final uid = prefs.getString('user_id');
-      if (uid != null && uid.isNotEmpty) {
+      final uid = userId ?? '';
+      if (uid.isNotEmpty) {
         // 优先读用户隔离键
         String? profileJson = prefs.getString('user_profile_$uid');
         // 降级到全局键（pullFromServer 保存到此键）
@@ -255,7 +279,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           } catch (_) {}
         }
       }
-      _userName = userName ?? prefs.getString('user_name') ?? prefs.getString('user_phone');
+      _userName = userName ?? prefs.getString('user_name') ?? (phone ?? '');
       _avatarPath = validAvatarPath;
       _guardianCount = guardianCount;
       _membershipLevel = MembershipService.getLevel();
@@ -266,8 +290,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     final prefs = await SharedPreferences.getInstance();
     final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
 
-    // 【修复】签到日期按用户隔离读取，与守护圈保持一致
-    final uid = prefs.getString('user_id') ?? '';
+    // 【修复 v1.77.0】签到日期按用户隔离读取，与守护圈保持一致
+    final uid = (await AuthService.getUserId()) ?? '';
     final lastDateKey = uid.isNotEmpty ? 'last_check_in_date_$uid' : 'last_check_in_date';
     final lastDate = prefs.getString(lastDateKey);
 
@@ -308,12 +332,12 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
               final serverChecked = res['checked_in_today'] == true;
               if (_checkedInToday != serverChecked) {
                 _checkedInToday = serverChecked;
-                debugPrint('[HomePage] ⚠️ 签到状态已修正: 本地=$_checkedInToday → 服务端=$serverChecked');
+                if (kDebugMode) debugPrint('[HomePage] ⚠️ 签到状态已修正: 本地=$_checkedInToday → 服务端=$serverChecked');
               }
             }
           });
-          // 同步到本地缓存（用户隔离 key）
-          final uid = prefs.getString('user_id') ?? '';
+          // 同步到本地缓存（用户隔离 key）【修复 v1.77.0】
+          final uid = (await AuthService.getUserId()) ?? '';
           final streakKey = uid.isNotEmpty ? 'continuous_days_$uid' : 'continuous_days';
           final totalKey = uid.isNotEmpty ? 'total_check_in_days_$uid' : 'total_check_in_days';
           final lastDateKey = uid.isNotEmpty ? 'last_check_in_date_$uid' : 'last_check_in_date';
@@ -323,10 +347,10 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
             await prefs.setString(lastDateKey, today);
             await prefs.setString('last_check_in_date', today);
           }
-          debugPrint('[HomePage] 服务器签到状态: totalDays=$_totalDays, daysSinceLastCheckin=$_daysSinceLastCheckin, checkedInToday=$_checkedInToday');
+          if (kDebugMode) debugPrint('[HomePage] 服务器签到状态: totalDays=$_totalDays, daysSinceLastCheckin=$_daysSinceLastCheckin, checkedInToday=$_checkedInToday');
         }
       } catch (e) {
-        debugPrint('[HomePage] 同步服务器签到状态失败: $e');
+        if (kDebugMode) debugPrint('[HomePage] 同步服务器签到状态失败: $e');
       }
     }
   }
@@ -342,7 +366,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         });
       }
     } catch (e) {
-      debugPrint('[Home] 加载平安确认请求失败: $e');
+      if (kDebugMode) debugPrint('[Home] 加载平安确认请求失败: $e');
     }
   }
 
@@ -364,7 +388,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         );
       }
     } catch (e) {
-      debugPrint('[Home] 确认平安失败: $e');
+      if (kDebugMode) debugPrint('[Home] 确认平安失败: $e');
     }
   }
 
@@ -390,7 +414,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       // 【修复 v1.9.72】服务端 UTC 时间与本地 UTC+8 可能存在日期偏差
       // 导致 _checkedInToday 被误设为 true，用户点击"签到"却无响应
       // 改为：仍弹出庆祝弹窗，不让用户体验断掉
-      debugPrint('[HomePage] 今日已签到（可能为时区误判），显示庆祝弹窗');
+      if (kDebugMode) debugPrint('[HomePage] 今日已签到（可能为时区误判），显示庆祝弹窗');
       try {
         if (mounted) {
           await showDialog(
@@ -406,8 +430,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           );
         }
       } catch (e, stack) {
-        debugPrint('[HomePage] 弹窗显示异常: $e');
-        debugPrint(stack.toString());
+        if (kDebugMode) debugPrint('[HomePage] 弹窗显示异常: $e');
+        if (kDebugMode) debugPrint(stack.toString());
       }
       return;
     }
@@ -421,7 +445,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         if (mounted) _animationController.reverse();
       });
     } catch (e) {
-      debugPrint('[HomePage] 动画异常（忽略）: $e');
+      if (kDebugMode) debugPrint('[HomePage] 动画异常（忽略）: $e');
     }
 
     final now = DateTime.now();
@@ -453,7 +477,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     // 后台异步持久化（不阻塞 UI）
     // 【修复】签到数据按用户隔离存储
     final prefs = await SharedPreferences.getInstance();
-    final uid = prefs.getString('user_id') ?? '';
+    final uid = (await AuthService.getUserId()) ?? '';
     final streakKey = uid.isNotEmpty ? 'continuous_days_$uid' : 'continuous_days';
     final totalKey = uid.isNotEmpty ? 'total_check_in_days_$uid' : 'total_check_in_days';
     final historyKey = uid.isNotEmpty ? 'checkin_history_$uid' : 'checkin_history';
@@ -476,7 +500,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       try {
         final res = await CheckinService.checkIn(date: today, mood: -1);
         if (res['success'] == true) {
-          debugPrint('[HomePage] 签到已同步到服务器: $res');
+          if (kDebugMode) debugPrint('[HomePage] 签到已同步到服务器: $res');
           // 【修复 v1.9.7】后端 total_days 是累计总天数，不应覆盖 continuous_days（连续天数）
           final serverTotal = res['total_days'] as int?;
           final serverStreak = res['streak'] as int? ?? res['continuous_days'] as int?;
@@ -501,7 +525,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           }
         } else {
           final errorMsg = res['error']?.toString() ?? res['message']?.toString() ?? '';
-          debugPrint('[HomePage] 签到同步失败: $errorMsg');
+          if (kDebugMode) debugPrint('[HomePage] 签到同步失败: $errorMsg');
           if (mounted) {
             // 【修复 v1.9.75】already_checked_in 是正常状态，不显示警告
             final isAlreadyCheckedIn = errorMsg.contains('already_checked_in');
@@ -518,13 +542,13 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           }
         }
       } catch (e) {
-        debugPrint('[HomePage] 签到同步异常（已本地保存）: $e');
+        if (kDebugMode) debugPrint('[HomePage] 签到同步异常（已本地保存）: $e');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
+            const SnackBar(
               content: Text('签到已记录，网络异常暂未同步到云端'),
               backgroundColor: Colors.orange,
-              duration: const Duration(seconds: 3),
+              duration: Duration(seconds: 3),
               behavior: SnackBarBehavior.floating,
             ),
           );
@@ -536,9 +560,9 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     try {
       final notifications = FlutterLocalNotificationsPlugin();
       await notifications.cancel(1); // 取消断签预警
-      debugPrint('[HomePage] 签到成功，已取消断签预警通知');
+      if (kDebugMode) debugPrint('[HomePage] 签到成功，已取消断签预警通知');
     } catch (e) {
-      debugPrint('[HomePage] 取消断签预警通知失败（忽略）: $e');
+      if (kDebugMode) debugPrint('[HomePage] 取消断签预警通知失败（忽略）: $e');
     }
 
     // 弹出签到成功弹窗（断签回归时传 isReturnCheckin）
@@ -558,13 +582,13 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         );
       }
     } catch (e, stack) {
-      debugPrint('[HomePage] 弹窗显示异常: $e');
-      debugPrint(stack.toString());
+      if (kDebugMode) debugPrint('[HomePage] 弹窗显示异常: $e');
+      if (kDebugMode) debugPrint(stack.toString());
     }
   }
 
   void _openHelp() {
-    debugPrint('[HomePage] 紧急求助卡片被点击，_isLoggedIn=$_isLoggedIn');
+    if (kDebugMode) debugPrint('[HomePage] 紧急求助卡片被点击，_isLoggedIn=$_isLoggedIn');
     if (!_isLoggedIn) {
       _showLoginPrompt();
       return;
@@ -603,7 +627,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         title: const Row(
           children: [
             Icon(Icons.login, color: Color(0xFFFF7F50)),
-            SizedBox(width: 8),
+            SizedBox(width: ZaiNeSpacing.sm),
             Text('请先完善信息'),
           ],
         ),
@@ -642,249 +666,33 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ====== 顶部标题栏 ======
-              Padding(
-                padding: const EdgeInsets.only(top: 12, bottom: 20),
-                child: Row(
-                  children: [
-                    // Logo
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(10),
-                      child: Image.asset(
-                        'assets/images/zaine_logo_home.png',
-                        width: 36,
-                        height: 36,
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    // 问候语 + 签到状态
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            _getGreeting(),
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey[500],
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Row(
-                            children: [
-                              const Text(
-                                '在呢',
-                                style: TextStyle(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFFFF7F50),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              // 签到状态胶囊
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: _checkedInToday
-                                      ? Colors.green.shade50
-                                      : Colors.orange.shade50,
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      _checkedInToday
-                                          ? Icons.check_circle
-                                          : Icons.radio_button_unchecked,
-                                      size: 12,
-                                      color: _checkedInToday
-                                          ? Colors.green
-                                          : Colors.orange,
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      _checkedInToday ? '已签到' : '未签到',
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        color: _checkedInToday
-                                            ? Colors.green
-                                            : Colors.orange,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              // 会员等级标签
-                              GestureDetector(
-                                onTap: _openSubscription,
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 7, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    gradient: _membershipLevel == 'smart'
-                                        ? const LinearGradient(
-                                            colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
-                                            begin: Alignment.topLeft,
-                                            end: Alignment.bottomRight,
-                                          )
-                                        : LinearGradient(
-                                            colors: [
-                                              Colors.orange.shade300,
-                                              Colors.orange.shade400,
-                                            ],
-                                            begin: Alignment.topLeft,
-                                            end: Alignment.bottomRight,
-                                          ),
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        _membershipLevel == 'smart'
-                                            ? Icons.auto_awesome
-                                            : Icons.shield_outlined,
-                                        size: 10,
-                                        color: Colors.white,
-                                      ),
-                                      const SizedBox(width: 3),
-                                      Text(
-                                        _membershipLevel == 'smart' ? '智能版' : '体验版',
-                                        style: const TextStyle(
-                                          fontSize: 10,
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    // 头像
-                    GestureDetector(
-                      onTap: _openProfile,
-                      child: Container(
-                        width: 48,
-                        height: 48,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: _avatarPath == null
-                              ? LinearGradient(
-                                  colors: [
-                                    const Color(0xFFFF7F50).withOpacity(0.2),
-                                    const Color(0xFFFFB347).withOpacity(0.2),
-                                  ],
-                                )
-                              : null,
-                          color: _avatarPath == null ? null : null,
-                          image: _avatarPath != null && _avatarPath!.isNotEmpty
-                              ? DecorationImage(
-                                  image: _avatarPath!.startsWith('/')
-                                      ? FileImage(File(_avatarPath!))
-                                      : AssetImage(_avatarPath!) as ImageProvider,
-                                  fit: BoxFit.cover,
-                                )
-                              : null,
-                          border: Border.all(
-                            color: const Color(0xFFFF7F50).withOpacity(0.3),
-                            width: 2,
-                          ),
-                        ),
-                        child: _avatarPath == null
-                            ? Icon(
-                                _isLoggedIn ? Icons.person : Icons.person_add,
-                                color: const Color(0xFFFF7F50),
-                                size: 24,
-                              )
-                            : null,
-                      ),
-                    ),
-                  ],
-                ),
+              // ====== 顶部标题栏（提取为 HomeHeaderWidget）======
+              HomeHeaderWidget(
+                isLoggedIn: _isLoggedIn,
+                checkedInToday: _checkedInToday,
+                userName: _userName,
+                avatarPath: _avatarPath,
+                membershipLevel: _membershipLevel,
+                totalRegistered: _totalRegistered,
+                guardianCount: _guardianCount,
+                continuousDays: _continuousDays,
+                onTapAvatar: _openProfile,
+                onTapMembership: _openSubscription,
               ),
 
               // ====== 平安确认请求横幅（守护者发来的） ======
-              if (_pendingPeaceRequests.isNotEmpty) ...[
-                for (final req in _pendingPeaceRequests)
-                  Container(
-                    margin: const EdgeInsets.only(bottom: 10),
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [Color(0xFF7C4DFF), Color(0xFF9C27B0)],
-                      ),
-                      borderRadius: BorderRadius.circular(14),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Color(0xFF7C4DFF).withOpacity(0.3),
-                          blurRadius: 8,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.favorite, color: Colors.white, size: 22),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                '${req['guardian_name'] ?? "守护者"} 想确认你是否平安',
-                                style: const TextStyle(
-                                  fontSize: 13.5,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                '点击下方按钮让他们安心',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: Colors.white.withOpacity(0.85),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        TextButton(
-                          onPressed: () => _confirmPeace(req['request_id'] ?? 0),
-                          style: TextButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            foregroundColor: Colors.green,
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                          ),
-                          child: const Text('我平安', style: TextStyle(fontWeight: FontWeight.bold)),
-                        ),
-                        IconButton(
-                          onPressed: () {
-                            setState(() {
-                              _pendingPeaceRequests.removeWhere((r) => r['request_id'] == req['request_id']);
-                            });
-                          },
-                          icon: const Icon(Icons.close, color: Colors.white70, size: 18),
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                        ),
-                      ],
-                    ),
-                  ),
-                const SizedBox(height: 4),
-              ],
+              // 【P3-2 代码优化 v1.17.4】已提取为 PeaceRequestBannerWidget
+              // 旧代码已注释，新组件在下方
+              PeaceRequestBannerWidget(
+                pendingRequests: _pendingPeaceRequests,
+                onConfirm: _confirmPeace,
+                onDismiss: (requestId) {
+                  setState(() {
+                    _pendingPeaceRequests.removeWhere((r) => r['request_id'] == requestId);
+                  });
+                },
+              ),
+              const SizedBox(height: ZaiNeSpacing.xs),
 
               // ====== 健康档案提示（v1.9.8 隐藏）=====
               // 根因：与紧急求助卡片前置引导重复（点击紧急求助会自动引导完善档案/守护人/位置授权），
@@ -893,7 +701,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
               //   Container(
               //     margin: const EdgeInsets.only(bottom: 16),
               //     padding:
-              //         const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              //         const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.md, vertical: ZaiNeSpacing.md),
               //     decoration: BoxDecoration(
               //       color: Colors.orange.shade50,
               //       borderRadius: BorderRadius.circular(12),
@@ -903,7 +711,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
               //       children: [
               //         Icon(Icons.info_outline,
               //             color: Colors.orange.shade700, size: 18),
-              //         const SizedBox(width: 8),
+              //         const SizedBox(width: ZaiNeSpacing.sm),
               //         Expanded(
               //           child: GestureDetector(
               //             onTap: _openProfile,
@@ -946,339 +754,118 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
               // ),
 
               // ====== 紧急求助卡片 ======
-              _buildHelpCard(),
+              HelpCardWidget(
+                isLoggedIn: _isLoggedIn,
+                onTap: _openHelp,
+              ),
 
-              const SizedBox(height: 16),
+              const SizedBox(height: ZaiNeSpacing.lg),
 
               // ====== 守护状态 ======
-              _buildGuardStatus(),
+              GuardStatusWidget(
+                isLoggedIn: _isLoggedIn,
+                continuousDays: _continuousDays,
+                totalRegistered: _totalRegistered,
+                guardianCount: _guardianCount,
+              ),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: ZaiNeSpacing.xl),
 
               // ====== 签到按钮 ======
-              _buildCheckInButton(),
+              CheckInButtonWidget(
+                continuousDays: _continuousDays,
+                checkedInToday: _checkedInToday,
+                onTap: _handleCheckIn,
+                scaleAnimation: _scaleAnimation,
+              ),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: ZaiNeSpacing.xl),
 
               // ====== 底部三列统计 ======
-              _buildStatsRow(),
+              StatsRowWidget(
+                continuousDays: _continuousDays,
+                totalDays: _totalDays,
+                weeklyDays: _weeklyDays,
+              ),
 
-              const SizedBox(height: 20),
+              // ====== 【v1.17.3】明显的升级按钮（解决审核找不到订阅入口问题） ======
+              if (_isLoggedIn && _membershipLevel == 'free') ...[
+                const SizedBox(height: ZaiNeSpacing.lg),
+                GestureDetector(
+                  onTap: _openSubscription,
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFFF8C42), Color(0xFFFF6B35)],
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFFFF6B35).withValues(alpha: 0.3),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.auto_awesome,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                        const SizedBox(width: ZaiNeSpacing.sm),
+                        const Text(
+                          '升级到智能版',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(width: ZaiNeSpacing.sm),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.sm, vertical: ZaiNeSpacing.xs),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.25),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Text(
+                            '解锁全部功能',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+
+              const SizedBox(height: ZaiNeSpacing.xl),
 
               // ====== 签到日历热力图 ======
               _buildCheckInCalendar(),
 
-              const SizedBox(height: 24),
+              const SizedBox(height: ZaiNeSpacing.xl),
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  /// 守护状态条
-  Widget _buildGuardStatus() {
-    // 【P2】显示历史最高连续纪录，减少断签心理落差
-    String statusText = _isLoggedIn
-        ? '守护已就绪 · $_continuousDays 天连续守护'
-        : '请完善健康档案，开启守护';
-    
-    // 【v2.0 新增】显示守护圈人数
-    if (_isLoggedIn && _totalRegistered > 0) {
-      statusText += ' · $_totalRegistered 位守护成员';
-    } else if (_isLoggedIn && _guardianCount > 0) {
-      statusText += ' · $_guardianCount 位守护者';
-    }
-
-    final statusColor = _isLoggedIn ? Colors.green : Colors.orange;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      decoration: BoxDecoration(
-        color: statusColor.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: statusColor.withOpacity(0.2)),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.shield_outlined, color: statusColor, size: 18),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              statusText,
-              style: TextStyle(
-                fontSize: 13,
-                color: statusColor,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-          if (_isLoggedIn)
-            Icon(Icons.check_circle, color: statusColor, size: 16),
-        ],
       ),
     );
   }
 
   /// 紧急求助卡片
-  Widget _buildHelpCard() {
-    return GestureDetector(
-      onTap: _openHelp,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFFFF4757),
-              Color(0xFFFF6B81),
-              Color(0xFFFF4757),
-            ],
-          ),
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFFFF4757).withOpacity(0.25),
-              blurRadius: 16,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            // 求助图标
-            Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.emergency,
-                size: 32,
-                color: Colors.white,
-              ),
-            ),
-            const SizedBox(width: 16),
-            // 文字
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    '紧急求助',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _isLoggedIn ? '点击发送紧急求助' : '请先完善健康档案',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.white.withOpacity(0.8),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            // 箭头
-            Icon(
-              Icons.arrow_forward_ios,
-              color: Colors.white.withOpacity(0.6),
-              size: 16,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   /// 签到按钮
-  Widget _buildCheckInButton() {
-    // 【P3】统一使用 BadgeGenerator.getLevel，避免重复维护50级映射
-    final badgeLevel = BadgeGenerator.getLevel(_continuousDays);
-
-    return Center(
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(90),
-          onTap: _handleCheckIn,
-          onTapDown: (_) => HapticFeedback.lightImpact(),
-          child: AnimatedBuilder(
-          animation: _scaleAnimation,
-          builder: (context, child) {
-            return Transform.scale(
-              scale: _scaleAnimation.value,
-              child: child,
-            );
-          },
-          child: Container(
-            width: 180,
-            height: 180,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: _checkedInToday
-                    ? [Colors.teal.shade400, Colors.green.shade500]
-                    : [const Color(0xFFFF7F50), const Color(0xFFFF6B3D)],
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: (_checkedInToday
-                          ? Colors.teal.shade300
-                          : const Color(0xFFFF7F50))
-                      .withOpacity(_checkedInToday ? 0.25 : 0.4),
-                  blurRadius: _checkedInToday ? 20 : 28,
-                  offset: const Offset(0, 10),
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // 【P3】徽章等级图标 — 连续签到 >=1 天即显示徽章
-                if (_continuousDays >= 1)
-                  Text(
-                    badgeLevel.emoji,
-                    style: const TextStyle(fontSize: 28),
-                  )
-                else
-                  Icon(
-                    _checkedInToday ? Icons.check_circle : Icons.touch_app,
-                    size: 44,
-                    color: Colors.white,
-                  ),
-                const SizedBox(height: 4),
-                Text(
-                  _checkedInToday ? '今日已签到' : '点击签到',
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-                // 【P3】连续签到 >=1 天即显示徽章和天数
-                if (_continuousDays >= 1) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    badgeLevel.title,
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Colors.white.withOpacity(0.85),
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  Text(
-                    '连续 $_continuousDays 天',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.white.withOpacity(0.9),
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ),
-      ),
-      ),
-    );
-  }
-
   /// 底部三列统计
-  Widget _buildStatsRow() {
-    return Row(
-      children: [
-        _buildStatItem(
-          icon: Icons.local_fire_department,
-          iconColor: Colors.orange,
-          label: '连续签到',
-          value: '$_continuousDays 天',
-          bgColor: Colors.orange.shade50,
-        ),
-        const SizedBox(width: 12),
-        _buildStatItem(
-          icon: Icons.calendar_today,
-          iconColor: Colors.blue,
-          label: '累计签到',
-          value: '$_totalDays 天',
-          bgColor: Colors.blue.shade50,
-        ),
-        const SizedBox(width: 12),
-        _buildStatItem(
-          icon: Icons.pie_chart,
-          iconColor: Colors.teal,
-          label: '本周进度',
-          value: '$_weeklyDays/7',
-          bgColor: Colors.teal.shade50,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStatItem({
-    required IconData icon,
-    required Color iconColor,
-    required String label,
-    required String value,
-    required Color bgColor,
-  }) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
-        decoration: BoxDecoration(
-          color: ZaiNeColors.cardBg(),
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.03),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Column(
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: bgColor,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, color: iconColor, size: 20),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              value,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 11,
-                color: Colors.grey[500],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   /// 签到日历热力图（支持月份切换）
   Widget _buildCheckInCalendar() {
     final now = DateTime.now();
@@ -1292,6 +879,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       ));
     }
     final prefs = _prefs!;
+    // 【兼容 v1.77.0】同步方法中从 SP 读取 user_id（Keychain 的双写备份）
     final uid = prefs.getString('user_id') ?? '';
     final historyKey = uid.isNotEmpty ? 'checkin_history_$uid' : 'checkin_history';
     final checkinHistory = prefs.getStringList(historyKey) ?? [];
@@ -1322,7 +910,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.03),
+                color: Colors.black.withValues(alpha: 0.03),
                 blurRadius: 8,
                 offset: const Offset(0, 4),
               ),
@@ -1347,7 +935,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                             ? () => setState(() => _calendarMonthOffset--)
                             : null,
                       ),
-                      const SizedBox(width: 4),
+                      const SizedBox(width: ZaiNeSpacing.xs),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -1369,7 +957,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                           ),
                         ],
                       ),
-                      const SizedBox(width: 4),
+                      const SizedBox(width: ZaiNeSpacing.xs),
                       // 下个月按钮
                       IconButton(
                         constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
@@ -1387,7 +975,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                     GestureDetector(
                       onTap: () => setState(() => _calendarMonthOffset = 0),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.md, vertical: ZaiNeSpacing.xs),
                         decoration: BoxDecoration(
                           color: Colors.teal.shade50,
                           borderRadius: BorderRadius.circular(10),
@@ -1403,7 +991,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                     const SizedBox.shrink(),
                 ],
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: ZaiNeSpacing.lg),
 
               // 星期标题 + 日历网格（Expanded 自适应宽度）
               Column(
@@ -1423,17 +1011,17 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                             ),
                           ),
                         ),
-                        if (i < 6) const SizedBox(width: 4),
+                        if (i < 6) const SizedBox(width: ZaiNeSpacing.xs),
                       ],
                     ],
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: ZaiNeSpacing.sm),
                   // 日历网格
                   ..._buildCalendarRows(days, checkinHistory),
                 ],
               ),
 
-              const SizedBox(height: 10),
+              const SizedBox(height: ZaiNeSpacing.md),
 
               // 图例
               Row(
@@ -1470,14 +1058,14 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       // 如果是第一行且不是从周一开始，前面补空
       if (row == 0 && firstWeekday > 1) {
         for (int i = 1; i < firstWeekday; i++) {
-          cells.add(const Expanded(child: SizedBox(height: 28)));
+          cells.add(const Expanded(child: SizedBox(height: ZaiNeSpacing.xl)));
         }
       }
 
       for (int col = 0; col < 7; col++) {
         final index = row * 7 + col - (firstWeekday - 1);
         if (index < 0 || index >= days.length) {
-          cells.add(const Expanded(child: SizedBox(height: 28)));
+          cells.add(const Expanded(child: SizedBox(height: ZaiNeSpacing.xl)));
         } else {
           final day = days[index];
           final dateStr = DateFormat('yyyy-MM-dd').format(day);
@@ -1488,7 +1076,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
             Expanded(
               child: Container(
                 height: 28,
-                margin: const EdgeInsets.symmetric(horizontal: 1),
+                margin: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.xs),
                 child: Tooltip(
                   message: '$dateStr ${isCheckedIn ? "✓ 已签到" : "未签到"}',
                   child: Container(
@@ -1527,7 +1115,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           children: [
             for (int i = 0; i < cells.length; i++) ...[
               cells[i],
-              if (i < cells.length - 1) const SizedBox(width: 4),
+              if (i < cells.length - 1) const SizedBox(width: ZaiNeSpacing.xs),
             ],
           ],
         ),
@@ -1546,26 +1134,18 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     return Row(mainAxisSize: MainAxisSize.min, children: [
       Container(width: 10, height: 10, decoration: BoxDecoration(
         color: color, borderRadius: BorderRadius.circular(2))),
-      const SizedBox(width: 3),
+      const SizedBox(width: ZaiNeSpacing.xs),
       Text(text, style: TextStyle(fontSize: 10, color: themeNotifier.mode == ZaiNeThemeMode.dark ? Colors.grey[400] : Colors.grey[500])),
-      const SizedBox(width: 8),
+      const SizedBox(width: ZaiNeSpacing.sm),
     ]);
   }
 
   Widget _buildLegendDot(Color color) {
     return Container(
       width: 10, height: 10,
-      margin: const EdgeInsets.symmetric(horizontal: 2),
+      margin: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.xs),
       decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2)),
     );
   }
 
-  String _getGreeting() {
-    final hour = DateTime.now().hour;
-    if (hour < 6) return '夜深了';
-    if (hour < 12) return '早上好';
-    if (hour < 14) return '中午好';
-    if (hour < 18) return '下午好';
-    return '晚上好';
-  }
 }

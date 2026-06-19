@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import '../theme/theme_helper.dart';
 import '../services/safety/safety_service.dart';
 import '../widgets/safety_features.dart';
+import 'location_history_page.dart';
+import 'fall_event_history_page.dart';
 
 /// 安全设置页面
 ///
@@ -17,6 +20,7 @@ class _SafetySettingsPageState extends State<SafetySettingsPage> {
   CheckInReminder _reminderConfig = const CheckInReminder();
   List<LocationRecord> _todayTrack = [];
   List<FallEvent> _fallEvents = [];
+  DateTime? _lastRecordTime;
   bool _isLocationTracking = false;
   bool _isLoading = true;
 
@@ -31,12 +35,14 @@ class _SafetySettingsPageState extends State<SafetySettingsPage> {
     final reminder = await _safetyService.getReminderConfig();
     final track = await _safetyService.getLocationTrackForDay(DateTime.now());
     final falls = await _safetyService.getFallEvents();
+    final lastRecordTime = await _safetyService.getLastRecordTime();
 
     if (mounted) {
       setState(() {
         _reminderConfig = reminder;
         _todayTrack = track;
         _fallEvents = falls;
+        _lastRecordTime = lastRecordTime;
         _isLoading = false;
       });
     }
@@ -51,7 +57,7 @@ class _SafetySettingsPageState extends State<SafetySettingsPage> {
           content: Row(
             children: [
               Icon(Icons.check_circle, color: Colors.white),
-              SizedBox(width: 8),
+              SizedBox(width: ZaiNeSpacing.sm),
               Text('✅ 平安确认完成！'),
             ],
           ),
@@ -65,11 +71,11 @@ class _SafetySettingsPageState extends State<SafetySettingsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: ZaiNeColors.scaffoldBg(),
       appBar: AppBar(
         title: const Text('安全中心'),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black87,
+        backgroundColor: ZaiNeColors.cardBg(),
+        foregroundColor: ZaiNeColors.textPrimary(),
         elevation: 0,
         actions: [
           IconButton(
@@ -90,7 +96,7 @@ class _SafetySettingsPageState extends State<SafetySettingsPage> {
                   children: [
                     // 安全状态总览
                     _buildSafetyOverview(),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: ZaiNeSpacing.xl),
 
                     // 功能卡片
                     CheckInReminderCard(
@@ -101,19 +107,32 @@ class _SafetySettingsPageState extends State<SafetySettingsPage> {
                       },
                       onPerformCheckIn: _performCheckIn,
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: ZaiNeSpacing.lg),
 
                     LocationTrackCard(
                       todayTrack: _todayTrack,
                       isTracking: _isLocationTracking,
+                      lastRecordTime: _lastRecordTime,
+                      onViewFullMap: _todayTrack.isNotEmpty
+                          ? () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => LocationHistoryPage(day: DateTime.now()),
+                                ),
+                              ).then((_) => _loadData());
+                            }
+                          : null,
                       onStartTracking: () async {
+                        final ctx = context; // 保存 context 引用
                         if (_isLocationTracking) {
                           setState(() => _isLocationTracking = false);
                         } else {
                           final success = await _safetyService.startLocationTracking();
+                          if (!mounted) return;
                           setState(() => _isLocationTracking = success);
-                          if (!success && mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
+                          if (!success && ctx.mounted) {
+                            ScaffoldMessenger.of(ctx).showSnackBar(
                               const SnackBar(
                                 content: Text('请开启位置权限'),
                                 backgroundColor: Colors.orange,
@@ -123,17 +142,20 @@ class _SafetySettingsPageState extends State<SafetySettingsPage> {
                         }
                       },
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: ZaiNeSpacing.lg),
 
                     FallDetectionCard(
                       recentFalls: _fallEvents,
-                      isEnabled: false,
-                      onAcknowledge: (id) async {
-                        await _safetyService.acknowledgeFallEvent(id);
-                        await _loadData();
+                      onViewHistory: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const FallEventHistoryPage(),
+                          ),
+                        ).then((_) => _loadData());
                       },
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: ZaiNeSpacing.xl),
 
                     // 安全提示
                     _buildSafetyTips(),
@@ -145,11 +167,10 @@ class _SafetySettingsPageState extends State<SafetySettingsPage> {
   }
 
   Widget _buildSafetyOverview() {
-    // 计算安全评分
     int score = 0;
-    if (_reminderConfig.enabled) score += 30;
-    if (_isLocationTracking) score += 20;
-    if (_fallEvents.isEmpty || _fallEvents.every((e) => e.acknowledged)) score += 50;
+    if (_reminderConfig.enabled) score += 50;
+    if (_isLocationTracking) score += 30;
+    if (_lastRecordTime != null) score += 20;
 
     Color scoreColor;
     String scoreLabel;
@@ -169,18 +190,17 @@ class _SafetySettingsPageState extends State<SafetySettingsPage> {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            scoreColor.withOpacity(0.1),
-            scoreColor.withOpacity(0.05),
+            scoreColor.withValues(alpha: 0.1),
+            scoreColor.withValues(alpha: 0.05),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: scoreColor.withOpacity(0.3)),
+        borderRadius: BorderRadius.circular(ZaiNeRadius.card),
+        border: Border.all(color: scoreColor.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
-          // 评分圆环
           Container(
             width: 80,
             height: 80,
@@ -189,7 +209,7 @@ class _SafetySettingsPageState extends State<SafetySettingsPage> {
               color: Colors.white,
               boxShadow: [
                 BoxShadow(
-                  color: scoreColor.withOpacity(0.2),
+                  color: scoreColor.withValues(alpha: 0.2),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),
@@ -214,7 +234,7 @@ class _SafetySettingsPageState extends State<SafetySettingsPage> {
                     Text(
                       '$score',
                       style: TextStyle(
-                        fontSize: 24,
+                        fontSize: ZaiNeFontSize.title,
                         fontWeight: FontWeight.bold,
                         color: scoreColor,
                       ),
@@ -222,7 +242,7 @@ class _SafetySettingsPageState extends State<SafetySettingsPage> {
                     Text(
                       scoreLabel,
                       style: TextStyle(
-                        fontSize: 11,
+                        fontSize: ZaiNeFontSize.micro,
                         color: scoreColor,
                       ),
                     ),
@@ -231,8 +251,7 @@ class _SafetySettingsPageState extends State<SafetySettingsPage> {
               ],
             ),
           ),
-          const SizedBox(width: 16),
-          // 安全状态说明
+          const SizedBox(width: ZaiNeSpacing.lg),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -240,19 +259,19 @@ class _SafetySettingsPageState extends State<SafetySettingsPage> {
                 const Text(
                   '安全状态',
                   style: TextStyle(
-                    fontSize: 18,
+                    fontSize: ZaiNeFontSize.subtitle,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: ZaiNeSpacing.sm),
                 Text(
                   _getSafetyDescription(),
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: ZaiNeFontSize.caption,
                     color: Colors.grey.shade600,
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: ZaiNeSpacing.sm),
                 Wrap(
                   spacing: 6,
                   runSpacing: 4,
@@ -275,10 +294,10 @@ class _SafetySettingsPageState extends State<SafetySettingsPage> {
 
   Widget _buildStatusChip(String label, Color color) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.sm, vertical: ZaiNeSpacing.xs),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(ZaiNeRadius.small),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -291,11 +310,11 @@ class _SafetySettingsPageState extends State<SafetySettingsPage> {
               color: color,
             ),
           ),
-          const SizedBox(width: 4),
+          const SizedBox(width: ZaiNeSpacing.xs),
           Text(
             label,
             style: TextStyle(
-              fontSize: 11,
+              fontSize: ZaiNeFontSize.micro,
               color: color,
             ),
           ),
@@ -319,7 +338,7 @@ class _SafetySettingsPageState extends State<SafetySettingsPage> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.blue.shade50,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(ZaiNeRadius.card),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -327,18 +346,18 @@ class _SafetySettingsPageState extends State<SafetySettingsPage> {
           Row(
             children: [
               Icon(Icons.lightbulb_outline, color: Colors.blue.shade400, size: 20),
-              const SizedBox(width: 8),
+              const SizedBox(width: ZaiNeSpacing.sm),
               Text(
                 '安全小贴士',
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: ZaiNeFontSize.bodySm,
                   fontWeight: FontWeight.bold,
                   color: Colors.blue.shade700,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: ZaiNeSpacing.md),
           _buildTipItem('1', '建议每天至少确认一次平安'),
           _buildTipItem('2', '开启位置追踪可在紧急时快速定位'),
           _buildTipItem('3', '佩戴 Apple Watch 可自动检测跌倒'),
@@ -365,19 +384,19 @@ class _SafetySettingsPageState extends State<SafetySettingsPage> {
               child: Text(
                 number,
                 style: const TextStyle(
-                  fontSize: 11,
+                  fontSize: ZaiNeFontSize.micro,
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
                 ),
               ),
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: ZaiNeSpacing.sm),
           Expanded(
             child: Text(
               text,
               style: TextStyle(
-                fontSize: 13,
+                fontSize: ZaiNeFontSize.caption,
                 color: Colors.blue.shade700,
               ),
             ),

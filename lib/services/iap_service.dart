@@ -38,7 +38,7 @@ class IapService {
     // 取消旧订阅
     await _subscription?.cancel();
     _subscription = _iap.purchaseStream.listen(_handlePurchaseUpdates);
-    debugPrint('[IAP] 服务初始化完成');
+    if (kDebugMode) debugPrint('[IAP] 服务初始化完成');
   }
 
   /// 释放资源
@@ -56,21 +56,29 @@ class IapService {
 
     final available = await _iap.isAvailable();
     if (!available) {
-      debugPrint('[IAP] StoreKit 不可用');
+      if (kDebugMode) debugPrint('[IAP] ❌ StoreKit 不可用');
       return [];
     }
+
+    if (kDebugMode) debugPrint('[IAP] 🔍 查询产品: $_productIds');
 
     final response = await _iap.queryProductDetails(_productIds);
 
     if (response.notFoundIDs.isNotEmpty) {
-      debugPrint('[IAP] 未找到的产品: ${response.notFoundIDs}');
+      if (kDebugMode) debugPrint('[IAP] ⚠️ 未找到的产品: ${response.notFoundIDs}');
+      if (kDebugMode) debugPrint('[IAP] 💡 可能原因: 1)ASC后台产品未提交审核 2)审核未通过 3)刚通过审核尚未生效(需等2-24h) 4)沙盒测试员未配置)');
     }
 
     if (response.productDetails.isNotEmpty) {
       _products = response.productDetails;
-      debugPrint('[IAP] 成功加载 ${response.productDetails.length} 个产品');
+      if (kDebugMode) {
+        for (final p in response.productDetails) {
+          debugPrint('[IAP] ✅ 产品: ${p.id} | ${p.title} | ${p.price}');
+        }
+      }
     } else {
-      debugPrint('[IAP] 产品加载为空，不缓存，下次可重试');
+      if (kDebugMode) debugPrint('[IAP] ❌ 产品加载为空! StoreKit 返回0个产品');
+      if (kDebugMode) debugPrint('[IAP] 💡 请检查: 1)ASC后台产品状态是否为"已批准" 2)产品ID是否匹配 3)是否使用沙盒测试账号');
       return [];
     }
 
@@ -84,37 +92,44 @@ class IapService {
   }
 
   /// 发起购买
-  Future<bool> purchaseProduct(ProductDetails product) async {
+  Future<String?> purchaseProduct(ProductDetails product) async {
     final available = await _iap.isAvailable();
     if (!available) {
-      debugPrint('[IAP] StoreKit 不可用，无法购买');
-      return false;
+      if (kDebugMode) debugPrint('[IAP] StoreKit 不可用，无法购买');
+      return 'StoreKit 不可用，请稍后再试';
     }
 
-    // StoreKit 2 推荐使用 SK2 方式
+    // StoreKit 2 统一购买接口（支持订阅/非消耗/消耗型）
     final purchaseParam = PurchaseParam(
       productDetails: product,
       applicationUserName: null, // 可选：关联用户标识
     );
 
-    final result = await _iap.buyNonConsumable(purchaseParam: purchaseParam);
-    if (!result) {
-      debugPrint('[IAP] 购买发起失败');
-      return false;
+    // 订阅型产品使用 buyNonConsumable（底层 StoreKit 统一处理）
+    // 注意：产品类型由 ASC 后台配置决定，API 调用方式相同
+    try {
+      final result = await _iap.buyNonConsumable(purchaseParam: purchaseParam);
+      if (!result) {
+        if (kDebugMode) debugPrint('[IAP] 购买发起失败（返回 false）');
+        return '购买请求发起失败，请重试';
+      }
+    } catch (e) {
+      if (kDebugMode) debugPrint('[IAP] 购买异常: $e');
+      return '购买异常: $e';
     }
-    return true;
+    return null; // null 表示成功发起
   }
 
   /// 恢复购买
   Future<void> restorePurchases() async {
     final available = await _iap.isAvailable();
     if (!available) {
-      debugPrint('[IAP] StoreKit 不可用，无法恢复');
+      if (kDebugMode) debugPrint('[IAP] StoreKit 不可用，无法恢复');
       return;
     }
 
     await _iap.restorePurchases();
-    debugPrint('[IAP] 恢复购买请求已发送');
+    if (kDebugMode) debugPrint('[IAP] 恢复购买请求已发送');
   }
 
   /// 获取缓存的产品（已加载后调用）
@@ -179,7 +194,7 @@ class IapService {
       // 标记交易已完成（对 StoreKit 1 和 2 都安全）
       if (purchaseDetails.pendingCompletePurchase) {
         _iap.completePurchase(purchaseDetails);
-        debugPrint('[IAP] 标记交易完成: ${purchaseDetails.productID}');
+        if (kDebugMode) debugPrint('[IAP] 标记交易完成: ${purchaseDetails.productID}');
       }
     }
   }

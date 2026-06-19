@@ -59,13 +59,13 @@ class HealthService {
     try {
       // 在部分旧版本或模拟器上，某些类型可能不可用，这里使用 try-catch
       bool authorized = await _health.requestAuthorization(_types, permissions: _permissions);
-      debugPrint('[HealthService] HealthKit 深度授权结果: $authorized');
+      if (kDebugMode) debugPrint('[HealthService] HealthKit 深度授权结果: $authorized');
       await prefs.setBool('health_last_authorized', authorized);
       await prefs.setString('health_last_auth_error', '');
       await prefs.setString('health_last_auth_time', DateTime.now().toIso8601String());
       return authorized;
     } catch (e) {
-      debugPrint('[HealthService] 请求权限异常: $e');
+      if (kDebugMode) debugPrint('[HealthService] 请求权限异常: $e');
       await prefs.setBool('health_last_authorized', false);
       await prefs.setString('health_last_auth_error', e.toString());
       await prefs.setString('health_last_auth_time', DateTime.now().toIso8601String());
@@ -77,7 +77,7 @@ class HealthService {
         await prefs.setBool('health_last_authorized', coreAuthorized);
         await prefs.setString('health_last_auth_error', coreAuthorized ? '' : 'core_not_authorized');
         await prefs.setString('health_last_auth_time', DateTime.now().toIso8601String());
-        debugPrint('[HealthService] HealthKit 核心授权结果: $coreAuthorized');
+        if (kDebugMode) debugPrint('[HealthService] HealthKit 核心授权结果: $coreAuthorized');
         return coreAuthorized;
       } catch (e2) {
         await prefs.setBool('health_last_authorized', false);
@@ -242,9 +242,9 @@ class HealthService {
         summary.addAll(menstruationInfo);
       }
 
-      debugPrint('[HealthService] 获取到健康摘要: $summary');
+      if (kDebugMode) debugPrint('[HealthService] 获取到健康摘要: $summary');
     } catch (e) {
-      debugPrint('[HealthService] 获取健康摘要失败: $e');
+      if (kDebugMode) debugPrint('[HealthService] 获取健康摘要失败: $e');
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('health_last_fetch_error', e.toString());
       await prefs.setString('health_last_fetch_time', DateTime.now().toIso8601String());
@@ -344,11 +344,13 @@ class HealthService {
         }
       }
 
-      debugPrint('[HealthService] 经期状态: inPeriod=${result['is_in_period']}, '
+      if (kDebugMode) {
+        debugPrint('[HealthService] 经期状态: inPeriod=${result['is_in_period']}, '
           'cycleDay=${result['cycle_day']}, avgCycle=${result['average_cycle_length']}, '
           'predictedNext=${result['predicted_next_date']}');
+      }
     } catch (e) {
-      debugPrint('[HealthService] 计算经期状态失败: $e');
+      if (kDebugMode) debugPrint('[HealthService] 计算经期状态失败: $e');
     }
 
     return result;
@@ -360,14 +362,14 @@ class HealthService {
       // 1. 获取最新健康摘要
       final summary = await getHealthSummary();
       if (summary.isEmpty) {
-        debugPrint('[HealthService] 健康摘要为空，跳过同步');
+        if (kDebugMode) debugPrint('[HealthService] 健康摘要为空，跳过同步');
         return false;
       }
 
       // 2. 调用 API 同步
       final res = await UserService.syncHealthMetrics(summary);
       if (res['success'] == true) {
-        debugPrint('[HealthService] 健康数据同步成功');
+        if (kDebugMode) debugPrint('[HealthService] 健康数据同步成功');
         
         // 3. 推送健康数据到 Apple Watch
         unawaited(WatchDataService().pushHealthSummary(summary));
@@ -405,21 +407,21 @@ class HealthService {
           }
 
           if (shouldNotify) {
-            debugPrint('[HealthService] 检测到异常体征，且通过冷静期校验，准备报警: $alerts');
+            if (kDebugMode) debugPrint('[HealthService] 检测到异常体征，且通过冷静期校验，准备报警: $alerts');
             await NotifyService.sendHealthAlert(alerts);
             
             // 更新缓存
             await prefs.setStringList('last_health_alerts', alerts);
             await prefs.setString('last_health_alert_time', DateTime.now().toIso8601String());
           } else {
-            debugPrint('[HealthService] 检测到异常但处于冷静期内且内容未变，跳过重复报警');
+            if (kDebugMode) debugPrint('[HealthService] 检测到异常但处于冷静期内且内容未变，跳过重复报警');
           }
         }
         
         return true;
       }
     } catch (e) {
-      debugPrint('[HealthService] 同步健康数据异常: $e');
+      if (kDebugMode) debugPrint('[HealthService] 同步健康数据异常: $e');
     }
     return false;
   }
@@ -524,14 +526,14 @@ class HealthService {
       );
 
       if (healthData.isNotEmpty) {
-        debugPrint('[HealthService] 检测到最近心跳数据: ${healthData.length} 条');
+        if (kDebugMode) debugPrint('[HealthService] 检测到最近心跳数据: ${healthData.length} 条');
         return true;
       }
       
-      debugPrint('[HealthService] 过去 $windowMinutes 分钟内未检测到心跳数据');
+      if (kDebugMode) debugPrint('[HealthService] 过去 $windowMinutes 分钟内未检测到心跳数据');
       return false;
     } catch (e) {
-      debugPrint('[HealthService] 读取心跳数据失败: $e');
+      if (kDebugMode) debugPrint('[HealthService] 读取心跳数据失败: $e');
       return false;
     }
   }
@@ -550,7 +552,7 @@ class HealthService {
     bool isAlive = hasWatchSignal || await checkRecentHeartbeat();
     
     if (isAlive) {
-      debugPrint('[HealthService] 触发静默签到 (Watch信号: $hasWatchSignal)...');
+      if (kDebugMode) debugPrint('[HealthService] 触发静默签到 (Watch信号: $hasWatchSignal)...');
       
       // 执行同步健康数据（顺便带上去）
       await syncHealthData();
@@ -565,7 +567,7 @@ class HealthService {
       );
       
       if (res['success'] == true) {
-        debugPrint('[HealthService] 静默签到成功');
+        if (kDebugMode) debugPrint('[HealthService] 静默签到成功');
         final uid = prefs.getString('user_id') ?? '';
         final lastDateKey =
             uid.isNotEmpty ? 'last_check_in_date_$uid' : 'last_check_in_date';

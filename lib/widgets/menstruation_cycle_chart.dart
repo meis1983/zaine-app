@@ -344,7 +344,7 @@ class _CyclePainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final cycleWidth = size.width / 3;
     final cycleHeight = size.height - 30;
-    final topPadding = 15.0;
+    const topPadding = 15.0;
 
     for (int i = 0; i < 3; i++) {
       final left = i * cycleWidth + 10;
@@ -479,7 +479,7 @@ class _CyclePainter extends CustomPainter {
     );
 
     // 标签
-    _drawLabel(canvas, left + width / 2, top - 5, '第${currentCycleDay}天');
+    _drawLabel(canvas, left + width / 2, top - 5, '第$currentCycleDay天');
   }
 
   void _drawPredictedCycle(
@@ -502,7 +502,7 @@ class _CyclePainter extends CustomPainter {
     canvas.drawRRect(rect, borderPaint);
 
     // 预测的经期（半透明）
-    final typicalPeriodDays = 5;
+    const typicalPeriodDays = 5;
     final periodRatio = typicalPeriodDays / averageCycleLength;
     final periodHeight = height * periodRatio;
     
@@ -597,7 +597,7 @@ class MenstruationPredictionCard extends StatelessWidget {
                   child: _buildPredictionItem(
                     '易孕窗口',
                     fertileWindowStart != null && fertileWindowEnd != null
-                        ? '第$fertileWindowStart-${fertileWindowEnd}天'
+                        ? '第$fertileWindowStart-$fertileWindowEnd天'
                         : '--',
                     Icons.favorite,
                     Colors.orange.shade400,

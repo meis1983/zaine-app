@@ -10,6 +10,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
+import '../api_service.dart';
 
 /// 定时确认状态
 enum CheckInReminderStatus {
@@ -255,7 +256,7 @@ class SafetyService {
         );
 
     _isInitialized = true;
-    debugPrint('[SafetyService] 初始化完成');
+    if (kDebugMode) debugPrint('[SafetyService] 初始化完成');
   }
 
   Future<void> _ensureInitialized() async {
@@ -265,25 +266,61 @@ class SafetyService {
 
   // ==================== 定时确认功能 ====================
 
-  /// 获取定时确认配置
+  /// 获取定时确认配置（优先后端，兜底本地）
   Future<CheckInReminder> getReminderConfig() async {
     await _ensureInitialized();
+
+    // 优先从后端拉取
+    try {
+      final res = await ApiService.get('/api/safety/reminder', auth: true);
+      if (res['success'] == true) {
+        // 去除 success 字段后直接用 CheckInReminder.fromJson 解析
+        final data = Map<String, dynamic>.from(res);
+        data.remove('success');
+        data.remove('error');
+        final config = CheckInReminder.fromJson(data);
+        // 同步到本地缓存
+        await _prefs!.setString(_reminderKey, jsonEncode(config.toJson()));
+        return config;
+      }
+    } catch (e) {
+      if (kDebugMode) debugPrint('[SafetyService] 后端获取提醒配置失败，使用本地缓存: $e');
+    }
+
+    // 兜底：从本地缓存读取
     final jsonStr = _prefs!.getString(_reminderKey);
     if (jsonStr == null) return const CheckInReminder();
-
     try {
       return CheckInReminder.fromJson(jsonDecode(jsonStr));
     } catch (e) {
-      debugPrint('[SafetyService] 解析提醒配置失败: $e');
+      if (kDebugMode) debugPrint('[SafetyService] 解析提醒配置失败: $e');
       return const CheckInReminder();
     }
   }
 
-  /// 保存定时确认配置
+  /// 保存定时确认配置（同步到后端 + 本地）
   Future<void> saveReminderConfig(CheckInReminder config) async {
     await _ensureInitialized();
+
+    // 先同步到后端
+    try {
+      await ApiService.post(
+        '/api/safety/reminder',
+        body: {
+          'enabled': config.enabled,
+          'status': config.status.name,
+          'reminder_hours': config.reminderHours,
+        },
+        auth: true,
+      );
+      if (kDebugMode) debugPrint('[SafetyService] 提醒配置已同步到后端');
+    } catch (e) {
+      if (kDebugMode) debugPrint('[SafetyService] 后端同步失败，仅保存到本地: $e');
+    }
+
+    // 保存到本地缓存
     await _prefs!.setString(_reminderKey, jsonEncode(config.toJson()));
-    debugPrint('[SafetyService] 提醒配置已保存: ${config.status}');
+    if (kDebugMode) debugPrint('[SafetyService] 提醒配置已保存: ${config.status}');
 
     // 更新定时器
     if (config.enabled) {
@@ -310,22 +347,30 @@ class SafetyService {
     await saveReminderConfig(current.copyWith(enabled: false));
   }
 
-  /// 执行定时确认
+  /// 执行定时确认（同步到后端 + 本地）
   Future<void> performCheckIn() async {
     await _ensureInitialized();
     final current = await getReminderConfig();
-    
+
+    // 先同步到后端
+    try {
+      final res = await ApiService.post('/api/safety/checkin', auth: true);
+      if (kDebugMode) debugPrint('[SafetyService] 定时确认已同步到后端: ${res['message']}');
+    } catch (e) {
+      if (kDebugMode) debugPrint('[SafetyService] 后端同步失败，仅本地保存: $e');
+    }
+
     final now = DateTime.now();
     final nextReminder = _calculateNextReminder(now, current.reminderHours);
-    
+
     final updated = current.copyWith(
       lastCheckIn: now,
       nextReminder: nextReminder,
       missedCount: 0, // 重置未确认计数
     );
-    
+
     await saveReminderConfig(updated);
-    debugPrint('[SafetyService] 定时确认完成，下次提醒: $nextReminder');
+    if (kDebugMode) debugPrint('[SafetyService] 定时确认完成，下次提醒: $nextReminder');
   }
 
   /// 启动定时器
@@ -354,7 +399,7 @@ class SafetyService {
       }
     });
     
-    debugPrint('[SafetyService] 定时器已启动');
+    if (kDebugMode) debugPrint('[SafetyService] 定时器已启动');
   }
 
   void _stopReminderTimer() {
@@ -363,9 +408,9 @@ class SafetyService {
   }
 
   void _triggerReminder() {
-    debugPrint('[SafetyService] 触发定时确认提醒');
+    if (kDebugMode) debugPrint('[SafetyService] 触发定时确认提醒');
     _showReminderNotification();
-    onReminderDue?.call(_CheckInReminderImpl(enabled: true, status: CheckInReminderStatus.daily));
+    onReminderDue?.call(const _CheckInReminderImpl(enabled: true, status: CheckInReminderStatus.daily));
   }
 
   Future<void> _handleMissedReminder(CheckInReminder config) async {
@@ -405,7 +450,7 @@ class SafetyService {
   }
 
   Future<void> _notifyGuardiansAboutMissedCheckIn(int missedCount) async {
-    debugPrint('[SafetyService] 连续$missedCount次未确认，通知守护人');
+    if (kDebugMode) debugPrint('[SafetyService] 连续$missedCount次未确认，通知守护人');
     // TODO: 调用通知服务通知守护人
   }
 
@@ -422,69 +467,175 @@ class SafetyService {
   }
 
   // ==================== 位置共享功能 ====================
+  
+  static const String _lastLocationKey = 'last_location_record';
+  Timer? _locationTimer; // 位置记录定时器
 
-  /// 开始位置跟踪
+  /// 开始位置跟踪（每5分钟记录一次）
   Future<bool> startLocationTracking() async {
-    // 请求权限
+    // 1. 请求权限
     final status = await Permission.locationWhenInUse.request();
     if (!status.isGranted) {
-      debugPrint('[SafetyService] 位置权限未授权');
+      if (kDebugMode) debugPrint('[SafetyService] 位置权限未授权');
       return false;
     }
 
-    // 检查位置服务是否开启
+    // 2. 检查位置服务是否开启
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
-      debugPrint('[SafetyService] 位置服务未开启');
+      if (kDebugMode) debugPrint('[SafetyService] 位置服务未开启');
       return false;
     }
 
-    // 开始定期位置更新
-    const locationSettings = LocationSettings(
-      accuracy: LocationAccuracy.high,
-      distanceFilter: 50, // 每50米更新一次
-    );
+    // 3. 停止之前的定时器（如果有）
+    _stopLocationTimer();
 
-    Geolocator.getPositionStream(locationSettings: locationSettings)
-        .listen((position) {
-      _handleLocationUpdate(position);
+    // 4. 立即记录一次位置
+    await _recordLocation();
+
+    // 5. 启动定时器（每5分钟记录一次）
+    _locationTimer = Timer.periodic(const Duration(minutes: 5), (timer) async {
+      await _recordLocation();
     });
 
-    debugPrint('[SafetyService] 位置跟踪已启动');
+    if (kDebugMode) debugPrint('[SafetyService] 位置跟踪已启动（每5分钟记录一次）');
     return true;
   }
 
-  /// 获取当前位置
-  Future<Position?> getCurrentLocation() async {
-    try {
-      final status = await Permission.locationWhenInUse.request();
-      if (!status.isGranted) return null;
+  /// 停止位置跟踪
+  void stopLocationTracking() {
+    _stopLocationTimer();
+    if (kDebugMode) debugPrint('[SafetyService] 位置跟踪已停止');
+  }
 
-      return await Geolocator.getCurrentPosition(
+  /// 停止位置定时器
+  void _stopLocationTimer() {
+    _locationTimer?.cancel();
+    _locationTimer = null;
+  }
+
+  /// 记录当前位置（本地 + 后端同步）
+  Future<void> _recordLocation() async {
+    try {
+      final position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
+
+      final record = LocationRecord(
+        timestamp: DateTime.now(),
+        latitude: position.latitude,
+        longitude: position.longitude,
+        accuracy: position.accuracy,
+        altitude: position.altitude,
+      );
+
+      // 保存到本地历史记录
+      await _saveLocationRecord(record);
+
+      // 保存最后一次记录时间
+      await _saveLastRecordTime(record.timestamp);
+
+      // 触发回调
+      onLocationUpdate?.call(record);
+
+      // 【新增 v1.76.0】同步到后端
+      _uploadLocationToBackend(record);
+
+      if (kDebugMode) debugPrint('[SafetyService] 位置已记录: ${record.latitude}, ${record.longitude}');
     } catch (e) {
-      debugPrint('[SafetyService] 获取位置失败: $e');
+      if (kDebugMode) debugPrint('[SafetyService] 记录位置失败: $e');
+    }
+  }
+
+  /// 后台上传位置到后端（静默失败，不阻塞主流程）
+  Future<void> _uploadLocationToBackend(LocationRecord record) async {
+    try {
+      await ApiService.post(
+        '/api/safety/location',
+        body: {
+          'latitude': record.latitude,
+          'longitude': record.longitude,
+          'accuracy': record.accuracy,
+          'altitude': record.altitude,
+          'activity_type': record.activityType?.name,
+          'record_type': 'tracking',
+        },
+        auth: true,
+      );
+      if (kDebugMode) debugPrint('[SafetyService] 位置已同步到后端');
+    } catch (e) {
+      if (kDebugMode) debugPrint('[SafetyService] 位置同步到后端失败（已忽略）: $e');
+    }
+  }
+
+  /// 保存最后一次记录时间
+  Future<void> _saveLastRecordTime(DateTime time) async {
+    await _ensureInitialized();
+    await _prefs!.setString(_lastLocationKey, time.toIso8601String());
+  }
+
+  /// 获取最后一次记录时间
+  Future<DateTime?> getLastRecordTime() async {
+    await _ensureInitialized();
+    final timeStr = _prefs!.getString(_lastLocationKey);
+    if (timeStr == null) return null;
+    try {
+      return DateTime.parse(timeStr);
+    } catch (e) {
       return null;
     }
   }
 
-  void _handleLocationUpdate(Position position) async {
-    await _ensureInitialized();
+  /// 获取当前位置（用于SOS时记录）
+  Future<LocationRecord?> getCurrentLocation() async {
+    try {
+      final status = await Permission.locationWhenInUse.request();
+      if (!status.isGranted) return null;
 
-    final record = LocationRecord(
-      timestamp: DateTime.now(),
-      latitude: position.latitude,
-      longitude: position.longitude,
-      accuracy: position.accuracy,
-      altitude: position.altitude,
-    );
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.best, // SOS时使用最佳精度
+      );
 
-    // 保存到历史记录
-    await _saveLocationRecord(record);
-    
-    // 触发回调
-    onLocationUpdate?.call(record);
+      return LocationRecord(
+        timestamp: DateTime.now(),
+        latitude: position.latitude,
+        longitude: position.longitude,
+        accuracy: position.accuracy,
+        altitude: position.altitude,
+      );
+    } catch (e) {
+      if (kDebugMode) debugPrint('[SafetyService] 获取位置失败: $e');
+      return null;
+    }
+  }
+
+  /// SOS时记录位置（只记录触发时的位置）
+  Future<void> recordLocationOnSOS() async {
+    final location = await getCurrentLocation();
+    if (location == null) {
+      if (kDebugMode) debugPrint('[SafetyService] SOS位置记录失败：无法获取位置');
+      return;
+    }
+
+    // 保存到本地
+    await _saveLocationRecord(location);
+
+    // 同步到后端（紧急联系人可查看）
+    try {
+      await ApiService.post(
+        '/api/safety/sos-location',
+        body: {
+          'latitude': location.latitude,
+          'longitude': location.longitude,
+          'accuracy': location.accuracy,
+          'timestamp': location.timestamp.toIso8601String(),
+        },
+        auth: true,
+      );
+      if (kDebugMode) debugPrint('[SafetyService] SOS位置已上传到后端');
+    } catch (e) {
+      if (kDebugMode) debugPrint('[SafetyService] SOS位置上传失败: $e');
+    }
   }
 
   Future<void> _saveLocationRecord(LocationRecord record) async {
@@ -520,26 +671,53 @@ class SafetyService {
 
       return records;
     } catch (e) {
-      debugPrint('[SafetyService] 解析位置历史失败: $e');
+      if (kDebugMode) debugPrint('[SafetyService] 解析位置历史失败: $e');
       return [];
     }
   }
 
-  /// 获取某天的轨迹
+  /// 获取某天的轨迹（本地 + 后端合并）
   Future<List<LocationRecord>> getLocationTrackForDay(DateTime day) async {
+    // 先读本地
     final history = await getLocationHistory();
-    return history.where((r) {
+    final localTrack = history.where((r) {
       return r.timestamp.year == day.year &&
           r.timestamp.month == day.month &&
           r.timestamp.day == day.day;
     }).toList();
+
+    // 尝试从后端拉取（静默失败）
+    try {
+      final dateStr = '${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}';
+      final res = await ApiService.get(
+        '/api/safety/location?date=$dateStr',
+        auth: true,
+      );
+      if (res['success'] == true && res['records'] is List) {
+        final backendRecords = (res['records'] as List).map((json) =>
+            LocationRecord.fromJson(json as Map<String, dynamic>)
+        ).toList();
+        // 合并：后端优先，去重
+        final all = [...backendRecords, ...localTrack];
+        final unique = <String, LocationRecord>{};
+        for (final r in all) {
+          unique['${r.timestamp.millisecondsSinceEpoch}'] = r;
+        }
+        return unique.values.toList()
+          ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
+      }
+    } catch (e) {
+      if (kDebugMode) debugPrint('[SafetyService] 后端位置记录获取失败（已忽略）: $e');
+    }
+
+    return localTrack;
   }
 
   /// 清除位置历史
   Future<void> clearLocationHistory() async {
     await _ensureInitialized();
     await _prefs!.remove(_locationHistoryKey);
-    debugPrint('[SafetyService] 位置历史已清除');
+    if (kDebugMode) debugPrint('[SafetyService] 位置历史已清除');
   }
 
   // ==================== 跌倒检测功能 ====================
@@ -557,7 +735,7 @@ class SafetyService {
           .toList()
         ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
     } catch (e) {
-      debugPrint('[SafetyService] 解析跌倒事件失败: $e');
+      if (kDebugMode) debugPrint('[SafetyService] 解析跌倒事件失败: $e');
       return [];
     }
   }
@@ -573,7 +751,7 @@ class SafetyService {
       jsonEncode(events.map((e) => e.toJson()).toList()),
     );
 
-    debugPrint('[SafetyService] 跌倒事件已记录: ${event.id}');
+    if (kDebugMode) debugPrint('[SafetyService] 跌倒事件已记录: ${event.id}');
     onFallDetected?.call(event);
   }
 
@@ -594,7 +772,7 @@ class SafetyService {
         _fallEventsKey,
         jsonEncode(events.map((e) => e.toJson()).toList()),
       );
-      debugPrint('[SafetyService] 跌倒事件已确认: $eventId');
+      if (kDebugMode) debugPrint('[SafetyService] 跌倒事件已确认: $eventId');
     }
   }
 
@@ -608,7 +786,7 @@ class SafetyService {
   Future<void> clearFallEvents() async {
     await _ensureInitialized();
     await _prefs!.remove(_fallEventsKey);
-    debugPrint('[SafetyService] 跌倒事件历史已清除');
+    if (kDebugMode) debugPrint('[SafetyService] 跌倒事件历史已清除');
   }
 
   /// 计算两点之间的距离（米）

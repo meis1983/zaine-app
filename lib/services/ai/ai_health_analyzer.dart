@@ -197,7 +197,7 @@ class AIHealthAnalyzer {
     required Map<String, dynamic> userProfile,
     List<Map<String, dynamic>>? historicalData,
   }) async {
-    debugPrint('[AI] 开始健康数据分析...');
+    if (kDebugMode) debugPrint('[AI] 开始健康数据分析...');
 
     final insights = <HealthInsight>[];
     final anomalies = <HealthAnomaly>[];
@@ -237,7 +237,7 @@ class AIHealthAnalyzer {
     // 保存分析结果
     await _saveAnalysisResult(result);
 
-    debugPrint('[AI] 健康分析完成，评分: $score');
+    if (kDebugMode) debugPrint('[AI] 健康分析完成，评分: $score');
     return result;
   }
 
@@ -638,7 +638,7 @@ class AIHealthAnalyzer {
     try {
       return HealthAnalysisResult.fromJson(jsonDecode(jsonStr));
     } catch (e) {
-      debugPrint('[AI] 解析分析结果失败: $e');
+      if (kDebugMode) debugPrint('[AI] 解析分析结果失败: $e');
       return null;
     }
   }
@@ -655,7 +655,7 @@ class AIHealthAnalyzer {
           .map((json) => HealthAnalysisResult.fromJson(json as Map<String, dynamic>))
           .toList();
     } catch (e) {
-      debugPrint('[AI] 解析分析历史失败: $e');
+      if (kDebugMode) debugPrint('[AI] 解析分析历史失败: $e');
       return [];
     }
   }

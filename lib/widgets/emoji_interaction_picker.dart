@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../services/social/guardian_message_service.dart';
+import '../theme/theme_helper.dart';
 
 /// 表情选择器组件
 ///
@@ -61,7 +62,7 @@ class _EmojiPickerState extends State<EmojiPicker> with SingleTickerProviderStat
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 10,
             offset: const Offset(0, -5),
           ),
@@ -77,7 +78,8 @@ class _EmojiPickerState extends State<EmojiPicker> with SingleTickerProviderStat
             decoration: BoxDecoration(
               color: Colors.grey.shade300,
               borderRadius: BorderRadius.circular(2),
-            ),
+            
+              boxShadow: ZaiNeShadows.card,),
           ),
           // 标题
           Padding(
@@ -190,9 +192,9 @@ class _EmojiPickerState extends State<EmojiPicker> with SingleTickerProviderStat
             behavior: SnackBarBehavior.floating,
           ),
         );
+        widget.onEmojiSent?.call(emojiCode);
+        Navigator.pop(context);
       }
-      widget.onEmojiSent?.call(emojiCode);
-      Navigator.pop(context);
     }
   }
 }
@@ -296,7 +298,7 @@ class _EmojiBubbleState extends State<EmojiBubble> with SingleTickerProviderStat
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: [
-              Theme.of(context).primaryColor.withOpacity(0.1),
+              Theme.of(context).primaryColor.withValues(alpha: 0.1),
               Colors.white,
             ],
             begin: Alignment.topLeft,
@@ -304,11 +306,11 @@ class _EmojiBubbleState extends State<EmojiBubble> with SingleTickerProviderStat
           ),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: Theme.of(context).primaryColor.withOpacity(0.2),
+            color: Theme.of(context).primaryColor.withValues(alpha: 0.2),
           ),
           boxShadow: [
             BoxShadow(
-              color: Theme.of(context).primaryColor.withOpacity(0.1),
+              color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -353,7 +355,7 @@ class QuickEmojiButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: isSelected
-          ? Theme.of(context).primaryColor.withOpacity(0.2)
+          ? Theme.of(context).primaryColor.withValues(alpha: 0.2)
           : Colors.grey.shade100,
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
@@ -367,7 +369,8 @@ class QuickEmojiButton extends StatelessWidget {
             border: isSelected
                 ? Border.all(color: Theme.of(context).primaryColor, width: 2)
                 : null,
-          ),
+          
+            boxShadow: ZaiNeShadows.card,),
           child: Center(
             child: Text(
               emojiCode,
@@ -418,14 +421,14 @@ class EmojiHistoryList extends StatelessWidget {
           Icon(
             Icons.emoji_emotions_outlined,
             size: 64,
-            color: Colors.grey.shade300,
+            color: ZaiNeColors.textHint(),
           ),
           const SizedBox(height: 16),
           Text(
             '还没有收到表情',
             style: TextStyle(
               fontSize: 16,
-              color: Colors.grey.shade500,
+              color: ZaiNeColors.textSecondary(),
             ),
           ),
           const SizedBox(height: 8),
@@ -433,7 +436,7 @@ class EmojiHistoryList extends StatelessWidget {
             '守护你的人会发送表情给你~',
             style: TextStyle(
               fontSize: 14,
-              color: Colors.grey.shade400,
+              color: ZaiNeColors.textHint(),
             ),
           ),
         ],
@@ -447,7 +450,7 @@ class EmojiHistoryList extends StatelessWidget {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: Colors.grey.shade200),
+        side: BorderSide(color: ZaiNeColors.borderColor()),
       ),
       child: Padding(
         padding: const EdgeInsets.all(12),
@@ -457,9 +460,10 @@ class EmojiHistoryList extends StatelessWidget {
               width: 56,
               height: 56,
               decoration: BoxDecoration(
-                color: Theme.of(context).primaryColor.withOpacity(0.1),
+                color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
-              ),
+              
+                boxShadow: ZaiNeShadows.card,),
               child: Center(
                 child: Text(
                   interaction.emojiCode,
@@ -483,7 +487,7 @@ class EmojiHistoryList extends StatelessWidget {
                   Text(
                     _formatTime(interaction.createdAt),
                     style: TextStyle(
-                      color: Colors.grey.shade500,
+                      color: ZaiNeColors.textSecondary(),
                       fontSize: 13,
                     ),
                   ),

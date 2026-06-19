@@ -253,7 +253,7 @@ class SocialService {
           .toList()
         ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
     } catch (e) {
-      debugPrint('[Social] 解析留言失败: $e');
+      if (kDebugMode) debugPrint('[Social] 解析留言失败: $e');
       return [];
     }
   }
@@ -290,10 +290,10 @@ class SocialService {
         '${_messagesKey}_$receiverId',
         jsonEncode(messages.map((m) => m.toJson()).toList()),
       );
-      debugPrint('[Social] 留言发送成功: ${message.id}');
+      if (kDebugMode) debugPrint('[Social] 留言发送成功: ${message.id}');
       return true;
     } catch (e) {
-      debugPrint('[Social] 保存留言失败: $e');
+      if (kDebugMode) debugPrint('[Social] 保存留言失败: $e');
       return false;
     }
   }
@@ -378,10 +378,10 @@ class SocialService {
       receivedList.insert(0, interaction.toJson());
       await _prefs!.setString(receivedKey, jsonEncode(receivedList));
 
-      debugPrint('[Social] 表情发送成功: $emojiCode');
+      if (kDebugMode) debugPrint('[Social] 表情发送成功: $emojiCode');
       return true;
     } catch (e) {
-      debugPrint('[Social] 保存表情失败: $e');
+      if (kDebugMode) debugPrint('[Social] 保存表情失败: $e');
       return false;
     }
   }
@@ -399,7 +399,7 @@ class SocialService {
           .toList()
         ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
     } catch (e) {
-      debugPrint('[Social] 解析表情失败: $e');
+      if (kDebugMode) debugPrint('[Social] 解析表情失败: $e');
       return [];
     }
   }
@@ -529,7 +529,7 @@ class SocialService {
         return a;
       }).toList();
     } catch (e) {
-      debugPrint('[Social] 解析成就失败: $e');
+      if (kDebugMode) debugPrint('[Social] 解析成就失败: $e');
       return achievements;
     }
   }
@@ -563,7 +563,7 @@ class SocialService {
     }
     await _prefs!.setString('${_achievementsKey}_$userId', jsonEncode(savedData));
 
-    debugPrint('[Social] 成就进度更新: $achievementId = $newValue');
+    if (kDebugMode) debugPrint('[Social] 成就进度更新: $achievementId = $newValue');
   }
 
   /// 批量更新成就进度

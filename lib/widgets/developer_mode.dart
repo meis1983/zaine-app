@@ -245,6 +245,7 @@ mixin DeveloperMode<T extends StatefulWidget> on State<T> {
                   onTap: () async {
                     final prefs = await SharedPreferences.getInstance();
                     await prefs.setBool('onboarding_completed', false);
+                    if (!mounted || !ctx.mounted) return;
                     Navigator.pop(ctx);
                     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
                       content: Text('已设置，下次启动将显示引导页 ✓'),
@@ -697,14 +698,14 @@ mixin DeveloperMode<T extends StatefulWidget> on State<T> {
     try {
       final res = await CheckinService.checkIn(date: todayStr, mood: -1);
       if (res['success'] == true) {
-        debugPrint('[DevMode] 签到模拟器后端同步成功');
+        if (kDebugMode) debugPrint('[DevMode] 签到模拟器后端同步成功');
       } else if (res['error'] == 'already_checked_in') {
-        debugPrint('[DevMode] 今日已在后端签过到，本地模拟数据已设置');
+        if (kDebugMode) debugPrint('[DevMode] 今日已在后端签过到，本地模拟数据已设置');
       } else {
-        debugPrint('[DevMode] 签到模拟器后端同步: ${res['error']}');
+        if (kDebugMode) debugPrint('[DevMode] 签到模拟器后端同步: ${res['error']}');
       }
     } catch (e) {
-      debugPrint('[DevMode] 签到模拟器后端同步失败（不影响本地）: $e');
+      if (kDebugMode) debugPrint('[DevMode] 签到模拟器后端同步失败（不影响本地）: $e');
     }
 
     if (!mounted) return;
@@ -757,8 +758,8 @@ mixin DeveloperMode<T extends StatefulWidget> on State<T> {
         ),
       );
     } catch (e, stack) {
-      debugPrint('[DevMode] 里程碑弹窗显示异常: $e');
-      debugPrint(stack.toString());
+      if (kDebugMode) debugPrint('[DevMode] 里程碑弹窗显示异常: $e');
+      if (kDebugMode) debugPrint(stack.toString());
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -783,13 +784,13 @@ mixin DeveloperMode<T extends StatefulWidget> on State<T> {
           SizedBox(width: 8),
           Text('重置签到'),
         ]),
-        content: SingleChildScrollView(
+        content: const SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('这将清除今天的签到记录，你可以重新签到。'),
-              const SizedBox(height: 8),
-              const Text('连续天数不会受影响。',
+              Text('这将清除今天的签到记录，你可以重新签到。'),
+              SizedBox(height: 8),
+              Text('连续天数不会受影响。',
                   style: TextStyle(fontSize: 12, color: Colors.grey)),
             ],
           ),
@@ -840,8 +841,8 @@ mixin DeveloperMode<T extends StatefulWidget> on State<T> {
           SizedBox(width: 8),
           Text('重置守护卡'),
         ]),
-        content: SingleChildScrollView(
-          child: const Column(
+        content: const SingleChildScrollView(
+          child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Text('这将重置守护卡为初始状态：'),
@@ -885,12 +886,12 @@ mixin DeveloperMode<T extends StatefulWidget> on State<T> {
           );
           if (apiRes['success'] == true) {
             backendOk = true;
-            debugPrint('[DeveloperMode] ✅ 后端配额已重置: available_cards=${apiRes['available_cards']}');
+            if (kDebugMode) debugPrint('[DeveloperMode] ✅ 后端配额已重置: available_cards=${apiRes['available_cards']}');
           } else {
-            debugPrint('[DeveloperMode] ⚠️ 后端配额重置失败: ${apiRes['error']}');
+            if (kDebugMode) debugPrint('[DeveloperMode] ⚠️ 后端配额重置失败: ${apiRes['error']}');
           }
         } catch (e) {
-          debugPrint('[DeveloperMode] ⚠️ 后端配额重置异常: $e');
+          if (kDebugMode) debugPrint('[DeveloperMode] ⚠️ 后端配额重置异常: $e');
         }
       }
 
@@ -957,8 +958,8 @@ mixin DeveloperMode<T extends StatefulWidget> on State<T> {
           SizedBox(width: 8),
           Text('模拟会员过期'),
         ]),
-        content: SingleChildScrollView(
-          child: const Column(
+        content: const SingleChildScrollView(
+          child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

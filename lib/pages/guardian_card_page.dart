@@ -1,10 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
-import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'dart:async';  // 新增：用于 Timer
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:image/image.dart' as img;
@@ -20,6 +20,7 @@ import '../services/api/auth_service.dart';
 import '../theme/theme_helper.dart';
 import '../utils/avatar_helper.dart';
 import '../widgets/guardian_card_painter.dart';
+import '../data/app_constants.dart';
 
 /// 守护卡页面 — 制作守护卡分享给在乎的人
 ///
@@ -104,27 +105,9 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
     if (mounted) setState(() => _isLoadingData = true);
     final prefs = await SharedPreferences.getInstance();
 
-    // 【修复 v1.9.7】统一使用 AuthService 判断登录状态，避免与首页标准不一致
-    // 根因：首页用 is_logged_in 判断，守护卡页直接查 auth_token，两者可能不同步
-    final isLoggedIn = await AuthService.isLoggedIn();
-    if (!isLoggedIn) {
-      debugPrint('[GuardianCardPage] ⚠️ 用户未登录，标记需要登录');
-      if (mounted) {
-        setState(() {
-          _needsLogin = true;
-        });
-      }
-      return;
-    }
-    // 登录状态正常，确保 _needsLogin 为 false（防止页面复用保留旧状态）
-    if (mounted) {
-      setState(() => _needsLogin = false);
-    }
-
-    // 初始化赠送卡（如果是新用户）
-    await GuardianCardService.initGiftCards();
-
-    // 加载用户信息（本地读取，无网络开销）
+    // 【修复 v1.75.0】先加载用户数据（不依赖 isLoggedIn() 结果）
+    // 根因：如果 isLoggedIn() 误判为 false，后续代码不执行，_userName 永远为空
+    //       导致 _shareCard() 里的兜底逻辑完全失效
     final userId = prefs.getString('user_id');
     final profileKey = (userId != null && userId.isNotEmpty)
         ? 'user_profile_$userId'
@@ -142,18 +125,43 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
       _userAvatar = avatarPath;
     }
 
+    // 【修复 v1.9.7】统一使用 AuthService 判断登录状态，避免与首页标准不一致
+    // 根因：首页用 is_logged_in 判断，守护卡页直接查 auth_token，两者可能不同步
+    final isLoggedIn = await AuthService.isLoggedIn();
+
+    // 【修复 v1.75.0】多重判断：isLoggedIn OR 有用户数据 → 认为已登录
+    final hasUserData = _userName.isNotEmpty || (userId != null && userId.isNotEmpty);
+    if (!isLoggedIn && !hasUserData) {
+      if (kDebugMode) debugPrint('[GuardianCardPage] ⚠️ 用户未登录且无用户数据，标记需要登录');
+      if (mounted) {
+        setState(() {
+          _needsLogin = true;
+          _isLoadingData = false;
+        });
+      }
+      return;
+    }
+
+    // 登录状态正常，确保 _needsLogin 为 false（防止页面复用保留旧状态）
+    if (mounted) {
+      setState(() => _needsLogin = false);
+    }
+
+    // 初始化赠送卡（如果是新用户）
+    await GuardianCardService.initGiftCards();
+
     // 【性能优化 v1.9.12】页面加载时预加载头像到图片缓存
     // 根因：之前在 _shareCard() 点击发送时才 precacheImage，增加 0.5-1s 延迟
     // 修复：在 _loadData 阶段就预加载，发送时直接截取
-    if (_userAvatar.isNotEmpty) {
+    if (_userAvatar.isNotEmpty && mounted) {
       try {
         final ImageProvider avatarProvider = _userAvatar.startsWith('/') || _userAvatar.startsWith('file://')
             ? FileImage(File(_userAvatar))
             : NetworkImage(_userAvatar) as ImageProvider;
         await precacheImage(avatarProvider, context);
-        debugPrint('[GuardianCardPage] 头像预加载完成');
+        if (kDebugMode) debugPrint('[GuardianCardPage] 头像预加载完成');
       } catch (e) {
-        debugPrint('[GuardianCardPage] 头像预加载失败(不影响): $e');
+        if (kDebugMode) debugPrint('[GuardianCardPage] 头像预加载失败(不影响): $e');
       }
     }
 
@@ -166,7 +174,7 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
       // 不在此处 remove 标记，改在 Future.wait 完成后统一 remove，
       // 确保并行回调也能看到 skipSync 标志
       _availableCards = await GuardianCardService.getGiftRemaining();
-      debugPrint('[GuardianCardPage] 开发者重置，跳过后端同步，使用本地值: $_availableCards');
+      if (kDebugMode) debugPrint('[GuardianCardPage] 开发者重置，跳过后端同步，使用本地值: $_availableCards');
     } else {
       final syncResult = await GuardianCardService.syncQuotaFromBackend();
       _availableCards = syncResult;
@@ -190,10 +198,10 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
           if (cardListRes['success'] == true) {
             final cards = cardListRes['cards'] as List<dynamic>? ?? [];
             // 【诊断 v1.9.61】打印后端原始数据，排查 A 账号折叠面板不显示问题
-            debugPrint('[GuardianCardPage] 🔍 listMyCards 原始返回: ${cards.length}张卡片');
+            if (kDebugMode) debugPrint('[GuardianCardPage] 🔍 listMyCards 原始返回: ${cards.length}张卡片');
             for (int i = 0; i < cards.length; i++) {
               final c = cards[i] as Map<String, dynamic>;
-              debugPrint('  卡片[$i] id=${c['id']} status=${c['status']} (type:${c['status'].runtimeType}) receiver=${c['receiver_name']} code=${c['card_code']?.toString().substring(0,6)}...');
+              if (kDebugMode) debugPrint('  卡片[$i] id=${c['id']} status=${c['status']} (type:${c['status'].runtimeType}) receiver=${c['receiver_name']} code=${c['card_code']?.toString().substring(0,6)}...');
             }
             _pendingCards = cards
                 .where((c) {
@@ -202,7 +210,7 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
               // 支持整数 0 和字符串 'pending'，兼容不同后端版本
               final accepted = ((status is int && status == 0) || (status is String && status.toLowerCase() == 'pending')) && !isFree;
               if (!accepted) {
-                debugPrint('  ⚠️ 卡片被过滤器丢弃: status=$status is_free=$isFree');
+                if (kDebugMode) debugPrint('  ⚠️ 卡片被过滤器丢弃: status=$status is_free=$isFree');
               }
               return accepted;
             })
@@ -225,7 +233,7 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
                 'expire_at': expireAt,
               };
             }).toList();
-            debugPrint('[GuardianCardPage] 待注册卡片数: ${_pendingCards.length}');
+            if (kDebugMode) debugPrint('[GuardianCardPage] 待注册卡片数: ${_pendingCards.length}');
 
             final stats = cardListRes['stats'] as Map<String, dynamic>?;
             if (stats != null) {
@@ -248,7 +256,7 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
             }
           }
         } catch (e) {
-          debugPrint('[GuardianCardPage] 加载卡片列表失败: $e');
+          if (kDebugMode) debugPrint('[GuardianCardPage] 加载卡片列表失败: $e');
         }
       }(),
     ]);
@@ -256,7 +264,7 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
     // Future.wait 完成后，统一清除 skipSync 标记，并结束加载状态
     if (skipSync) {
       await prefs.remove('guardian_card_skip_sync_once');
-      debugPrint('[GuardianCardPage] skipSync 标记已清除');
+      if (kDebugMode) debugPrint('[GuardianCardPage] skipSync 标记已清除');
     }
     if (mounted) setState(() => _isLoadingData = false);
   }
@@ -265,16 +273,20 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
       _isCustomMessage ? _customMsgController.text.trim() : _presetMessages[_selectedMessageIndex];
 
   /// 【修复 v1.16.0】fallback URL 改为 landing 页，不再指向 App Store
-  String get _appStoreUrl => 'https://zaine.love/landing/welcome';
+  String get _appStoreUrl => AppConstants.welcomeUrl;
 
   int get _totalAvailable => _availableCards;
 
   // ==================== 截图分享 ====================
 
   Future<void> _shareCard() async {
-    // 【修复 v1.9.7】实时检查登录状态，避免缓存的 _needsLogin 过时
+    // 【修复 v1.75.0】多重登录状态校验
+    // 1. 标准检查：AuthService.isLoggedIn()
+    // 2. 兜底检查：页面已有用户数据（避免 Keychain 读取偶发失败导致误判）
     final isLoggedIn = await AuthService.isLoggedIn();
-    if (!isLoggedIn) {
+    final hasUserData = _userName.isNotEmpty;
+
+    if (!isLoggedIn && !hasUserData) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -287,6 +299,11 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
       return;
     }
 
+    // 兜底生效时记录日志（便于排查 Keychain 读取问题）
+    if (!isLoggedIn && hasUserData) {
+      if (kDebugMode) debugPrint('[GuardianCardPage] ⚠️ isLoggedIn=false 但页面有用户数据，允许继续（兜底生效）');
+    }
+
     // 不再验证祝福语是否为空——祝福语渲染在卡片图片上，微信发图即可看到
     // iOS 微信不支持通过分享 API 传递文本内容
 
@@ -295,6 +312,8 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
 
     try {
       // ====== 第一步：编辑昵称（先让用户输入，再发卡） ======
+      if (!mounted) return;
+      
       final defaultRecipient = _recipientName.isNotEmpty ? _recipientName : '朋友';
 
       // 使用 TextEditingController 管理输入状态
@@ -311,11 +330,11 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
           return StatefulBuilder(
             builder: (ctx, setDlgState) {
               return AlertDialog(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.card)),
                 title: const Row(
                   children: [
                     Icon(Icons.edit_outlined, color: Color(0xFFFF7F50)),
-                    SizedBox(width: 8),
+                    SizedBox(width: ZaiNeSpacing.sm),
                     Text('编辑称呼'),
                   ],
                 ),
@@ -329,19 +348,19 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
                           color: const Color(0xFFFFF5F0),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFFFF7F50).withOpacity(0.3)),
+                          borderRadius: BorderRadius.circular(ZaiNeRadius.small),
+                          border: Border.all(color: const Color(0xFFFF7F50).withValues(alpha: 0.3)),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('对方称呼（必填）', style: TextStyle(fontSize: 12, color: Color(0xFFFF7F50), fontWeight: FontWeight.bold)),
-                            const SizedBox(height: 4),
+                            const Text('对方称呼（必填）', style: TextStyle(fontSize: ZaiNeFontSize.caption, color: Color(0xFFFF7F50), fontWeight: FontWeight.bold)),
+                            const SizedBox(height: ZaiNeSpacing.xs),
                             TextField(
                               controller: recipientController,
                               autofocus: true,
                               onChanged: (_) => setDlgState(() {}),
-                              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                              style: const TextStyle(fontSize: ZaiNeFontSize.subtitle, fontWeight: FontWeight.bold),
                               decoration: const InputDecoration(
                                 hintText: '例如：小赵',
                                 border: InputBorder.none,
@@ -351,7 +370,7 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
                           ],
                         ),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: ZaiNeSpacing.lg),
                       // 发送者昵称
                       TextField(
                         controller: senderController,
@@ -359,14 +378,14 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
                         decoration: InputDecoration(
                           labelText: '你的昵称',
                           prefixIcon: const Icon(Icons.person_outline, color: Color(0xFFFF7F50)),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.small)),
                         ),
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: ZaiNeSpacing.md),
                       Text(
                         '让对方一眼就知道是你寄出的礼物 💌',
                         textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                        style: TextStyle(fontSize: ZaiNeFontSize.caption, color: Colors.grey.shade500),
                       ),
                     ],
                   ),
@@ -396,7 +415,7 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFFF7F50),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.small)),
                       ),
                       child: const Text('生成守护卡', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
                     ),
@@ -454,20 +473,20 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
             SnackBar(content: Text(errMsg), backgroundColor: Colors.red, duration: const Duration(seconds: 4)),
           );
         }
-        debugPrint('[GuardianCard] 发卡失败: $sendResult');
+        if (kDebugMode) debugPrint('[GuardianCard] 发卡失败: $sendResult');
         return;
       }
 
       final cardCode = sendResult['cardCode']?.toString() ?? '';
       // 构建 landing 页 URL（扫码后打开精美H5落地页）
       final landingUrl = cardCode.isNotEmpty
-          ? 'https://zaine.love/landing/$cardCode'
-          : 'https://zaine.love';
+          ? AppConstants.guardianCardUrl(cardCode)
+          : AppConstants.landingBaseUrl;
       if (mounted) {
         setState(() {
           _currentShareUrl = landingUrl;
           _currentCardCode = cardCode;
-          debugPrint('[GuardianCard] 二维码URL已更新: $_currentShareUrl, 安全码: $_currentCardCode');
+          if (kDebugMode) debugPrint('[GuardianCard] 二维码URL已更新: $_currentShareUrl, 安全码: $_currentCardCode');
           final newAvailable = sendResult['available_cards'] as int?;
           if (newAvailable != null) _availableCards = newAvailable;
         });
@@ -501,7 +520,7 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
           subject: '守护卡 · 在呢',
         );
       } catch (e) {
-        debugPrint('[GuardianCard] 系统分享失败: $e');
+        if (kDebugMode) debugPrint('[GuardianCard] 系统分享失败: $e');
         // 分享失败不影响发卡成功状态，给用户提示
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -521,12 +540,12 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
       final skipSyncAfterSend = prefs.getBool('guardian_card_skip_sync_once') ?? false;
       if (skipSyncAfterSend) {
         await prefs.remove('guardian_card_skip_sync_once');
-        debugPrint('[GuardianCardPage] 开发者重置标记已清除，强制同步后端额度');
+        if (kDebugMode) debugPrint('[GuardianCardPage] 开发者重置标记已清除，强制同步后端额度');
       }
       // 【修复 v1.9.8】无论是否开发者重置，发卡后都强制同步后端权威值
       // 根因：sendCardWithBackend 已更新本地缓存，但后端可能有额外逻辑（如过期检查）
       _availableCards = await GuardianCardService.syncQuotaFromBackend();
-      debugPrint('[GuardianCardPage] 发卡后同步后端额度: $_availableCards 张');
+      if (kDebugMode) debugPrint('[GuardianCardPage] 发卡后同步后端额度: $_availableCards 张');
 
       // 标记新手任务：发送守护卡完成
       await prefs.setBool('newbie_card_sent', true);
@@ -537,10 +556,10 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
         if (cardListRes['success'] == true) {
           final cards = cardListRes['cards'] as List<dynamic>? ?? [];
           // 【诊断 v1.9.61】发卡后刷新：打印原始数据
-          debugPrint('[GuardianCardPage] 🔍 发卡后 listMyCards 原始返回: ${cards.length}张卡片');
+          if (kDebugMode) debugPrint('[GuardianCardPage] 🔍 发卡后 listMyCards 原始返回: ${cards.length}张卡片');
           for (int i = 0; i < cards.length; i++) {
             final c = cards[i] as Map<String, dynamic>;
-            debugPrint('  卡片[$i] id=${c['id']} status=${c['status']} (type:${c['status'].runtimeType}) receiver=${c['receiver_name']} code=${c['card_code']?.toString().substring(0,6)}...');
+            if (kDebugMode) debugPrint('  卡片[$i] id=${c['id']} status=${c['status']} (type:${c['status'].runtimeType}) receiver=${c['receiver_name']} code=${c['card_code']?.toString().substring(0,6)}...');
           }
           _pendingCards = cards
               .where((c) {
@@ -548,7 +567,7 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
             final isFree = c['is_free'] == 1;
             final accepted = ((status is int && status == 0) || (status is String && status.toLowerCase() == 'pending')) && !isFree;
             if (!accepted) {
-              debugPrint('  ⚠️ 发卡后被过滤器丢弃: status=$status is_free=$isFree');
+              if (kDebugMode) debugPrint('  ⚠️ 发卡后被过滤器丢弃: status=$status is_free=$isFree');
             }
             return accepted;
           })
@@ -567,10 +586,10 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
               'expire_at': expireAt,
             };
           }).toList();
-          debugPrint('[GuardianCardPage] 发卡后刷新待注册卡片: ${_pendingCards.length}张');
+          if (kDebugMode) debugPrint('[GuardianCardPage] 发卡后刷新待注册卡片: ${_pendingCards.length}张');
         }
       } catch (e) {
-        debugPrint('[GuardianCardPage] 发卡后刷新卡片列表失败: $e');
+        if (kDebugMode) debugPrint('[GuardianCardPage] 发卡后刷新卡片列表失败: $e');
       }
 
       if (mounted) {
@@ -591,7 +610,7 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
         );
       }
     } catch (e) {
-      debugPrint('[GuardianCard] 分享失败: $e');
+      if (kDebugMode) debugPrint('[GuardianCard] 分享失败: $e');
       if (mounted) {
         setState(() => _isSharing = false);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -606,12 +625,12 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
       // 【修复 v1.9.12】多重保护，防止截到红屏或空白帧
       final context = _cardKey.currentContext;
       if (context == null) {
-        debugPrint('[GuardianCard] 截图失败: currentContext 为 null');
+        if (kDebugMode) debugPrint('[GuardianCard] 截图失败: currentContext 为 null');
         return null;
       }
       final boundary = context.findRenderObject();
       if (boundary == null || boundary is! RenderRepaintBoundary) {
-        debugPrint('[GuardianCard] 截图失败: boundary 类型异常 (${boundary.runtimeType})');
+        if (kDebugMode) debugPrint('[GuardianCard] 截图失败: boundary 类型异常 (${boundary.runtimeType})');
         return null;
       }
       // 等一帧，确保 widget 已渲染完成（非红屏状态）
@@ -619,18 +638,18 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
       final image = await boundary.toImage(pixelRatio: 3.0);
 
       // 阶段①+②：GPU 加速 — 填粉底 + clipRRect 裁切
-      final cornerRadius = 24.0 * 3.0; // UI borderRadius(24) × pixelRatio(3.0)
+      const cornerRadius = 24.0 * 3.0; // UI borderRadius(24) × pixelRatio(3.0)
       final roundedImage = await _clipRoundedCorners(image, cornerRadius);
 
       // 阶段③：PNG → CPU 逐像素边缘采样填充四角 → 输出 JPEG
       final byteData = await roundedImage.toByteData(format: ui.ImageByteFormat.png);
       if (byteData == null) {
-        debugPrint('[GuardianCard] 截图失败: 生成的图像数据为空');
+        if (kDebugMode) debugPrint('[GuardianCard] 截图失败: 生成的图像数据为空');
         return null;
       }
       var src = img.decodeImage(byteData.buffer.asUint8List());
       if (src == null) {
-        debugPrint('[GuardianCard] 截图失败: PNG解码失败');
+        if (kDebugMode) debugPrint('[GuardianCard] 截图失败: PNG解码失败');
         return null;
       }
 
@@ -638,10 +657,10 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
       _fillRoundedCorners(src, cornerRadius);
 
       final bytes = Uint8List.fromList(img.encodeJpg(src, quality: 100));
-      debugPrint('[GuardianCard] 截图成功: ${bytes.length} bytes (含CPU圆角处理)');
+      if (kDebugMode) debugPrint('[GuardianCard] 截图成功: ${bytes.length} bytes (含CPU圆角处理)');
       return bytes;
     } catch (e, st) {
-      debugPrint('[GuardianCard] 截图异常: $e\n$st');
+      if (kDebugMode) debugPrint('[GuardianCard] 截图异常: $e\n$st');
       return null;
     }
   }
@@ -748,20 +767,20 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.lg, vertical: ZaiNeSpacing.md),
       decoration: BoxDecoration(
-        color: Colors.orange.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.orange.withOpacity(0.3)),
+        color: Colors.orange.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(ZaiNeRadius.small),
+        border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
           Icon(Icons.info_outline, color: Colors.orange.shade700, size: 20),
-          const SizedBox(width: 10),
+          const SizedBox(width: ZaiNeSpacing.md),
           Expanded(
             child: Text(
               '您尚未登录，发送守护卡需要登录账号',
-              style: TextStyle(fontSize: 13, color: Colors.orange.shade800, fontWeight: FontWeight.w500),
+              style: TextStyle(fontSize: ZaiNeFontSize.caption, color: Colors.orange.shade800, fontWeight: FontWeight.w500),
             ),
           ),
           TextButton(
@@ -801,7 +820,7 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
       body: SafeArea(
         bottom: true,
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.xl, vertical: ZaiNeSpacing.md),
           child: Column(
                 children: [
                   // 【修复】未登录提示横幅
@@ -812,15 +831,15 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
 
                   // 方案C：待注册卡片列表（独立于配额栏，有卡就始终可展开）
                   if (_pendingCards.isNotEmpty) ...[
-                    const SizedBox(height: 8),
+                    const SizedBox(height: ZaiNeSpacing.sm),
                     _buildPendingSection(),
                   ],
 
                   // P4: 邀请统计（仅在有邀请记录时显示）
-                  const SizedBox(height: 8),
+                  const SizedBox(height: ZaiNeSpacing.sm),
                   if (_invitedCount > 0) _buildInviteStatsBar(),
 
-                  const SizedBox(height: 20),
+                  const SizedBox(height: ZaiNeSpacing.xl),
 
                   // 守护卡预览（v2.1 裂变传播版）
                   RepaintBoundary(
@@ -838,27 +857,27 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
                     ),
                   ),
 
-                  const SizedBox(height: 20),
+                  const SizedBox(height: ZaiNeSpacing.xl),
 
                   // 收件人称呼（纯装饰，显示在卡片上）
                   _buildRecipientInput(),
 
-                  const SizedBox(height: 16),
+                  const SizedBox(height: ZaiNeSpacing.lg),
 
                   // 祝福语选择
                   _buildMessageSelector(),
 
-                  const SizedBox(height: 14),
+                  const SizedBox(height: ZaiNeSpacing.lg),
 
                   // 自定义祝福语输入
                   _buildCustomMessageInput(),
 
-                  const SizedBox(height: 24),
+                  const SizedBox(height: ZaiNeSpacing.xl),
 
                   // 操作按钮
                   _buildActionButtons(),
 
-                  const SizedBox(height: 40),
+                  const SizedBox(height: ZaiNeSpacing.xxl),
                 ],
               ),
             ),
@@ -890,54 +909,54 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
               height: 300,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: const Color(0xFFFF9A8B).withOpacity(0.05),
+                color: const Color(0xFFFF9A8B).withValues(alpha: 0.05),
               ),
             ),
           ),
           Center(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 60),
+              padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.xxl, vertical: ZaiNeSpacing.xxl),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   // 动画图标
                   _buildAnimatedComingSoonIcon(),
 
-                  const SizedBox(height: 32),
+                  const SizedBox(height: ZaiNeSpacing.xxl),
 
                   Text(
                     '守护卡即将上线',
                     style: TextStyle(
-                      fontSize: 24,
+                      fontSize: ZaiNeFontSize.title,
                       fontWeight: FontWeight.bold,
                       color: ZaiNeColors.textPrimary(),
                       letterSpacing: 1.2,
                     ),
                   ),
 
-                  const SizedBox(height: 16),
+                  const SizedBox(height: ZaiNeSpacing.lg),
 
                   Text(
                     '给在乎的人发一张守护卡\n让他们感受到跨越距离的关心',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontSize: 15,
+                      fontSize: ZaiNeFontSize.body,
                       color: ZaiNeColors.textSecondary(),
                       height: 1.6,
                     ),
                   ),
 
-                  const SizedBox(height: 40),
+                  const SizedBox(height: ZaiNeSpacing.xxl),
 
                   // 功能预告卡片
                   Container(
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
                       color: ZaiNeColors.cardBg(),
-                      borderRadius: BorderRadius.circular(24),
+                      borderRadius: BorderRadius.circular(ZaiNeRadius.card),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.04),
+                          color: Colors.black.withValues(alpha: 0.04),
                           blurRadius: 20,
                           offset: const Offset(0, 10),
                         ),
@@ -946,15 +965,15 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
                     child: Column(
                       children: [
                         _buildComingSoonFeature(Icons.brush_rounded, '精美守护卡', '多款温暖设计的卡片模板'),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: ZaiNeSpacing.xl),
                         _buildComingSoonFeature(Icons.auto_awesome_rounded, '3D 仪式感', '沉浸式信封开封动画体验'),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: ZaiNeSpacing.xl),
                         _buildComingSoonFeature(Icons.qr_code_2_rounded, '情感裂变', '通过守护卡建立真实的联系'),
                       ],
                     ),
                   ),
 
-                  const SizedBox(height: 48),
+                  const SizedBox(height: ZaiNeSpacing.xxl),
 
                   // 按钮提示
                   Container(
@@ -964,34 +983,34 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
                       gradient: const LinearGradient(
                         colors: [Color(0xFFFF9A8B), Color(0xFFFF6A88)],
                       ),
-                      borderRadius: BorderRadius.circular(27),
+                      borderRadius: BorderRadius.circular(ZaiNeRadius.card),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFFFF6A88).withOpacity(0.3),
+                          color: const Color(0xFFFF6A88).withValues(alpha: 0.3),
                           blurRadius: 12,
                           offset: const Offset(0, 6),
                         ),
                       ],
                     ),
-                    child: Center(
+                    child: const Center(
                       child: Text(
                         'Android 敬请期待',
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: Colors.white,
-                          fontSize: 16,
+                          fontSize: ZaiNeFontSize.body,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),
                   ),
 
-                  const SizedBox(height: 24),
+                  const SizedBox(height: ZaiNeSpacing.xl),
 
                   Text(
                     'Android 版本正在全速开发中\n我们希望能为你带来最极致的守护体验',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: ZaiNeFontSize.caption,
                       color: Colors.grey[400],
                       height: 1.5,
                     ),
@@ -1007,7 +1026,7 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
 
   /// 构建带有动画感的图标
   Widget _buildAnimatedComingSoonIcon() {
-    return Container(
+    return SizedBox(
       width: 130,
       height: 130,
       child: Stack(
@@ -1019,7 +1038,7 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
             height: 130,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: const Color(0xFFFF9A8B).withOpacity(0.1),
+              color: const Color(0xFFFF9A8B).withValues(alpha: 0.1),
             ),
           ),
           Container(
@@ -1027,7 +1046,7 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
             height: 100,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: const Color(0xFFFF9A8B).withOpacity(0.15),
+              color: const Color(0xFFFF9A8B).withValues(alpha: 0.15),
             ),
           ),
           // 核心图标
@@ -1043,7 +1062,7 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFFFF6A88).withOpacity(0.3),
+                  color: const Color(0xFFFF6A88).withValues(alpha: 0.3),
                   blurRadius: 15,
                   offset: const Offset(0, 6),
                 ),
@@ -1069,16 +1088,16 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
           height: 40,
           decoration: BoxDecoration(
             color: Colors.orange.shade50,
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(ZaiNeRadius.small),
           ),
           child: Icon(icon, color: Colors.orange, size: 20),
         ),
-        const SizedBox(width: 14),
+        const SizedBox(width: ZaiNeSpacing.lg),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-            Text(subtitle, style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+            Text(title, style: const TextStyle(fontSize: ZaiNeFontSize.bodySm, fontWeight: FontWeight.w600)),
+            Text(subtitle, style: TextStyle(fontSize: ZaiNeFontSize.caption, color: Colors.grey[500])),
           ],
         ),
       ],
@@ -1098,10 +1117,10 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
     final bool hasPendingCards = !hasCards && _pendingCards.isNotEmpty;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.lg, vertical: ZaiNeSpacing.md),
       decoration: BoxDecoration(
         color: ZaiNeColors.cardBg(),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(ZaiNeRadius.card),
         border: Border.all(
           color: hasCards
               ? const Color(0xFFFF7F50).withValues(alpha: 0.2)
@@ -1132,14 +1151,14 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
                   color: hasCards ? const Color(0xFFFF7F50) : Colors.grey[400],
                   size: 20,
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: ZaiNeSpacing.sm),
                 Expanded(
                   child: _buildQuotaTitle(hasCards, hasPendingCards),
                 ),
                 _buildQuotaBadge(hasCards, hasPendingCards),
                 // 方案C：展开箭头（仅有待注册卡片时显示）
                 if (_pendingCards.isNotEmpty) ...[
-                  const SizedBox(width: 8),
+                  const SizedBox(width: ZaiNeSpacing.sm),
                   AnimatedRotation(
                     turns: _isExpanded ? 0.5 : 0.0,
                     duration: const Duration(milliseconds: 200),
@@ -1156,7 +1175,7 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
 
           // 副行：根据状态显示详细信息
           if (_buildQuotaSubtitle() != null) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: ZaiNeSpacing.sm),
             _buildQuotaSubtitle()!,
           ],
         ],
@@ -1193,7 +1212,7 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
     return Text(
       title,
       style: TextStyle(
-        fontSize: 13,
+        fontSize: ZaiNeFontSize.caption,
         fontWeight: FontWeight.w600,
         color: color,
       ),
@@ -1204,10 +1223,10 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
   Widget _buildQuotaBadge(bool hasCards, bool hasPendingCards) {
     if (hasCards) {
       return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.md, vertical: ZaiNeSpacing.xs),
         decoration: BoxDecoration(
           color: const Color(0xFFFF7F50).withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(ZaiNeRadius.small),
           border: Border.all(
             color: const Color(0xFFFF7F50).withValues(alpha: 0.2),
           ),
@@ -1215,12 +1234,12 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.favorite, size: 10, color: const Color(0xFFFF7F50)),
-            const SizedBox(width: 4),
+            const Icon(Icons.favorite, size: 10, color: Color(0xFFFF7F50)),
+            const SizedBox(width: ZaiNeSpacing.xs),
             Text(
               '$_availableCards 张',
               style: const TextStyle(
-                fontSize: 12,
+                fontSize: ZaiNeFontSize.caption,
                 fontWeight: FontWeight.w600,
                 color: Color(0xFFFF7F50),
               ),
@@ -1230,21 +1249,21 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
       );
     } else if (hasPendingCards) {
       return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.md, vertical: ZaiNeSpacing.xs),
         decoration: BoxDecoration(
           color: Colors.orange.shade50,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(ZaiNeRadius.small),
           border: Border.all(color: Colors.orange.shade200),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.hourglass_top, size: 10, color: Colors.orange.shade700),
-            const SizedBox(width: 4),
+            const SizedBox(width: ZaiNeSpacing.xs),
             Text(
               '24h内注册',
               style: TextStyle(
-                fontSize: 11,
+                fontSize: ZaiNeFontSize.micro,
                 fontWeight: FontWeight.w600,
                 color: Colors.orange.shade700,
               ),
@@ -1257,21 +1276,21 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
       final nextUnlock = _checkinProgress!['next_unlock'] as Map<String, dynamic>?;
       final remainingDays = nextUnlock?['remaining'] as int? ?? 0;
       return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.md, vertical: ZaiNeSpacing.xs),
         decoration: BoxDecoration(
           color: Colors.blue.shade50,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(ZaiNeRadius.small),
           border: Border.all(color: Colors.blue.shade200),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.lock_open, size: 10, color: Colors.blue.shade700),
-            const SizedBox(width: 4),
+            const SizedBox(width: ZaiNeSpacing.xs),
             Text(
               remainingDays > 0 ? '再签$remainingDays天' : '可解锁',
               style: TextStyle(
-                fontSize: 11,
+                fontSize: ZaiNeFontSize.micro,
                 fontWeight: FontWeight.w600,
                 color: Colors.blue.shade700,
               ),
@@ -1282,10 +1301,10 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
     } else if (_isLoadingData) {
       // 【修复 v1.14.0】后端数据加载中，不应显示"待解锁"
       return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.md, vertical: ZaiNeSpacing.xs),
         decoration: BoxDecoration(
           color: Colors.grey.shade50,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(ZaiNeRadius.small),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -1298,11 +1317,11 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
                 color: Colors.grey[400],
               ),
             ),
-            const SizedBox(width: 4),
+            const SizedBox(width: ZaiNeSpacing.xs),
             Text(
               '加载中',
               style: TextStyle(
-                fontSize: 11,
+                fontSize: ZaiNeFontSize.micro,
                 color: Colors.grey[400],
                 fontWeight: FontWeight.w500,
               ),
@@ -1313,15 +1332,15 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
     } else if (_availableCards == 0) {
       // 【修复 v1.14.0】只有真正无卡时才显示待解锁
       return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.md, vertical: ZaiNeSpacing.xs),
         decoration: BoxDecoration(
           color: Colors.grey.shade100,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(ZaiNeRadius.small),
         ),
         child: Text(
           '待解锁',
           style: TextStyle(
-            fontSize: 11,
+            fontSize: ZaiNeFontSize.micro,
             color: Colors.grey[500],
             fontWeight: FontWeight.w500,
           ),
@@ -1330,20 +1349,20 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
     } else {
       // 有卡但数据不完整（边缘情况），显示剩余数量兜底
       return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.md, vertical: ZaiNeSpacing.xs),
         decoration: BoxDecoration(
           color: Colors.green.shade50,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(ZaiNeRadius.small),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.check_circle, size: 10, color: Colors.green.shade700),
-            const SizedBox(width: 4),
+            const SizedBox(width: ZaiNeSpacing.xs),
             Text(
               '$_availableCards 张可用',
               style: TextStyle(
-                fontSize: 11,
+                fontSize: ZaiNeFontSize.micro,
                 color: Colors.green.shade700,
                 fontWeight: FontWeight.w600,
               ),
@@ -1364,11 +1383,11 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
       return Row(
         children: [
           Icon(Icons.access_time, size: 12, color: Colors.orange.shade600),
-          const SizedBox(width: 4),
+          const SizedBox(width: ZaiNeSpacing.xs),
           Text(
             '初始卡剩余有效期: $_initialRemainingDays 天',
             style: TextStyle(
-              fontSize: 11,
+              fontSize: ZaiNeFontSize.micro,
               color: Colors.orange.shade600,
               fontWeight: FontWeight.w500,
             ),
@@ -1384,11 +1403,11 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
       return Row(
         children: [
           Icon(Icons.info_outline, size: 12, color: Colors.orange.shade500),
-          const SizedBox(width: 4),
+          const SizedBox(width: ZaiNeSpacing.xs),
           Text(
             '24小时内未注册将自动返回',
             style: TextStyle(
-              fontSize: 11,
+              fontSize: ZaiNeFontSize.micro,
               color: Colors.orange.shade500,
             ),
           ),
@@ -1411,21 +1430,21 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
           Row(
             children: [
               Icon(Icons.calendar_today, size: 12, color: Colors.blue.shade600),
-              const SizedBox(width: 4),
+              const SizedBox(width: ZaiNeSpacing.xs),
               Text(
                 '累计签到 $totalDays 天 — 签到 $targetDays 天解锁 1 张守护卡',
                 style: TextStyle(
-                  fontSize: 11,
+                  fontSize: ZaiNeFontSize.micro,
                   color: Colors.blue.shade600,
                   fontWeight: FontWeight.w500,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: ZaiNeSpacing.sm),
           // 进度条
           ClipRRect(
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: BorderRadius.circular(ZaiNeRadius.small),
             child: LinearProgressIndicator(
               value: progress.clamp(0.0, 1.0),
               backgroundColor: Colors.blue.shade100,
@@ -1442,11 +1461,11 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
       return Row(
         children: [
           Icon(Icons.people, size: 12, color: Colors.green.shade600),
-          const SizedBox(width: 4),
+          const SizedBox(width: ZaiNeSpacing.xs),
           Text(
             '已守护 $_totalRegistered 人 — 继续邀请获得更多守护卡',
             style: TextStyle(
-              fontSize: 11,
+              fontSize: ZaiNeFontSize.micro,
               color: Colors.green.shade600,
               fontWeight: FontWeight.w500,
             ),
@@ -1468,8 +1487,8 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
     return Container(
       decoration: BoxDecoration(
         color: ZaiNeColors.cardBg(),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(ZaiNeRadius.card),
+        border: Border.all(color: ZaiNeColors.borderColor()),
       ),
       child: Column(
         children: [
@@ -1486,20 +1505,20 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
             },
             borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.lg, vertical: ZaiNeSpacing.md),
               child: Row(
                 children: [
                   Icon(Icons.schedule_send, size: 20, color: Colors.grey[600]),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: ZaiNeSpacing.sm),
                   Expanded(
                     child: Text(
                       '已发出 ${cards.length} 张卡',
-                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                      style: const TextStyle(fontSize: ZaiNeFontSize.bodySm, fontWeight: FontWeight.w600),
                     ),
                   ),
                   Text(
                     _isExpanded ? '收起' : '展开',
-                    style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                    style: TextStyle(fontSize: ZaiNeFontSize.caption, color: Colors.grey[500]),
                   ),
                   AnimatedRotation(
                     turns: _isExpanded ? 0.5 : 0.0,
@@ -1537,15 +1556,15 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
                 padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
                   color: const Color(0xFFFF7F50).withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: BorderRadius.circular(ZaiNeRadius.small),
                 ),
                 child: const Icon(Icons.favorite_border, size: 12, color: Color(0xFFFF7F50)),
               ),
-              const SizedBox(width: 6),
+              const SizedBox(width: ZaiNeSpacing.sm),
               Text(
                 '他们还没来（${_pendingCards.length}）',
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: ZaiNeFontSize.caption,
                   fontWeight: FontWeight.w600,
                   color: ZaiNeColors.textSecondary(),
                   letterSpacing: 0.3,
@@ -1554,7 +1573,7 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
             ],
           ),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: ZaiNeSpacing.md),
         // 卡片列表
         ...List.generate(_pendingCards.length, (index) {
           final card = _pendingCards[index];
@@ -1623,7 +1642,7 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
                   : isUrgent
                       ? const Color(0xFFFF7F50).withValues(alpha: 0.04)
                       : ZaiNeColors.cardBg(),
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(ZaiNeRadius.card),
               border: Border.all(
                 color: isExpired
                     ? Colors.grey.shade200
@@ -1649,19 +1668,19 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
                   height: 40,
                   decoration: BoxDecoration(
                     color: avatarBg,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(ZaiNeRadius.small),
                   ),
                   alignment: Alignment.center,
                   child: Text(
                     receiverName.isNotEmpty ? receiverName[0] : '?',
                     style: TextStyle(
-                      fontSize: 16,
+                      fontSize: ZaiNeFontSize.body,
                       fontWeight: FontWeight.w700,
                       color: avatarFg,
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: ZaiNeSpacing.md),
                 // 名称 + 状态
                 Expanded(
                   child: Column(
@@ -1670,23 +1689,23 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
                       Text(
                         receiverName,
                         style: TextStyle(
-                          fontSize: 14,
+                          fontSize: ZaiNeFontSize.bodySm,
                           fontWeight: FontWeight.w600,
                           color: ZaiNeColors.textPrimary(),
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 3),
+                      const SizedBox(height: ZaiNeSpacing.xs),
                       Row(
                         children: [
                           if (isExpired) ...[
                             Icon(Icons.info_outline_rounded, size: 12, color: timeColor),
-                            const SizedBox(width: 3),
+                            const SizedBox(width: ZaiNeSpacing.xs),
                             Text(
                               '卡片已自动退回',
                               style: TextStyle(
-                                fontSize: 11,
+                                fontSize: ZaiNeFontSize.micro,
                                 color: timeColor,
                                 fontWeight: FontWeight.w400,
                               ),
@@ -1700,21 +1719,21 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
                                 shape: BoxShape.circle,
                               ),
                             ),
-                            const SizedBox(width: 5),
+                            const SizedBox(width: ZaiNeSpacing.xs),
                             Text(
                               timeLeft,
                               style: TextStyle(
-                                fontSize: 11,
+                                fontSize: ZaiNeFontSize.micro,
                                 color: timeColor,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
                             if (isUrgent) ...[
-                              const SizedBox(width: 6),
+                              const SizedBox(width: ZaiNeSpacing.sm),
                               Text(
                                 '即将过期',
                                 style: TextStyle(
-                                  fontSize: 10,
+                                  fontSize: ZaiNeFontSize.micro,
                                   color: Colors.red.shade400,
                                   fontWeight: FontWeight.w500,
                                 ),
@@ -1725,7 +1744,7 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
                       ),
                       // 【新增 v1.9.78】安全码持久化显示：退出发送页后仍可找到
                       if (!isExpired && cardCode.isNotEmpty) ...[
-                        const SizedBox(height: 6),
+                        const SizedBox(height: ZaiNeSpacing.sm),
                         GestureDetector(
                           onTap: () {
                             Clipboard.setData(ClipboardData(text: cardCode));
@@ -1741,28 +1760,28 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
                           },
                           behavior: HitTestBehavior.opaque,
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.sm, vertical: ZaiNeSpacing.xs),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFFF7F50).withOpacity(0.05),
-                              borderRadius: BorderRadius.circular(4),
+                              color: const Color(0xFFFF7F50).withValues(alpha: 0.05),
+                              borderRadius: BorderRadius.circular(ZaiNeRadius.small),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.vpn_key, size: 12, color: const Color(0xFFFF7F50).withOpacity(0.6)),
-                                const SizedBox(width: 6),
+                                Icon(Icons.vpn_key, size: 12, color: const Color(0xFFFF7F50).withValues(alpha: 0.6)),
+                                const SizedBox(width: ZaiNeSpacing.sm),
                                 Text(
                                   cardCode.toUpperCase(),
                                   style: const TextStyle(
-                                    fontSize: 14,
+                                    fontSize: ZaiNeFontSize.bodySm,
                                     color: Color(0xFFFF7F50),
                                     fontFamily: 'monospace',
                                     fontWeight: FontWeight.bold,
                                     letterSpacing: 1.5,
                                   ),
                                 ),
-                                const SizedBox(width: 8),
-                                Icon(Icons.copy_rounded, size: 14, color: const Color(0xFFFF7F50).withOpacity(0.4)),
+                                const SizedBox(width: ZaiNeSpacing.sm),
+                                Icon(Icons.copy_rounded, size: 14, color: const Color(0xFFFF7F50).withValues(alpha: 0.4)),
                               ],
                             ),
                           ),
@@ -1771,13 +1790,13 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
                     ],
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: ZaiNeSpacing.sm),
                 // 温柔提醒按钮（方案C：促进裂变）
                 if (!isExpired) ...[
                   GestureDetector(
                     onTap: () => _remindViaWeChat(receiverName, cardCode),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.lg, vertical: ZaiNeSpacing.sm),
                       decoration: BoxDecoration(
                         gradient: isUrgent
                             ? const LinearGradient(
@@ -1786,7 +1805,7 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
                             : const LinearGradient(
                                 colors: [Color(0xFFFF7F50), Color(0xFFFFAB91)],
                               ),
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius: BorderRadius.circular(ZaiNeRadius.card),
                         boxShadow: [
                           BoxShadow(
                             color: const Color(0xFFFF7F50).withValues(alpha: 0.25),
@@ -1803,11 +1822,11 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
                             size: 13,
                             color: Colors.white.withValues(alpha: 0.9),
                           ),
-                          const SizedBox(width: 4),
+                          const SizedBox(width: ZaiNeSpacing.xs),
                           Text(
                             '提醒TA',
                             style: TextStyle(
-                              fontSize: 12,
+                              fontSize: ZaiNeFontSize.caption,
                               fontWeight: FontWeight.w600,
                               color: Colors.white.withValues(alpha: 0.95),
                               letterSpacing: 0.5,
@@ -1823,14 +1842,14 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
           );
         }),
         // 底部温馨提示
-        const SizedBox(height: 4),
+        const SizedBox(height: ZaiNeSpacing.xs),
         Center(
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4),
+            padding: const EdgeInsets.symmetric(vertical: ZaiNeSpacing.xs),
             child: Text(
               '点击「提醒TA」选择一句关心的话，复制后去微信粘贴发送',
               style: TextStyle(
-                fontSize: 10.5,
+                fontSize: ZaiNeFontSize.micro,
                 color: ZaiNeColors.textHint(),
                 letterSpacing: 0.2,
               ),
@@ -1848,8 +1867,8 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
     // 【修复 v1.16.0】统一使用 landing 页链接，不再使用 App Store 直链
     // 根因：ICP 备案已完成，应引导接收者先看到精美 H5 落地页，再决定是否下载
     final shareUrl = cardCode.isNotEmpty
-        ? 'https://zaine.love/landing/$cardCode'
-        : 'https://zaine.love';
+        ? AppConstants.guardianCardUrl(cardCode)
+        : AppConstants.landingBaseUrl;
 
     // 4种文案模板 —— 默认展示方案A（温柔关切）
     final messageTemplates = [
@@ -1875,8 +1894,8 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
             return Container(
               margin: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
+                color: ZaiNeColors.cardBg(),
+                borderRadius: BorderRadius.circular(ZaiNeRadius.card),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.1),
@@ -1896,20 +1915,20 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(Icons.favorite, color: Colors.red.shade300, size: 20),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: ZaiNeSpacing.sm),
                         Text(
                           '把关心发给TA',
                           style: TextStyle(
-                            fontSize: 18,
+                            fontSize: ZaiNeFontSize.subtitle,
                             fontWeight: FontWeight.w700,
                             color: ZaiNeColors.textPrimary(),
                           ),
                         ),
-                        const SizedBox(width: 4),
-                        Text('💬', style: TextStyle(fontSize: 18)),
+                        const SizedBox(width: ZaiNeSpacing.xs),
+                        const Text('💬', style: TextStyle(fontSize: ZaiNeFontSize.subtitle)),
                       ],
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: ZaiNeSpacing.xl),
 
                     // 文案预览卡片
                     Container(
@@ -1917,7 +1936,7 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
                         color: const Color(0xFFF8F9FE),
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(ZaiNeRadius.card),
                         border: Border.all(
                           color: const Color(0xFFE8EAF6),
                           width: 1,
@@ -1926,14 +1945,14 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
                       child: Text(
                         currentMessage,
                         style: TextStyle(
-                          fontSize: 15,
+                          fontSize: ZaiNeFontSize.body,
                           height: 1.6,
                           color: ZaiNeColors.textPrimary(),
                           fontWeight: FontWeight.w400,
                         ),
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: ZaiNeSpacing.lg),
 
                     // 换一句按钮
                     GestureDetector(
@@ -1944,10 +1963,10 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
                         HapticFeedback.lightImpact();
                       },
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.lg, vertical: ZaiNeSpacing.sm),
                         decoration: BoxDecoration(
                           color: const Color(0xFFF0F0F0),
-                          borderRadius: BorderRadius.circular(20),
+                          borderRadius: BorderRadius.circular(ZaiNeRadius.card),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -1957,11 +1976,11 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
                               size: 16,
                               color: ZaiNeColors.textSecondary(),
                             ),
-                            const SizedBox(width: 6),
+                            const SizedBox(width: ZaiNeSpacing.sm),
                             Text(
                               '换一句',
                               style: TextStyle(
-                                fontSize: 13,
+                                fontSize: ZaiNeFontSize.caption,
                                 color: ZaiNeColors.textSecondary(),
                                 fontWeight: FontWeight.w500,
                               ),
@@ -1970,7 +1989,7 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: ZaiNeSpacing.xl),
 
                     // 复制并打开微信按钮
                     GestureDetector(
@@ -1988,16 +2007,16 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
                               duration: const Duration(seconds: 3),
                               behavior: SnackBarBehavior.floating,
                               margin: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.small)),
                               backgroundColor: const Color(0xFF323232),
                               content: const Row(
                                 children: [
                                   Icon(Icons.check_circle, color: Colors.green, size: 18),
-                                  SizedBox(width: 8),
+                                  SizedBox(width: ZaiNeSpacing.sm),
                                   Expanded(
                                     child: Text(
                                       '已复制，去微信粘贴发送 💬',
-                                      style: TextStyle(fontSize: 14, color: Colors.white),
+                                      style: TextStyle(fontSize: ZaiNeFontSize.bodySm, color: Colors.white),
                                     ),
                                   ),
                                 ],
@@ -2016,16 +2035,16 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
                           );
                         }
 
-                        debugPrint('[GuardianCard] 提醒TA文案已复制: 方案${currentIndex + 1}');
+                        if (kDebugMode) debugPrint('[GuardianCard] 提醒TA文案已复制: 方案${currentIndex + 1}');
                       },
                       child: Container(
                         width: double.infinity,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        padding: const EdgeInsets.symmetric(vertical: ZaiNeSpacing.lg),
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
                             colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
                           ),
-                          borderRadius: BorderRadius.circular(14),
+                          borderRadius: BorderRadius.circular(ZaiNeRadius.card),
                           boxShadow: [
                             BoxShadow(
                               color: const Color(0xFF667EEA).withValues(alpha: 0.3),
@@ -2038,11 +2057,11 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(Icons.copy, color: Colors.white, size: 18),
-                            SizedBox(width: 8),
+                            SizedBox(width: ZaiNeSpacing.sm),
                             Text(
                               '复制并打开微信',
                               style: TextStyle(
-                                fontSize: 15,
+                                fontSize: ZaiNeFontSize.body,
                                 fontWeight: FontWeight.w600,
                                 color: Colors.white,
                               ),
@@ -2114,20 +2133,20 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
   /// P4 邀请统计条（有邀请记录时显示）
   Widget _buildInviteStatsBar() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.lg, vertical: ZaiNeSpacing.md),
       decoration: BoxDecoration(
         color: Colors.green.shade50,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(ZaiNeRadius.small),
         border: Border.all(color: Colors.green.shade200.withValues(alpha: 0.5)),
       ),
       child: Row(
         children: [
           Icon(Icons.people_alt_rounded, color: Colors.green.shade600, size: 18),
-          const SizedBox(width: 8),
+          const SizedBox(width: ZaiNeSpacing.sm),
           Text(
             '已邀请 $_invitedCount 人加入',
             style: TextStyle(
-              fontSize: 12,
+              fontSize: ZaiNeFontSize.caption,
               color: Colors.green.shade700,
               fontWeight: FontWeight.w500,
             ),
@@ -2136,15 +2155,15 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
           // 【修复 v1.9.x】"获赠"改为显示已成功邀请注册的人数
           if (_invitedCount > 0) ...[
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.sm, vertical: ZaiNeSpacing.xs),
               decoration: BoxDecoration(
                 color: Colors.green.shade100,
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(ZaiNeRadius.small),
               ),
               child: Text(
                 '获赠 $_invitedCount 张',
                 style: TextStyle(
-                  fontSize: 11,
+                  fontSize: ZaiNeFontSize.micro,
                   color: Colors.green.shade800,
                   fontWeight: FontWeight.w600,
                 ),
@@ -2159,22 +2178,22 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
   /// 收件人称呼（纯装饰，会显示在守护卡上，如"妈妈，希望你每天平安"）
   Widget _buildRecipientInput() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.lg, vertical: ZaiNeSpacing.lg),
       decoration: BoxDecoration(
         color: ZaiNeColors.cardBg(),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.grey.shade200),
+        borderRadius: BorderRadius.circular(ZaiNeRadius.card),
+        border: Border.all(color: ZaiNeColors.borderColor()),
       ),
       child: Row(
         children: [
           Icon(Icons.favorite_border, size: 18, color: ZaiNeColors.textSecondary()),
-          const SizedBox(width: 10),
+          const SizedBox(width: ZaiNeSpacing.md),
           Expanded(
             child: TextField(
               onChanged: (v) => setState(() => _recipientName = v.trim()),
               decoration: InputDecoration(
                 hintText: '对方的称呼（选填），如"妈妈"',
-                hintStyle: TextStyle(fontSize: 13, color: Colors.grey[400]),
+                hintStyle: TextStyle(fontSize: ZaiNeFontSize.caption, color: Colors.grey[400]),
                 border: InputBorder.none,
                 enabledBorder: InputBorder.none,
                 focusedBorder: InputBorder.none,
@@ -2195,7 +2214,7 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
       children: [
         Padding(
           padding: const EdgeInsets.only(left: 4, bottom: 8),
-          child: Text('选择祝福语', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: ZaiNeColors.textPrimary())),
+          child: Text('选择祝福语', style: TextStyle(fontSize: ZaiNeFontSize.caption, fontWeight: FontWeight.w600, color: ZaiNeColors.textPrimary())),
         ),
         Wrap(
           spacing: 8,
@@ -2212,12 +2231,12 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
               },
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.md, vertical: ZaiNeSpacing.sm),
                 decoration: BoxDecoration(
                   color: isSelected
                       ? const Color(0xFFFF7F50).withValues(alpha: 0.12)
                       : ZaiNeColors.cardBg(),
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(ZaiNeRadius.card),
                   border: Border.all(
                     color: isSelected ? const Color(0xFFFF7F50) : Colors.grey.shade300,
                     width: isSelected ? 1.5 : 1,
@@ -2226,7 +2245,7 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
                 child: Text(
                   _presetMessages[index],
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: ZaiNeFontSize.caption,
                     color: isSelected ? const Color(0xFFFF7F50) : ZaiNeColors.textSecondary(),
                     fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
                   ),
@@ -2250,20 +2269,20 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
             setState(() => _isCustomMessage = true);
           },
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.md, vertical: ZaiNeSpacing.sm),
             decoration: BoxDecoration(
               color: _isCustomMessage ? const Color(0xFFFF7F50).withValues(alpha: 0.08) : null,
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(ZaiNeRadius.small),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(Icons.edit_outlined, size: 14, color: _isCustomMessage ? const Color(0xFFFF7F50) : Colors.grey[500]),
-                const SizedBox(width: 4),
+                const SizedBox(width: ZaiNeSpacing.xs),
                 Text(
                   '自定义祝福语',
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: ZaiNeFontSize.caption,
                     color: _isCustomMessage ? const Color(0xFFFF7F50) : Colors.grey[500],
                     fontWeight: FontWeight.w500,
                   ),
@@ -2273,23 +2292,23 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
           ),
         ),
         if (_isCustomMessage) ...[
-          const SizedBox(height: 8),
+          const SizedBox(height: ZaiNeSpacing.sm),
           TextField(
             controller: _customMsgController,
             maxLength: 50,
             onChanged: (_) => setState(() {}),
             decoration: InputDecoration(
               hintText: '写下你想说的话...',
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.small)),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Colors.grey.shade300),
+                borderRadius: BorderRadius.circular(ZaiNeRadius.small),
+                borderSide: BorderSide(color: ZaiNeColors.borderColor()),
               ),
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(ZaiNeRadius.small),
                 borderSide: const BorderSide(color: Color(0xFFFF7F50), width: 1.5),
               ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              contentPadding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.lg, vertical: ZaiNeSpacing.lg),
               counterText: '${_customMsgController.text.length}/50',
             ),
           ),
@@ -2313,7 +2332,7 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
             style: ElevatedButton.styleFrom(
               backgroundColor: canShare ? const Color(0xFFFF7F50) : Colors.grey.shade300,
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.card)),
               elevation: canShare ? 4 : 0,
             ),
             child: _isSharing
@@ -2322,17 +2341,17 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       const Icon(Icons.share, size: 18),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: ZaiNeSpacing.sm),
                       Text(
                         _totalAvailable <= 0 ? '守护卡已用完' : '发送守护卡',
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                        style: const TextStyle(fontSize: ZaiNeFontSize.body, fontWeight: FontWeight.w600),
                       ),
                     ],
                   ),
           ),
         ),
 
-        const SizedBox(height: 10),
+        const SizedBox(height: ZaiNeSpacing.md),
 
         // 保存到相册
         SizedBox(
@@ -2342,11 +2361,11 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
             onPressed: _isSharing ? null : _saveCard,
             style: OutlinedButton.styleFrom(
               foregroundColor: ZaiNeColors.textSecondary(),
-              side: BorderSide(color: Colors.grey.shade300),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              side: BorderSide(color: ZaiNeColors.borderColor()),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.card)),
             ),
             icon: const Icon(Icons.save_alt, size: 16),
-            label: const Text('保存到相册', style: TextStyle(fontSize: 13)),
+            label: const Text('保存到相册', style: TextStyle(fontSize: ZaiNeFontSize.caption)),
           ),
         ),
       ],

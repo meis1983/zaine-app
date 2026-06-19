@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../theme/theme_helper.dart';
+import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 import '../services/platform/health_service.dart';
 import '../services/api/user_service.dart';
@@ -48,7 +50,7 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
         _alerts = anomalies != null ? List<String>.from(anomalies['alerts']) : [];
       });
     } catch (e) {
-      debugPrint('[HealthOverview] 加载失败: $e');
+      if (kDebugMode) debugPrint('[HealthOverview] 加载失败: $e');
     } finally {
       setState(() => _isLoading = false);
     }
@@ -57,11 +59,11 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
+      backgroundColor: ZaiNeColors.scaffoldBg(),
       appBar: AppBar(
         title: const Text('生命体征守护', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
+        backgroundColor: ZaiNeColors.cardBg(),
+        foregroundColor: ZaiNeColors.textPrimary(),
         elevation: 0,
         actions: [
           IconButton(
@@ -79,18 +81,18 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
                 children: [
                   _buildHeader(),
                   if (_alerts.isNotEmpty) ...[
-                    const SizedBox(height: 20),
+                    const SizedBox(height: ZaiNeSpacing.xl),
                     _buildAlertBanner(),
                   ],
-                  const SizedBox(height: 24),
+                  const SizedBox(height: ZaiNeSpacing.xl),
                   _buildGrid(),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: ZaiNeSpacing.xl),
                   _buildSleepCard(),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: ZaiNeSpacing.xl),
                   _buildMenstruationCard(),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: ZaiNeSpacing.xl),
                   _buildQuickActionCard(),
-                  const SizedBox(height: 40),
+                  const SizedBox(height: ZaiNeSpacing.xxl),
                   _buildDisclaimer(),
                 ],
               ),
@@ -104,12 +106,12 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
       children: [
         const Text(
           '实时健康摘要',
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          style: TextStyle(fontSize: ZaiNeFontSize.title, fontWeight: FontWeight.bold),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: ZaiNeSpacing.xs),
         Text(
           _lastUpdated.isNotEmpty ? '上次同步: $_lastUpdated' : '尚未同步健康数据',
-          style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+          style: TextStyle(color: ZaiNeColors.textSecondary(), fontSize: ZaiNeFontSize.caption),
         ),
       ],
     );
@@ -120,20 +122,21 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: const Color(0xFFFFF1F0),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(ZaiNeRadius.card),
         border: Border.all(color: Colors.red.shade200),
-      ),
+      
+        boxShadow: ZaiNeShadows.card,),
       child: Column(
         children: _alerts.map((alert) => Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
+          padding: const EdgeInsets.symmetric(vertical: ZaiNeSpacing.xs),
           child: Row(
             children: [
               const Icon(Icons.warning_amber_rounded, color: Colors.red, size: 20),
-              const SizedBox(width: 12),
+              const SizedBox(width: ZaiNeSpacing.md),
               Expanded(
                 child: Text(
                   alert,
-                  style: const TextStyle(color: Color(0xFFCF1322), fontWeight: FontWeight.w600, fontSize: 14),
+                  style: const TextStyle(color: Color(0xFFCF1322), fontWeight: FontWeight.w600, fontSize: ZaiNeFontSize.bodySm),
                 ),
               ),
             ],
@@ -229,11 +232,11 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: isAlert ? const Color(0xFFFFF1F0) : Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(ZaiNeRadius.card),
         border: isAlert ? Border.all(color: Colors.red.shade200, width: 1.5) : null,
         boxShadow: [
           BoxShadow(
-            color: isAlert ? Colors.red.withOpacity(0.1) : color.withOpacity(0.08),
+            color: isAlert ? Colors.red.withValues(alpha: 0.1) : color.withValues(alpha: 0.08),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -245,8 +248,8 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
           Row(
             children: [
               Icon(icon, color: isAlert ? Colors.red : color, size: 20),
-              const SizedBox(width: 8),
-              Text(title, style: TextStyle(color: isAlert ? Colors.red.shade700 : Colors.grey.shade700, fontSize: 14, fontWeight: FontWeight.w600)),
+              const SizedBox(width: ZaiNeSpacing.sm),
+              Text(title, style: TextStyle(color: isAlert ? Colors.red.shade700 : Colors.grey.shade700, fontSize: ZaiNeFontSize.bodySm, fontWeight: FontWeight.w600)),
               if (isAlert) ...[
                 const Spacer(),
                 const Icon(Icons.error_outline, color: Colors.red, size: 16),
@@ -256,12 +259,12 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
           const Spacer(),
           Text(
             value,
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: isAlert ? Colors.red.shade900 : Colors.black),
+            style: TextStyle(fontSize: ZaiNeFontSize.title, fontWeight: FontWeight.bold, color: isAlert ? Colors.red.shade900 : Colors.black),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: ZaiNeSpacing.xs),
           Text(
             subtitle,
-            style: TextStyle(color: isAlert ? Colors.red.withOpacity(0.6) : Colors.grey.shade500, fontSize: 11),
+            style: TextStyle(color: isAlert ? Colors.red.withValues(alpha: 0.6) : Colors.grey.shade500, fontSize: ZaiNeFontSize.micro),
           ),
         ],
       ),
@@ -281,10 +284,10 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(ZaiNeRadius.card),
         boxShadow: [
           BoxShadow(
-            color: Colors.indigo.withOpacity(0.3),
+            color: Colors.indigo.withValues(alpha: 0.3),
             blurRadius: 12,
             offset: const Offset(0, 6),
           ),
@@ -299,20 +302,20 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
               const Row(
                 children: [
                   Icon(Icons.nights_stay, color: Colors.white, size: 24),
-                  SizedBox(width: 12),
+                  SizedBox(width: ZaiNeSpacing.md),
                   Text(
                     '昨晚睡眠',
-                    style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                    style: TextStyle(color: Colors.white, fontSize: ZaiNeFontSize.subtitle, fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
               Text(
                 totalMinutes > 0 ? '$hours小时$minutes分' : '暂无数据',
-                style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w800),
+                style: const TextStyle(color: Colors.white, fontSize: ZaiNeFontSize.title, fontWeight: FontWeight.w800),
               ),
             ],
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: ZaiNeSpacing.xl),
           Row(
             children: [
               _buildSleepBit('深度睡眠', _metrics['sleep_deep'] ?? 0, Colors.blue.shade200),
@@ -331,10 +334,10 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
         children: [
           Text(
             '${(mins / 60).floor()}h${mins % 60}m',
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: ZaiNeFontSize.bodySm),
           ),
-          const SizedBox(height: 4),
-          Text(label, style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 11)),
+          const SizedBox(height: ZaiNeSpacing.xs),
+          Text(label, style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: ZaiNeFontSize.micro)),
         ],
       ),
     );
@@ -362,12 +365,13 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
               )
             : null,
         color: isInPeriod ? null : Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(ZaiNeRadius.card),
         border: Border.all(
           color: isInPeriod ? Colors.pink.shade200 : Colors.grey.shade200,
           width: 1.5,
         ),
-      ),
+      
+        boxShadow: ZaiNeShadows.card,),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -386,19 +390,19 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
                   size: 22,
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: ZaiNeSpacing.md),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text('女性经期跟踪',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                    const SizedBox(height: 2),
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: ZaiNeFontSize.body)),
+                    const SizedBox(height: ZaiNeSpacing.xs),
                     Text(
                       hasData ? statusText : '暂未同步到经期记录',
                       style: TextStyle(
                         color: statusColor,
-                        fontSize: 13,
+                        fontSize: ZaiNeFontSize.caption,
                         fontWeight: isInPeriod ? FontWeight.w600 : FontWeight.normal,
                       ),
                     ),
@@ -406,18 +410,19 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.md, vertical: ZaiNeSpacing.xs),
                 decoration: BoxDecoration(
                   color: isInPeriod
                       ? Colors.pink.shade100
                       : Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(12),
-                ),
+                  borderRadius: BorderRadius.circular(ZaiNeRadius.small),
+                
+                  boxShadow: ZaiNeShadows.card,),
                 child: Text(
                   hasData ? '第$cycleDay天' : '--',
                   style: TextStyle(
                     color: statusColor,
-                    fontSize: 13,
+                    fontSize: ZaiNeFontSize.caption,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -426,22 +431,23 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
           ),
           // 详情行（有数据时显示）
           if (hasData) ...[
-            const SizedBox(height: 16),
+            const SizedBox(height: ZaiNeSpacing.lg),
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.7),
-                borderRadius: BorderRadius.circular(12),
-              ),
+                color: Colors.white.withValues(alpha: 0.7),
+                borderRadius: BorderRadius.circular(ZaiNeRadius.small),
+              
+                boxShadow: ZaiNeShadows.card,),
               child: Row(
                 children: [
                   _buildMenstruationInfoItem(
                     label: '平均周期',
-                    value: '${avgCycle}天',
+                    value: '$avgCycle天',
                     icon: Icons.calendar_today,
                     color: Colors.pink.shade300,
                   ),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: ZaiNeSpacing.lg),
                   _buildMenstruationInfoItem(
                     label: '预测下次',
                     value: predictedNext.isNotEmpty
@@ -469,15 +475,15 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
       child: Row(
         children: [
           Icon(icon, color: color, size: 18),
-          const SizedBox(width: 8),
+          const SizedBox(width: ZaiNeSpacing.sm),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(label,
-                  style: TextStyle(color: Colors.grey.shade500, fontSize: 11)),
+                  style: TextStyle(color: ZaiNeColors.textSecondary(), fontSize: ZaiNeFontSize.micro)),
               Text(value,
                   style: const TextStyle(
-                      fontWeight: FontWeight.w600, fontSize: 14)),
+                      fontWeight: FontWeight.w600, fontSize: ZaiNeFontSize.bodySm)),
             ],
           ),
         ],
@@ -503,16 +509,17 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-      ),
+        color: ZaiNeColors.cardBg(),
+        borderRadius: BorderRadius.circular(ZaiNeRadius.card),
+      
+        boxShadow: ZaiNeShadows.card,),
       child: Column(
         children: [
           const Text(
             '让守护者更放心',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: ZaiNeFontSize.body),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: ZaiNeSpacing.lg),
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
@@ -531,8 +538,8 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFFF7F50),
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(vertical: ZaiNeSpacing.lg),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.small)),
               ),
             ),
           ),
@@ -544,12 +551,12 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
   Widget _buildDisclaimer() {
     return Column(
       children: [
-        Icon(Icons.shield_outlined, color: Colors.grey.shade400, size: 32),
-        const SizedBox(height: 12),
+        Icon(Icons.shield_outlined, color: ZaiNeColors.textSecondary(), size: 32),
+        const SizedBox(height: ZaiNeSpacing.md),
         Text(
           '健康数据由 Apple HealthKit 提供\n仅供参考，不作为医疗诊断依据',
           textAlign: TextAlign.center,
-          style: TextStyle(color: Colors.grey.shade500, fontSize: 12, height: 1.5),
+          style: TextStyle(color: ZaiNeColors.textSecondary(), fontSize: ZaiNeFontSize.caption, height: 1.5),
         ),
       ],
     );

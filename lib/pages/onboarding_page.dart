@@ -1,13 +1,17 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
+import 'package:intl_phone_number_input/intl_phone_number_input.dart';
 import '../main.dart';
 import '../theme/theme_helper.dart';
 import '../services/api/sync_service.dart';
 import '../services/platform/location_service.dart';
 import '../services/api/auth_service.dart';
+import '../services/deep_link_service.dart'; // [v1.76.0] 紧急联系人邀请
 import '../services/api/card_service.dart'; // 新增
 import '../widgets/guardian_card_envelope.dart'; // 新增
 
@@ -33,6 +37,7 @@ class _LoginPage extends StatefulWidget {
   final VoidCallback? onPhoneChanged;
   final VoidCallback onLogin;
   final VoidCallback onBack;
+  final VoidCallback? onAppleLoginSuccess; // 【新增 v1.9.78】Apple 登录成功回调
 
   const _LoginPage({
     required this.phoneController,
@@ -43,8 +48,8 @@ class _LoginPage extends StatefulWidget {
     this.onPhoneChanged,
     required this.onLogin,
     required this.onBack,
-    Key? key,
-  }) : super(key: key);
+    this.onAppleLoginSuccess, // 【新增】
+  });
 
   @override
   State<_LoginPage> createState() => _LoginPageState();
@@ -92,7 +97,6 @@ class _LoginPageState extends State<_LoginPage>
   Widget build(BuildContext context) {
     super.build(context); // AutomaticKeepAliveClientMixin 必须调用
 
-    final phoneValid = widget.phoneController.text.trim().length >= 11;
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     final bottomPadding = MediaQuery.of(context).padding.bottom;
 
@@ -101,7 +105,7 @@ class _LoginPageState extends State<_LoginPage>
           28, 12, 28, 24 + bottomInset + (bottomPadding > 0 ? 0 : 16)),
       child: Column(
         children: [
-          const SizedBox(height: 12),
+          const SizedBox(height: ZaiNeSpacing.md),
 
           // 返回上一页按钮
           Align(
@@ -115,7 +119,7 @@ class _LoginPageState extends State<_LoginPage>
               child: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade200.withOpacity(0.6),
+                  color: Colors.grey.shade200.withValues(alpha: 0.6),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(Icons.arrow_back_ios_new,
@@ -124,7 +128,7 @@ class _LoginPageState extends State<_LoginPage>
             ),
           ),
 
-          const SizedBox(height: 24),
+          const SizedBox(height: ZaiNeSpacing.xl),
 
           // 图标区域
           Container(
@@ -143,7 +147,7 @@ class _LoginPageState extends State<_LoginPage>
               ),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF7C4DFF).withOpacity(0.3),
+                  color: const Color(0xFF7C4DFF).withValues(alpha: 0.3),
                   blurRadius: 24,
                   spreadRadius: 4,
                 ),
@@ -155,57 +159,57 @@ class _LoginPageState extends State<_LoginPage>
             ),
           ),
 
-          const SizedBox(height: 36),
+          const SizedBox(height: ZaiNeSpacing.xxl),
 
           // 标题
-          const Text(
+          Text(
             '开始使用',
             style: TextStyle(
-                fontSize: 26,
+                fontSize: ZaiNeFontSize.title,
                 fontWeight: FontWeight.bold,
-                color: Colors.black87),
+                color: ZaiNeColors.textPrimary()),
             textAlign: TextAlign.center,
           ),
 
-          const SizedBox(height: 10),
+          const SizedBox(height: ZaiNeSpacing.md),
 
           // 副标题
           Text(
             '输入手机号，即刻开启安全守护',
-            style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+            style: TextStyle(fontSize: ZaiNeFontSize.bodySm, color: Colors.grey[600]),
             textAlign: TextAlign.center,
           ),
 
           // 提示标签
-          const SizedBox(height: 12),
+          const SizedBox(height: ZaiNeSpacing.md),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.lg, vertical: ZaiNeSpacing.sm),
             decoration: BoxDecoration(
-              color: Colors.purple.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(20),
-            ),
+              color: Colors.purple.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(ZaiNeRadius.card),
+            
+              boxShadow: ZaiNeShadows.card,),
             child: const Text(
               '手机号登录，即刻开启',
               style: TextStyle(
-                  fontSize: 13,
+                  fontSize: ZaiNeFontSize.caption,
                   fontWeight: FontWeight.w700,
                   color: Colors.purple),
             ),
           ),
 
-          const SizedBox(height: 28),
+          const SizedBox(height: ZaiNeSpacing.xl),
 
-          // 手机号输入框（纯输入，底部有统一按钮）
+          // 国际手机号输入框
           Listener(
             onPointerDown: (_) {
-              // 每次点击输入框时通知父组件刷新（解决键盘输入后父组件不重建的问题）
               widget.onPhoneChanged?.call();
             },
             child: Container(
               decoration: BoxDecoration(
                 color: ZaiNeColors.cardBg(),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.grey.shade300),
+                borderRadius: BorderRadius.circular(ZaiNeRadius.card),
+                border: Border.all(color: ZaiNeColors.borderColor()),
                 boxShadow: [
                   BoxShadow(
                       color: Colors.grey.shade100,
@@ -213,70 +217,82 @@ class _LoginPageState extends State<_LoginPage>
                       offset: const Offset(0, 2)),
                 ],
               ),
-              child: TextField(
-                controller: widget.phoneController,
-                focusNode: widget.phoneFocusNode,
-                enabled: !widget.isLoggingIn,
-                keyboardType: TextInputType.phone,
-                maxLength: 11,
-                textInputAction: TextInputAction.done,
-                style: const TextStyle(fontSize: 18, letterSpacing: 2),
-                scrollPadding: const EdgeInsets.only(bottom: 120),
-                decoration: InputDecoration(
-                  counterText: '',
-                  counterStyle: const TextStyle(height: 0),
-                  prefixIcon: Icon(Icons.phone_android,
-                      color: Colors.purple.shade400, size: 22),
-                  hintText: '请输入手机号',
-                  hintStyle:
-                      TextStyle(fontSize: 15, color: Colors.grey.shade400),
-                  border: InputBorder.none,
-                  enabledBorder: InputBorder.none,
-                  focusedBorder: InputBorder.none,
-                  errorBorder: InputBorder.none,
-                  disabledBorder: InputBorder.none,
-                  focusedErrorBorder: InputBorder.none,
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                ),
-                onChanged: (_) => widget.onPhoneChanged?.call(),
-                onSubmitted: (_) {
-                  if (phoneValid && !widget.isLoggingIn) {
-                    widget.onLogin();
-                  }
+              child: InternationalPhoneNumberInput(
+                onInputChanged: (PhoneNumber number) {
+                  widget.onPhoneChanged?.call();
                 },
+                selectorConfig: const SelectorConfig(
+                  selectorType: PhoneInputSelectorType.BOTTOM_SHEET,
+                  showFlags: true,
+                  useEmoji: true,
+                ),
+                ignoreBlank: false,
+                autoValidateMode: AutovalidateMode.disabled,
+                selectorTextStyle: TextStyle(
+                    fontSize: ZaiNeFontSize.body,
+                    color: ZaiNeColors.textPrimary()),
+                textFieldController: widget.phoneController,
+                formatInput: true,
+                keyboardType: TextInputType.phone,
+                inputBorder: InputBorder.none,
+                hintText: '请输入手机号',
+                maxLength: 15,
+                countries: const ['CN', 'US', 'JP', 'KR', 'SG', 'HK', 'TW', 'MO'],
+                initialValue: PhoneNumber(isoCode: 'CN'),
               ),
             ),
           ),
 
-          const SizedBox(height: 20),
+          // 提示文字
+          const SizedBox(height: ZaiNeSpacing.sm),
+          Text(
+            '支持全球手机号注册登录',
+            style: TextStyle(
+                fontSize: ZaiNeFontSize.caption,
+                color: ZaiNeColors.textHint()),
+            textAlign: TextAlign.center,
+          ),
+
+          // Apple ID 登录按钮
+          SignInWithAppleButton(
+            onPressed: widget.isLoggingIn
+                ? () {}
+                : () {
+                    // 异步执行，不阻塞 UI
+                    _handleAppleSignIn();
+                  },
+            style: SignInWithAppleButtonStyle.black,
+            height: 50,
+            borderRadius: BorderRadius.circular(ZaiNeRadius.card),
+          ),
 
           // 内联错误提示（取代 SnackBar，避免跨导航残留）
           if (widget.loginError.isNotEmpty) ...[
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.md, vertical: ZaiNeSpacing.sm),
               decoration: BoxDecoration(
                 color: Colors.red.shade50,
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(ZaiNeRadius.small),
                 border: Border.all(color: Colors.red.shade200),
-              ),
+              
+                boxShadow: ZaiNeShadows.card,),
               child: Row(
                 children: [
                   Icon(Icons.error_outline,
                       size: 16, color: Colors.red.shade400),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: ZaiNeSpacing.sm),
                   Expanded(
                     child: Text(
                       widget.loginError,
                       style:
-                          TextStyle(fontSize: 13, color: Colors.red.shade700),
+                          TextStyle(fontSize: ZaiNeFontSize.caption, color: Colors.red.shade700),
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: ZaiNeSpacing.md),
           ],
 
           // 【新增 v1.9.78】条件显示：输入守护码入口
@@ -287,28 +303,30 @@ class _LoginPageState extends State<_LoginPage>
               child: Container(
                 width: double.infinity,
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.lg, vertical: ZaiNeSpacing.lg),
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
                     colors: [Color(0xFFFFF5F0), Color(0xFFFFF0E8)],
                   ),
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(ZaiNeRadius.card),
                   border: Border.all(
-                      color: const Color(0xFFFF7F50).withOpacity(0.2)),
-                ),
+                      color: const Color(0xFFFF7F50).withValues(alpha: 0.2)),
+                
+                  boxShadow: ZaiNeShadows.card,),
                 child: Row(
                   children: [
                     Container(
                       width: 36,
                       height: 36,
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFF7F50).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
+                        color: const Color(0xFFFF7F50).withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(ZaiNeRadius.small),
+                      
+                        boxShadow: ZaiNeShadows.card,),
                       child: const Icon(Icons.card_giftcard,
                           color: Color(0xFFFF7F50), size: 18),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: ZaiNeSpacing.md),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -316,15 +334,15 @@ class _LoginPageState extends State<_LoginPage>
                           Text(
                             '有人给你发了守护卡？',
                             style: TextStyle(
-                                fontSize: 14,
+                                fontSize: ZaiNeFontSize.bodySm,
                                 fontWeight: FontWeight.w600,
                                 color: Colors.grey.shade800),
                           ),
-                          const SizedBox(height: 2),
+                          const SizedBox(height: ZaiNeSpacing.xs),
                           const Text(
                             '输入安全码，一键完成绑定 →',
                             style: TextStyle(
-                                fontSize: 12, color: Color(0xFFFF7F50)),
+                                fontSize: ZaiNeFontSize.caption, color: Color(0xFFFF7F50)),
                           ),
                         ],
                       ),
@@ -335,24 +353,25 @@ class _LoginPageState extends State<_LoginPage>
                 ),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: ZaiNeSpacing.lg),
           ],
 
           // 底部提示
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.lg, vertical: ZaiNeSpacing.md),
             decoration: BoxDecoration(
-              color: Colors.grey.shade100.withOpacity(0.5),
-              borderRadius: BorderRadius.circular(12),
-            ),
+              color: Colors.grey.shade100.withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(ZaiNeRadius.small),
+            
+              boxShadow: ZaiNeShadows.card,),
             child: Text(
               '在呢，守护独居的你',
-              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+              style: TextStyle(fontSize: ZaiNeFontSize.caption, color: Colors.grey[600]),
               textAlign: TextAlign.center,
             ),
           ),
 
-          const SizedBox(height: 24),
+          const SizedBox(height: ZaiNeSpacing.xl),
         ],
       ),
     );
@@ -375,10 +394,11 @@ class _LoginPageState extends State<_LoginPage>
             return Padding(
               padding: EdgeInsets.only(bottom: bottomInset),
               child: Container(
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-                ),
+                decoration: BoxDecoration(
+                  color: ZaiNeColors.cardBg(),
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                
+                  boxShadow: ZaiNeShadows.card,),
                 padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -390,10 +410,11 @@ class _LoginPageState extends State<_LoginPage>
                         height: 4,
                         decoration: BoxDecoration(
                             color: Colors.grey.shade300,
-                            borderRadius: BorderRadius.circular(2)),
+                            borderRadius: BorderRadius.circular(ZaiNeRadius.small)
+                      ),
                       ),
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: ZaiNeSpacing.xl),
                     Row(
                       children: [
                         Container(
@@ -401,63 +422,63 @@ class _LoginPageState extends State<_LoginPage>
                           height: 40,
                           decoration: BoxDecoration(
                               color: const Color(0xFFFFF5F0),
-                              borderRadius: BorderRadius.circular(10)),
+                              borderRadius: BorderRadius.circular(ZaiNeRadius.small)
+                          ),
                           child: const Icon(Icons.vpn_key,
                               color: Color(0xFFFF7F50), size: 20),
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: ZaiNeSpacing.md),
                         const Expanded(
                           child: Text(
                             '输入守护安全码',
                             style: TextStyle(
-                                fontSize: 18, fontWeight: FontWeight.bold),
+                                fontSize: ZaiNeFontSize.subtitle, fontWeight: FontWeight.bold),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: ZaiNeSpacing.sm),
                     Text(
                       '安全码由发卡人提供，输入后即可与对方建立守护关系',
                       style:
-                          TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                          TextStyle(fontSize: ZaiNeFontSize.caption, color: ZaiNeColors.textSecondary()),
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: ZaiNeSpacing.xl),
                     TextField(
                       controller: controller,
                       textCapitalization: TextCapitalization.characters,
                       maxLength: 16,
                       style: const TextStyle(
-                          fontSize: 18,
+                          fontSize: ZaiNeFontSize.subtitle,
                           letterSpacing: 3,
                           fontWeight: FontWeight.bold),
                       decoration: InputDecoration(
                         hintText: '例如: TFABT4',
                         hintStyle: TextStyle(
-                            fontSize: 16,
-                            color: Colors.grey.shade400,
+                            fontSize: ZaiNeFontSize.body,
+                            color: ZaiNeColors.textHint(),
                             letterSpacing: 2),
                         errorText: errorText,
                         counterText: '',
                         filled: true,
                         fillColor: Colors.grey.shade50,
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: Colors.grey.shade200),
+                          borderRadius: BorderRadius.circular(ZaiNeRadius.small),
+                          borderSide: BorderSide(color: ZaiNeColors.borderColor()),
                         ),
                         enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: Colors.grey.shade200),
+                          borderRadius: BorderRadius.circular(ZaiNeRadius.small),
+                          borderSide: BorderSide(color: ZaiNeColors.borderColor()),
                         ),
                         focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(ZaiNeRadius.small),
                           borderSide:
                               const BorderSide(color: Color(0xFFFF7F50)),
                         ),
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 16),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.lg, vertical: ZaiNeSpacing.lg),
                       ),
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: ZaiNeSpacing.xl),
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
@@ -491,11 +512,13 @@ class _LoginPageState extends State<_LoginPage>
                           final prefs = await SharedPreferences.getInstance();
                           await prefs.setString('pending_card_code', code);
                           await prefs.setString('pending-card-code', code);
-                          debugPrint('[Onboarding] 暂存安全码: $code');
+                          if (kDebugMode) debugPrint('[Onboarding] 暂存安全码: $code');
 
-                          if (mounted) {
+                          if (mounted && ctx.mounted) {
                             setState(() => _hasPendingCard = true);
                             Navigator.pop(ctx);
+                          }
+                          if (mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                 content: Text('✅ 安全码已保存，登录后将自动绑定'),
@@ -508,13 +531,12 @@ class _LoginPageState extends State<_LoginPage>
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFFFF7F50),
                           foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14)),
+                          padding: const EdgeInsets.symmetric(vertical: ZaiNeSpacing.lg),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.card)),
                         ),
                         child: const Text('确认',
                             style: TextStyle(
-                                fontSize: 15, fontWeight: FontWeight.bold)),
+                                fontSize: ZaiNeFontSize.body, fontWeight: FontWeight.bold)),
                       ),
                     ),
                   ],
@@ -525,6 +547,69 @@ class _LoginPageState extends State<_LoginPage>
         );
       },
     );
+  }
+
+  /// Apple Sign In 处理逻辑
+  Future<void> _handleAppleSignIn() async {
+    try {
+      if (kDebugMode) debugPrint('[Apple Sign In] 开始...');
+      final credential = await SignInWithApple.getAppleIDCredential(
+        scopes: [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+      );
+      if (kDebugMode) {
+        debugPrint('[Apple Sign In] identityToken: ${credential.identityToken}');
+        debugPrint('[Apple Sign In] authorizationCode: ${credential.authorizationCode}');
+      }
+
+      // 【v1.9.78】调用后端接口，用 Apple credential 登录
+      final identityToken = credential.identityToken ?? '';
+      final authorizationCode = credential.authorizationCode; // 可能为 null
+
+      // 提取用户信息（Apple 只在首次授权时返回）
+      String? email;
+      String? givenName;
+      String? familyName;
+
+      final res = await AuthService.appleLogin(
+        identityToken: identityToken,
+        authorizationCode: authorizationCode, // 直接传递，后端会处理 null
+        userId: null, // 由后端从 identityToken 解码
+        email: email,
+        givenName: givenName,
+        familyName: familyName,
+      );
+
+      if (res['success'] == true) {
+        if (kDebugMode) debugPrint('[Apple Sign In] 登录成功');
+        // 登录成功，通知父组件
+        widget.onAppleLoginSuccess?.call();
+      } else {
+        // 登录失败
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Apple 登录失败: ${res['message'] ?? '未知错误'}'),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) debugPrint('[Apple Sign In] 错误: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Apple 登录失败: $e'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
   }
 }
 
@@ -647,7 +732,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('onboarding_completed', true);
 
-      debugPrint('[Onboarding] 开始请求位置权限（在页面跳转前）...');
+      if (kDebugMode) debugPrint('[Onboarding] 开始请求位置权限（在页面跳转前）...');
       await _requestLocationPermissionBeforeTransition();
 
       if (!mounted) return;
@@ -658,7 +743,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
     } catch (e) {
       // 防止位置权限请求或导航中的异常传播到 _quickLogin 的 catch 块，
       // 导致登录成功后仍显示红色错误 SnackBar
-      debugPrint('[Onboarding] _completeOnboarding 异常（不影响登录）: $e');
+      if (kDebugMode) debugPrint('[Onboarding] _completeOnboarding 异常（不影响登录）: $e');
       if (mounted) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (_) => const MainNavigation()),
@@ -670,32 +755,32 @@ class _OnboardingPageState extends State<OnboardingPage> {
   Future<void> _requestLocationPermissionBeforeTransition() async {
     final hasPerm = await LocationService.hasPermission();
     if (hasPerm) {
-      debugPrint('[Onboarding] 位置权限已存在，无需请求');
+      if (kDebugMode) debugPrint('[Onboarding] 位置权限已存在，无需请求');
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('newbie_task_location', true);
       return;
     }
 
-    debugPrint('[Onboarding] 显示位置权限引导弹窗...');
+    if (kDebugMode) debugPrint('[Onboarding] 显示位置权限引导弹窗...');
 
     final confirmed = await _showLocationPermissionGuide();
     if (confirmed != true) {
-      debugPrint('[Onboarding] 用户选择稍后再说');
+      if (kDebugMode) debugPrint('[Onboarding] 用户选择稍后再说');
       return;
     }
 
     if (!mounted) return;
 
-    debugPrint('[Onboarding] 用户确认，开始请求系统位置权限...');
+    if (kDebugMode) debugPrint('[Onboarding] 用户确认，开始请求系统位置权限...');
     final status = await LocationService.requestPermission();
-    debugPrint('[Onboarding] 权限请求结果: $status');
+    if (kDebugMode) debugPrint('[Onboarding] 权限请求结果: $status');
 
     final prefs = await SharedPreferences.getInstance();
     if (status.isGranted || status.isLimited) {
-      debugPrint('[Onboarding] 位置权限获取成功！');
+      if (kDebugMode) debugPrint('[Onboarding] 位置权限获取成功！');
       await prefs.setBool('newbie_task_location', true);
     } else {
-      debugPrint('[Onboarding] 位置权限未授权，稍后可在 求助页面再次开启');
+      if (kDebugMode) debugPrint('[Onboarding] 位置权限未授权，稍后可在 求助页面再次开启');
     }
   }
 
@@ -704,11 +789,11 @@ class _OnboardingPageState extends State<OnboardingPage> {
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.card)),
         title: const Row(
           children: [
             Icon(Icons.location_on, color: Color(0xFF11998E)),
-            SizedBox(width: 8),
+            SizedBox(width: ZaiNeSpacing.sm),
             Text('开启位置权限'),
           ],
         ),
@@ -718,33 +803,34 @@ class _OnboardingPageState extends State<OnboardingPage> {
           children: [
             const Text(
               '为了在你触发求助时，守护者能第一时间知道你的准确位置，我们需要获取位置权限。',
-              style: TextStyle(fontSize: 14),
+              style: TextStyle(fontSize: ZaiNeFontSize.bodySm),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: ZaiNeSpacing.lg),
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0xFF11998E).withOpacity(0.08),
-                borderRadius: BorderRadius.circular(12),
-              ),
+                color: const Color(0xFF11998E).withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(ZaiNeRadius.small),
+              
+                boxShadow: ZaiNeShadows.card,),
               child: const Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
                       Icon(Icons.lock, size: 16, color: Color(0xFF11998E)),
-                      SizedBox(width: 6),
+                      SizedBox(width: ZaiNeSpacing.sm),
                       Text(
                         '我们承诺：',
                         style: TextStyle(
-                            fontWeight: FontWeight.w600, fontSize: 13),
+                            fontWeight: FontWeight.w600, fontSize: ZaiNeFontSize.caption),
                       ),
                     ],
                   ),
-                  SizedBox(height: 6),
-                  Text('• 平时不追踪、不监控、不上传你的位置', style: TextStyle(fontSize: 12)),
-                  Text('• 只有你主动触发求助时才获取一次位置', style: TextStyle(fontSize: 12)),
-                  Text('• 你的隐私，我们用生命捍卫', style: TextStyle(fontSize: 12)),
+                  SizedBox(height: ZaiNeSpacing.sm),
+                  Text('• 平时不追踪、不监控、不上传你的位置', style: TextStyle(fontSize: ZaiNeFontSize.caption)),
+                  Text('• 只有你主动触发求助时才获取一次位置', style: TextStyle(fontSize: ZaiNeFontSize.caption)),
+                  Text('• 你的隐私，我们用生命捍卫', style: TextStyle(fontSize: ZaiNeFontSize.caption)),
                 ],
               ),
             ),
@@ -762,8 +848,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF11998E),
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.small)),
             ),
           ),
         ],
@@ -816,13 +901,14 @@ class _OnboardingPageState extends State<OnboardingPage> {
                               duration: const Duration(milliseconds: 300),
                               width: isActive ? 24 : 8,
                               height: 8,
-                              margin: const EdgeInsets.symmetric(horizontal: 3),
+                              margin: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.xs),
                               decoration: BoxDecoration(
                                 color: isActive
                                     ? const Color(0xFFFF7F50)
                                     : Colors.grey.shade300,
-                                borderRadius: BorderRadius.circular(4),
-                              ),
+                                borderRadius: BorderRadius.circular(ZaiNeRadius.small),
+                              
+                                boxShadow: ZaiNeShadows.card,),
                             );
                           }),
                         ),
@@ -833,7 +919,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                             ? GestureDetector(
                                 key: const ValueKey('cancelled'),
                                 onTap: () {
-                                  debugPrint('[Onboarding] 用户取消操作');
+                                  if (kDebugMode) debugPrint('[Onboarding] 用户取消操作');
                                   _loginCancelled = false;
                                   setState(() {});
                                 },
@@ -874,7 +960,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                                         boxShadow: [
                                           BoxShadow(
                                               color: const Color(0xFFFF7F50)
-                                                  .withOpacity(0.35),
+                                                  .withValues(alpha: 0.35),
                                               blurRadius: 12,
                                               offset: const Offset(0, 4)),
                                         ],
@@ -907,6 +993,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
         loginError: _loginError,
         onPhoneChanged: () => setState(() {}), // 手机号变化时刷新底部按钮状态
         onLogin: _quickLogin,
+        onAppleLoginSuccess: _completeOnboarding, // 【新增 v1.9.78】
         onBack: () {
           _phoneFocusNode.unfocus();
           _pageController.previousPage(
@@ -917,10 +1004,10 @@ class _OnboardingPageState extends State<OnboardingPage> {
       );
     }
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
+      padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.xl, vertical: ZaiNeSpacing.xl),
       child: Column(
         children: [
-          const SizedBox(height: 48),
+          const SizedBox(height: ZaiNeSpacing.xxl),
           Container(
             width: 120,
             height: 120,
@@ -934,7 +1021,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
               boxShadow: [
                 BoxShadow(
                   color:
-                      (page['gradient'] as List<Color>).first.withOpacity(0.3),
+                      (page['gradient'] as List<Color>).first.withValues(alpha: 0.3),
                   blurRadius: 24,
                   spreadRadius: 4,
                 ),
@@ -945,41 +1032,42 @@ class _OnboardingPageState extends State<OnboardingPage> {
                   Icon(page['icon'] as IconData, size: 56, color: Colors.white),
             ),
           ),
-          const SizedBox(height: 36),
+          const SizedBox(height: ZaiNeSpacing.xxl),
           Text(
             page['title'] as String,
-            style: const TextStyle(
-              fontSize: 26,
+            style: TextStyle(
+              fontSize: ZaiNeFontSize.title,
               fontWeight: FontWeight.bold,
-              color: Colors.black87,
+              color: ZaiNeColors.textPrimary(),
             ),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: ZaiNeSpacing.md),
           Text(
             page['subtitle'] as String,
-            style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+            style: TextStyle(fontSize: ZaiNeFontSize.bodySm, color: ZaiNeColors.textSecondary()),
             textAlign: TextAlign.center,
           ),
           if ((page['highlight'] as String).isNotEmpty) ...[
-            const SizedBox(height: 12),
+            const SizedBox(height: ZaiNeSpacing.md),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.lg, vertical: ZaiNeSpacing.sm),
               decoration: BoxDecoration(
-                color: (page['iconBg'] as Color).withOpacity(0.1),
-                borderRadius: BorderRadius.circular(20),
-              ),
+                color: (page['iconBg'] as Color).withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(ZaiNeRadius.card),
+              
+                boxShadow: ZaiNeShadows.card,),
               child: Text(
                 page['highlight'] as String,
                 style: TextStyle(
-                  fontSize: 13,
+                  fontSize: ZaiNeFontSize.caption,
                   fontWeight: FontWeight.w700,
                   color: page['iconBg'] as Color,
                 ),
               ),
             ),
           ],
-          const SizedBox(height: 24),
+          const SizedBox(height: ZaiNeSpacing.xl),
           ...((page['desc'] as List).map((item) => Padding(
                 padding: const EdgeInsets.only(bottom: 10),
                 child: Container(
@@ -987,39 +1075,41 @@ class _OnboardingPageState extends State<OnboardingPage> {
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: ZaiNeColors.cardBg(),
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(ZaiNeRadius.card),
                     border: Border.all(
-                        color: (page['iconBg'] as Color).withOpacity(0.08)),
-                  ),
+                        color: (page['iconBg'] as Color).withValues(alpha: 0.08)),
+                  
+                    boxShadow: ZaiNeShadows.card,),
                   child: Row(
                     children: [
                       Text(item['icon'] as String,
-                          style: const TextStyle(fontSize: 22)),
-                      const SizedBox(width: 12),
+                          style: const TextStyle(fontSize: ZaiNeFontSize.title)),
+                      const SizedBox(width: ZaiNeSpacing.md),
                       Expanded(
                           child: Text(item['text'] as String,
                               style: TextStyle(
-                                  fontSize: 14,
+                                  fontSize: ZaiNeFontSize.bodySm,
                                   color: Colors.grey[800],
                                   fontWeight: FontWeight.w500))),
                     ],
                   ),
                 ),
               ))),
-          const SizedBox(height: 36),
+          const SizedBox(height: ZaiNeSpacing.xxl),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.lg, vertical: ZaiNeSpacing.md),
             decoration: BoxDecoration(
-              color: Colors.grey.shade100.withOpacity(0.5),
-              borderRadius: BorderRadius.circular(12),
-            ),
+              color: Colors.grey.shade100.withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(ZaiNeRadius.small),
+            
+              boxShadow: ZaiNeShadows.card,),
             child: Text(
               page['footer'] as String,
-              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+              style: TextStyle(fontSize: ZaiNeFontSize.caption, color: Colors.grey[600]),
               textAlign: TextAlign.center,
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: ZaiNeSpacing.lg),
         ],
       ),
     );
@@ -1039,8 +1129,8 @@ class _OnboardingPageState extends State<OnboardingPage> {
         disabledBackgroundColor: Colors.grey.shade400,
         foregroundColor: Colors.white,
         disabledForegroundColor: Colors.white70,
-        padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.xl, vertical: ZaiNeSpacing.lg),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.card)),
         elevation: 0,
       ),
       child: _isLoggingIn
@@ -1055,10 +1145,10 @@ class _OnboardingPageState extends State<OnboardingPage> {
                     valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                   ),
                 ),
-                SizedBox(width: 8),
+                SizedBox(width: ZaiNeSpacing.sm),
                 Text('登录中...',
                     style: TextStyle(
-                        fontSize: 15,
+                        fontSize: ZaiNeFontSize.body,
                         fontWeight: FontWeight.bold,
                         color: Colors.white)),
               ],
@@ -1067,10 +1157,10 @@ class _OnboardingPageState extends State<OnboardingPage> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(Icons.check_circle_outline_rounded, size: 18),
-                SizedBox(width: 6),
+                SizedBox(width: ZaiNeSpacing.sm),
                 Text('登录 / 注册',
                     style:
-                        TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                        TextStyle(fontSize: ZaiNeFontSize.body, fontWeight: FontWeight.bold)),
               ],
             ),
     );
@@ -1083,10 +1173,11 @@ class _OnboardingPageState extends State<OnboardingPage> {
     _loginError = ''; // 清除之前的错误提示
 
     final phone = _phoneController.text.trim();
-    if (phone.isEmpty || phone.length < 11) {
+    // 【v1.9.78】支持国际手机号（最少6位，最长15位）
+    if (phone.isEmpty || phone.replaceAll(RegExp(r'[^0-9]'), '').length < 6) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content: Text('请输入正确的11位手机号'), backgroundColor: Colors.orange),
+            content: Text('请输入有效的手机号码'), backgroundColor: Colors.orange),
       );
       return;
     }
@@ -1107,16 +1198,31 @@ class _OnboardingPageState extends State<OnboardingPage> {
         await prefs.setString('pending_card_code', _pendingCardCode!);
       }
 
-      debugPrint('[Onboarding] quickLogin: $phone, cardCode=$_pendingCardCode');
+      // [v1.76.0] 检查是否有紧急联系人邀请
+      final pendingInvitePhone = await DeepLinkService.getPendingInvitePhone();
+      bool enableBidirectional = false;
+
+      if (pendingInvitePhone != null && pendingInvitePhone.isNotEmpty) {
+        if (kDebugMode) debugPrint('[Onboarding] 发现紧急联系人邀请: phone=$pendingInvitePhone');
+        // 显示授权对话框（方案A：显式授权）
+        enableBidirectional = await _showInviteAuthDialog(pendingInvitePhone);
+      }
+
+      if (kDebugMode) debugPrint('[Onboarding] quickLogin: $phone, cardCode=$_pendingCardCode, invitePhone=$pendingInvitePhone, enableBidirectional=$enableBidirectional');
 
       // 包含冷启动重试
-      final res = await AuthService.quickLogin(phone, cardId: _pendingCardCode)
+      final res = await AuthService.quickLogin(
+        phone,
+        cardId: _pendingCardCode,
+        invitePhone: pendingInvitePhone,
+        enableBidirectional: enableBidirectional,
+      )
           .timeout(const Duration(seconds: 55), onTimeout: () {
         return {'success': false, 'error': '网络连接超时，请检查网络后重试'};
       });
 
       if (res['success'] == true) {
-        debugPrint('[Onboarding] quickLogin 成功, userId=${res['userId']}');
+        if (kDebugMode) debugPrint('[Onboarding] quickLogin 成功, userId=${res['userId']}');
 
         // ====== 增强：仪式感动画展示 ======
       // 【修复 v1.17.1】优先使用 quickLogin 返回的 card_info（首次下载注册场景）
@@ -1126,7 +1232,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
         // 场景A：H5注册后首次下载App，后端通过 quickLogin 返回卡片信息
         try {
           final cardData = cardInfo as Map<String, dynamic>;
-          debugPrint('[Onboarding] 展示守护礼动画（来自登录返回）');
+          if (kDebugMode) debugPrint('[Onboarding] 展示守护礼动画（来自登录返回）');
 
           // 先执行拉取数据，让背景静默准备
           await SyncService.pullFromServer();
@@ -1137,7 +1243,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
           await showGeneralDialog(
             context: context,
             barrierDismissible: false,
-            barrierColor: Colors.black.withOpacity(0.92),
+            barrierColor: Colors.black.withValues(alpha: 0.92),
             transitionDuration: const Duration(milliseconds: 800),
             pageBuilder: (ctx, anim1, anim2) {
               return Scaffold(
@@ -1152,12 +1258,12 @@ class _OnboardingPageState extends State<OnboardingPage> {
                           '开启你的守护礼',
                           style: TextStyle(
                               color: Colors.white,
-                              fontSize: 18,
+                              fontSize: ZaiNeFontSize.subtitle,
                               letterSpacing: 4,
                               fontWeight: FontWeight.w300),
                         ),
                       ),
-                      const SizedBox(height: 60),
+                      const SizedBox(height: ZaiNeSpacing.xxl),
                       GuardianCardEnvelope(
                         senderName: cardData['sender_name'] ?? '你的好友',
                         senderAvatar: cardData['sender_avatar'],
@@ -1166,8 +1272,15 @@ class _OnboardingPageState extends State<OnboardingPage> {
                         appStoreUrl: '',
                         isWelcomeMode: true, // 【修复 v1.17.1】收卡人登录后展示欢迎卡
                         onComplete: () {
-                          Future.delayed(const Duration(milliseconds: 3500), () {
-                            if (ctx.mounted) Navigator.pop(ctx);
+                          // 【修复 v1.76.0】清理 pending_card_code 避免重复弹出
+                          Future.delayed(const Duration(milliseconds: 3500), () async {
+                            if (ctx.mounted) {
+                              Navigator.pop(ctx);
+                              // 清理 pending 状态（两种 key 格式都清理）
+                              final prefs = await SharedPreferences.getInstance();
+                              await prefs.remove('pending_card_code');
+                              await prefs.remove('pending-card-code');
+                            }
                           });
                         },
                       ),
@@ -1178,7 +1291,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
             },
           );
         } catch (e) {
-          debugPrint('[Onboarding] 守护礼动画失败（登录返回）: $e');
+          if (kDebugMode) debugPrint('[Onboarding] 守护礼动画失败（登录返回）: $e');
         }
       } else if (_pendingCardCode != null && _pendingCardCode!.isNotEmpty) {
         // 场景B：已装App，通过 DeepLink 唤醒（兜底逻辑）
@@ -1186,7 +1299,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
           final cardRes = await CardService.checkCard(_pendingCardCode!);
           if (cardRes['success'] == true && mounted) {
             final cardData = cardRes;
-            debugPrint('[Onboarding] 展示守护礼动画（来自DeepLink）');
+            if (kDebugMode) debugPrint('[Onboarding] 展示守护礼动画（来自DeepLink）');
 
             await SyncService.pullFromServer();
             if (!mounted) return;
@@ -1194,7 +1307,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
             await showGeneralDialog(
               context: context,
               barrierDismissible: false,
-              barrierColor: Colors.black.withOpacity(0.92),
+              barrierColor: Colors.black.withValues(alpha: 0.92),
               transitionDuration: const Duration(milliseconds: 800),
               pageBuilder: (ctx, anim1, anim2) {
                 return Scaffold(
@@ -1209,12 +1322,12 @@ class _OnboardingPageState extends State<OnboardingPage> {
                             '开启你的守护礼',
                             style: TextStyle(
                                 color: Colors.white,
-                                fontSize: 18,
+                                fontSize: ZaiNeFontSize.subtitle,
                                 letterSpacing: 4,
                                 fontWeight: FontWeight.w300),
                           ),
                         ),
-                        const SizedBox(height: 60),
+                        const SizedBox(height: ZaiNeSpacing.xxl),
                         GuardianCardEnvelope(
                           senderName: cardData['sender_name'] ?? '你的好友',
                           senderAvatar: cardData['sender_avatar'],
@@ -1223,8 +1336,15 @@ class _OnboardingPageState extends State<OnboardingPage> {
                           appStoreUrl: '',
                           isWelcomeMode: true, // 【修复 v1.17.1】收卡人登录后展示欢迎卡
                           onComplete: () {
-                            Future.delayed(const Duration(milliseconds: 3500), () {
-                              if (ctx.mounted) Navigator.pop(ctx);
+                            // 【修复 v1.76.0】清理 pending_card_code 避免重复弹出
+                            Future.delayed(const Duration(milliseconds: 3500), () async {
+                              if (ctx.mounted) {
+                                Navigator.pop(ctx);
+                                // 清理 pending 状态（两种 key 格式都清理）
+                                final prefs = await SharedPreferences.getInstance();
+                                await prefs.remove('pending_card_code');
+                                await prefs.remove('pending-card-code');
+                              }
                             });
                           },
                         ),
@@ -1236,7 +1356,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
             );
           }
         } catch (e) {
-          debugPrint('[Onboarding] 守护礼动画失败（DeepLink）: $e');
+          if (kDebugMode) debugPrint('[Onboarding] 守护礼动画失败（DeepLink）: $e');
         }
       } else {
         // 普通登录，直接拉取数据
@@ -1253,7 +1373,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
             res['error']?.toString() ?? res['message']?.toString() ?? '');
       }
     } catch (e) {
-      debugPrint('[Onboarding] quickLogin 异常: $e');
+      if (kDebugMode) debugPrint('[Onboarding] quickLogin 异常: $e');
       if (_loginCompleted || !mounted) return;
       _showInlineError(e.toString());
     } finally {
@@ -1300,5 +1420,109 @@ class _OnboardingPageState extends State<OnboardingPage> {
     if (!mounted || _loginCompleted) return;
     final msg = _sanitizeErrorMessage(raw);
     setState(() => _loginError = msg);
+  }
+
+  /// [v1.76.0] 显示紧急联系人邀请授权对话框（方案A：显式授权）
+  ///
+  /// 流程：
+  /// 1. 用户点击邀请链接 → Deep Link 保存 pending_invite_phone
+  /// 2. 用户注册登录后，检查是否有待处理邀请
+  /// 3. 弹出此对话框，让用户选择是否建立双向守护
+  ///
+  /// 返回：
+  /// - true：用户同意双向守护
+  /// - false：用户拒绝（仅单向守护）
+  Future<bool> _showInviteAuthDialog(String inviterPhone) async {
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.card)),
+        title: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: const Color(0xFFFF7F50).withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.shield_outlined, color: Color(0xFFFF7F50), size: 24),
+            ),
+            const SizedBox(width: ZaiNeSpacing.md),
+            const Expanded(
+              child: Text('守护邀请', style: TextStyle(fontSize: ZaiNeFontSize.subtitle, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '手机号 $inviterPhone 的用户已将你设为紧急联系人',
+              style: const TextStyle(fontSize: ZaiNeFontSize.body, fontWeight: FontWeight.w500),
+            ),
+            const SizedBox(height: ZaiNeSpacing.md),
+            Text(
+              '你是否也希望对方守护你？',
+              style: TextStyle(fontSize: ZaiNeFontSize.bodySm, color: ZaiNeColors.textPrimary()),
+            ),
+            const SizedBox(height: ZaiNeSpacing.sm),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: ZaiNeColors.cardBg(),
+                borderRadius: BorderRadius.circular(ZaiNeRadius.small),
+                border: Border.all(color: ZaiNeColors.dividerColor()),
+              
+                boxShadow: ZaiNeShadows.card,),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.check_circle_outline, size: 16, color: Colors.green.shade600),
+                      const SizedBox(width: ZaiNeSpacing.sm),
+                      const Expanded(
+                        child: Text('互相守护', style: TextStyle(fontSize: ZaiNeFontSize.caption, fontWeight: FontWeight.w500)),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: ZaiNeSpacing.xs),
+                  Text(
+                    '  你们可以查看彼此的状态，遇到紧急情况互相帮助',
+                    style: TextStyle(fontSize: ZaiNeFontSize.caption, color: ZaiNeColors.textSecondary()),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: ZaiNeSpacing.sm),
+            Text(
+              '你也可以选择"不用了"，仅作为对方的紧急联系人',
+              style: TextStyle(fontSize: ZaiNeFontSize.caption, color: ZaiNeColors.textSecondary()),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('不用了', style: TextStyle(color: ZaiNeColors.textSecondary(), fontSize: ZaiNeFontSize.body)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFFF7F50),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.small)),
+              padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.xl, vertical: ZaiNeSpacing.md),
+            ),
+            child: const Text('互相守护', style: TextStyle(fontSize: ZaiNeFontSize.body, fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
+
+    return result ?? false; // 默认拒绝（仅单向）
   }
 }

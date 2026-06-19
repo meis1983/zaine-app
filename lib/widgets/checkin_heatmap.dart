@@ -291,7 +291,7 @@ class CheckinHeatmap extends StatelessWidget {
             height: 12,
             margin: const EdgeInsets.only(right: 3),
             decoration: BoxDecoration(
-              color: baseColor.withOpacity(0.2 + (index * 0.25)),
+              color: baseColor.withValues(alpha: 0.2 + (index * 0.25)),
               borderRadius: BorderRadius.circular(2),
             ),
           );
@@ -328,7 +328,7 @@ class CheckinHeatmap extends StatelessWidget {
       return Colors.grey.shade200;
     }
     // 根据连续签到天数调整颜色深浅
-    return baseColor.withOpacity(0.8);
+    return baseColor.withValues(alpha: 0.8);
   }
 
   Map<String, dynamic> _calculateStats(DateTime startDate, DateTime endDate) {
@@ -461,9 +461,9 @@ class CheckinStatsCard extends StatelessWidget {
           height: 70,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: color.withOpacity(0.1),
+            color: color.withValues(alpha: 0.1),
             border: Border.all(
-              color: color.withOpacity(0.3),
+              color: color.withValues(alpha: 0.3),
               width: 2,
             ),
           ),
@@ -483,7 +483,7 @@ class CheckinStatsCard extends StatelessWidget {
                   unit,
                   style: TextStyle(
                     fontSize: 10,
-                    color: color.withOpacity(0.7),
+                    color: color.withValues(alpha: 0.7),
                   ),
                 ),
               ],

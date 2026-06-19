@@ -3,7 +3,7 @@ description: 在呢 - 独居守护App
 
 publish_to: 'none'
 
-version: 1.77.0+72
+version: 1.79.0+73
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -51,7 +51,16 @@ dependencies:
   watch_connectivity: ^0.2.8
   # 版本号读取（从 pubspec.yaml 自动同步，根治版本号不一致问题）
   package_info_plus: ^8.0.0
+  # 安全存储（Token等敏感数据使用 Keychain/Keystore）
+  flutter_secure_storage: ^9.2.0
+  # 本地数据库（替代部分 SharedPreferences 场景，依赖 path_provider）
+  sqflite: ^2.4.0
+  # Apple Sign in
+  sign_in_with_apple: ^6.0.0
+  # 国际手机号输入
+  intl_phone_number_input: ^0.7.0
 
+  path: any
 dev_dependencies:
   flutter_test:
     sdk: flutter

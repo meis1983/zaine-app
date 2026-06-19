@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'dart:io';
@@ -56,7 +56,43 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
 
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
-    final profileJson = prefs.getString('user_profile');
+    
+    // 【修复 v1.75.0】按用户隔离读取健康档案，与 profile_page.dart 保存逻辑一致
+    final userId = prefs.getString('user_id');
+    final phone = prefs.getString('user_phone');
+    
+    String? profileJson;
+    String? profileKey;
+    
+    if (userId != null && userId.isNotEmpty) {
+      profileKey = 'user_profile_$userId';
+      profileJson = prefs.getString(profileKey);
+      
+      // 兼容旧数据：如果用户特定的键不存在，尝试全局键
+      if (profileJson == null) {
+        profileJson = prefs.getString('user_profile');
+        // 如果找到了旧数据，迁移到用户特定的键
+        if (profileJson != null) {
+          await prefs.setString(profileKey, profileJson);
+          if (kDebugMode) debugPrint('[SettingsPage] ✅ 健康档案已从全局键迁移到用户特定键: $profileKey');
+        }
+      }
+    } else if (phone != null && phone.isNotEmpty) {
+      profileKey = 'user_profile_$phone';
+      profileJson = prefs.getString(profileKey);
+      
+      if (profileJson == null) {
+        profileJson = prefs.getString('user_profile');
+        if (profileJson != null) {
+          await prefs.setString(profileKey, profileJson);
+        }
+      }
+    } else {
+      // 未登录状态，读取全局键（兼容性）
+      profileKey = 'user_profile';
+      profileJson = prefs.getString(profileKey);
+    }
+    
     if (profileJson != null) {
       final profile = jsonDecode(profileJson);
       _userName = profile['name'];
@@ -94,7 +130,7 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
           content: Text('已设置每天 ${time.format(context)} 提醒签到'),
           backgroundColor: const Color(0xFFFF7F50),
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.small)),
         ),
       );
     }
@@ -115,7 +151,7 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
             content: Text('签到提醒已开启，每天 ${_reminderTime.format(context)}'),
             backgroundColor: const Color(0xFFFF7F50),
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.small)),
           ),
         );
       }
@@ -194,9 +230,9 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
       '点击打开「在呢」，完成今日签到，让守护者放心 ❤️',
       tzScheduledTime,
       details,
-      androidAllowWhileIdle: true,
       uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
       matchDateTimeComponents: DateTimeComponents.time,
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
     );
 
     // ====== 系统提醒（id=3）—— 主提醒后2小时，未签到时额外提醒 ======
@@ -224,9 +260,9 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
         '今天还没签到呢，花3秒报个平安，让守护者放心',
         tzSystemTime,
         systemDetails,
-        androidAllowWhileIdle: true,
         uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
         matchDateTimeComponents: DateTimeComponents.time,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       );
     }
 
@@ -283,7 +319,7 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
       alertMinute = 0;
     } else if (daysSinceLastCheckIn >= 3) {
       // 第3天+未签到 → 09:00 强提醒 + 守护圈影响
-      title = '【重要】连续${daysSinceLastCheckIn}天未签到';
+      title = '【重要】连续$daysSinceLastCheckIn天未签到';
       body = '守护圈将收到异常提醒。点击签到，让大家放心 ❤️';
       alertHour = 9;
       alertMinute = 0;
@@ -304,11 +340,11 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
       body,
       tzAlertTime,
       alertDetails,
-      androidAllowWhileIdle: true,
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
     );
 
-    debugPrint('[Settings] 断签预警已调度: ${daysSinceLastCheckIn}天未签到，$alertHour:$alertMinute提醒');
+    if (kDebugMode) debugPrint('[Settings] 断签预警已调度: $daysSinceLastCheckIn天未签到，$alertHour:$alertMinute提醒');
   }
 
   /// 切换系统提醒开关
@@ -352,7 +388,7 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
         return Theme(
           data: Theme.of(context).copyWith(
             timePickerTheme: TimePickerThemeData(
-              backgroundColor: Colors.white,
+              backgroundColor: ZaiNeColors.cardBg(),  // 自动适配暗黑模式
               hourMinuteTextColor: const Color(0xFFFF7F50),
             ),
           ),
@@ -403,7 +439,7 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.card)),
         title: const Text('退出登录'),
         content: const Text('退出后将清除本地数据并回到登录页，下次使用需要重新输入手机号登录。\n\n是否确认退出？'),
         actions: [
@@ -518,9 +554,9 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
               children: [
                 const Text(
                   '选择主题',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  style: TextStyle(fontSize: ZaiNeFontSize.subtitle, fontWeight: FontWeight.bold),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: ZaiNeSpacing.xl),
                 _themeOption(
                   context, setModalState,
                   ZaiNeThemeMode.light,
@@ -529,7 +565,7 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
                   '清爽明亮，温柔暖白',
                   const Color(0xFFFFF8F0),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: ZaiNeSpacing.md),
                 _themeOption(
                   context, setModalState,
                   ZaiNeThemeMode.dark,
@@ -538,7 +574,7 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
                   '护眼夜用，深邃静谧',
                   const Color(0xFF121212),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: ZaiNeSpacing.md),
                 _themeOption(
                   context, setModalState,
                   ZaiNeThemeMode.soft,
@@ -547,7 +583,7 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
                   '温暖米白，舒适柔和',
                   const Color(0xFFF2EDE8),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: ZaiNeSpacing.sm),
               ],
             ),
           );
@@ -568,22 +604,24 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
     final isSelected = _currentTheme == mode;
     return InkWell(
       onTap: () async {
+        final ctx = context; // 保存 context 引用
         await themeNotifier.setMode(mode);
+        if (!mounted) return;
         setModalState(() {});
-        if (mounted) setState(() => _currentTheme = mode);
-        if (context.mounted) Navigator.pop(context);
+        setState(() => _currentTheme = mode);
+        if (ctx.mounted) Navigator.pop(ctx);
       },
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(ZaiNeRadius.card),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(ZaiNeRadius.card),
           border: Border.all(
             color: isSelected ? const Color(0xFFFF7F50) : Colors.grey.shade200,
             width: isSelected ? 2 : 1,
           ),
           color: isSelected
-              ? const Color(0xFFFF7F50).withOpacity(0.05)
+              ? const Color(0xFFFF7F50).withValues(alpha: 0.05)
               : Colors.transparent,
         ),
         child: Row(
@@ -593,12 +631,12 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
               height: 40,
               decoration: BoxDecoration(
                 color: previewColor,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.grey.shade200),
+                borderRadius: BorderRadius.circular(ZaiNeRadius.small),
+                border: Border.all(color: ZaiNeColors.borderColor()),
               ),
               child: Icon(icon, size: 20, color: const Color(0xFFFF7F50)),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: ZaiNeSpacing.lg),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -606,7 +644,7 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
                   Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
                   Text(
                     subtitle,
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                    style: TextStyle(fontSize: ZaiNeFontSize.caption, color: Colors.grey.shade500),
                   ),
                 ],
               ),
@@ -621,7 +659,7 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
 
   /// 【修复 v1.16.0】隐私政策链接改用正式域名
   Future<void> _showPrivacyPolicy() async {
-    final uri = Uri.parse('https://zaine.love/privacy');
+    final uri = Uri.parse(AppConstants.privacyUrl);
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } else {
@@ -643,11 +681,11 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
     final firstConfirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.card)),
         title: const Row(
           children: [
             Icon(Icons.warning_amber_rounded, color: Colors.red),
-            SizedBox(width: 8),
+            SizedBox(width: ZaiNeSpacing.sm),
             Text('删除账号', style: TextStyle(color: Colors.red)),
           ],
         ),
@@ -656,12 +694,12 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('此操作将永久删除您的账号及所有数据：'),
-            SizedBox(height: 12),
+            SizedBox(height: ZaiNeSpacing.md),
             Text('• 个人资料和健康档案'),
             Text('• 签到记录和守护卡'),
             Text('• 紧急联系人列表'),
             Text('• 会员订阅记录'),
-            SizedBox(height: 12),
+            SizedBox(height: ZaiNeSpacing.md),
             Text('此操作不可恢复！',
                 style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
           ],
@@ -684,13 +722,13 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.card)),
         title: const Text('最终确认', style: TextStyle(color: Colors.red)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             const Text('请输入「删除」以确认删除账号：'),
-            const SizedBox(height: 16),
+            const SizedBox(height: ZaiNeSpacing.lg),
             TextField(
               controller: controller,
               autofocus: true,
@@ -700,7 +738,7 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
                 border: const OutlineInputBorder(),
                 focusedBorder: OutlineInputBorder(
                   borderSide: const BorderSide(color: Colors.red, width: 2),
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(ZaiNeRadius.small),
                 ),
               ),
             ),
@@ -734,11 +772,11 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
               context: context,
               barrierDismissible: false,
               builder: (context) => AlertDialog(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.card)),
                 title: const Row(
                   children: [
                     Icon(Icons.check_circle, color: Colors.green),
-                    SizedBox(width: 8),
+                    SizedBox(width: ZaiNeSpacing.sm),
                     Text('账号已删除'),
                   ],
                 ),
@@ -785,7 +823,7 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.card)),
         title: Row(
           children: [
             Container(
@@ -793,18 +831,18 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
               height: 48,
               decoration: BoxDecoration(
                 color: const Color(0xFFFF7F50),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(ZaiNeRadius.small),
               ),
               child: const Icon(Icons.favorite, color: Colors.white),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: ZaiNeSpacing.md),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text('在呢', style: TextStyle(fontWeight: FontWeight.bold)),
                 Text(
                   'v${AppConstants.version} (Build ${AppConstants.buildNumber})',
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  style: const TextStyle(fontSize: ZaiNeFontSize.caption, color: Colors.grey),
                 ),
               ],
             ),
@@ -818,10 +856,10 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
               '守护每一次签到，守护每一份牵挂。',
               style: TextStyle(height: 1.5),
             ),
-            SizedBox(height: 16),
+            SizedBox(height: ZaiNeSpacing.lg),
             Text(
               '"在呢"是一款专为城市独居青年打造的守护应用。每天签到报平安，紧急时刻一键呼救，让在乎你的人安心。',
-              style: TextStyle(fontSize: 13, color: Colors.grey),
+              style: TextStyle(fontSize: ZaiNeFontSize.caption, color: Colors.grey),
             ),
           ],
         ),
@@ -865,11 +903,11 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
 
   Widget _buildUpdateDialogContent(BuildContext context) {
     return AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.card)),
       title: const Row(
         children: [
           Icon(Icons.system_update, color: Color(0xFFFF7F50)),
-          SizedBox(width: 8),
+          SizedBox(width: ZaiNeSpacing.sm),
           Text('检查更新'),
         ],
       ),
@@ -885,20 +923,20 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
               child: Icon(Icons.check_circle, size: 48, color: Colors.green.shade400),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: ZaiNeSpacing.md),
           Text(
             '当前版本 v${AppConstants.version} (Build ${AppConstants.buildNumber})',
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: ZaiNeFontSize.body),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: ZaiNeSpacing.sm),
           const Text(
             '已经是最新版本！',
             style: TextStyle(color: Colors.green),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: ZaiNeSpacing.xs),
           Text(
             '感谢你使用「在呢」❤️',
-            style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+            style: TextStyle(fontSize: ZaiNeFontSize.caption, color: Colors.grey[600]),
           ),
         ],
       ),
@@ -943,7 +981,7 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
                 gradient: const LinearGradient(
                   colors: [Color(0xFFFF7F50), Color(0xFFFF8C42)],
                 ),
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(ZaiNeRadius.card),
               ),
               child: Row(
                 children: [
@@ -952,11 +990,11 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
                     height: 56,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withValues(alpha: 0.2),
                     ),
                     child: const Icon(Icons.person, color: Colors.white, size: 32),
                   ),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: ZaiNeSpacing.lg),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -965,14 +1003,14 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
                           _userName!,
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 20,
+                            fontSize: ZaiNeFontSize.title,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: ZaiNeSpacing.xs),
                         const Text(
                           '健康档案已完善',
-                          style: TextStyle(color: Colors.white70, fontSize: 13),
+                          style: TextStyle(color: Colors.white70, fontSize: ZaiNeFontSize.caption),
                         ),
                       ],
                     ),
@@ -990,23 +1028,23 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
               margin: const EdgeInsets.only(bottom: 24),
               decoration: BoxDecoration(
                 color: Colors.orange.shade50,
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(ZaiNeRadius.card),
                 border: Border.all(color: Colors.orange.shade200),
               ),
               child: Row(
                 children: [
                   Icon(Icons.info_outline, color: Colors.orange.shade700),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: ZaiNeSpacing.md),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text('请完善您的健康档案',
                             style: TextStyle(fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: ZaiNeSpacing.xs),
                         Text('完善档案后解锁完整求助功能',
                             style: TextStyle(
-                                fontSize: 12, color: Colors.grey.shade600)),
+                                fontSize: ZaiNeFontSize.caption, color: ZaiNeColors.textSecondary())),
                       ],
                     ),
                   ),
@@ -1023,14 +1061,14 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
           // 主题设置（v1.2 新增）
           _buildSectionTitle('外观'),
           Card(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.card)),
             child: ListTile(
               leading: Container(
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
                   color: Colors.purple.shade50,
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(ZaiNeRadius.small),
                 ),
                 child: Icon(Icons.palette_outlined, color: Colors.purple.shade700),
               ),
@@ -1041,12 +1079,12 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
             ),
           ),
 
-          const SizedBox(height: 24),
+          const SizedBox(height: ZaiNeSpacing.xl),
 
           // 签到提醒设置
           _buildSectionTitle('签到提醒'),
           Card(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.card)),
             child: Column(
               children: [
                 SwitchListTile(
@@ -1054,7 +1092,7 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
                   subtitle: const Text('提醒你进行每日签到'),
                   value: _reminderEnabled,
                   onChanged: _toggleReminder,
-                  activeColor: const Color(0xFFFF7F50),
+                  activeThumbColor: const Color(0xFFFF7F50),
                 ),
                 AnimatedSize(
                   duration: const Duration(milliseconds: 250),
@@ -1076,7 +1114,7 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
                               subtitle: const Text('当天未签到时，系统将发送额外提醒'),
                               value: _systemReminderEnabled,
                               onChanged: _toggleSystemReminder,
-                              activeColor: const Color(0xFFFF7F50),
+                              activeThumbColor: const Color(0xFFFF7F50),
                             ),
                           ],
                         )
@@ -1086,12 +1124,12 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
             ),
           ),
 
-          const SizedBox(height: 24),
+          const SizedBox(height: ZaiNeSpacing.xl),
 
           // 求助设置
           _buildSectionTitle('求助设置'),
           Card(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.card)),
             child: Column(
               children: [
                 ListTile(
@@ -1111,13 +1149,13 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
             ),
           ),
 
-          const SizedBox(height: 24),
+          const SizedBox(height: ZaiNeSpacing.xl),
 
           // 会员管理
           if (_isLoggedIn) ...[
             _buildSectionTitle('会员'),
             Card(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.card)),
               child: ListTile(
                 leading: Container(
                   width: 40,
@@ -1128,13 +1166,61 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(ZaiNeRadius.small),
                   ),
                   child: const Icon(Icons.home, color: Colors.white, size: 20),
                 ),
                 title: const Text('在呢智能版'),
                 subtitle: const Text('解锁更多守护能力'),
-                trailing: const Icon(Icons.chevron_right),
+                // 【v1.17.3】根据会员状态显示不同的 trailing 组件
+                trailing: MembershipService.getLevel() == 'smart'
+                    ? Container(
+                        padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.md, vertical: ZaiNeSpacing.xs),
+                        decoration: BoxDecoration(
+                          color: Colors.green.shade50,
+                          borderRadius: BorderRadius.circular(ZaiNeRadius.small),
+                          border: Border.all(color: Colors.green.shade200),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.check_circle, size: 14, color: Colors.green.shade600),
+                            const SizedBox(width: ZaiNeSpacing.xs),
+                            Text(
+                              '已订阅',
+                              style: TextStyle(
+                                fontSize: ZaiNeFontSize.caption,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.green.shade700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : Container(
+                        padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.md, vertical: ZaiNeSpacing.xs),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFFFF8C42), Color(0xFFFF6B35)],
+                          ),
+                          borderRadius: BorderRadius.circular(ZaiNeRadius.small),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              '升级',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: ZaiNeFontSize.caption,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            SizedBox(width: ZaiNeSpacing.xs),
+                            Icon(Icons.chevron_right, color: Colors.white, size: 16),
+                          ],
+                        ),
+                      ),
                 onTap: () {
                   Navigator.of(context).push(
                     MaterialPageRoute(builder: (context) => const SubscriptionPage()),
@@ -1142,15 +1228,14 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
                 },
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: ZaiNeSpacing.xl),
           ],
 
           // 账号（v1.4 新增退出登录）
           if (_isLoggedIn) ...[
             _buildSectionTitle('账号'),
             Card(
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.card)),
               child: Column(
                 children: [
                   ListTile(
@@ -1159,7 +1244,7 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
                       height: 40,
                       decoration: BoxDecoration(
                         color: Colors.red.shade50,
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(ZaiNeRadius.small),
                       ),
                       child: Icon(Icons.logout, color: Colors.red.shade400),
                     ),
@@ -1175,26 +1260,26 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
                       height: 40,
                       decoration: BoxDecoration(
                         color: Colors.red.shade50,
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(ZaiNeRadius.small),
                       ),
                       child: Icon(Icons.delete_forever, color: Colors.red.shade700),
                     ),
                     title: Text('删除账号',
                         style: TextStyle(color: Colors.red.shade700, fontWeight: FontWeight.w600)),
                     subtitle: const Text('彻底删除所有数据，不可恢复',
-                        style: TextStyle(fontSize: 12)),
+                        style: TextStyle(fontSize: ZaiNeFontSize.caption)),
                     onTap: _deleteAccount,
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: ZaiNeSpacing.xl),
           ],
 
           // 隐私与数据
           _buildSectionTitle('隐私与数据'),
           Card(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.card)),
             child: Column(
               children: [
                 ListTile(
@@ -1203,7 +1288,7 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
                     height: 40,
                     decoration: BoxDecoration(
                       color: Colors.blue.shade50,
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(ZaiNeRadius.small),
                     ),
                     child: Icon(Icons.privacy_tip_outlined,
                         color: Colors.blue.shade700),
@@ -1219,7 +1304,7 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
                     height: 40,
                     decoration: BoxDecoration(
                       color: Colors.green.shade50,
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(ZaiNeRadius.small),
                     ),
                     child: Icon(Icons.shield_outlined,
                         color: Colors.green.shade700),
@@ -1231,12 +1316,11 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
                     showDialog(
                       context: context,
                       builder: (context) => AlertDialog(
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.card)),
                         title: const Row(
                           children: [
                             Icon(Icons.shield, color: Colors.green),
-                            SizedBox(width: 8),
+                            SizedBox(width: ZaiNeSpacing.sm),
                             Text('数据安全保障'),
                           ],
                         ),
@@ -1257,12 +1341,12 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
             ),
           ),
 
-          const SizedBox(height: 24),
+          const SizedBox(height: ZaiNeSpacing.xl),
 
           // 存储管理（v1.7 新增）
           _buildSectionTitle('存储管理'),
           Card(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.card)),
             child: Column(
               children: [
                 ListTile(
@@ -1271,7 +1355,7 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
                     height: 40,
                     decoration: BoxDecoration(
                       color: Colors.blue.shade50,
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(ZaiNeRadius.small),
                     ),
                     child: Icon(Icons.cleaning_services_outlined, color: Colors.blue.shade700),
                   ),
@@ -1287,25 +1371,25 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
                     height: 40,
                     decoration: BoxDecoration(
                       color: Colors.red.shade50,
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(ZaiNeRadius.small),
                     ),
                     child: Icon(Icons.restart_alt, color: Colors.red.shade400),
                   ),
                   title: const Text('重置所有数据', style: TextStyle(color: Colors.red)),
                   subtitle: const Text('清除所有本地数据（签到、档案、联系人）',
-                      style: TextStyle(fontSize: 12)),
+                      style: TextStyle(fontSize: ZaiNeFontSize.caption)),
                   onTap: _resetAllData,
                 ),
               ],
             ),
           ),
 
-          const SizedBox(height: 24),
+          const SizedBox(height: ZaiNeSpacing.xl),
 
           // 关于
           _buildSectionTitle('关于'),
           Card(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.card)),
             child: Column(
               children: [
                 ListTile(
@@ -1314,7 +1398,7 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
                     height: 40,
                     decoration: BoxDecoration(
                       color: Colors.purple.shade50,
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(ZaiNeRadius.small),
                     ),
                     child: Icon(Icons.info_outline, color: Colors.purple.shade700),
                   ),
@@ -1324,7 +1408,7 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
                 ),
                 const Divider(height: 1),
                 ListTile(
-                  leading: const SizedBox(width: 40),
+                  leading: const SizedBox(width: ZaiNeSpacing.xxl),
                   title: Row(
                     children: [
                       Text(
@@ -1338,17 +1422,17 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
                       if (devTapCount >= 1)
                         Text(
                           devTapCount >= 3 ? '开发者模式 ✅' : '再点 ${3 - devTapCount} 次激活',
-                          style: TextStyle(color: Colors.orange.shade600, fontSize: 11),
+                          style: TextStyle(color: Colors.orange.shade600, fontSize: ZaiNeFontSize.micro),
                         ),
                     ],
                   ),
                   subtitle: Text('v${AppConstants.version} (Build ${AppConstants.buildNumber})'),
                   trailing: devTapCount >= 3
                       ? Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.sm, vertical: ZaiNeSpacing.xs),
                           decoration: BoxDecoration(
                             color: Colors.purple.shade100,
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(ZaiNeRadius.small),
                           ),
                           child: Icon(Icons.code, size: 14, color: Colors.purple.shade700),
                         )
@@ -1366,7 +1450,7 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
             ),
           ),
 
-          const SizedBox(height: 40),
+          const SizedBox(height: ZaiNeSpacing.xxl),
 
           Center(
             child: Column(
@@ -1374,21 +1458,21 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
                 const Text(
                   '在呢',
                   style: TextStyle(
-                    fontSize: 18,
+                    fontSize: ZaiNeFontSize.subtitle,
                     fontWeight: FontWeight.bold,
                     color: Color(0xFFFF7F50),
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: ZaiNeSpacing.xs),
                 Text(
                   '让在乎你的人安心',
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                  style: TextStyle(fontSize: ZaiNeFontSize.caption, color: Colors.grey.shade500),
                 ),
               ],
             ),
           ),
 
-          const SizedBox(height: 40),
+          const SizedBox(height: ZaiNeSpacing.xxl),
         ],
       ),
       ),
@@ -1400,11 +1484,11 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.card)),
         title: const Row(
           children: [
             Icon(Icons.cleaning_services, color: Colors.blue),
-            SizedBox(width: 8),
+            SizedBox(width: ZaiNeSpacing.sm),
             Text('清除缓存'),
           ],
         ),
@@ -1442,11 +1526,11 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
     final firstConfirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.card)),
         title: const Row(
           children: [
             Icon(Icons.warning_amber_rounded, color: Colors.red),
-            SizedBox(width: 8),
+            SizedBox(width: ZaiNeSpacing.sm),
             Text('⚠️ 危险操作', style: TextStyle(color: Colors.red)),
           ],
         ),
@@ -1455,13 +1539,13 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('此操作将永久删除以下所有数据：'),
-            SizedBox(height: 12),
+            SizedBox(height: ZaiNeSpacing.md),
             Text('• 签到记录和连续天数'),
             Text('• 健康档案信息'),
             Text('• 紧急联系人列表'),
             Text('• 登录状态'),
             Text('• 主题偏好设置'),
-            SizedBox(height: 12),
+            SizedBox(height: ZaiNeSpacing.md),
             Text('此操作不可恢复！',
                 style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
           ],
@@ -1508,7 +1592,7 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
           }
         }
       } catch (e) {
-        debugPrint('[_resetAllData] 头像文件清理失败: $e');
+        if (kDebugMode) debugPrint('[_resetAllData] 头像文件清理失败: $e');
       }
 
       if (mounted) {
@@ -1539,13 +1623,13 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.card)),
         title: const Text('🔒 最终确认', style: TextStyle(color: Colors.red)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             const Text('请输入「重置」以确认删除所有数据：'),
-            const SizedBox(height: 16),
+            const SizedBox(height: ZaiNeSpacing.lg),
             TextField(
               controller: controller,
               autofocus: true,
@@ -1555,7 +1639,7 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
                 border: const OutlineInputBorder(),
                 focusedBorder: OutlineInputBorder(
                   borderSide: const BorderSide(color: Colors.red, width: 2),
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(ZaiNeRadius.small),
                 ),
               ),
             ),
@@ -1585,9 +1669,9 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
       child: Text(
         title,
         style: TextStyle(
-          fontSize: 14,
+          fontSize: ZaiNeFontSize.bodySm,
           fontWeight: FontWeight.w600,
-          color: Colors.grey.shade600,
+          color: ZaiNeColors.textSecondary(),
         ),
       ),
     );

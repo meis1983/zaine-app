@@ -26,7 +26,7 @@ class WatchDataService {
     try {
       _isSupported = await _wc.isSupported;
       if (!_isSupported) {
-        debugPrint('[WatchData] WatchConnectivity 不支持');
+        if (kDebugMode) debugPrint('[WatchData] WatchConnectivity 不支持');
         return;
       }
 
@@ -34,9 +34,9 @@ class WatchDataService {
       // 连接状态变化需要通过其他方式检测（如定时轮询或在相关页面手动调用）
 
       await _updateState();
-      debugPrint('[WatchData] 初始化完成, paired=$_isPaired, reachable=$_isReachable');
+      if (kDebugMode) debugPrint('[WatchData] 初始化完成, paired=$_isPaired, reachable=$_isReachable');
     } catch (e) {
-      debugPrint('[WatchData] 初始化失败: $e');
+      if (kDebugMode) debugPrint('[WatchData] 初始化失败: $e');
     }
   }
 
@@ -91,17 +91,17 @@ class WatchDataService {
       // 使用 sendMessage（实时推送，Watch 必须可达）
       if (_isReachable) {
         await _wc.sendMessage(watchData);
-        debugPrint('[WatchData] 健康数据已推送到 Watch (实时)');
+        if (kDebugMode) debugPrint('[WatchData] 健康数据已推送到 Watch (实时)');
         return true;
       }
 
       // 使用 transferUserInfo（后台传输，Watch 不需要可达）
       // 使用 applicationContext 以确保数据不重复累积
       await _wc.updateApplicationContext(watchData);
-      debugPrint('[WatchData] 健康数据已传输到 Watch (后台)');
+      if (kDebugMode) debugPrint('[WatchData] 健康数据已传输到 Watch (后台)');
       return true;
     } catch (e) {
-      debugPrint('[WatchData] 推送健康数据失败: $e');
+      if (kDebugMode) debugPrint('[WatchData] 推送健康数据失败: $e');
       return false;
     }
   }
@@ -126,10 +126,10 @@ class WatchDataService {
       } else {
         await _wc.updateApplicationContext(data);
       }
-      debugPrint('[WatchData] 守护圈信息已推送: $guardianCount 人');
+      if (kDebugMode) debugPrint('[WatchData] 守护圈信息已推送: $guardianCount 人');
       return true;
     } catch (e) {
-      debugPrint('[WatchData] 推送守护圈信息失败: $e');
+      if (kDebugMode) debugPrint('[WatchData] 推送守护圈信息失败: $e');
       return false;
     }
   }
@@ -156,10 +156,10 @@ class WatchDataService {
       } else {
         await _wc.updateApplicationContext(data);
       }
-      debugPrint('[WatchData] 经期状态已推送: cycleDay=$cycleDay');
+      if (kDebugMode) debugPrint('[WatchData] 经期状态已推送: cycleDay=$cycleDay');
       return true;
     } catch (e) {
-      debugPrint('[WatchData] 推送经期状态失败: $e');
+      if (kDebugMode) debugPrint('[WatchData] 推送经期状态失败: $e');
       return false;
     }
   }
@@ -167,7 +167,7 @@ class WatchDataService {
   // ==================== Widget Complications 数据同步 ====================
 
   /// 缓存的 Widget 数据
-  Map<String, dynamic> _cachedWidgetData = {};
+  final Map<String, dynamic> _cachedWidgetData = {};
 
   /// 更新 Widget Complications 数据
   ///
@@ -204,10 +204,10 @@ class WatchDataService {
       final jsonStr = jsonEncode(_cachedWidgetData);
       await prefs.setString('widget_data', jsonStr);
 
-      debugPrint('[WatchData] Widget 数据已更新: ${jsonStr.substring(0, jsonStr.length > 100 ? 100 : jsonStr.length)}...');
+      if (kDebugMode) debugPrint('[WatchData] Widget 数据已更新: ${jsonStr.substring(0, jsonStr.length > 100 ? 100 : jsonStr.length)}...');
       return true;
     } catch (e) {
-      debugPrint('[WatchData] 更新 Widget 数据失败: $e');
+      if (kDebugMode) debugPrint('[WatchData] 更新 Widget 数据失败: $e');
       return false;
     }
   }
@@ -244,7 +244,7 @@ class WatchDataService {
   Future<void> reloadWidgetTimelines() async {
     // Widget 会自动根据 timeline 策略刷新
     // 这里可以添加额外的刷新逻辑
-    debugPrint('[WatchData] Widget timelines 刷新请求已发送');
+    if (kDebugMode) debugPrint('[WatchData] Widget timelines 刷新请求已发送');
   }
 
   /// 推送订阅状态到 Watch
@@ -269,7 +269,7 @@ class WatchDataService {
       }
       return true;
     } catch (e) {
-      debugPrint('[WatchData] 推送订阅状态失败: $e');
+      if (kDebugMode) debugPrint('[WatchData] 推送订阅状态失败: $e');
       return false;
     }
   }

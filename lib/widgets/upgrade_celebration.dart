@@ -3,6 +3,7 @@
 
 import 'dart:math';
 import 'package:flutter/material.dart';
+import '../theme/theme_helper.dart';
 
 /// 展示升级成功的庆祝动画
 /// 调用方式：UpgradeCelebration.show(context);
@@ -119,7 +120,8 @@ class _UpgradeCelebrationState extends State<UpgradeCelebration>
                         decoration: BoxDecoration(
                           color: p.color,
                           borderRadius: BorderRadius.circular(2),
-                        ),
+                        
+                          boxShadow: ZaiNeShadows.card,),
                       ),
                     ),
                   ),
@@ -177,7 +179,8 @@ class _UpgradeCelebrationState extends State<UpgradeCelebration>
                 end: Alignment.bottomRight,
               ),
               borderRadius: BorderRadius.circular(20),
-            ),
+            
+              boxShadow: ZaiNeShadows.card,),
             child: const Center(
               child: Icon(Icons.auto_awesome, color: Colors.white, size: 32),
             ),

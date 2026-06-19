@@ -271,7 +271,7 @@ class _TrendChartPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     if (data.length < 2) return;
 
-    final padding = const EdgeInsets.only(left: 0, right: 0, top: 10, bottom: 20);
+    const padding = EdgeInsets.only(left: 0, right: 0, top: 10, bottom: 20);
     final chartWidth = size.width - padding.horizontal;
     final chartHeight = size.height - padding.vertical;
 
@@ -329,8 +329,8 @@ class _TrendChartPainter extends CustomPainter {
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
         colors: [
-          fillColor.withOpacity(0.3),
-          fillColor.withOpacity(0.05),
+          fillColor.withValues(alpha: 0.3),
+          fillColor.withValues(alpha: 0.05),
         ],
       ).createShader(Rect.fromLTWH(0, 0, size.width, size.height))
       ..style = PaintingStyle.fill;
@@ -417,7 +417,7 @@ class _TrendChartPainter extends CustomPainter {
       ..color = lineColor
       ..style = PaintingStyle.fill;
 
-    final textStyle = TextStyle(
+    const textStyle = TextStyle(
       color: Colors.white,
       fontSize: 11,
       fontWeight: FontWeight.bold,

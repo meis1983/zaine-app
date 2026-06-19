@@ -3,6 +3,7 @@ import 'dart:math';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:image_gallery_saver/image_gallery_saver.dart';
@@ -11,6 +12,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import '../theme/theme_helper.dart';
 import '../utils/badge_generator.dart';
 import '../utils/share_card_generator.dart';
+import '../data/app_constants.dart';
 
 /// 签到里程碑弹窗 — v1.3（精美徽章 + 渐变背景保存到相册 + 二维码）
 class CheckinMilestoneDialog extends StatefulWidget {
@@ -80,7 +82,7 @@ class _CheckinMilestoneDialogState extends State<CheckinMilestoneDialog>
 
       // 1. 以 4x 像素比捕获原始渲染（矩形，四角透明）
       final image = await boundary.toImage(pixelRatio: 4.0);
-      final cornerRadius = 28.0 * 4.0; // UI borderRadius × pixelRatio
+      const cornerRadius = 28.0 * 4.0; // UI borderRadius × pixelRatio
 
       // 2. GPU 加速：画布填白底 + clipRRect 裁切 → 消除透明但仍有直角边
       final roundedImage = await _clipRoundedCorners(image, cornerRadius);
@@ -116,7 +118,7 @@ class _CheckinMilestoneDialogState extends State<CheckinMilestoneDialog>
               content: Row(
                 children: [
                   Icon(Icons.check_circle, color: Colors.white, size: 18),
-                  SizedBox(width: 8),
+                  SizedBox(width: ZaiNeSpacing.sm),
                   Text('徽章图片已保存到相册'),
                 ],
               ),
@@ -129,7 +131,7 @@ class _CheckinMilestoneDialogState extends State<CheckinMilestoneDialog>
         _showError('保存失败');
       }
     } catch (e) {
-      debugPrint('Save image error: $e');
+      if (kDebugMode) debugPrint('Save image error: $e');
       _showError('保存失败：$e');
     }
   }
@@ -230,7 +232,7 @@ class _CheckinMilestoneDialogState extends State<CheckinMilestoneDialog>
 
     return Dialog(
       backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      insetPadding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.xl, vertical: ZaiNeSpacing.lg),
       child: FadeTransition(
         opacity: _fadeAnim,
         child: ScaleTransition(
@@ -250,12 +252,12 @@ class _CheckinMilestoneDialogState extends State<CheckinMilestoneDialog>
                       borderRadius: BorderRadius.circular(28),
                       boxShadow: [
                         BoxShadow(
-                          color: badge.badgeColor.withOpacity(0.2),
+                          color: badge.badgeColor.withValues(alpha: 0.2),
                           blurRadius: 30,
                           offset: const Offset(0, 12),
                         ),
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.08),
+                          color: Colors.black.withValues(alpha: 0.08),
                           blurRadius: 16,
                           offset: const Offset(0, 6)),
                       ],
@@ -275,13 +277,14 @@ class _CheckinMilestoneDialogState extends State<CheckinMilestoneDialog>
                                 end: Alignment.bottomCenter,
                                 colors: [
                                   gradient.colors.first,
-                                  gradient.colors.first.withOpacity(0.06),
+                                  gradient.colors.first.withValues(alpha: 0.06),
                                   ZaiNeColors.cardBg(),
                                 ],
                                 stops: const [0.0, 0.35, 0.45],
                               ),
                               borderRadius: BorderRadius.circular(28),
-                            ),
+                            
+                              boxShadow: ZaiNeShadows.card,),
                             padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
                             child: Stack(
                               children: [
@@ -305,8 +308,8 @@ class _CheckinMilestoneDialogState extends State<CheckinMilestoneDialog>
                                   child: Column(
                                     children: [
                                       Text(badge.emoji, style: const TextStyle(fontSize: 30)),
-                                      const SizedBox(height: 4),
-                                      Text(
+                                      const SizedBox(height: ZaiNeSpacing.xs),
+                                      const Text(
                                         '签到成功 ✓',
                                         style: TextStyle(
                                           fontSize: 22,
@@ -314,17 +317,17 @@ class _CheckinMilestoneDialogState extends State<CheckinMilestoneDialog>
                                           color: Colors.white,
                                         ),
                                       ),
-                                      const SizedBox(height: 2),
+                                      const SizedBox(height: ZaiNeSpacing.xs),
                                       Text(
                                         badge.title,
-                                        style: TextStyle(fontSize: 13, color: Colors.white.withOpacity(0.9)),
+                                        style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.9)),
                                       ),
                       // 【P3】等级描述 — 统一使用 BadgeGenerator.getLevel
                       if (!badge.isMilestone && !badge.isFestival && !badge.isReturnCheckin && !badge.isSolarTerm) ...[
-                        const SizedBox(height: 2),
+                        const SizedBox(height: ZaiNeSpacing.xs),
                         Text(
                           BadgeGenerator.getLevel(widget.continuousDays).desc,
-                          style: TextStyle(fontSize: 11, color: Colors.white.withOpacity(0.7)),
+                          style: TextStyle(fontSize: 11, color: Colors.white.withValues(alpha: 0.7)),
                         ),
                       ],
                                     ],
@@ -347,16 +350,16 @@ class _CheckinMilestoneDialogState extends State<CheckinMilestoneDialog>
                                           decoration: BoxDecoration(
                                             shape: BoxShape.circle,
                                             gradient: LinearGradient(colors: [
-                                              badge.badgeColor.withOpacity(0.15),
-                                              badge.badgeColor.withOpacity(0.05),
+                                              badge.badgeColor.withValues(alpha: 0.15),
+                                              badge.badgeColor.withValues(alpha: 0.05),
                                             ]),
                                             border: Border.all(
-                                              color: badge.badgeColor.withOpacity(0.3),
+                                              color: badge.badgeColor.withValues(alpha: 0.3),
                                               width: 2,
                                             ),
                                             boxShadow: [
                                               BoxShadow(
-                                                color: badge.badgeColor.withOpacity(0.15),
+                                                color: badge.badgeColor.withValues(alpha: 0.15),
                                                 blurRadius: 20,
                                                 spreadRadius: 4,
                                               ),
@@ -372,7 +375,7 @@ class _CheckinMilestoneDialogState extends State<CheckinMilestoneDialog>
                                                 )),
                                                 Text('天', style: TextStyle(
                                                   fontSize: 11, fontWeight: FontWeight.w600,
-                                                  color: badge.badgeColor.withOpacity(0.7),
+                                                  color: badge.badgeColor.withValues(alpha: 0.7),
                                                 )),
                                               ],
                                             ),
@@ -393,7 +396,7 @@ class _CheckinMilestoneDialogState extends State<CheckinMilestoneDialog>
                                   ),
                                 ),
 
-                                const SizedBox(height: 6),
+                                const SizedBox(height: ZaiNeSpacing.sm),
 
                                 // 副标题
                                 Text(
@@ -401,7 +404,7 @@ class _CheckinMilestoneDialogState extends State<CheckinMilestoneDialog>
                                   style: TextStyle(fontSize: 14, color: Colors.grey[700], fontWeight: FontWeight.w500),
                                 ),
 
-                                const SizedBox(height: 2),
+                                const SizedBox(height: ZaiNeSpacing.xs),
 
                                 Text(
                                   widget.userName.isEmpty ? '在呢用户' : widget.userName,
@@ -409,34 +412,35 @@ class _CheckinMilestoneDialogState extends State<CheckinMilestoneDialog>
                                 ),
 
                                 // 装饰元素 + 每日文案
-                                const SizedBox(height: 4),
+                                const SizedBox(height: ZaiNeSpacing.xs),
                                 if (badge.message.isNotEmpty)
                                   Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                                    padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.md),
                                     child: Text(
                                       '${BadgeGenerator.decoChars[badge.decoType]} ${badge.message}',
                                       textAlign: TextAlign.center,
                                       style: TextStyle(
                                         fontSize: 12,
-                                        color: badge.badgeColor.withOpacity(0.7),
+                                        color: badge.badgeColor.withValues(alpha: 0.7),
                                         fontWeight: FontWeight.w500,
                                         height: 1.3,
                                       ),
                                     ),
                                   ),
 
-                                const SizedBox(height: 12),
+                                const SizedBox(height: ZaiNeSpacing.md),
 
                                 // ====== 二维码/邀请卡片区 ======
                                 Container(
                                   padding: const EdgeInsets.all(14),
                                   decoration: BoxDecoration(
                                     gradient: LinearGradient(
-                                      colors: [Colors.grey.shade50.withOpacity(0.5), Colors.grey.shade100.withOpacity(0.3)],
+                                      colors: [Colors.grey.shade50.withValues(alpha: 0.5), Colors.grey.shade100.withValues(alpha: 0.3)],
                                     ),
                                     borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(color: Colors.grey.shade200),
-                                  ),
+                                    border: Border.all(color: ZaiNeColors.borderColor()),
+                                  
+                                    boxShadow: ZaiNeShadows.card,),
                                   child: Row(
                                     children: [
                                       // iOS 显示真二维码，Android 显示敬请期待
@@ -446,17 +450,17 @@ class _CheckinMilestoneDialogState extends State<CheckinMilestoneDialog>
                                           decoration: BoxDecoration(
                                             color: Colors.white,
                                             borderRadius: BorderRadius.circular(12),
-                                            border: Border.all(color: badge.badgeColor.withOpacity(0.2)),
+                                            border: Border.all(color: badge.badgeColor.withValues(alpha: 0.2)),
                                             boxShadow: [
                                               BoxShadow(
-                                                color: badge.badgeColor.withOpacity(0.08),
+                                                color: badge.badgeColor.withValues(alpha: 0.08),
                                                 blurRadius: 8,
                                                 offset: const Offset(0, 2),
                                               ),
                                             ],
                                           ),
                                           child: QrImageView(
-                                            data: 'https://zaine.love/landing/checkin_milestone',
+                                            data: AppConstants.checkinMilestoneUrl,
                                             version: QrVersions.auto,
                                             size: 58,
                                             backgroundColor: Colors.white,
@@ -478,37 +482,38 @@ class _CheckinMilestoneDialogState extends State<CheckinMilestoneDialog>
                                             color: Colors.orange.shade50,
                                             borderRadius: BorderRadius.circular(10),
                                             border: Border.all(color: Colors.orange.shade200),
-                                          ),
+                                          
+                                            boxShadow: ZaiNeShadows.card,),
                                           child: Center(
                                             child: Column(
                                               mainAxisAlignment: MainAxisAlignment.center,
                                               children: [
                                                 Icon(Icons.android, size: 22, color: Colors.orange.shade400),
-                                                const SizedBox(height: 2),
+                                                const SizedBox(height: ZaiNeSpacing.xs),
                                                 Text('敬请', style: TextStyle(fontSize: 8, color: Colors.orange.shade600, fontWeight: FontWeight.w600)),
                                                 Text('期待', style: TextStyle(fontSize: 8, color: Colors.orange.shade600, fontWeight: FontWeight.w600)),
                                               ],
                                             ),
                                           ),
                                         ),
-                                      const SizedBox(width: 12),
+                                      const SizedBox(width: ZaiNeSpacing.md),
                                       Expanded(
                                         child: Column(
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
-                                            Text('邀请朋友一起守护', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.grey[800])),
-                                            const SizedBox(height: 3),
+                                            Text('扫码下载「在呢」', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.grey[800])),
+                                            const SizedBox(height: ZaiNeSpacing.xs),
                                             Text(
                                               Platform.isIOS
-                                                  ? '扫码下载「在呢」\n成为彼此的守护者'
-                                                  : 'Android 版本即将上线\n敬请期待，扫码功能开发中',
+                                                  ? '独居安全守护 App\n让在乎的人知道你很好'
+                                                  : 'Android 版本即将上线\n敬请期待',
                                               style: TextStyle(fontSize: 11, color: Colors.grey[500], height: 1.3),
                                             ),
-                                            const SizedBox(height: 4),
+                                            const SizedBox(height: ZaiNeSpacing.xs),
                                             Row(
                                               children: [
                                                 Icon(Icons.people_outline, size: 12, color: Colors.orange.shade600),
-                                                const SizedBox(width: 3),
+                                                const SizedBox(width: ZaiNeSpacing.xs),
                                                 Text('已守护 ${widget.continuousDays} 天', style: TextStyle(fontSize: 10, color: Colors.orange.shade700, fontWeight: FontWeight.w600)),
                                               ],
                                             ),
@@ -519,7 +524,7 @@ class _CheckinMilestoneDialogState extends State<CheckinMilestoneDialog>
                                   ),
                                 ),
 
-                                const SizedBox(height: 14),
+                                const SizedBox(height: ZaiNeSpacing.lg),
 
                                 // ====== 操作按钮（仅关闭 + 保存徽章） ======
                                 IntrinsicHeight(
@@ -531,38 +536,42 @@ class _CheckinMilestoneDialogState extends State<CheckinMilestoneDialog>
                                         child: GestureDetector(
                                           onTap: () => Navigator.of(context).pop(),
                                           child: Container(
-                                            padding: const EdgeInsets.symmetric(vertical: 14),
+                                            padding: const EdgeInsets.symmetric(vertical: ZaiNeSpacing.lg),
                                             decoration: BoxDecoration(
                                               color: Colors.grey.shade100,
                                               borderRadius: BorderRadius.circular(14),
-                                            ),
+                                            
+                                              boxShadow: ZaiNeShadows.card,),
                                             child: const Text('关闭', textAlign: TextAlign.center,
                                               style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w600, fontSize: 14)),
                                           ),
                                         ),
                                       ),
-                                      const SizedBox(width: 8),
+                                      const SizedBox(width: ZaiNeSpacing.sm),
                                       // 保存徽章
                                       Expanded(
                                         flex: 1,
                                         child: GestureDetector(
                                           onTap: () async {
+                                            // 【修复 v1.18】黑屏问题：先保存 Navigator 引用，异步操作后检查 mounted
+                                            final navigator = Navigator.of(context);
                                             await _saveBadgeImage();
-                                            if (mounted) Navigator.of(context).pop();
+                                            if (mounted) navigator.pop();
                                           },
                                           child: Container(
-                                            padding: const EdgeInsets.symmetric(vertical: 14),
+                                            padding: const EdgeInsets.symmetric(vertical: ZaiNeSpacing.lg),
                                             decoration: BoxDecoration(
                                               color: Colors.teal.shade50,
                                               borderRadius: BorderRadius.circular(14),
                                               border: Border.all(color: Colors.teal.shade200),
-                                            ),
+                                            
+                                              boxShadow: ZaiNeShadows.card,),
                                             child: Center(
                                               child: Row(
                                                 mainAxisSize: MainAxisSize.min,
                                                 children: [
                                                   Icon(Icons.download_rounded, color: Colors.teal.shade600, size: 17),
-                                                  const SizedBox(width: 5),
+                                                  const SizedBox(width: ZaiNeSpacing.xs),
                                                   Text('保存徽章', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.teal.shade700, fontSize: 14)),
                                                 ],
                                               ),
@@ -599,11 +608,11 @@ class _CheckinMilestoneDialogState extends State<CheckinMilestoneDialog>
                           shape: BoxShape.circle,
                           gradient: LinearGradient(colors: [
                             (badge.badgeColor),
-                            badge.badgeColor.withOpacity(0.7),
+                            badge.badgeColor.withValues(alpha: 0.7),
                           ]),
                           boxShadow: [
                             BoxShadow(
-                              color: badge.badgeColor.withOpacity(0.4),
+                              color: badge.badgeColor.withValues(alpha: 0.4),
                               blurRadius: 20,
                               spreadRadius: 4,
                             ),
@@ -633,9 +642,9 @@ class _CheckinMilestoneDialogState extends State<CheckinMilestoneDialog>
                       child: Container(
                         width: 32, height: 32,
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.9),
+                          color: Colors.white.withValues(alpha: 0.9),
                           shape: BoxShape.circle,
-                          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 4)],
+                          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 4)],
                         ),
                         child: const Icon(Icons.close, size: 16, color: Colors.grey),
                       ),
@@ -662,7 +671,7 @@ class _RingStylePainter extends CustomPainter {
     final cx = size.width / 2, cy = size.height / 2, r = size.shortestSide / 2 - 1;
     final paint = Paint()
       ..style = PaintingStyle.stroke
-      ..color = color.withOpacity(0.4);
+      ..color = color.withValues(alpha: 0.4);
 
     switch (style) {
       case 0: // 实线 — 已有Border.all，不画额外
@@ -680,7 +689,7 @@ class _RingStylePainter extends CustomPainter {
       case 2: // 双圈
         paint.strokeWidth = 1;
         canvas.drawCircle(Offset(cx, cy), r - 3, paint);
-        canvas.drawCircle(Offset(cx, cy), r + 1, paint..color = color.withOpacity(0.2));
+        canvas.drawCircle(Offset(cx, cy), r + 1, paint..color = color.withValues(alpha: 0.2));
         break;
       case 3: // 点阵
         paint.strokeWidth = 2;
@@ -697,8 +706,11 @@ class _RingStylePainter extends CustomPainter {
           final ri = r + sin(a * 12) * 3;
           final px = cx + cos(a) * ri;
           final py = cy + sin(a) * ri;
-          if (a == 0) path2.moveTo(px, py);
-          else path2.lineTo(px, py);
+          if (a == 0) {
+            path2.moveTo(px, py);
+          } else {
+            path2.lineTo(px, py);
+          }
         }
         path2.close();
         canvas.drawPath(path2, paint);
@@ -710,8 +722,11 @@ class _RingStylePainter extends CustomPainter {
           final ri = r + sin(a * 8) * 2;
           final px = cx + cos(a) * ri;
           final py = cy + sin(a) * ri;
-          if (a == 0) path3.moveTo(px, py);
-          else path3.lineTo(px, py);
+          if (a == 0) {
+            path3.moveTo(px, py);
+          } else {
+            path3.lineTo(px, py);
+          }
         }
         path3.close();
         canvas.drawPath(path3, paint);
@@ -724,8 +739,11 @@ class _RingStylePainter extends CustomPainter {
           final ri = r + sin(w * 6) * 1.5;
           final px = cx + cos(w) * ri;
           final py = cy + sin(w) * ri;
-          if (a == 0) path4.moveTo(px, py);
-          else path4.lineTo(px, py);
+          if (a == 0) {
+            path4.moveTo(px, py);
+          } else {
+            path4.lineTo(px, py);
+          }
         }
         canvas.drawPath(path4, paint);
         break;

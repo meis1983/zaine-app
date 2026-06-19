@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/theme_helper.dart';
 import '../services/social/guardian_message_service.dart';
 import 'package:intl/intl.dart';
 
@@ -51,16 +52,16 @@ class _GuardianAchievementsPageState extends State<GuardianAchievementsPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: ZaiNeColors.scaffoldBg(),
       appBar: AppBar(
         title: const Text('守护成就'),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black87,
+        backgroundColor: ZaiNeColors.cardBg(),
+        foregroundColor: ZaiNeColors.textPrimary(),
         elevation: 0,
         bottom: TabBar(
           controller: _tabController,
           labelColor: Theme.of(context).primaryColor,
-          unselectedLabelColor: Colors.grey,
+          unselectedLabelColor: ZaiNeColors.textHint(),
           indicatorColor: Theme.of(context).primaryColor,
           tabs: const [
             Tab(text: '全部'),
@@ -103,7 +104,7 @@ class _GuardianAchievementsPageState extends State<GuardianAchievementsPage>
         gradient: LinearGradient(
           colors: [
             Theme.of(context).primaryColor,
-            Theme.of(context).primaryColor.withOpacity(0.8),
+            Theme.of(context).primaryColor.withValues(alpha: 0.8),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -111,7 +112,7 @@ class _GuardianAchievementsPageState extends State<GuardianAchievementsPage>
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Theme.of(context).primaryColor.withOpacity(0.3),
+            color: Theme.of(context).primaryColor.withValues(alpha: 0.3),
             blurRadius: 15,
             offset: const Offset(0, 5),
           ),
@@ -126,7 +127,7 @@ class _GuardianAchievementsPageState extends State<GuardianAchievementsPage>
                 width: 70,
                 height: 70,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white.withValues(alpha: 0.2),
                   shape: BoxShape.circle,
                 ),
                 child: Center(
@@ -153,7 +154,7 @@ class _GuardianAchievementsPageState extends State<GuardianAchievementsPage>
                     Text(
                       _getMotivationalText(),
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.9),
+                        color: Colors.white.withValues(alpha: 0.9),
                         fontSize: 14,
                       ),
                     ),
@@ -168,7 +169,7 @@ class _GuardianAchievementsPageState extends State<GuardianAchievementsPage>
             borderRadius: BorderRadius.circular(4),
             child: LinearProgressIndicator(
               value: progress,
-              backgroundColor: Colors.white.withOpacity(0.3),
+              backgroundColor: Colors.white.withValues(alpha: 0.3),
               valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
               minHeight: 8,
             ),
@@ -224,7 +225,7 @@ class AchievementCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
           color: achievement.isUnlocked
-              ? Theme.of(context).primaryColor.withOpacity(0.3)
+              ? Theme.of(context).primaryColor.withValues(alpha: 0.3)
               : Colors.grey.shade200,
         ),
       ),
@@ -266,7 +267,8 @@ class AchievementCard extends StatelessWidget {
                             decoration: BoxDecoration(
                               color: Colors.amber.shade100,
                               borderRadius: BorderRadius.circular(8),
-                            ),
+                            
+                              boxShadow: ZaiNeShadows.card,),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
@@ -294,7 +296,7 @@ class AchievementCard extends StatelessWidget {
                       achievement.description,
                       style: TextStyle(
                         fontSize: 13,
-                        color: Colors.grey.shade600,
+                        color: ZaiNeColors.textSecondary(),
                       ),
                     ),
                     if (!achievement.isUnlocked) ...[
@@ -320,7 +322,7 @@ class AchievementCard extends StatelessWidget {
                             '${achievement.currentValue}/${achievement.requiredValue}',
                             style: TextStyle(
                               fontSize: 12,
-                              color: Colors.grey.shade500,
+                              color: ZaiNeColors.textSecondary(),
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -333,7 +335,7 @@ class AchievementCard extends StatelessWidget {
                         '解锁于 ${DateFormat('yyyy/MM/dd').format(achievement.unlockedAt!)}',
                         style: TextStyle(
                           fontSize: 11,
-                          color: Colors.grey.shade400,
+                          color: ZaiNeColors.textHint(),
                         ),
                       ),
                     ],
@@ -353,10 +355,11 @@ class AchievementCard extends StatelessWidget {
       height: 60,
       decoration: BoxDecoration(
         color: achievement.isUnlocked
-            ? _getCategoryColor().withOpacity(0.15)
+            ? _getCategoryColor().withValues(alpha: 0.15)
             : Colors.grey.shade100,
         borderRadius: BorderRadius.circular(16),
-      ),
+      
+        boxShadow: ZaiNeShadows.card,),
       child: Center(
         child: achievement.isUnlocked
             ? Text(
@@ -366,7 +369,7 @@ class AchievementCard extends StatelessWidget {
             : Icon(
                 Icons.lock_outline,
                 size: 28,
-                color: Colors.grey.shade400,
+                color: ZaiNeColors.textSecondary(),
               ),
       ),
     );
@@ -417,7 +420,7 @@ class AchievementBadge extends StatelessWidget {
         boxShadow: isUnlocked
             ? [
                 BoxShadow(
-                  color: Colors.amber.withOpacity(0.3),
+                  color: Colors.amber.withValues(alpha: 0.3),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
@@ -510,11 +513,11 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
         child: Container(
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: ZaiNeColors.cardBg(),
             borderRadius: BorderRadius.circular(24),
             boxShadow: [
               BoxShadow(
-                color: Colors.amber.withOpacity(0.3),
+                color: Colors.amber.withValues(alpha: 0.3),
                 blurRadius: 20,
                 spreadRadius: 5,
               ),
@@ -570,7 +573,7 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
                 widget.achievement.description,
                 style: TextStyle(
                   fontSize: 14,
-                  color: Colors.grey.shade600,
+                  color: ZaiNeColors.textSecondary(),
                 ),
                 textAlign: TextAlign.center,
               ),

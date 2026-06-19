@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -9,6 +10,10 @@ import '../services/membership_service.dart';
 import '../services/api/contact_service.dart';
 import '../services/api/card_service.dart';
 import '../services/api_service.dart';
+import '../pages/subscription_page.dart';
+import '../data/app_constants.dart';
+import '../widgets/empty_state_widget.dart';
+import '../widgets/contact_card_widget.dart';
 
 /// 预设关系选项
 const List<String> kRelationOptions = [
@@ -82,21 +87,21 @@ class _ContactsPageState extends State<ContactsPage> {
       if (oldData != null && newData == null) {
         // 迁移旧数据到新key
         await prefs.setString(contactsKey, oldData);
-        debugPrint('[ContactsPage] 数据迁移: 从全局key迁移到 $contactsKey');
+        if (kDebugMode) debugPrint('[ContactsPage] 数据迁移: 从全局key迁移到 $contactsKey');
       }
     }
 
     // ====== Step 1: 先读本地缓存（即时展示） ======
     final contactsJson = prefs.getString(contactsKey);
 
-    debugPrint('[ContactsPage] _loadContacts() 被调用');
-    debugPrint('[ContactsPage] raw emergency_contacts = ${contactsJson ?? "NULL!! 确实不存在"}');
+    if (kDebugMode) debugPrint('[ContactsPage] _loadContacts() 被调用');
+    if (kDebugMode) debugPrint('[ContactsPage] raw emergency_contacts = ${contactsJson ?? "NULL!! 确实不存在"}');
 
     if (contactsJson != null && contactsJson.isNotEmpty) {
       List<Map<String, dynamic>> contacts = [];
       try {
         final decoded = jsonDecode(contactsJson);
-        debugPrint('[ContactsPage] jsonDecode 类型: ${decoded.runtimeType}, 内容: $decoded');
+        if (kDebugMode) debugPrint('[ContactsPage] jsonDecode 类型: ${decoded.runtimeType}, 内容: $decoded');
 
         if (decoded is List) {
           for (final item in decoded) {
@@ -108,11 +113,11 @@ class _ContactsPageState extends State<ContactsPage> {
           }
         }
       } catch (e) {
-        debugPrint('[ContactsPage] jsonDecode 失败: $e, 尝试兼容模式');
+        if (kDebugMode) debugPrint('[ContactsPage] jsonDecode 失败: $e, 尝试兼容模式');
         contacts = ContactParser.parse(contactsJson);
       }
 
-      debugPrint('[ContactsPage] 本地缓存: ${contacts.length} 个联系人');
+      if (kDebugMode) debugPrint('[ContactsPage] 本地缓存: ${contacts.length} 个联系人');
 
       // 即时展示本地数据
       if (mounted) {
@@ -122,7 +127,7 @@ class _ContactsPageState extends State<ContactsPage> {
         });
       }
     } else {
-      debugPrint('[ContactsPage] emergency_contacts 为空或不存在 → 显示空状态');
+      if (kDebugMode) debugPrint('[ContactsPage] emergency_contacts 为空或不存在 → 显示空状态');
       if (mounted) {
         setState(() {
           _contacts = [];
@@ -142,7 +147,7 @@ class _ContactsPageState extends State<ContactsPage> {
       final res = await ContactService.getContacts();
 
       if (res['success'] != true) {
-        debugPrint('[ContactsPage] 后端拉取失败: ${res['error'] ?? res}');
+        if (kDebugMode) debugPrint('[ContactsPage] 后端拉取失败: ${res['error'] ?? res}');
         return;
       }
 
@@ -157,11 +162,11 @@ class _ContactsPageState extends State<ContactsPage> {
         }
       }
 
-      debugPrint('[ContactsPage] 后端返回 ${parsed.length} 个联系人，本地 ${_contacts.length} 个');
+      if (kDebugMode) debugPrint('[ContactsPage] 后端返回 ${parsed.length} 个联系人，本地 ${_contacts.length} 个');
 
       if (parsed.isEmpty && _contacts.isNotEmpty) {
         // 场景：老用户首次 —— 本地有数据但后端为空，自动迁移
-        debugPrint('[ContactsPage] 检测到老用户数据，开始自动迁移到后端...');
+        if (kDebugMode) debugPrint('[ContactsPage] 检测到老用户数据，开始自动迁移到后端...');
         await _migrateLocalToServer();
         return;
       }
@@ -171,7 +176,7 @@ class _ContactsPageState extends State<ContactsPage> {
         await _mergeFromServer(parsed);
       }
     } catch (e) {
-      debugPrint('[ContactsPage] _syncFromServer 异常: $e');
+      if (kDebugMode) debugPrint('[ContactsPage] _syncFromServer 异常: $e');
     }
   }
 
@@ -191,7 +196,7 @@ class _ContactsPageState extends State<ContactsPage> {
 
     // 同步写到本地缓存
     await prefs.setString(contactsKey, jsonEncode(serverContacts));
-    debugPrint('[ContactsPage] 已用后端数据覆盖本地缓存 (${serverContacts.length} 条)');
+    if (kDebugMode) debugPrint('[ContactsPage] 已用后端数据覆盖本地缓存 (${serverContacts.length} 条)');
   }
 
   /// 老用户首次迁移：把本地联系人批量上传到后端
@@ -221,13 +226,13 @@ class _ContactsPageState extends State<ContactsPage> {
 
         if (parsed.isNotEmpty) {
           await _mergeFromServer(parsed);
-          debugPrint('[ContactsPage] ✅ 老用户数据迁移完成：${parsed.length} 条联系人已同步到后端');
+          if (kDebugMode) debugPrint('[ContactsPage] ✅ 老用户数据迁移完成：${parsed.length} 条联系人已同步到后端');
         }
       } else {
-        debugPrint('[ContactsPage] 老用户迁移上传失败: ${res['error'] ?? res}');
+        if (kDebugMode) debugPrint('[ContactsPage] 老用户迁移上传失败: ${res['error'] ?? res}');
       }
     } catch (e) {
-      debugPrint('[ContactsPage] _migrateLocalToServer 异常: $e');
+      if (kDebugMode) debugPrint('[ContactsPage] _migrateLocalToServer 异常: $e');
     }
   }
 
@@ -241,55 +246,99 @@ class _ContactsPageState extends State<ContactsPage> {
         : 'emergency_contacts';
     
     final jsonStr = jsonEncode(_contacts);
-    debugPrint('[ContactsPage] _saveContacts() 保存数据: $jsonStr');
+    if (kDebugMode) debugPrint('[ContactsPage] _saveContacts() 保存数据: $jsonStr');
     await prefs.setString(contactsKey, jsonStr);
 
     // 立即回读验证
     final verify = prefs.getString(contactsKey);
-    debugPrint('[ContactsPage] 回读验证: ${verify ?? "NULL!! 保存失败!"}');
+    if (kDebugMode) debugPrint('[ContactsPage] 回读验证: ${verify ?? "NULL!! 保存失败!"}');
   }
 
   Future<void> _addContact() async {
-    // 【修复 v1.17.3-Bug1】添加前校验数量上限，超限直接提示升级
+    // 【v1.17.3】添加前校验数量上限，超限弹出明确的升级引导对话框
     final maxContacts = MembershipService.getMaxContacts();
     if (_contacts.length >= maxContacts) {
       if (mounted) {
         final isSmart = MembershipService.isSmartMember();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                Icon(Icons.workspace_premium_rounded, color: Colors.amber.shade700, size: 20),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    isSmart
-                        ? '智能版最多添加 $maxContacts 位联系人'
-                        : '体验版最多 $maxContacts 位，升级智能版可添加 ${MembershipService.smartMaxContacts} 位联系人 ❤️',
-                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+        if (isSmart) {
+          // 智能版已达上限，简单提示
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('智能版最多添加 $maxContacts 位联系人'),
+              backgroundColor: Colors.amber.shade50,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        } else {
+          // 体验版已达上限，弹出明确的升级引导对话框
+          showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.card)),
+              title: Row(
+                children: [
+                  Icon(Icons.workspace_premium_rounded, color: Colors.amber.shade700, size: 28),
+                  const SizedBox(width: ZaiNeSpacing.md),
+                  const Expanded(
+                    child: Text('联系人已达上限', style: TextStyle(fontSize: ZaiNeFontSize.title, fontWeight: FontWeight.bold)),
                   ),
+                ],
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '体验版最多可添加 $maxContacts 位紧急联系人。',
+                    style: TextStyle(fontSize: ZaiNeFontSize.body, color: ZaiNeColors.textPrimary()),
+                  ),
+                  const SizedBox(height: ZaiNeSpacing.md),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF8F0),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFFFE0B2)),
+                    
+                      boxShadow: ZaiNeShadows.card,),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          '升级到智能版，你将获得：',
+                          style: TextStyle(fontSize: ZaiNeFontSize.bodySm, fontWeight: FontWeight.w600, color: Color(0xFFE65100)),
+                        ),
+                        const SizedBox(height: ZaiNeSpacing.sm),
+                        _buildUpgradeBenefit(Icons.people_alt_outlined, '紧急联系人 5位 → ${MembershipService.smartMaxContacts}位'),
+                        _buildUpgradeBenefit(Icons.call_outlined, '紧急快捷拨打 1位 → ${MembershipService.smartAutoCallLimit}位'),
+                        _buildUpgradeBenefit(Icons.sms_outlined, '紧急快捷短信 1位 → ${MembershipService.smartAutoCallLimit}位'),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('稍后再说', style: TextStyle(color: Colors.grey)),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    _goToSubscription();
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFFF6B35),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.xl, vertical: ZaiNeSpacing.md),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.small)),
+                  ),
+                  child: const Text('立即升级', style: TextStyle(fontSize: ZaiNeFontSize.body, fontWeight: FontWeight.w600)),
                 ),
               ],
             ),
-            backgroundColor: Colors.amber.shade50,
-            behavior: SnackBarBehavior.floating,
-            shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
-            duration: const Duration(seconds: 4),
-            showCloseIcon: true,
-            closeIconColor: Colors.grey,
-            action: isSmart
-                ? null
-                : SnackBarAction(
-                    label: '去升级',
-                    textColor: Colors.orange.shade800,
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(builder: (context) => const SubscriptionPage()),
-                      );
-                    },
-                  ),
-          ),
-        );
+          );
+        }
       }
       return;
     }
@@ -300,7 +349,7 @@ class _ContactsPageState extends State<ContactsPage> {
     );
 
     if (result != null) {
-      debugPrint('[ContactsPage] 收到添加联系人结果: $result');
+      if (kDebugMode) debugPrint('[ContactsPage] 收到添加联系人结果: $result');
 
       final contactName = (result['name'] ?? '').toString();
       final contactPhone = (result['phone'] ?? '').toString();
@@ -317,7 +366,7 @@ class _ContactsPageState extends State<ContactsPage> {
             content: Row(
               children: [
                 const Icon(Icons.check_circle, color: Colors.white),
-                const SizedBox(width: 12),
+                const SizedBox(width: ZaiNeSpacing.md),
                 Text('$contactName 已添加为守护者'),
               ],
             ),
@@ -345,6 +394,27 @@ class _ContactsPageState extends State<ContactsPage> {
       // 异步同步到后端（非阻塞）
       _syncAddToBackend(result);
     }
+  }
+
+  /// 跳转订阅页面（抽取为独立方法，避免 SnackBarAction 编译错误）
+  void _goToSubscription() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (context) => const SubscriptionPage()),
+    );
+  }
+
+  /// 【v1.17.3】升级引导对话框中的权益条目
+  Widget _buildUpgradeBenefit(IconData icon, String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: const Color(0xFFFF6B35)),
+          const SizedBox(width: ZaiNeSpacing.sm),
+          Text(text, style: TextStyle(fontSize: ZaiNeFontSize.caption, color: ZaiNeColors.textPrimary())),
+        ],
+      ),
+    );
   }
 
   /// 异步添加联系人到后端（非阻塞，失败不影响本地）
@@ -378,7 +448,7 @@ class _ContactsPageState extends State<ContactsPage> {
                     _contacts[i]['phone'] == parsed['phone'] &&
                     _contacts[i]['id'] == null) {
                   _contacts[i] = parsed;
-                  debugPrint('[ContactsPage] 已用后端数据替换本地临时记录 (id=${parsed['id']})');
+                  if (kDebugMode) debugPrint('[ContactsPage] 已用后端数据替换本地临时记录 (id=${parsed['id']})');
                   break;
                 }
               }
@@ -387,7 +457,7 @@ class _ContactsPageState extends State<ContactsPage> {
           }
         }
       } else {
-        debugPrint('[ContactsPage] 后端添加失败: ${res['error'] ?? res}');
+        if (kDebugMode) debugPrint('[ContactsPage] 后端添加失败: ${res['error'] ?? res}');
         // 【修复 v1.17.3-Bug1】后端拒绝时弹提示（如超限）
         final errorCode = res['error']?.toString() ?? '';
         final errorDetail = res['detail'];
@@ -402,8 +472,8 @@ class _ContactsPageState extends State<ContactsPage> {
               content: Row(
                 children: [
                   Icon(Icons.workspace_premium_rounded, color: Colors.amber.shade700, size: 20),
-                  const SizedBox(width: 10),
-                  Expanded(child: Text(upgradeHint, style: const TextStyle(fontSize: 13))),
+                  const SizedBox(width: ZaiNeSpacing.md),
+                  Expanded(child: Text(upgradeHint, style: const TextStyle(fontSize: ZaiNeFontSize.caption))),
                 ],
               ),
               backgroundColor: Colors.amber.shade50,
@@ -415,18 +485,14 @@ class _ContactsPageState extends State<ContactsPage> {
               action: SnackBarAction(
                 label: '去升级',
                 textColor: Colors.orange.shade800,
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (context) => const SubscriptionPage()),
-                  );
-                },
+                onPressed: _goToSubscription,
               ),
             ),
           );
         }
       }
     } catch (e) {
-      debugPrint('[ContactsPage] _syncAddToBackend 异常: $e');
+      if (kDebugMode) debugPrint('[ContactsPage] _syncAddToBackend 异常: $e');
     }
   }
 
@@ -437,11 +503,11 @@ class _ContactsPageState extends State<ContactsPage> {
         content: Row(
           children: [
             Icon(Icons.workspace_premium_rounded, color: Colors.amber.shade700, size: 20),
-            const SizedBox(width: 10),
-            Expanded(
+            const SizedBox(width: ZaiNeSpacing.md),
+            const Expanded(
               child: Text(
                 '升级智能版后，前${MembershipService.smartAutoCallLimit}位联系人将自动接收紧急通知 ❤️',
-                style: const TextStyle(fontSize: 13),
+                style: TextStyle(fontSize: ZaiNeFontSize.caption),
               ),
             ),
           ],
@@ -473,10 +539,10 @@ class _ContactsPageState extends State<ContactsPage> {
             final recipientName = recipientController.text.trim();
 
             // 【修复 v1.16.0】使用 landing 页链接，不再使用 App Store 直链
-            final smsBody = '【在呢】嗨 ${recipientName.isNotEmpty ? recipientName : name}！我是$senderName，刚把你设为我的紧急联系人 🛡️\n\n我在用「在呢」App 守护自己的安全——每天签到报平安，遇到紧急情况一键求助 会自动通知你我的实时位置。\n\n如果你也下载「在呢」，我们可以互相守护，让彼此都更安心。❤️\n\n点击链接接受邀请：https://zaine.love/landing/contacts_${phone.replaceAll(RegExp(r'[^0-9]'), '')}';
+            final smsBody = '【在呢】嗨 ${recipientName.isNotEmpty ? recipientName : name}！我是$senderName，刚把你设为我的紧急联系人 🛡️\n\n我在用「在呢」App 守护自己的安全——每天签到报平安，遇到紧急情况一键求助 会自动通知你我的实时位置。\n\n如果你也下载「在呢」，我们可以互相守护，让彼此都更安心。❤️\n\n点击链接接受邀请：${AppConstants.contactsInviteUrl(phone)}';
 
             return AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.card)),
               title: Row(
                 children: [
                   Container(
@@ -484,11 +550,12 @@ class _ContactsPageState extends State<ContactsPage> {
                     decoration: BoxDecoration(
                       color: Colors.green.shade50,
                       borderRadius: BorderRadius.circular(10),
-                    ),
+                    
+                      boxShadow: ZaiNeShadows.card,),
                     child: Icon(Icons.sms_rounded, color: Colors.green.shade600, size: 20),
                   ),
-                  const SizedBox(width: 10),
-                  const Text('发送邀请短信', style: TextStyle(fontSize: 17)),
+                  const SizedBox(width: ZaiNeSpacing.md),
+                  const Text('发送邀请短信', style: TextStyle(fontSize: ZaiNeFontSize.subtitle)),
                 ],
               ),
               // 【修复 v1.9.6】键盘弹出时允许滚动，避免溢出警告
@@ -499,10 +566,10 @@ class _ContactsPageState extends State<ContactsPage> {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('已为 $name 设置为紧急联系人。', style: TextStyle(fontSize: 14, color: ZaiNeColors.textPrimary())),
-                      const SizedBox(height: 8),
-                      Text('编辑短信内容（双方昵称可选）', style: TextStyle(fontSize: 12, color: ZaiNeColors.textSecondary())),
-                      const SizedBox(height: 12),
+                      Text('已为 $name 设置为紧急联系人。', style: TextStyle(fontSize: ZaiNeFontSize.bodySm, color: ZaiNeColors.textPrimary())),
+                      const SizedBox(height: ZaiNeSpacing.sm),
+                      Text('编辑短信内容（双方昵称可选）', style: TextStyle(fontSize: ZaiNeFontSize.micro, color: ZaiNeColors.textSecondary())),
+                      const SizedBox(height: ZaiNeSpacing.md),
 
                       // 发送者昵称（使用 controller 避免重建丢失状态）
                       TextField(
@@ -513,11 +580,11 @@ class _ContactsPageState extends State<ContactsPage> {
                           hintText: '发短信时显示你是谁',
                           prefixIcon: const Icon(Icons.person_outline, color: Color(0xFF4CAF50)),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.md, vertical: ZaiNeSpacing.md),
                         ),
-                        style: const TextStyle(fontSize: 14),
+                        style: const TextStyle(fontSize: ZaiNeFontSize.bodySm),
                       ),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: ZaiNeSpacing.md),
 
                       // 接收者称呼
                       TextField(
@@ -528,11 +595,11 @@ class _ContactsPageState extends State<ContactsPage> {
                           hintText: '你想怎么称呼对方',
                           prefixIcon: const Icon(Icons.favorite_outline, color: Color(0xFFFF7F50)),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.md, vertical: ZaiNeSpacing.md),
                         ),
-                        style: const TextStyle(fontSize: 14),
+                        style: const TextStyle(fontSize: ZaiNeFontSize.bodySm),
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: ZaiNeSpacing.md),
 
                       // 短信预览
                       Container(
@@ -541,16 +608,17 @@ class _ContactsPageState extends State<ContactsPage> {
                         decoration: BoxDecoration(
                           color: Colors.grey.shade100,
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.grey.shade200),
-                        ),
+                          border: Border.all(color: ZaiNeColors.borderColor()),
+                        
+                          boxShadow: ZaiNeShadows.card,),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('短信预览：', style: TextStyle(fontSize: 11, color: Colors.grey.shade600, fontWeight: FontWeight.w500)),
-                            const SizedBox(height: 6),
+                            Text('短信预览：', style: TextStyle(fontSize: ZaiNeFontSize.micro, color: ZaiNeColors.textSecondary(), fontWeight: FontWeight.w500)),
+                            const SizedBox(height: ZaiNeSpacing.sm),
                             Text(
                               smsBody,
-                              style: TextStyle(fontSize: 12, color: Colors.grey.shade700, height: 1.4),
+                              style: TextStyle(fontSize: ZaiNeFontSize.micro, color: ZaiNeColors.textSecondary(), height: 1.4),
                               maxLines: 8,
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -585,13 +653,13 @@ class _ContactsPageState extends State<ContactsPage> {
                         receiverName: recipientDisplayName,
                       );
                     } catch (e) {
-                      debugPrint('[ContactsPage] 创建免费守护卡失败: $e');
+                      if (kDebugMode) debugPrint('[ContactsPage] 创建免费守护卡失败: $e');
                     }
 
                     // 【修复 v1.17.3-Bug4】生成通用短链替代长链接
                     String inviteShortUrl;
                     try {
-                      final targetUrl = 'https://zaine.love/landing/contacts_${phone.replaceAll(RegExp(r'[^0-9]'), '')}';
+                      final targetUrl = AppConstants.contactsInviteUrl(phone);
                       final linkRes = await ApiService.createShortLink(
                         targetUrl: targetUrl,
                         linkType: 'invite',
@@ -599,17 +667,19 @@ class _ContactsPageState extends State<ContactsPage> {
                       );
                       if (linkRes['success'] == true) {
                         inviteShortUrl = linkRes['short_url']?.toString() ?? targetUrl;
-                        debugPrint('[ContactsPage] 邀请短链生成成功: $inviteShortUrl');
+                        if (kDebugMode) debugPrint('[ContactsPage] 邀请短链生成成功: $inviteShortUrl');
                       } else {
                         inviteShortUrl = targetUrl;
-                        debugPrint('[ContactsPage] 邀请短链生成失败，降级使用长链接');
+                        if (kDebugMode) debugPrint('[ContactsPage] 邀请短链生成失败，降级使用长链接');
                       }
                     } catch (e) {
-                      inviteShortUrl = 'https://zaine.love/landing/contacts_${phone.replaceAll(RegExp(r'[^0-9]'), '')}';
-                      debugPrint('[ContactsPage] 邀请短链异常，降级使用长链接: $e');
+                      inviteShortUrl = AppConstants.contactsInviteUrl(phone);
+                      if (kDebugMode) debugPrint('[ContactsPage] 邀请短链异常，降级使用长链接: $e');
                     }
 
-                    final finalBody = '【在呢】嗨 $recipientDisplayName！我是$finalSender，刚把你设为我的紧急联系人 🛡️\n\n我在用「在呢」App 守护自己的安全——每天签到报平安，遇到紧急情况一键求助 会自动通知你我的实时位置。\n\n如果你也下载「在呢」，我们可以互相守护，让彼此都更安心。❤️\n\n点击链接接受邀请：$inviteShortUrl';
+                    // 【修复 v1.75.0】链接单独一行，避免 iOS 短信换行导致 URL 不可点击
+                    // 根因：URL 跨行后 iOS Data Detector 无法识别为可点击链接
+                    final finalBody = '【在呢】嗨 $recipientDisplayName！我是$finalSender，刚把你设为我的紧急联系人 🛡️\n\n我在用「在呢」App 守护自己的安全——每天签到报平安，遇到紧急情况一键求助 会自动通知你我的实时位置。\n\n如果你也下载「在呢」，我们可以互相守护，让彼此都更安心。❤️\n\n点击链接接受邀请：\n$inviteShortUrl';
                     _sendInviteSms(phone, recipientDisplayName, finalBody);
                     senderController.dispose();
                     recipientController.dispose();
@@ -617,7 +687,7 @@ class _ContactsPageState extends State<ContactsPage> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.green,
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.small)),
                   ),
                   icon: const Icon(Icons.send, size: 16),
                   label: const Text('发送短信'),
@@ -641,7 +711,7 @@ class _ContactsPageState extends State<ContactsPage> {
       queryParameters: {'body': smsBody},
     );
 
-    debugPrint('[ContactsPage] 短信 URI: $uri');
+    if (kDebugMode) debugPrint('[ContactsPage] 短信 URI: $uri');
 
     try {
       if (await canLaunchUrl(uri)) {
@@ -657,7 +727,7 @@ class _ContactsPageState extends State<ContactsPage> {
         }
       } else {
         // canLaunchUrl 返回 false，尝试直接 launch（兼容部分机型）
-        debugPrint('[ContactsPage] canLaunchUrl 返回 false，尝试直接 launch');
+        if (kDebugMode) debugPrint('[ContactsPage] canLaunchUrl 返回 false，尝试直接 launch');
         final altUri = Uri(
           scheme: 'sms',
           path: phone,
@@ -678,7 +748,7 @@ class _ContactsPageState extends State<ContactsPage> {
         }
       }
     } catch (e) {
-      debugPrint('[ContactsPage] 短信发送失败: $e');
+      if (kDebugMode) debugPrint('[ContactsPage] 短信发送失败: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -713,7 +783,7 @@ class _ContactsPageState extends State<ContactsPage> {
         _syncEditToBackend(contactId, result);
       } else {
         // 【修复 v1.17.3-Bug2】本地有但后端无 id → 改为新增而非跳过
-        debugPrint('[ContactsPage] 编辑的联系人无后端 id，改为调用新增 API');
+        if (kDebugMode) debugPrint('[ContactsPage] 编辑的联系人无后端 id，改为调用新增 API');
         _syncAddToBackend(result);
       }
     }
@@ -732,9 +802,9 @@ class _ContactsPageState extends State<ContactsPage> {
       );
 
       if (res['success'] == true) {
-        debugPrint('[ContactsPage] 后端编辑成功 id=$contactId');
+        if (kDebugMode) debugPrint('[ContactsPage] 后端编辑成功 id=$contactId');
       } else {
-        debugPrint('[ContactsPage] 后端编辑失败: ${res['error'] ?? res}');
+        if (kDebugMode) debugPrint('[ContactsPage] 后端编辑失败: ${res['error'] ?? res}');
         // 【修复 v1.17.3-Bug2】编辑失败时提示用户
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -748,7 +818,7 @@ class _ContactsPageState extends State<ContactsPage> {
         }
       }
     } catch (e) {
-      debugPrint('[ContactsPage] _syncEditToBackend 异常: $e');
+      if (kDebugMode) debugPrint('[ContactsPage] _syncEditToBackend 异常: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -766,7 +836,7 @@ class _ContactsPageState extends State<ContactsPage> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.card)),
         title: const Text('删除联系人'),
         content: Text('确定要删除 ${_contacts[index]['name']} 吗？'),
         actions: [
@@ -795,7 +865,7 @@ class _ContactsPageState extends State<ContactsPage> {
       if (contactId != null) {
         _syncDeleteToBackend(contactId);
       } else {
-        debugPrint('[ContactsPage] 删除的联系人无后端 id，仅本地删除');
+        if (kDebugMode) debugPrint('[ContactsPage] 删除的联系人无后端 id，仅本地删除');
       }
     }
   }
@@ -806,7 +876,7 @@ class _ContactsPageState extends State<ContactsPage> {
       final res = await ContactService.deleteContact(contactId.toString());
 
       if (res['success'] == true) {
-        debugPrint('[ContactsPage] 后端删除成功 id=$contactId');
+        if (kDebugMode) debugPrint('[ContactsPage] 后端删除成功 id=$contactId');
 
         // 用后端返回的剩余列表更新本地（处理 sort_order 重排）
         final serverContacts = res['contacts'] as List<dynamic>? ?? [];
@@ -825,47 +895,10 @@ class _ContactsPageState extends State<ContactsPage> {
           await _saveContacts();
         }
       } else {
-        debugPrint('[ContactsPage] 后端删除失败: ${res['error'] ?? res}');
+        if (kDebugMode) debugPrint('[ContactsPage] 后端删除失败: ${res['error'] ?? res}');
       }
     } catch (e) {
-      debugPrint('[ContactsPage] _syncDeleteToBackend 异常: $e');
-    }
-  }
-
-  /// 拖动排序回调
-  /// oldIndex/newIndex = ReorderableListView 的实际 item 索引（>=1）
-  void _onReorder(int oldIndex, int newIndex) {
-    debugPrint('[ContactsPage] _onReorder raw: oldIndex=$oldIndex, newIndex=$newIndex');
-
-    // index 0 是 info header，不应该参与重排（已被 onReorder 拦截）
-    // 实际联系人索引 = item 索引 - 1（跳过 header）
-    int contactOld = oldIndex - 1;
-
-    // Flutter ReorderableListView 的 newIndex 规则：
-    // 如果向下移动（newIndex > oldIndex），newIndex 已经包含了"被拖元素被移走后前面元素前移"的效果
-    // 所以实际目标位置需要再减1
-    // 如果向上移动（newIndex < oldIndex），newIndex 就是插入位置
-    int contactNew;
-    if (newIndex > oldIndex) {
-      contactNew = newIndex - 2; // 向下拖：减去header(1) + 被移走元素自身(1)
-    } else {
-      contactNew = newIndex - 1; // 向上拖：只减去header(1)
-    }
-
-    debugPrint('[ContactsPage] contact索引: 移动[$contactOld] → 插入[$contactNew], 总数=${_contacts.length}');
-
-    if (contactOld >= 0 && contactOld < _contacts.length &&
-        contactNew >= 0 && contactNew <= _contacts.length) {
-      setState(() {
-        final item = _contacts.removeAt(contactOld);
-        _contacts.insert(contactNew, item);
-      });
-      _saveContacts();
-
-      // 异步同步排序到后端
-      _syncReorderToBackend();
-    } else {
-      debugPrint('[ContactsPage] ⚠️ 索引越界！忽略本次操作');
+      if (kDebugMode) debugPrint('[ContactsPage] _syncDeleteToBackend 异常: $e');
     }
   }
 
@@ -882,19 +915,19 @@ class _ContactsPageState extends State<ContactsPage> {
       }
 
       if (contactIds.isEmpty) {
-        debugPrint('[ContactsPage] 所有联系人都无后端 id，跳过排序同步');
+        if (kDebugMode) debugPrint('[ContactsPage] 所有联系人都无后端 id，跳过排序同步');
         return;
       }
 
       final res = await ContactService.reorderContacts(contactIds);
 
       if (res['success'] == true) {
-        debugPrint('[ContactsPage] 后端排序同步成功');
+        if (kDebugMode) debugPrint('[ContactsPage] 后端排序同步成功');
       } else {
-        debugPrint('[ContactsPage] 后端排序同步失败: ${res['error'] ?? res}');
+        if (kDebugMode) debugPrint('[ContactsPage] 后端排序同步失败: ${res['error'] ?? res}');
       }
     } catch (e) {
-      debugPrint('[ContactsPage] _syncReorderToBackend 异常: $e');
+      if (kDebugMode) debugPrint('[ContactsPage] _syncReorderToBackend 异常: $e');
     }
   }
 
@@ -951,11 +984,11 @@ class _ContactsPageState extends State<ContactsPage> {
       body: SafeArea(
         top: false,  // AppBar 已处理顶部安全区
         bottom: true,
-        child: _isLoading
-            ? const Center(child: CircularProgressIndicator(color: Color(0xFFFF7F50)))
-            : _contacts.isEmpty
-                ? _buildEmptyState()
-                : _buildContactsList(),
+      child: _isLoading
+          ? const Center(child: CircularProgressIndicator(color: Color(0xFFFF7F50)))
+          : _contacts.isEmpty
+              ? const EmptyStateWidget()
+              : _buildContactsList(),
       ),
       floatingActionButton: _contacts.isEmpty && !_isLoading
           ? FloatingActionButton.extended(
@@ -968,277 +1001,99 @@ class _ContactsPageState extends State<ContactsPage> {
     );
   }
 
-  Widget _buildEmptyState() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 100,
-              height: 100,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: const Color(0xFFFF7F50).withOpacity(0.1),
-              ),
-              child: Icon(
-                Icons.people_outline,
-                size: 50,
-                color: Colors.grey.shade300,
-              ),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              '暂无紧急联系人',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: ZaiNeColors.textSecondary(),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              '添加至少一个紧急联系人\n确保求助功能正常触发',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 14,
-                color: ZaiNeColors.textSecondary().withOpacity(0.7),
-              ),
-            ),
-            const SizedBox(height: 32),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.blue.shade50,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.info_outline, color: Colors.blue.shade700),
-                  const SizedBox(width: 12),
-                  const Expanded(
-                    child: Text(
-                      '紧急联系人将在求助时收到您的位置和健康信息\n拖动可调整优先顺序',
-                      style: TextStyle(fontSize: 12),
+  Widget _buildContactsList() {
+    // 使用 ReorderableListView 支持拖拽排序
+    return ReorderableListView(
+      padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.lg, vertical: ZaiNeSpacing.sm),
+      onReorderItem: _handleReorderItem,
+      buildDefaultDragHandles: false, // 使用自定义拖拽手柄
+      children: [
+        // 第一个位置放说明框（不可拖拽）
+        Container(
+          key: const ValueKey('info_header'),
+          padding: const EdgeInsets.all(12),
+          margin: const EdgeInsets.only(bottom: 12),
+          decoration: BoxDecoration(
+            color: Colors.blue.shade50,
+            borderRadius: BorderRadius.circular(12),
+          
+            boxShadow: ZaiNeShadows.card,),
+          child: Row(
+            children: [
+              Icon(Icons.info_outline, color: Colors.blue.shade700, size: 20),
+              const SizedBox(width: ZaiNeSpacing.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '求助时将按优先顺序拨打，拖动左侧☰调整排序',
+                      style: TextStyle(fontSize: ZaiNeFontSize.caption, color: Colors.blue.shade700),
                     ),
-                  ),
-                ],
+                    Text(
+                      '第一位联系人 = 第一紧急联系人（最优先）',
+                      style: TextStyle(fontSize: ZaiNeFontSize.micro, color: Colors.blue.shade500),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        
+        // 联系人列表
+        for (int i = 0; i < _contacts.length; i++)
+          ContactCardWidget(
+            key: ValueKey('contact_${_contacts[i]['id'] ?? _contacts[i]['phone']}_$i'),
+            itemIndex: i + 1, // +1 因为header在index 0
+            contactIndex: i,
+            contact: _contacts[i],
+            priorityColor: _priorityColor(i),
+            priorityLabel: _priorityLabelWithIcon(i),
+            isPremium: i < MembershipService.getAutoCallLimit(),
+            onEdit: () => _editContact(i),
+            onDelete: () => _deleteContact(i),
+            dragHandle: ReorderableDragStartListener(
+              index: i + 1, // +1 因为header在index 0
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                child: Icon(
+                  Icons.drag_handle,
+                  color: ZaiNeColors.textSecondary(),
+                  size: 20,
+                ),
               ),
             ),
-          ],
-        ),
-      ),
+          ),
+      ],
     );
   }
-
-  Widget _buildContactsList() {
-    // 使用 ReorderableListView 直接作为主体，不用 Column+Expanded 嵌套
-    return ReorderableListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      itemCount: _contacts.length + 1, // +1 for the header info box
-      onReorder: (oldIndex, newIndex) {
-        // index 0 是说明框，不参与重排
-        if (oldIndex == 0 || newIndex == 0) return;
-        // 直接传递实际列表索引给 _onReorder
-        _onReorder(oldIndex, newIndex);
-      },
-      buildDefaultDragHandles: false,
-      itemBuilder: (context, index) {
-        // 第一个位置放说明框
-        if (index == 0) {
-          return Container(
-            key: const ValueKey('info_header'),
-            padding: const EdgeInsets.all(12),
-            margin: const EdgeInsets.only(bottom: 12),
-            decoration: BoxDecoration(
-              color: Colors.blue.shade50,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.info_outline, color: Colors.blue.shade700, size: 20),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '求助时将按优先顺序拨打，拖动左侧☰调整排序',
-                        style: TextStyle(fontSize: 13, color:Colors.blue.shade700),
-                      ),
-                      Text(
-                        '第一位联系人 = 第一紧急联系人（最优先）',
-                        style: TextStyle(fontSize: 11, color: Colors.blue.shade500),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          );
-        }
-        
-        final contactIndex = index - 1;
-        final contact = _contacts[contactIndex];
-        // ⚠️ 关键：传入实际的 item 索引(index)，不是 contactIndex！
-        // ReorderableDragStartListener 需要的是 ReorderableListView 的 item 索引
-        return _buildContactCard(itemIndex: index, contactIndex: contactIndex, contact: contact);
-      },
-    );
+  
+  /// 处理拖拽排序（新API：onReorderItem）
+  void _handleReorderItem(int oldIndex, int newIndex) {
+    // 调整 newIndex（Flutter 的 ReorderableListView 规则）
+    if (newIndex > oldIndex) {
+      newIndex -= 1;
+    }
+    
+    // 不允许拖拽header（index 0）
+    if (oldIndex == 0 || newIndex == 0) return;
+    
+    // 调整为 _contacts 数组的索引（去掉header）
+    final adjustedOldIndex = oldIndex - 1;
+    final adjustedNewIndex = newIndex - 1;
+    
+    setState(() {
+      final contact = _contacts.removeAt(adjustedOldIndex);
+      _contacts.insert(adjustedNewIndex, contact);
+    });
+    
+    // 保存并同步到后端
+    _saveContacts();
+    _syncReorderToBackend();
   }
 
   /// 单个联系人卡片（支持拖动手柄）
-  Widget _buildContactCard({
-    required int itemIndex,     // ReorderableListView 实际 item 索引（>=1，因为0是header）
-    required int contactIndex,  // 联系人在 _contacts 数组中的索引（0-based）
-    required Map<String, dynamic> contact,
-  }) {
-    final priorityColor = _priorityColor(contactIndex);
-    final name = (contact['name'] ?? '').toString();
-    final phone = (contact['phone'] ?? '').toString();
-    final relation = (contact['relation'] ?? '亲友').toString();
-
-    return Container(
-      key: ValueKey('contact_${name}_$itemIndex'),
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: ZaiNeColors.cardBg(),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        child: Row(
-          children: [
-            // 拖动手柄
-            // ⚠️ 必须传 itemIndex（ReorderableListView 实际索引 1,2,3...）
-            // onReorder 回调收到的 oldIndex/newIndex 就是这个值
-            ReorderableDragStartListener(
-              index: itemIndex,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-                child: Icon(Icons.drag_handle, color: Colors.grey[400], size: 24),
-              ),
-            ),
-
-            const SizedBox(width: 8),
-
-            // 头像
-            Container(
-              width: 46,
-              height: 46,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: const Color(0xFFFF7F50).withOpacity(0.1),
-              ),
-              child: Center(
-                child: Text(
-                  name.isNotEmpty ? name[0].toUpperCase() : '?',
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFFFF7F50),
-                  ),
-                ),
-              ),
-            ),
-
-            const SizedBox(width: 12),
-
-            // 信息区
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Flexible(
-                        child: Text(
-                          name,
-                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      // 会员限制锁定图标（超出自动通知上限的联系人）
-                      if (contactIndex >= MembershipService.getAutoCallLimit()) ...[
-                        Icon(Icons.lock_outline, size: 13, color: Colors.grey.shade400),
-                        const SizedBox(width: 4),
-                      ],
-                      // 优先级标签
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                        decoration: BoxDecoration(
-                          color: priorityColor.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: priorityColor.withOpacity(0.3), width: 0.5),
-                        ),
-                        child: Text(
-                          _priorityLabelWithIcon(contactIndex),
-                          style: TextStyle(
-                            fontSize: 9.5,
-                            color: priorityColor,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    phone,
-                    style: TextStyle(fontSize: 13, color: Colors.grey[600]),
-                  ),
-                  const SizedBox(height: 4),
-                  // 关系标签
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
-                    decoration: BoxDecoration(
-                      color: Colors.orange.shade50,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      relation,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.orange.shade700,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // 操作按钮（竖排编辑/删除）
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                IconButton(
-                  icon: Icon(Icons.edit, color: Colors.grey[500], size: 18),
-                  onPressed: () => _editContact(contactIndex),
-                  visualDensity: VisualDensity.compact,
-                  tooltip: '编辑',
-                ),
-                IconButton(
-                  icon: const Icon(Icons.delete_outline, color: Colors.red, size: 18),
-                  onPressed: () => _deleteContact(contactIndex),
-                  visualDensity: VisualDensity.compact,
-                  tooltip: '删除',
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
 /// 添加联系人对话框 — 精美设计版 v2
@@ -1291,14 +1146,15 @@ class _AddContactDialogState extends State<AddContactDialog> {
     final maxContentHeight = screenHeight - keyboardHeight - 80;
 
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      insetPadding: const EdgeInsets.symmetric(horizontal: 20),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.card)),
+      insetPadding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.xl),
       child: Container(
         constraints: BoxConstraints(maxHeight: maxContentHeight),
         decoration: BoxDecoration(
           color: ZaiNeColors.cardBg(),
           borderRadius: BorderRadius.circular(24),
-        ),
+        
+          boxShadow: ZaiNeShadows.card,),
         child: SingleChildScrollView(
           // 确保内容可滚动，防止键盘弹出时溢出
           physics: const ClampingScrollPhysics(),
@@ -1315,10 +1171,10 @@ class _AddContactDialogState extends State<AddContactDialog> {
                     end: Alignment.bottomRight,
                     colors: [Color(0xFFFF7F50), Color(0xFFFFB347)],
                   ),
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFFFF7F50).withOpacity(0.25),
+                      color: const Color(0xFFFF7F50).withValues(alpha: 0.25),
                       blurRadius: 12,
                       offset: const Offset(0, 4),
                     ),
@@ -1331,9 +1187,9 @@ class _AddContactDialogState extends State<AddContactDialog> {
                       width: 60,
                       height: 60,
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.22),
+                        color: Colors.white.withValues(alpha: 0.22),
                         shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white.withOpacity(0.35), width: 1.5),
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.35), width: 1.5),
                       ),
                       child: Icon(
                         isEdit ? Icons.edit_note : Icons.person_add_alt_1_rounded,
@@ -1341,7 +1197,7 @@ class _AddContactDialogState extends State<AddContactDialog> {
                         color: Colors.white,
                       ),
                     ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: ZaiNeSpacing.lg),
                     Text(
                       isEdit ? '编辑紧急联系人' : '添加紧急联系人',
                       style: const TextStyle(
@@ -1351,10 +1207,10 @@ class _AddContactDialogState extends State<AddContactDialog> {
                         letterSpacing: 0.5,
                       ),
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: ZaiNeSpacing.sm),
                     Text(
                       isEdit ? '修改后将自动保存优先顺序' : '求助时将按优先顺序拨打',
-                      style: TextStyle(fontSize: 12.5, color: Colors.white.withOpacity(0.85)),
+                      style: TextStyle(fontSize: ZaiNeFontSize.caption, color: Colors.white.withValues(alpha: 0.85)),
                     ),
                   ],
                 ),
@@ -1377,7 +1233,7 @@ class _AddContactDialogState extends State<AddContactDialog> {
                         validator: (v) => (v == null || v.isEmpty) ? '请输入姓名' : null,
                       ),
 
-                      const SizedBox(height: 18),
+                      const SizedBox(height: ZaiNeSpacing.lg),
 
                       // 手机号 — 带显示/隐藏切换（眼睛图标垂直居中）
                       _buildPremiumField(
@@ -1405,18 +1261,18 @@ class _AddContactDialogState extends State<AddContactDialog> {
                         },
                       ),
 
-                      const SizedBox(height: 18),
+                      const SizedBox(height: ZaiNeSpacing.lg),
 
                       // 关系选择 — 精美芯片式下拉
                       DropdownButtonFormField<String>(
-                        value: kRelationOptions.contains(_selectedRelation)
+                        initialValue: kRelationOptions.contains(_selectedRelation)
                             ? _selectedRelation : '其他',
                         decoration: InputDecoration(
                           labelText: '与您的关系',
-                          labelStyle: TextStyle(color: Colors.grey[600], fontSize: 13),
+                          labelStyle: TextStyle(color: Colors.grey[600], fontSize: ZaiNeFontSize.caption),
                           prefixIcon: Icon(Icons.favorite_border_rounded, color: Colors.orange.shade400, size: 20),
                           filled: true,
-                          fillColor: Colors.orange.shade50.withOpacity(0.4),
+                          fillColor: Colors.orange.shade50.withValues(alpha: 0.4),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(14),
                             borderSide: BorderSide(color: Colors.orange.shade200),
@@ -1427,16 +1283,16 @@ class _AddContactDialogState extends State<AddContactDialog> {
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(14),
-                            borderSide: BorderSide(color: const Color(0xFFFF7F50), width: 1.5),
+                            borderSide: const BorderSide(color: Color(0xFFFF7F50), width: 1.5),
                           ),
                           errorBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(14),
                             borderSide: BorderSide(color: Colors.red.shade300),
                           ),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.lg, vertical: ZaiNeSpacing.lg),
                         ),
                         icon: Icon(Icons.keyboard_arrow_down_rounded, color: Colors.grey[600]),
-                        style: TextStyle(fontSize: 14, color: Colors.grey[800]),
+                        style: TextStyle(fontSize: ZaiNeFontSize.bodySm, color: Colors.grey[800]),
                         items: kRelationOptions.map((relation) {
                           return DropdownMenuItem(value: relation, child: Text(relation));
                         }).toList(),
@@ -1449,7 +1305,7 @@ class _AddContactDialogState extends State<AddContactDialog> {
                         },
                       ),
 
-                      const SizedBox(height: 8),
+                      const SizedBox(height: ZaiNeSpacing.sm),
                     ],
                   ),
                 ),
@@ -1465,14 +1321,14 @@ class _AddContactDialogState extends State<AddContactDialog> {
                       child: OutlinedButton(
                         onPressed: () => Navigator.of(context).pop(),
                         style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                          side: BorderSide(color: Colors.grey.shade300),
+                          padding: const EdgeInsets.symmetric(vertical: ZaiNeSpacing.lg),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.card)),
+                          side: BorderSide(color: ZaiNeColors.borderColor()),
                         ),
                         child: Text('取消', style: TextStyle(color: Colors.grey[600], fontWeight: FontWeight.w500)),
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: ZaiNeSpacing.md),
 
                     // 保存按钮
                     Expanded(
@@ -1490,16 +1346,16 @@ class _AddContactDialogState extends State<AddContactDialog> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFFFF7F50),
                           foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          padding: const EdgeInsets.symmetric(vertical: ZaiNeSpacing.lg),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.card)),
                           elevation: 0,
-                          shadowColor: const Color(0xFFFF7F50).withOpacity(0.3),
+                          shadowColor: const Color(0xFFFF7F50).withValues(alpha: 0.3),
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(isEdit ? Icons.check_rounded : Icons.person_add_rounded, size: 18),
-                            const SizedBox(width: 6),
+                            const SizedBox(width: ZaiNeSpacing.sm),
                             Text(isEdit ? '保存修改' : '添加联系人', style: const TextStyle(fontWeight: FontWeight.w600, letterSpacing: 0.3)),
                           ],
                         ),
@@ -1530,12 +1386,12 @@ class _AddContactDialogState extends State<AddContactDialog> {
       controller: controller,
       obscureText: obscureText,
       keyboardType: keyboardType,
-      style: const TextStyle(fontSize: 15.5, letterSpacing: 0.3),
+      style: const TextStyle(fontSize: ZaiNeFontSize.body, letterSpacing: 0.3),
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
-        labelStyle: TextStyle(color: Colors.grey[600], fontSize: 13),
-        hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
+        labelStyle: TextStyle(color: Colors.grey[600], fontSize: ZaiNeFontSize.caption),
+        hintStyle: TextStyle(color: Colors.grey[400], fontSize: ZaiNeFontSize.bodySm),
         prefixIcon: Icon(prefixIcon, color: const Color(0xFFFF7F50), size: 21),
         suffixIcon: suffixIcon,
         filled: true,
@@ -1544,21 +1400,21 @@ class _AddContactDialogState extends State<AddContactDialog> {
             : Colors.grey.shade50,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: Colors.grey.shade300),
+          borderSide: BorderSide(color: ZaiNeColors.borderColor()),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: Colors.grey.shade300),
+          borderSide: BorderSide(color: ZaiNeColors.borderColor()),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: const Color(0xFFFF7F50), width: 1.5),
+          borderSide: const BorderSide(color: Color(0xFFFF7F50), width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
           borderSide: BorderSide(color: Colors.red.shade300),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+        contentPadding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.lg, vertical: ZaiNeSpacing.lg),
       ),
       validator: validator,
     );

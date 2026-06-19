@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/social/guardian_message_service.dart';
 import 'package:intl/intl.dart';
+import '../theme/theme_helper.dart';
 
 /// 守护圈留言板组件
 ///
@@ -110,14 +111,14 @@ class _GuardianMessageBoardState extends State<GuardianMessageBoard> {
           Icon(
             Icons.chat_bubble_outline,
             size: 64,
-            color: Colors.grey.shade300,
+            color: ZaiNeColors.textHint(),
           ),
           const SizedBox(height: 16),
           Text(
             '还没有消息',
             style: TextStyle(
               fontSize: 16,
-              color: Colors.grey.shade500,
+              color: ZaiNeColors.textSecondary(),
             ),
           ),
           const SizedBox(height: 8),
@@ -125,7 +126,7 @@ class _GuardianMessageBoardState extends State<GuardianMessageBoard> {
             '发送第一条消息吧~',
             style: TextStyle(
               fontSize: 14,
-              color: Colors.grey.shade400,
+              color: ZaiNeColors.textHint(),
             ),
           ),
         ],
@@ -172,7 +173,7 @@ class _GuardianMessageBoardState extends State<GuardianMessageBoard> {
                       message.senderName,
                       style: TextStyle(
                         fontSize: 12,
-                        color: Colors.grey.shade600,
+                        color: ZaiNeColors.textSecondary(),
                       ),
                     ),
                   ),
@@ -188,7 +189,7 @@ class _GuardianMessageBoardState extends State<GuardianMessageBoard> {
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
+                        color: Colors.black.withValues(alpha: 0.05),
                         blurRadius: 5,
                         offset: const Offset(0, 2),
                       ),
@@ -233,7 +234,7 @@ class _GuardianMessageBoardState extends State<GuardianMessageBoard> {
       height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: Theme.of(context).primaryColor.withOpacity(0.2),
+        color: Theme.of(context).primaryColor.withValues(alpha: 0.2),
       ),
       child: Center(
         child: Icon(
@@ -260,10 +261,10 @@ class _GuardianMessageBoardState extends State<GuardianMessageBoard> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: ZaiNeColors.cardBg(),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, -2),
           ),
@@ -338,7 +339,7 @@ class MessageCard extends StatelessWidget {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: Colors.grey.shade200),
+        side: BorderSide(color: ZaiNeColors.borderColor()),
       ),
       child: InkWell(
         onTap: onTap,
@@ -364,7 +365,7 @@ class MessageCard extends StatelessWidget {
                     Text(
                       message.content ?? _getTypeSubtitle(),
                       style: TextStyle(
-                        color: Colors.grey.shade600,
+                        color: ZaiNeColors.textSecondary(),
                         fontSize: 13,
                       ),
                       maxLines: 2,
@@ -389,7 +390,7 @@ class MessageCard extends StatelessWidget {
                   Text(
                     _formatDate(message.createdAt),
                     style: TextStyle(
-                      color: Colors.grey.shade400,
+                      color: ZaiNeColors.textHint(),
                       fontSize: 11,
                     ),
                   ),
@@ -433,7 +434,7 @@ class MessageCard extends StatelessWidget {
       width: 44,
       height: 44,
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Center(

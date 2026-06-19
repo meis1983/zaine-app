@@ -165,7 +165,7 @@ class _HelpDemoModeState extends State<HelpDemoMode> with TickerProviderStateMix
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.orange.withOpacity(0.15),
+                      color: Colors.orange.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: const Text(
@@ -260,7 +260,7 @@ class _HelpDemoModeState extends State<HelpDemoMode> with TickerProviderStateMix
                               ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: (_currentStep >= 5 ? Colors.green : Colors.red).withOpacity(0.3),
+                                  color: (_currentStep >= 5 ? Colors.green : Colors.red).withValues(alpha: 0.3),
                                   blurRadius: 20,
                                   offset: const Offset(0, 10),
                                 ),
@@ -300,7 +300,7 @@ class _HelpDemoModeState extends State<HelpDemoMode> with TickerProviderStateMix
                           borderRadius: BorderRadius.circular(16),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(isDark ? 0.2 : 0.06),
+                              color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.06),
                               blurRadius: 12,
                               offset: const Offset(0, 4),
                             ),
@@ -491,13 +491,13 @@ class _HelpDemoModeState extends State<HelpDemoMode> with TickerProviderStateMix
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: isCompleted
-            ? color.withOpacity(0.08)
-            : (isActive ? color.withOpacity(0.06) : cardColor),
+            ? color.withValues(alpha: 0.08)
+            : (isActive ? color.withValues(alpha: 0.06) : cardColor),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isCompleted
-              ? color.withOpacity(0.3)
-              : (isActive ? color.withOpacity(0.2) : Colors.grey.withOpacity(0.15)),
+              ? color.withValues(alpha: 0.3)
+              : (isActive ? color.withValues(alpha: 0.2) : Colors.grey.withValues(alpha: 0.15)),
         ),
       ),
       child: Row(
@@ -508,7 +508,7 @@ class _HelpDemoModeState extends State<HelpDemoMode> with TickerProviderStateMix
             decoration: BoxDecoration(
               color: isCompleted
                   ? color
-                  : (isActive ? color.withOpacity(0.15) : Colors.grey.withOpacity(0.1)),
+                  : (isActive ? color.withValues(alpha: 0.15) : Colors.grey.withValues(alpha: 0.1)),
               shape: BoxShape.circle,
             ),
             child: isCompleted
@@ -533,7 +533,7 @@ class _HelpDemoModeState extends State<HelpDemoMode> with TickerProviderStateMix
                   detail,
                   style: TextStyle(
                     fontSize: 12,
-                    color: isCompleted ? color.withOpacity(0.8) : textSecondary,
+                    color: isCompleted ? color.withValues(alpha: 0.8) : textSecondary,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,

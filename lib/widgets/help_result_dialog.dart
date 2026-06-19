@@ -2,9 +2,11 @@
 // 紧急求助已触发结果弹窗 —— 从 help_page.dart 拆出的独立组件
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/membership_service.dart';
+import '../theme/theme_helper.dart';
 
 /// 求助触发时的数据快照（用于解耦弹窗组件与 HelpPage 父组件）
 class HelpDataSnapshot {
@@ -192,7 +194,7 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
               padding: const EdgeInsets.fromLTRB(16, 2, 16, 12),
               child: TextButton(
                 onPressed: widget.onCancel,
-                child: Text('我没事了', style: TextStyle(fontSize: 15, color: Colors.grey.shade600)),
+                child: Text('我没事了', style: TextStyle(fontSize: 15, color: ZaiNeColors.textSecondary())),
               ),
             ),
           ],
@@ -216,7 +218,8 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
         color: Colors.orange.shade50,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: Colors.orange.shade200.withValues(alpha: 0.5)),
-      ),
+      
+        boxShadow: ZaiNeShadows.card,),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -252,11 +255,11 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
                   else if (idx == _currentSmsIndex && !isAllSent)
                     Icon(Icons.radio_button_checked, size: 16, color: Colors.orange.shade700)
                   else
-                    Icon(Icons.circle_outlined, size: 16, color: Colors.grey.shade400),
+                    Icon(Icons.circle_outlined, size: 16, color: ZaiNeColors.textSecondary()),
                   const SizedBox(width: 6),
                   Expanded(child: Text(
                     '$name${relation.isNotEmpty ? '（$relation）' : ''}',
-                    style: TextStyle(fontSize: 12.5, color: isSmsDone ? Colors.grey.shade600 : Colors.black87),
+                    style: TextStyle(fontSize: 12.5, color: isSmsDone ? ZaiNeColors.textSecondary() : ZaiNeColors.textPrimary()),
                   )),
                   if (isCallDone)
                     Icon(Icons.phone_in_talk, size: 13, color: Colors.blue.shade400),
@@ -275,7 +278,7 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 8),
                   child: Text('更多守护人',
-                    style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+                    style: TextStyle(fontSize: 11, color: ZaiNeColors.textSecondary())),
                 ),
                 Expanded(child: Divider(color: Colors.orange.shade200, thickness: 1)),
               ]),
@@ -291,13 +294,14 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
                     color: Colors.grey.shade100.withValues(alpha: 0.6),
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(color: Colors.grey.shade200.withValues(alpha: 0.4)),
-                  ),
+                  
+                    boxShadow: ZaiNeShadows.card,),
                   child: Row(children: [
-                    Icon(Icons.lock_outline, size: 13, color: Colors.grey.shade400),
+                    Icon(Icons.lock_outline, size: 13, color: ZaiNeColors.textSecondary()),
                     const SizedBox(width: 5),
                     Expanded(child: Text(
                       '$name${relation.isNotEmpty ? '（$relation）' : ''}',
-                      style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                      style: TextStyle(fontSize: 12, color: ZaiNeColors.textSecondary()),
                     )),
                   ]),
                 ),
@@ -313,9 +317,9 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
                       content: Row(children: [
                         Icon(Icons.workspace_premium_rounded, color: Colors.amber.shade700, size: 18),
                         const SizedBox(width: 8),
-                        Expanded(child: Text(
+                        const Expanded(child: Text(
                           '升级智能版后，前${MembershipService.smartAutoCallLimit}位联系人将自动接收紧急通知 ❤️',
-                          style: const TextStyle(fontSize: 13),
+                          style: TextStyle(fontSize: 13),
                         )),
                       ]),
                       duration: const Duration(seconds: 3),
@@ -329,7 +333,8 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
                     color: Colors.amber.shade50.withValues(alpha: 0.5),
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(color: Colors.amber.shade200.withValues(alpha: 0.4)),
-                  ),
+                  
+                    boxShadow: ZaiNeShadows.card,),
                   child: Row(children: [
                     Icon(Icons.workspace_premium_rounded, size: 15, color: Colors.amber.shade700),
                     const SizedBox(width: 6),
@@ -432,7 +437,7 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
         queryParameters: {'body': safeBody},
       );
 
-      debugPrint('[Help] SMS URI: $uri');
+      if (kDebugMode) debugPrint('[Help] SMS URI: $uri');
 
       if (await canLaunchUrl(uri)) {
         _justLaunchedExternal = true;
@@ -441,7 +446,7 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
         HapticFeedback.mediumImpact();
       }
     } catch (e) {
-      debugPrint('[Help] 发送短信失败: $e');
+      if (kDebugMode) debugPrint('[Help] 发送短信失败: $e');
     }
   }
 
@@ -476,7 +481,7 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
         HapticFeedback.heavyImpact();
       }
     } catch (e) {
-      debugPrint('[Help] 拨打电话失败: $e');
+      if (kDebugMode) debugPrint('[Help] 拨打电话失败: $e');
     }
   }
 
@@ -486,10 +491,11 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: ZaiNeColors.cardBg(),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.blue.shade200.withValues(alpha: 0.4)),
-      ),
+      
+        boxShadow: ZaiNeShadows.card,),
       child: Theme(
         data: ThemeData().copyWith(dividerColor: Colors.transparent),
         child: ExpansionTile(
@@ -516,10 +522,11 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
               decoration: BoxDecoration(
                 color: Colors.blue.shade50,
                 borderRadius: BorderRadius.circular(10),
-              ),
+              
+                boxShadow: ZaiNeShadows.card,),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Row(children: [
-                  Text('📱', style: TextStyle(fontSize: 13)),
+                  const Text('📱', style: TextStyle(fontSize: 13)),
                   const SizedBox(width: 4),
                   Text('【在呢 紧急求助】', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: Colors.red.shade700)),
                   const Spacer(),
@@ -529,13 +536,13 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('已复制到剪贴板'), duration: Duration(seconds: 1)));
                     },
-                    child: Icon(Icons.content_copy_outlined, size: 17, color: Colors.blue),
+                    child: const Icon(Icons.content_copy_outlined, size: 17, color: Colors.blue),
                   ),
                 ]),
                 Padding(
                   padding: const EdgeInsets.only(left: 2, top: 2, bottom: 6),
                   child: Row(children: [
-                    Text('🕐', style: TextStyle(fontSize: 11.5, color: Colors.red)),
+                    const Text('🕐', style: TextStyle(fontSize: 11.5, color: Colors.red)),
                     const SizedBox(width: 4),
                     Text(DateTime.now().toString().substring(0, 16),
                          style: TextStyle(fontSize: 11.5, color: Colors.red.shade400)),
@@ -549,7 +556,7 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
                 if (d.medicine.isNotEmpty) _oldStyleInfoRow('💊', '药物', d.medicine),
                 if (d.allergy.isNotEmpty) _oldStyleInfoRow('⚠️', '过敏', d.allergy),
                 Center(child: Text('━━━━━━━━ 求助者位置信息 ━━━━━━━━',
-                    style: TextStyle(fontSize: 11, color: Colors.grey.shade600, letterSpacing: 0.5, fontWeight: FontWeight.w500))),
+                    style: TextStyle(fontSize: 11, color: ZaiNeColors.textSecondary(), letterSpacing: 0.5, fontWeight: FontWeight.w500))),
                 const SizedBox(height: 4),
                 _locationInfoRowOld('', '地址', d.address ?? '未知地址'),
                 _coordInfoRowOld('🧭', d.coordLat, d.coordLng),
@@ -559,7 +566,7 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
                 Padding(
                   padding: const EdgeInsets.only(top: 6),
                   child: Text('请立即联系我或拨打120！\n在呢 - 独居守护App',
-                      style: TextStyle(fontSize: 11.5, color: Colors.grey.shade700, height: 1.35)),
+                      style: TextStyle(fontSize: 11.5, color: ZaiNeColors.textSecondary(), height: 1.35)),
                 ),
               ]),
             ),
@@ -574,7 +581,7 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
     child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Text(emoji, style: const TextStyle(fontSize: 12.5)),
       const SizedBox(width: 6),
-      Text('$label：', style: TextStyle(fontSize: 12, color: Colors.grey.shade700, fontWeight: FontWeight.w500)),
+      Text('$label：', style: TextStyle(fontSize: 12, color: ZaiNeColors.textSecondary(), fontWeight: FontWeight.w500)),
       Expanded(child: Text(value, style: const TextStyle(fontSize: 12, height: 1.3))),
     ]),
   );
@@ -584,7 +591,7 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
     child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Text(emoji, style: const TextStyle(fontSize: 12.5)),
       const SizedBox(width: 6),
-      Text('$label：', style: TextStyle(fontSize: 12, color: Colors.grey.shade700, fontWeight: FontWeight.w500)),
+      Text('$label：', style: TextStyle(fontSize: 12, color: ZaiNeColors.textSecondary(), fontWeight: FontWeight.w500)),
       Expanded(child: Text(value,
         style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500,
             color: value == '未知地址' ? Colors.red : null, height: 1.3))),
@@ -600,7 +607,7 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
       child: Row(children: [
         Text(emoji, style: const TextStyle(fontSize: 12.5)),
         const SizedBox(width: 6),
-        Text('坐标：', style: TextStyle(fontSize: 12, color: Colors.grey.shade700, fontWeight: FontWeight.w500)),
+        Text('坐标：', style: TextStyle(fontSize: 12, color: ZaiNeColors.textSecondary(), fontWeight: FontWeight.w500)),
         Flexible(child: Text(coordText, style: const TextStyle(fontSize: 11.5, fontFamily: 'monospace'))),
       ]),
     );
@@ -627,7 +634,7 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
         Text(emoji, style: const TextStyle(fontSize: 12.5)),
         const SizedBox(width: 6),
       ],
-      Text('$label：', style: TextStyle(fontSize: 12, color: isBlue ? Colors.blue.shade700 : Colors.grey.shade700, fontWeight: FontWeight.w500)),
+      Text('$label：', style: TextStyle(fontSize: 12, color: isBlue ? Colors.blue.shade700 : ZaiNeColors.textSecondary(), fontWeight: FontWeight.w500)),
       Expanded(child: Text(url,
         style: const TextStyle(fontSize: 9.5, fontFamily: 'monospace', color: Colors.blue),
         overflow: TextOverflow.ellipsis, maxLines: 2)),
@@ -646,7 +653,7 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
         Padding(
           padding: const EdgeInsets.only(bottom: 10),
           child: Text('正在采取以下行动：',
-              style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold, color: Colors.black87)),
+              style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold, color: ZaiNeColors.textPrimary())),
         ),
         // 紧急联系人电话 — 使用动态 _currentCallIndex 判断
         _buildDynamicStatusItem(
@@ -688,14 +695,15 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: ZaiNeColors.cardBg(),
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: Colors.grey.shade200.withValues(alpha: 0.5)),
-      ),
+      
+        boxShadow: ZaiNeShadows.card,),
       child: Row(children: [
         Text(emoji, style: const TextStyle(fontSize: 16)),
         const SizedBox(width: 10),
-        Expanded(child: Text(label, style: const TextStyle(fontSize: 13.5, color: Colors.black87))),
+        Expanded(child: Text(label, style: TextStyle(fontSize: 13.5, color: ZaiNeColors.textPrimary()))),
         if (isDone)
           Row(mainAxisSize: MainAxisSize.min, children: [
             Icon(Icons.check_circle, size: 17, color: Colors.green.shade600),

@@ -1,16 +1,25 @@
 // lib/services/api_service.dart
 // 底层 HTTP 封装 (v1.4 新增, v1.6 完善异常处理)
 
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../data/app_constants.dart';
 
+/// 安全存储实例（用于 Token）
+const _secureStorage = FlutterSecureStorage(
+  iOptions: IOSOptions(
+    accessibility: KeychainAccessibility.first_unlock_this_device,
+  ),
+);
+
 class ApiService {
-  static const String _baseUrl = AppConstants.backendBaseUrl;
+  static final String _baseUrl = AppConstants.backendBaseUrl;
   // 阿里云FC冷启动约3-4秒，弱网环境下需预留更多缓冲
-  static const Duration _timeout = Duration(seconds: 15);
+  static const Duration _timeout = Duration(seconds: 8);
   // 冷启动最多额外重试 2 次（间隔 2s、4s），总计最多 3 次尝试
   static const int _maxRetries = 2;
   static const Duration _retryDelay = Duration(seconds: 2);
@@ -26,7 +35,9 @@ class ApiService {
     for (int attempt = 0; attempt <= _maxRetries; attempt++) {
       try {
         if (attempt > 0) {
-          debugPrint('[ApiService] 🔄 $method $path 第${attempt + 1}次尝试（冷启动重试）...');
+          if (kDebugMode) {
+            if (kDebugMode) debugPrint('[ApiService] 🔄 $method $path 第${attempt + 1}次尝试（冷启动重试）...');
+          }
         }
         final result = await request();
         // HTTP 业务错误不重试（4xx/5xx）
@@ -34,29 +45,51 @@ class ApiService {
           return result;
         }
         return result;
+      } on TimeoutException catch (e) {
+        lastException = e;
+        if (attempt < _maxRetries) {
+          if (kDebugMode) {
+            if (kDebugMode) debugPrint('[ApiService] ⏳ $method $path 超时，${_retryDelay.inMilliseconds * (attempt + 1)}ms 后重试');
+          }
+          await Future.delayed(_retryDelay * (attempt + 1));
+          continue;
+        }
+        break;
+      } on SocketException catch (e) {
+        lastException = e;
+        if (attempt < _maxRetries) {
+          if (kDebugMode) {
+            if (kDebugMode) debugPrint('[ApiService] 🌐 $method $path 网络连接失败，重试中...');
+          }
+          await Future.delayed(_retryDelay * (attempt + 1));
+          continue;
+        }
+        break;
       } on Exception catch (e) {
         lastException = e;
         final errorStr = e.toString().toLowerCase();
-        // 只对超时/连接类错误重试，不做无限重试
         final isTimeout = errorStr.contains('timeout') ||
             errorStr.contains('deadline exceeded') ||
             errorStr.contains('connection');
         if (isTimeout && attempt < _maxRetries) {
-          debugPrint('[ApiService] ⏳ $method $path 超时，${_retryDelay.inMilliseconds * (attempt + 1)}ms 后重试');
-          await Future.delayed(_retryDelay * (attempt + 1)); // 2s, 4s 递增延迟
+          if (kDebugMode) {
+            if (kDebugMode) debugPrint('[ApiService] ⏳ $method $path 超时，${_retryDelay.inMilliseconds * (attempt + 1)}ms 后重试');
+          }
+          await Future.delayed(_retryDelay * (attempt + 1));
           continue;
         }
         break;
       }
     }
-    debugPrint('ApiService $method $path error: $lastException');
+    if (kDebugMode) {
+      if (kDebugMode) debugPrint('ApiService $method $path error: $lastException');
+    }
     return {'success': false, 'error': lastException.toString(), 'offline': true};
   }
 
-  // 获取 token
+  // 获取 token（从安全存储读取）
   static Future<String?> _getToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('auth_token');
+    return await _secureStorage.read(key: 'auth_token');
   }
 
   // 构造请求头
@@ -167,11 +200,13 @@ class ApiService {
       if (response.statusCode >= 200 && response.statusCode < 300) {
         return {'success': true, ...data};
       } else {
-        debugPrint('ApiService error ${response.statusCode}: ${response.body}');
-        return {'success': false, 'statusCode': response.statusCode, ...data};
+    if (kDebugMode) {
+      if (kDebugMode) debugPrint('ApiService error ${response.statusCode}: ${response.body}');
+    }
+    return {'success': false, 'statusCode': response.statusCode, ...data};
       }
     } catch (e) {
-      debugPrint('ApiService parse error: $e, body: ${response.body}');
+      if (kDebugMode) debugPrint('ApiService parse error: $e, body: ${response.body}');
       final body = response.body.trim();
       String errorMsg;
       if (body.isEmpty) {

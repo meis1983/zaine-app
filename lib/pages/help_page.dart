@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -9,7 +10,8 @@ import '../services/membership_service.dart';
 import '../services/api_service.dart';
 import '../theme/theme_helper.dart';
 import '../widgets/help_result_dialog.dart';
-import '../widgets/help_demo_mode.dart';
+import '../widgets/full_help_page_widget.dart';
+import '../widgets/lightweight_guide_widget.dart';
 import 'profile_page.dart';
 import 'contacts_page.dart';
 
@@ -54,7 +56,7 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
   int _countdown = 5;  // 改为 5 秒倒计时（用户可取消）
 
   // ========== 求助已触发后的行动状态 ==========
-  bool _smsSent = false;
+  final bool _smsSent = false;
   bool _calledContact = false;
   bool _locationObtained = false;
 
@@ -101,7 +103,7 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
           profileJson = prefs.getString('user_profile');
           if (profileJson != null) {
             await prefs.setString(profileKey, profileJson);
-            debugPrint('[Help] ✅ 健康档案已从全局键迁移到用户特定键: $profileKey');
+            if (kDebugMode) debugPrint('[Help] ✅ 健康档案已从全局键迁移到用户特定键: $profileKey');
           }
         }
       } else if (phone != null && phone.isNotEmpty) {
@@ -147,11 +149,11 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
       try {
         _hasLocationReady = await LocationService.hasPermission()
             .timeout(const Duration(seconds: 5), onTimeout: () {
-          debugPrint('[Help] hasPermission 超时(5s)，默认 false');
+          if (kDebugMode) debugPrint('[Help] hasPermission 超时(5s)，默认 false');
           return false;
         });
       } catch (e) {
-        debugPrint('[Help] hasPermission 异常: $e');
+        if (kDebugMode) debugPrint('[Help] hasPermission 异常: $e');
         _hasLocationReady = false;
       }
 
@@ -162,7 +164,7 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
         _loadLocation();
       }
     } catch (e) {
-      debugPrint('[Help] _checkPrerequisites 异常: $e');
+      if (kDebugMode) debugPrint('[Help] _checkPrerequisites 异常: $e');
       // 即使出错也要让页面渲染出来，不能白屏
       if (mounted) {
         setState(() => _prerequisitesChecked = true);
@@ -190,35 +192,35 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
   /// - 用户点「去开启」→ request() → 弹系统框 → 点允许 → 完成
   /// - 如果系统不弹框（永久拒绝态）→ 一句话 + 一个按钮跳设置
   Future<void> _requestLocationPermission() async {
-    debugPrint('[Help] _requestLocationPermission 开始, 当前 _hasLocationReady=$_hasLocationReady');
+    if (kDebugMode) debugPrint('[Help] _requestLocationPermission 开始, 当前 _hasLocationReady=$_hasLocationReady');
     
     // ★ 修复：跳过 hasPermission 缓存检查，直接请求（Geolocator.requestPermission 会返回最新的 iOS 实际状态）
-    debugPrint('[Help] ===== 开始请求位置权限（用户主动点击）=====');
+    if (kDebugMode) debugPrint('[Help] ===== 开始请求位置权限（用户主动点击）=====');
     final status = await LocationService.requestPermission();
-    debugPrint('[Help] 权限请求结果: $status, isGranted=${status.isGranted}, isLimited=${status.isLimited}');
+    if (kDebugMode) debugPrint('[Help] 权限请求结果: $status, isGranted=${status.isGranted}, isLimited=${status.isLimited}');
 
     if ((status.isGranted || status.isLimited) && mounted) {
       // ✅ 成功 → 绿色提示
-      debugPrint('[Help] 权限授权成功！setState _hasLocationReady=true');
+      if (kDebugMode) debugPrint('[Help] 权限授权成功！setState _hasLocationReady=true');
       setState(() => _hasLocationReady = true);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Row(
             children: [
               Icon(Icons.check_circle, color: Colors.white, size: 18),
-              SizedBox(width: 8),
+              SizedBox(width: ZaiNeSpacing.sm),
               Text('✅ 位置权限已开启！'),
             ],
           ),
           backgroundColor: Colors.green.shade600,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.small)),
           duration: const Duration(seconds: 2),
         ),
       );
     } else if (status.isPermanentlyDenied && mounted) {
       // ★ 永久拒绝 → 弹对话框引导去系统设置
-      debugPrint('[Help] 权限被永久拒绝，弹出引导对话框');
+      if (kDebugMode) debugPrint('[Help] 权限被永久拒绝，弹出引导对话框');
       showDialog(
         context: context,
         builder: (ctx) => AlertDialog(
@@ -241,19 +243,19 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
       );
     } else if (mounted) {
       // ❌ 失败 → SnackBar提示
-      debugPrint('[Help] 权限请求失败: $status');
+      if (kDebugMode) debugPrint('[Help] 权限请求失败: $status');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Row(
             children: [
               Icon(Icons.location_off, color: Colors.white, size: 18),
-              SizedBox(width: 8),
+              SizedBox(width: ZaiNeSpacing.sm),
               Expanded(child: Text('位置权限未开启。紧急求助需要您的位置才能发送求救信息')),
             ],
           ),
           backgroundColor: Colors.orange.shade700,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.small)),
           duration: const Duration(seconds: 5),
           action: SnackBarAction(
             label: '去设置',
@@ -270,29 +272,29 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
   ///       这样当用户在设置中开启权限并返回时，能自动刷新权限状态。
   Future<void> _openLocationSettings() async {
     try {
-      debugPrint('[Help] 调用 openAppSettings()...');
+      if (kDebugMode) debugPrint('[Help] 调用 openAppSettings()...');
       // 使用 permission_handler 的 openAppSettings，它会在用户返回后 resolve
       final opened = await openAppSettings();
-      debugPrint('[Help] 用户已从设置返回，opened=$opened');
+      if (kDebugMode) debugPrint('[Help] 用户已从设置返回，opened=$opened');
     } catch (e) {
-      debugPrint('[Help] openAppSettings 失败: $e');
+      if (kDebugMode) debugPrint('[Help] openAppSettings 失败: $e');
     }
 
     // ⭐ 关键：用户从设置返回后，立刻重新检查权限
     if (!mounted) return;
-    debugPrint('[Help] 重新检查位置权限...');
+    if (kDebugMode) debugPrint('[Help] 重新检查位置权限...');
     final hasPerm = await LocationService.hasPermission();
-    debugPrint('[Help] 重新检查结果: hasPerm=$hasPerm');
+    if (kDebugMode) debugPrint('[Help] 重新检查结果: hasPerm=$hasPerm');
 
     if (hasPerm && mounted) {
-      debugPrint('[Help] 设置返回后权限已开启！setState _hasLocationReady=true');
+      if (kDebugMode) debugPrint('[Help] 设置返回后权限已开启！setState _hasLocationReady=true');
       setState(() => _hasLocationReady = true);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Row(
             children: [
               Icon(Icons.check_circle, color: Colors.white, size: 18),
-              SizedBox(width: 8),
+              SizedBox(width: ZaiNeSpacing.sm),
               Text('✅ 位置权限已开启！'),
             ],
           ),
@@ -310,7 +312,7 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
           backgroundColor: Colors.orange.shade700,
           behavior: SnackBarBehavior.floating,
           shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(10))),
-          duration: Duration(seconds: 3),
+          duration: const Duration(seconds: 3),
         ),
       );
     }
@@ -354,7 +356,7 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
           try {
             return _buildActualPage(context);
           } catch (e, st) {
-            debugPrint('[Help] ⚠️ build 异常: $e\n$st');
+            if (kDebugMode) debugPrint('[Help] ⚠️ build 异常: $e\n$st');
             // 防止白屏：渲染一个错误提示页面，至少让用户能看到信息
             return Scaffold(
               backgroundColor: ZaiNeColors.scaffoldBg(),
@@ -371,11 +373,11 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       const Icon(Icons.error_outline, color: Colors.red, size: 48),
-                      const SizedBox(height: 16),
-                      const Text('紧急求助页面加载异常', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 8),
-                      Text('错误信息: $e', style: const TextStyle(fontSize: 13, color: Colors.grey)),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: ZaiNeSpacing.lg),
+                      const Text('紧急求助页面加载异常', style: TextStyle(fontSize: ZaiNeFontSize.title, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: ZaiNeSpacing.sm),
+                      Text('错误信息: $e', style: const TextStyle(fontSize: ZaiNeFontSize.caption, color: Colors.grey)),
+                      const SizedBox(height: ZaiNeSpacing.xl),
                       ElevatedButton(
                         onPressed: () => setState(() {}),
                         child: const Text('重试'),
@@ -412,601 +414,45 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
       if (!_hasLocationReady) missingItems.add('定位');
 
       child = missingItems.isNotEmpty
-          ? _buildLightweightGuide(missingItems)
-          : _buildFullHelpPage();
+          ? LightweightGuideWidget(
+              hasProfileReady: _hasProfileReady,
+              hasContactsReady: _hasContactsReady,
+              hasLocationReady: _hasLocationReady,
+              pulseController: _pulseController,
+              onGoToProfile: () => _goToPage(const ProfilePage(isPushed: true)),
+              onGoToContacts: () => _goToPage(const ContactsPage()),
+              onRequestLocationPermission: _requestLocationPermission,
+            )
+          : _buildFullHelpPageWidget();
     }
     return child;
   }
 
-  // ==================== 轻量引导页（核心改造） ====================
-  /// 设计原则：
-  /// - 不严肃、不吓人 —— 温和的提示语 + 品牌橙色
-  /// - 三步清单式，做完一项打 ✓ 自动进下一项
-  /// - 位置授权点一下就好
-
-  Widget _buildLightweightGuide(List<String> missingItems) {
-    return Scaffold(
-      backgroundColor: ZaiNeColors.scaffoldBg(),
-      body: SafeArea(
-        child: Column(
-          children: [
-            // 顶部品牌区（无返回按钮，tab 页面）
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-              child: Row(
-                children: [
-                  const SizedBox(width: 48), // 左侧占位平衡（替代返回按钮）
-                  const Spacer(),
-                  Text('求助设置', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: ZaiNeColors.textPrimary())),
-                  const Spacer(),
-                  const SizedBox(width: 48), // 平衡
-                ],
-              ),
-            ),
-
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(28, 0, 28, 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 12),
-
-                    // 温和标题
-                    Center(
-                      child: RichText(
-                        text: TextSpan(
-                          style: const TextStyle(fontSize: 22, height: 1.4),
-                          children: [
-                            const TextSpan(text: '让紧急求助 ', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)),
-                            TextSpan(text: '随时可用', style: TextStyle(color: Colors.orange.shade600, fontWeight: FontWeight.bold)),
-                            const TextSpan(text: ' ✨', style: TextStyle(fontSize: 20)),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 8),
-
-                    // 副标题
-                    Center(
-                      child: Text(
-                        '简单 ${missingItems.length} 步，一次设置永久生效',
-                        style: TextStyle(fontSize: 13, color: Colors.grey[500]),
-                      ),
-                    ),
-
-                    const SizedBox(height: 32),
-
-                    // ====== 三步卡片列表 ======
-                    _buildStepItem(
-                      stepNum: 1,
-                      icon: Icons.person_outline,
-                      iconBgColor: Colors.blue,
-                      label: '完善健康档案',
-                      desc: '姓名 · 年龄 · 血型',
-                      isDone: _hasProfileReady,
-                      onTap: !_hasProfileReady ? () => _goToPage(const ProfilePage(isPushed: true)) : null,
-                    ),
-
-                    const SizedBox(height: 14),
-
-                    // 连接线
-                    _buildConnector(isActive: _hasProfileReady),
-
-                    _buildStepItem(
-                      stepNum: 2,
-                      icon: Icons.contact_phone_outlined,
-                      iconBgColor: Colors.orange,
-                      label: '添加紧急联系人',
-                      desc: '至少绑定一位家人或朋友',
-                      isDone: _hasContactsReady,
-                      onTap: (_hasProfileReady && !_hasContactsReady)
-                          ? () => _goToPage(const ContactsPage())
-                          : null,
-                      locked: !_hasProfileReady, // 上一步没完成则锁定
-                    ),
-
-                    const SizedBox(height: 14),
-
-                    _buildConnector(isActive: _hasContactsReady),
-
-                    _buildStepItem(
-                      stepNum: 3,
-                      icon: Icons.location_on_outlined,
-                      iconBgColor: Colors.green,
-                      label: '开启位置权限',
-                      desc: '点击下方按钮 → 弹出系统框 → 点「允许」',
-                      isDone: _hasLocationReady,
-                      onTap: (_hasContactsReady && !_hasLocationReady)
-                          ? _requestLocationPermission
-                          : null,
-                      locked: !_hasContactsReady, // 上一步没完成则锁定
-                      isActionButton: true, // 标记为需要特殊样式的按钮
-                    ),
-
-                    const SizedBox(height: 32),
-
-                    // 底部提示
-                    if (missingItems.length == 1)
-                      Center(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                          decoration: BoxDecoration(
-                            color: Colors.orange.shade50,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.star, size: 16, color: Colors.orange.shade700),
-                              const SizedBox(width: 6),
-                              Text(
-                                '还差最后一步就大功告成！',
-                                style: TextStyle(fontSize: 13, color: Colors.orange.shade800, fontWeight: FontWeight.w500),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-
-                    // 【修复 v1.9.9】底部留白使用 viewPadding 替代固定值，
-                    // 防止在小屏设备或键盘弹出时产生 BOTTOM OVERFLOWED
-                    SizedBox(height: MediaQuery.of(context).viewPadding.bottom + 24),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// 单个步骤条目
-  Widget _buildStepItem({
-    required int stepNum,
-    required IconData icon,
-    required Color iconBgColor,
-    required String label,
-    required String desc,
-    required bool isDone,
-    required VoidCallback? onTap,
-    bool locked = false,
-    bool isActionButton = false, // 是否为需要用户主动点击的操作按钮
-  }) {
-    final isActive = !isDone && !locked;
-    final bool isLocationAction = !isDone && !locked && isActionButton;
-
-    return Opacity(
-      opacity: locked ? 0.5 : 1.0,
-      child: GestureDetector(
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: isDone
-                ? Colors.green.shade50                    // ✅ 已完成：浅绿底
-                : (isLocationAction
-                    ? Colors.green.shade50               // ⚡ 待操作（位置权限）：浅绿底 + 脉冲吸引注意
-                    : (isActive ? ZaiNeColors.cardBg() : Colors.grey.shade100)),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: isDone
-                  ? Colors.green.shade300                // ✅ 已完成：绿色边框
-                  : (isLocationAction
-                      ? Colors.green                     // ⚡ 待操作：深绿实心边框（与已完成区分！）
-                      : (isActive ? iconBgColor.withValues(alpha: 0.25) : Colors.grey.shade300)),
-              width: isDone ? 1.5 : (isLocationAction ? 2.0 : 1),   // 待操作边框更粗
-            ),
-            boxShadow: isLocationAction
-                ? [BoxShadow(color: Colors.green.withValues(alpha: 0.15), blurRadius: 16, offset: const Offset(0, 4))]
-                : (isDone
-                    ? null                              // ✅ 已完成不需要阴影
-                    : (isActive
-                        ? [BoxShadow(color: iconBgColor.withValues(alpha: 0.08), blurRadius: 12, offset: const Offset(0, 4))]
-                        : null)),
-          ),
-          child: Row(
-            children: [
-              // 左侧：序号 / 图标 / 完成勾 / 动画按钮
-              if (isLocationAction)
-                // 位置权限特殊样式：脉冲动效按钮
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Colors.green, Color(0xFF38EF7D)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(color: Colors.green.withValues(alpha: 0.35), blurRadius: 10, offset: const Offset(0, 3)),
-                    ],
-                  ),
-                  child: AnimatedBuilder(
-                    animation: _pulseController,
-                    builder: (context, child) => Transform.scale(
-                      scale: 1.0 + (_pulseController.value * 0.08),
-                      child: child,
-                    ),
-                    child: const Icon(Icons.location_searching, color: Colors.white, size: 24),
-                  ),
-                )
-              else if (isDone)
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: const BoxDecoration(
-                    color: Colors.green,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.check, color: Colors.white, size: 24),
-                )
-              else
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: iconBgColor.withValues(alpha: 0.12),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(icon, color: iconBgColor, size: 22),
-                ),
-
-              const SizedBox(width: 14),
-
-              // 中间：文字
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      label,
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: isDone ? Colors.green.shade700 : (isLocationAction ? Colors.green.shade700 : Colors.black87),
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      isDone ? '已完成 ✓' : (locked ? '🔒 请先完成上一步' : desc),
-                      style: TextStyle(fontSize: 12, color: isDone ? Colors.green.shade600 : (isLocationAction ? Colors.green.shade600 : Colors.grey[500])),
-                    ),
-                  ],
-                ),
-              ),
-
-              // 右侧：箭头 或 锁定图标 或 "去开启"按钮 或 完成对勾
-              if (isDone)
-                Icon(Icons.check_circle, color: Colors.green.shade400, size: 22)
-              else if (locked)
-                Icon(Icons.lock_outline, color: Colors.grey[400], size: 20)
-              else if (isLocationAction)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.green,
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [BoxShadow(color: Colors.green.withValues(alpha: 0.3), blurRadius: 6, offset: const Offset(0, 2))],
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text('去开启', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white)),
-                      SizedBox(width: 2),
-                      Icon(Icons.arrow_forward_ios, size: 11, color: Colors.white),
-                    ],
-                  ),
-                )
-              else
-                Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: iconBgColor.withValues(alpha: 0.12),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(Icons.chevron_right, color: iconBgColor, size: 18),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// 步骤之间的连接线
-  Widget _buildConnector({required bool isActive}) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 21),
-      child: Container(
-        width: 2,
-        height: 18,
-        color: isActive ? Colors.green.shade400 : Colors.grey.shade300,
-      ),
+  /// 构建完整求助页面 Widget（包装 FullHelpPageWidget）
+  Widget _buildFullHelpPageWidget() {
+    return FullHelpPageWidget(
+      isTriggering: _isTriggering,
+      countdown: _countdown,
+      myPhone: _myPhone,
+      userName: _userName,
+      userAge: _userAge,
+      bloodType: _bloodType,
+      pulseController: _pulseController,
+      onTriggerHelp: _triggerHelp,
+      onCancelHelp: _cancelHelp,
+      onShowPhoneInput: _showPhoneInputDialog,
+      locationLoading: _locationLoading,
+      locationLat: _coordLat,
+      locationLng: _coordLng,
+      locationAddress: _address,
+      onLocationRefresh: _loadLocation,
     );
   }
 
   // ==================== 完整求助主界面 ====================
 
-  Widget _buildFullHelpPage() {
-    return Scaffold(
-      backgroundColor: ZaiNeColors.scaffoldBg(),
-      appBar: AppBar(
-        backgroundColor: Colors.transparent, elevation: 0,
-        leading: null, // tab 页面无返回按钮
-        title: Text('紧急求助', style: TextStyle(color: ZaiNeColors.textPrimary())),
-        centerTitle: true,
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          child: Column(
-            children: [
-              // 温和警告提示
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.orange.shade50,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.orange.shade200),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.info_outline, color: Colors.orange.shade700, size: 20),
-                    const SizedBox(width: 8),
-                    Expanded(child: Text('紧急情况才使用，将联系紧急联系人并发送位置', style: TextStyle(fontSize: 13, color: Colors.orange.shade800))),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 14),
-
-              // 就绪指示器
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                  color: Colors.green.shade50,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.check_circle, color: Colors.green.shade600, size: 16),
-                    const SizedBox(width: 6),
-                    Text('档案 · 联系人 · 定位 已就绪', style: TextStyle(fontSize: 12, color: Colors.green.shade700, fontWeight: FontWeight.w600)),
-                  ],
-                ),
-              ),
-
-              // 档案预览
-              const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: ZaiNeColors.cardBg(),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: Colors.blue.shade100),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.medical_information, color: Colors.blue.shade600, size: 18),
-                    const SizedBox(width: 8),
-                    Expanded(child: Text('${(_myPhone != null && _myPhone!.isNotEmpty) ? "$_myPhone · " : ""}$_userName · $_userAge岁 · $_bloodType', style: TextStyle(color: Colors.blue.shade800, fontSize: 13, fontWeight: FontWeight.w600))),
-                    Icon(Icons.check_circle, color: Colors.green, size: 16),
-                  ],
-                ),
-              ),
-
-              // 手机号设置提示（未设置时显示，点击可补填）
-              if (_myPhone == null || _myPhone!.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: GestureDetector(
-                    onTap: _showPhoneInputDialog,
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: Colors.orange.shade50,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.orange.shade300),
-                      ),
-                      child: Row(children: [
-                        Icon(Icons.phone_android, color: Colors.orange.shade700, size: 16),
-                        const SizedBox(width: 8),
-                        Expanded(child: Text('手机号未设置，点击此处补充 →', style: TextStyle(fontSize: 12, color: Colors.orange.shade800, fontWeight: FontWeight.w500))),
-                      ]),
-                    ),
-                  ),
-                ),
-
-              const SizedBox(height: 40),
-
-              // 紧急求助按钮
-              if (_isTriggering) ...[
-                Container(
-                  width: 160, height: 160,
-                  decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.red.shade100, border: Border.all(color: Colors.red, width: 4)),
-                  child: Center(child: TweenAnimationBuilder<double>(
-                    tween: Tween(begin: 1.2, end: 1.0),
-                    duration: const Duration(milliseconds: 300),
-                    curve: Curves.easeOut,
-                    builder: (context, scale, child) => Transform.scale(
-                      scale: scale,
-                      child: Text(
-                        '$_countdown',
-                        key: ValueKey(_countdown),
-                        style: TextStyle(
-                          fontSize: 70,
-                          fontWeight: FontWeight.bold,
-                          color: _countdown <= 2 ? Colors.red.shade900 : Colors.red.shade700,
-                        ),
-                      ),
-                    ),
-                  )),
-                ),
-                const SizedBox(height: 14),
-                Text('正在发送求助...', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.red.shade700)),
-                const SizedBox(height: 12),
-                TextButton(onPressed: _cancelHelp, child: Text('取消', style: TextStyle(fontSize: 15, color: Colors.grey.shade600))),
-              ] else ...[
-                GestureDetector(
-                  onTap: _triggerHelp,
-                  // 【P1修复 v1.9.83】移除 onLongPress，避免误触触发紧急求助
-                  onTapDown: (_) => HapticFeedback.mediumImpact(),
-                  child: AnimatedBuilder(
-                    animation: _pulseController,
-                    builder: (context, child) => Transform.scale(scale: 1.0 + (_pulseController.value * 0.08), child: child),
-                    child: Container(
-                      width: 180, height: 180,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Colors.red.shade400, Colors.red.shade600]),
-                        boxShadow: [BoxShadow(color: Colors.red.withValues(alpha: 0.4), blurRadius: 30, offset: const Offset(0, 15))],
-                      ),
-                      child: const Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                        Icon(Icons.emergency, size: 56, color: Colors.white),
-                        SizedBox(height: 10),
-                        Text('求助', style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold, color: Colors.white)),
-                      ]),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text('点击触发紧急求助', style: TextStyle(fontSize: 14, color: ZaiNeColors.textSecondary())),
-              ],
-
-              const SizedBox(height: 16),
-
-              // 体验演示按钮
-              GestureDetector(
-                onTap: () {
-                  HapticFeedback.selectionClick();
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const HelpDemoMode()),
-                  );
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.shade50,
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: Colors.orange.shade200),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.play_circle_outline, color: Colors.orange.shade700, size: 18),
-                      const SizedBox(width: 6),
-                      Text('体验演示', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.orange.shade700)),
-                      const SizedBox(width: 4),
-                      Icon(Icons.chevron_right, color: Colors.orange.shade400, size: 16),
-                    ],
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 20),
-
-              // 实时定位
-              _buildLocationCard(),
-
-              const SizedBox(height: 24),
-
-              // 【修复 v1.9.9】底部留白使用 viewPadding 替代固定值
-              SizedBox(height: MediaQuery.of(context).viewPadding.bottom + 16),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 
   /// 实时定位卡片（增强版 - 详细信息）
-  Widget _buildLocationCard() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: ZaiNeColors.cardBg(),
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: ZaiNeColors.scaffoldBg() == const Color(0xFF121212) ? 0.15 : 0.06), blurRadius: 10, offset: const Offset(0, 4))],
-        border: Border.all(color: Colors.green.shade200.withValues(alpha: 0.4), width: 1),
-      ),
-      child: _locationLoading
-          ? Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-              SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.green.shade600)),
-              const SizedBox(width: 10),
-              Text('正在获取位置...', style: TextStyle(fontSize: 13, color: Colors.grey[500])),
-            ])
-          : (_coordLat != null && _coordLng != null)
-              ? Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  // 标题行
-                  Row(children: [
-                    Icon(Icons.gps_fixed, color: Colors.green.shade600, size: 18),
-                    const SizedBox(width: 6),
-                    const Text('当前位置', style: TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w500)),
-                    const Spacer(),
-                    GestureDetector(onTap: _loadLocation, child: Icon(Icons.refresh, size: 16, color: Colors.grey[400])),
-                  ]),
-                  const SizedBox(height: 10),
-
-                  // 详细地址（核心显示，大字突出）
-                  if (_address != null && _address!.isNotEmpty)
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.red.shade50,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Icon(Icons.location_on, color: Colors.red.shade500, size: 20),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(_address!,
-                            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: ZaiNeColors.textPrimary(), height: 1.4),
-                          ),
-                        ),
-                      ]),
-                    ),
-
-                  // 坐标信息（始终显示，无边框避免横杠问题）
-                  const SizedBox(height: 8),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: Colors.teal.shade50,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Row(children: [
-                      Icon(Icons.my_location, size: 16, color: Colors.teal.shade700),
-                      const SizedBox(width: 8),
-                      if (_coordLat != null) Text(_coordLat!, style: TextStyle(fontSize: 13, color: Colors.teal[800], fontFamily: 'monospace', fontWeight: FontWeight.w600)),
-                      if (_coordLat != null && _coordLng != null) Text('  ', style: TextStyle(fontFamily: 'monospace')),
-                      if (_coordLng != null) Text(_coordLng!, style: TextStyle(fontSize: 13, color: Colors.teal[800], fontFamily: 'monospace', fontWeight: FontWeight.w600)),
-                    ]),
-                  ),
-                ])
-              : Row(children: [
-                  Icon(Icons.location_off, color: Colors.grey[400], size: 20),
-                  const SizedBox(width: 10),
-                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text('位置获取失败', style: TextStyle(fontSize: 13, color: Colors.grey[600])),
-                    const SizedBox(height: 2),
-                    Text('点击刷新重试', style: TextStyle(fontSize: 11, color: Colors.grey[400])),
-                  ])),
-                  IconButton(icon: const Icon(Icons.refresh, size: 18), onPressed: _loadLocation, tooltip: '重试'),
-                ]),
-    );
-  }
 
   // ==================== 求助核心方法 ====================
 
@@ -1016,13 +462,13 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('📱 设置手机号', style: TextStyle(fontSize: 18)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.card)),
+        title: const Text('📱 设置手机号', style: TextStyle(fontSize: ZaiNeFontSize.title)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('设置后，紧急求助短信中将包含您的手机号', style: TextStyle(fontSize: 13, color: Colors.grey)),
-            const SizedBox(height: 12),
+            const Text('设置后，紧急求助短信中将包含您的手机号', style: TextStyle(fontSize: ZaiNeFontSize.caption, color: Colors.grey)),
+            const SizedBox(height: ZaiNeSpacing.md),
             TextField(
               controller: controller,
               keyboardType: TextInputType.phone,
@@ -1136,10 +582,10 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
         );
         if (linkRes['success'] == true) {
           appleMapShortUrl = linkRes['short_url']?.toString();
-          debugPrint('[Help] 苹果地图短链生成成功: $appleMapShortUrl');
+          if (kDebugMode) debugPrint('[Help] 苹果地图短链生成成功: $appleMapShortUrl');
         }
       } catch (e) {
-        debugPrint('[Help] 苹果地图短链生成失败: $e');
+        if (kDebugMode) debugPrint('[Help] 苹果地图短链生成失败: $e');
       }
 
       // 2. 生成高德地图短链（使用通用短链接口）
@@ -1152,16 +598,16 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
         );
         if (linkRes['success'] == true) {
           amapShortUrl = linkRes['short_url']?.toString();
-          debugPrint('[Help] 高德地图短链生成成功: $amapShortUrl');
+          if (kDebugMode) debugPrint('[Help] 高德地图短链生成成功: $amapShortUrl');
         }
       } catch (e) {
-        debugPrint('[Help] 高德地图短链生成失败: $e');
+        if (kDebugMode) debugPrint('[Help] 高德地图短链生成失败: $e');
       }
     }
 
     // 生成完整短信内容（用于预览）
     final helpMessage = _generateHelpMessage(_myPhone ?? '', latStr, lngStr, appleMapShortUrl, amapShortUrl);
-    debugPrint('[Help] 短信模板:\n$helpMessage');
+    if (kDebugMode) debugPrint('[Help] 短信模板:\n$helpMessage');
 
     // 标记位置已获取
     _locationObtained = true;
@@ -1204,36 +650,56 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
     if (_emergencyNote.isNotEmpty) sb.writeln('备注：$_emergencyNote');
     sb.writeln('');
     sb.writeln('─── 求助者位置信息 ───');
-    // 在地址中插入零宽空格，防止 iOS 短信自动识别为可点击地址
-    final addrObfuscated = addrPart.split('').join('\u200B');
-    sb.writeln('地址：$addrObfuscated');
+    // 【修复 v1.76.0】删除零宽空格 \u200B（它会污染 iOS Data Detector，导致后续链接无法识别）
+    // 改用普通空格破坏地址连续性，防止 iOS 短信将地址识别为可点击链接
+    final addrBroken = addrPart.contains('区')
+        ? addrPart.replaceFirst('区', '区 ')
+        : addrPart.contains('县')
+            ? addrPart.replaceFirst('县', '县 ')
+            : addrPart.contains('市')
+                ? addrPart.replaceFirst('市', '市 ')
+                : addrPart;
+    sb.writeln('地址：$addrBroken');
+    
+    // 【修复 v1.77.0】位置信息降级处理：优先显示地图链接，失败则显示文本坐标
     if (coordPart.isNotEmpty) {
       sb.writeln('');
       // 【修复 v1.17.4-Bug4+5】始终同时显示苹果地图和高德地图（优先使用短链，降级使用长链接）
-      if (appleMapShortUrl != null && appleMapShortUrl!.isNotEmpty) {
+      if (appleMapShortUrl != null && appleMapShortUrl.isNotEmpty) {
         // 苹果地图短链
         sb.writeln('🍎 点击跳转苹果地图导航');
         sb.writeln('');
-        sb.writeln(appleMapShortUrl!);
+        sb.writeln(appleMapShortUrl);
       } else {
-        // 降级：苹果地图长链接
+        // 【修复 v1.76.0】苹果地图链接使用 ll= 参数传坐标（q= 传坐标会解析异常）
+        // ll=lat,lng 指定地图中心坐标，q=%1 防止 Apple Maps 搜索空关键词
         sb.writeln('🍎 点击跳转苹果地图导航');
         sb.writeln('');
-        sb.writeln('https://maps.apple.com/?q=$coordPart');
+        final appleMapUrl = 'https://maps.apple.com/?ll=$coordPart&q=%1';
+        sb.writeln(appleMapUrl);
       }
       sb.writeln('');
-      if (amapShortUrl != null && amapShortUrl!.isNotEmpty) {
+      if (amapShortUrl != null && amapShortUrl.isNotEmpty) {
         // 高德地图短链
         sb.writeln('📍 点击跳转高德地图导航');
         sb.writeln('');
-        sb.writeln(amapShortUrl!);
+        sb.writeln(amapShortUrl);
       } else {
         // 降级：高德地图长链接
         sb.writeln('📍 点击跳转高德地图导航');
         sb.writeln('');
         sb.writeln('https://uri.amap.com/marker?position=$lngStr,$latStr');
       }
+      // 【修复 v1.77.0】同时显示文本坐标（防止链接失效时仍能获取位置）
+      sb.writeln('');
+      sb.writeln('坐标（$coordPart）');
+    } else {
+      // 【修复 v1.77.0】位置获取失败时的降级处理
+      sb.writeln('');
+      sb.writeln('⚠️ 位置获取失败，请立即回拨确认位置！');
+      sb.writeln('如果方便，请描述您当前的位置（如：XX路口、XX小区、XX商场附近）');
     }
+    
     sb.writeln('');
     sb.writeln('请立即联系我或拨打120！');
     sb.writeln('在呢 - 独居守护App');
@@ -1280,7 +746,7 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
           setState(() => _isTriggering = false);
         },
         onStatusChanged: (String status) {
-          debugPrint('[HelpPage] Status changed: $status');
+          if (kDebugMode) debugPrint('[HelpPage] Status changed: $status');
         },
         data: HelpDataSnapshot(
           userName: _userName,

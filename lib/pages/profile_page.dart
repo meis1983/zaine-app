@@ -424,7 +424,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
                 trailing: isSelected
                     ? const Icon(Icons.check_circle, color: Color(0xFFFF7F50))
                     : null,
-                tileColor: isSelected ? const Color(0xFFFF7F50).withOpacity(0.08) : null,
+                tileColor: isSelected ? const Color(0xFFFF7F50).withValues(alpha: 20) : null,
                 onTap: () {
                   themeNotifier.setMode(t['mode'] as ZaiNeThemeMode);
                   Navigator.pop(context);
@@ -577,8 +577,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
                       if (confirm == true) {
                         final p = await SharedPreferences.getInstance();
                         await p.remove('feedback_list');
-                        if (context.mounted) Navigator.pop(context);
-                        if (mounted) {
+                        if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
                             content: Text('反馈记录已清空'),
                             backgroundColor: Colors.red,
@@ -660,9 +659,10 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
               children: [
                 Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)))),
                 const SizedBox(height: 16),
-                Row(children: [
-                  Icon(Icons.shield, color: const Color(0xFFFF7F50)), const SizedBox(width: 8),
-                  const Text('守护关系', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const Row(children: [
+                  const Icon(Icons.shield, color: const Color(0xFFFF7F50)),
+                  const SizedBox(width: 8),
+                  const Text('守护关系', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 ]),
                 const SizedBox(height: 20),
 
@@ -950,7 +950,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
           end: Alignment.bottomRight,
           colors: isDark
               ? [const Color(0xFF1E1E2E), const Color(0xFF2A2A3E)]
-              : [const Color(0xFFFF7F50).withOpacity(0.08), const Color(0xFFFFB347).withOpacity(0.06)],
+              : [const Color(0xFFFF7F50).withValues(alpha: 20), const Color(0xFFFFB347).withValues(alpha: 15)],
           stops: const [0.0, 1.0],
         ),
         borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(20), bottomRight: Radius.circular(20)),
@@ -967,7 +967,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFFFF7F50).withOpacity(0.25),
+                    color: const Color(0xFFFF7F50).withValues(alpha: 64),
                     blurRadius: 16,
                     offset: const Offset(0, 6),
                   ),
@@ -982,8 +982,8 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
                       shape: BoxShape.circle,
                       gradient: _avatarPath == null
                           ? LinearGradient(colors: [
-                              const Color(0xFFFF7F50).withOpacity(0.25),
-                              const Color(0xFFFFB347).withOpacity(0.25),
+                              const Color(0xFFFF7F50).withValues(alpha: 64),
+                              const Color(0xFFFFB347).withValues(alpha: 64),
                             ])
                           : null,
                       image: _avatarPath != null
@@ -1040,7 +1040,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
               borderRadius: BorderRadius.circular(14),
               boxShadow: [
                 BoxShadow(
-                  color: (_isLoggedIn ? Colors.green : Colors.orange).withOpacity(0.15),
+                  color: (_isLoggedIn ? Colors.green : Colors.orange).withValues(alpha: 38),
                   blurRadius: 12,
                   offset: const Offset(0, 4),
                 ),
@@ -1052,7 +1052,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
                   width: 36,
                   height: 36,
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
+                    color: Colors.white.withValues(alpha: 51),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(
@@ -1073,12 +1073,12 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
                       const SizedBox(height: 2),
                       Text(
                         _isLoggedIn ? '求助功能已解锁，保护自己从现在开始' : '紧急求助需要您的健康信息',
-                        style: TextStyle(color: Colors.white.withOpacity(0.85), fontSize: 12),
+                        style: TextStyle(color: Colors.white.withValues(alpha: 217), fontSize: 12),
                       ),
                     ],
                   ),
                 ),
-                Icon(Icons.chevron_right, color: Colors.white.withOpacity(0.6)),
+                Icon(Icons.chevron_right, color: Colors.white.withValues(alpha: 153)),
               ],
             ),
           ),
@@ -1098,7 +1098,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.12 : 0.04),
+            color: Colors.black.withAlpha(((isDark ? 0.12 : 0.04) * 255).round()),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -1160,7 +1160,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.15 : 0.04),
+            color: Colors.black.withAlpha(((isDark ? 0.15 : 0.04) * 255).round()),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -1176,7 +1176,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
             iconColor: Colors.purple.shade600,
             onTap: _showThemeSelector,
           ),
-          Container(width: 1, height: 36, color: isDark ? Colors.white.withOpacity(0.08) : Colors.grey.shade200),
+          Container(width: 1, height: 36, color: isDark ? Colors.white.withValues(alpha: 20) : Colors.grey.shade200),
           _buildQuickActionItem(
             icon: Icons.key_rounded,
             label: '安全码',
@@ -1189,7 +1189,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
               );
             },
           ),
-          Container(width: 1, height: 36, color: isDark ? Colors.white.withOpacity(0.08) : Colors.grey.shade200),
+          Container(width: 1, height: 36, color: isDark ? Colors.white.withValues(alpha: 20) : Colors.grey.shade200),
           _buildQuickActionItem(
             icon: Icons.feedback_rounded,
             label: '问题反馈',
@@ -1242,7 +1242,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
   // ==================== 表单区域 ====================
   Widget _buildFormSection(bool isDark) {
     final cardBg = ZaiNeColors.cardBg();
-    final borderColor = isDark ? Colors.white.withOpacity(0.08) : Colors.grey.shade100;
+    final borderColor = isDark ? Colors.white.withValues(alpha: 20) : Colors.grey.shade100;
     final labelColor = ZaiNeColors.textSecondary();
     final fieldBg = isDark ? const Color(0xFF1A1A2A) : const Color(0xFFFAFAFA);
 
@@ -1253,7 +1253,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.15 : 0.04),
+            color: Colors.black.withAlpha(((isDark ? 0.15 : 0.04) * 255).round()),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -1448,10 +1448,10 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFFF7F50).withOpacity(0.12) : Colors.transparent,
+          color: isSelected ? const Color(0xFFFF7F50).withValues(alpha: 31) : Colors.transparent,
           borderRadius: BorderRadius.circular(6),
           border: Border.all(
-            color: isSelected ? const Color(0xFFFF7F50) : (ZaiNeColors.scaffoldBg() == const Color(0xFF121212) ? Colors.white.withOpacity(0.12) : Colors.grey.shade300),
+            color: isSelected ? const Color(0xFFFF7F50) : (ZaiNeColors.scaffoldBg() == const Color(0xFF121212) ? Colors.white.withValues(alpha: 31) : Colors.grey.shade300),
           ),
         ),
         child: Text(
@@ -1477,7 +1477,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
     int? maxLines,
     String? Function(String?)? validator,
   }) {
-    final borderColor = ZaiNeColors.scaffoldBg() == const Color(0xFF121212) ? Colors.white.withOpacity(0.08) : Colors.grey.shade200;
+    final borderColor = ZaiNeColors.scaffoldBg() == const Color(0xFF121212) ? Colors.white.withValues(alpha: 20) : Colors.grey.shade200;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1496,7 +1496,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
             fillColor: fieldBg,
             prefixIcon: Container(
               margin: const EdgeInsets.all(10),
-              decoration: BoxDecoration(color: iconColor.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+              decoration: BoxDecoration(color: iconColor.withValues(alpha: 26), borderRadius: BorderRadius.circular(8)),
               child: Icon(icon, color: iconColor, size: 18),
             ),
             border: OutlineInputBorder(
@@ -1532,7 +1532,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFFFF7F50).withOpacity(0.3),
+              color: const Color(0xFFFF7F50).withValues(alpha: 76),
               blurRadius: 16,
               offset: const Offset(0, 6),
             ),
@@ -1576,7 +1576,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.12 : 0.04),
+            color: Colors.black.withAlpha(((isDark ? 0.12 : 0.04) * 255).round()),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -1585,7 +1585,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: isDark ? Colors.blue.shade900.withOpacity(0.15) : Colors.blue.shade50,
+          color: isDark ? Colors.blue.shade900.withValues(alpha: 38) : Colors.blue.shade50,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(

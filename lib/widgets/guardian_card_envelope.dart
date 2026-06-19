@@ -123,7 +123,7 @@ class _GuardianCardEnvelopeState extends State<GuardianCardEnvelope>
         y: random.nextDouble(),
         size: 4 + random.nextDouble() * 8,
         speed: 0.5 + random.nextDouble() * 1.5,
-        color: _theme.accentColor.withOpacity(0.3 + random.nextDouble() * 0.4),
+        color: _theme.accentColor.withValues(alpha: 0.3 + random.nextDouble() * 0.4),
         type: random.nextBool() ? _ParticleType.circle : _ParticleType.star,
       );
     });
@@ -222,7 +222,7 @@ class _GuardianCardEnvelopeState extends State<GuardianCardEnvelope>
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: _theme.primaryColor.withOpacity(0.2),
+                      color: _theme.primaryColor.withValues(alpha: 0.2),
                       blurRadius: 15,
                       offset: const Offset(0, 5),
                     ),
@@ -245,7 +245,7 @@ class _GuardianCardEnvelopeState extends State<GuardianCardEnvelope>
                     alignment: Alignment.topCenter,
                     transform: Matrix4.identity()
                       ..setEntry(3, 2, 0.001)
-                      ..translate(0.0, envelopeHeight - 240.0)
+                      ..translateByDouble(0.0, envelopeHeight - 240.0, 0.0, 1.0)
                       ..rotateX(angle),
                     child: CustomPaint(
                       size: const Size(envelopeWidth, 120),
@@ -283,7 +283,7 @@ class _GuardianCardEnvelopeState extends State<GuardianCardEnvelope>
     return _particles.map((p) {
       final x = p.x * width + (p.x - 0.5) * progress * 100;
       final y = p.y * height - progress * p.speed * 150;
-      final opacity = (1 - progress) * p.color.opacity;
+      final opacity = (1 - progress) * p.color.a;
 
       return Positioned(
         left: x,
@@ -291,12 +291,12 @@ class _GuardianCardEnvelopeState extends State<GuardianCardEnvelope>
         child: Opacity(
           opacity: opacity.clamp(0.0, 1.0),
           child: p.type == _ParticleType.star
-              ? Icon(Icons.star, size: p.size, color: p.color.withOpacity(1))
+              ? Icon(Icons.star, size: p.size, color: p.color.withValues(alpha: 1))
               : Container(
                   width: p.size,
                   height: p.size,
                   decoration: BoxDecoration(
-                    color: p.color.withOpacity(1),
+                    color: p.color.withValues(alpha: 1),
                     shape: BoxShape.circle,
                   ),
                 ),
@@ -315,7 +315,7 @@ class _GuardianCardEnvelopeState extends State<GuardianCardEnvelope>
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: _theme.sealColor.withOpacity(0.3),
+            color: _theme.sealColor.withValues(alpha: 0.3),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -335,10 +335,10 @@ class _GuardianCardEnvelopeState extends State<GuardianCardEnvelope>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.9),
+        color: Colors.white.withValues(alpha: 0.9),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: _theme.accentColor.withOpacity(0.3),
+          color: _theme.accentColor.withValues(alpha: 0.3),
           width: 1,
         ),
       ),
@@ -411,7 +411,7 @@ class EnvelopeFrontPainter extends CustomPainter {
 
     // 阴影线
     final strokePaint = Paint()
-      ..color = theme.primaryColor.withOpacity(0.1)
+      ..color = theme.primaryColor.withValues(alpha: 0.1)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.0;
     canvas.drawPath(path, strokePaint);
@@ -432,7 +432,7 @@ class EnvelopeFlapPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = isBackside ? theme.primaryColor.withOpacity(0.7) : theme.envelopeFlapColor
+      ..color = isBackside ? theme.primaryColor.withValues(alpha: 0.7) : theme.envelopeFlapColor
       ..style = PaintingStyle.fill;
 
     final path = Path()
@@ -446,7 +446,7 @@ class EnvelopeFlapPainter extends CustomPainter {
     // 装饰线条
     if (!isBackside) {
       final linePaint = Paint()
-        ..color = theme.accentColor.withOpacity(0.3)
+        ..color = theme.accentColor.withValues(alpha: 0.3)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2.0;
 
@@ -459,7 +459,7 @@ class EnvelopeFlapPainter extends CustomPainter {
 
       // 季节装饰线
       final decorPaint = Paint()
-        ..color = theme.accentColor.withOpacity(0.15)
+        ..color = theme.accentColor.withValues(alpha: 0.15)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.0;
 

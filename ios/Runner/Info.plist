@@ -39,10 +39,21 @@
 	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<false/>
+	</dict>
 	<key>NSCameraUsageDescription</key>
 	<string>在呢需要访问相机以扫描二维码添加联系人。</string>
 	<key>NSContactsUsageDescription</key>
 	<string>在呢需要访问您的通讯录，以便添加紧急联系人。</string>
+	<key>NSHealthClinicalHealthRecordsShareUsageDescription</key>
+	<string>在呢需要读取您的健康记录（步数、心率、血氧、睡眠），以便在紧急情况下向守护人展示您的健康状况。</string>
+	<key>NSHealthShareUsageDescription</key>
+	<string>在呢需要同步您的健康数据（心率、血氧、睡眠、经期等），以实现生命体征守护功能。</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>在呢需要读取您的健康数据，以实现自动平安签到和经期跟踪功能。</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>在呢需要始终获取您的位置，以便在紧急情况下向您的联系人发送您的位置信息。</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
@@ -51,10 +62,6 @@
 	<string>在呢需要在紧急情况下拨打您的紧急联系人。</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>在呢需要访问相册以选择联系人头像。</string>
-	<key>NSHealthShareUsageDescription</key>
-	<string>在呢需要同步您的健康数据（心率、血氧、睡眠、经期等），以实现生命体征守护功能。</string>
-	<key>NSHealthUpdateUsageDescription</key>
-	<string>在呢需要读取您的健康数据，以实现自动平安签到和经期跟踪功能。</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
@@ -81,6 +88,7 @@
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>
+		<string>fetch</string>
 	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>

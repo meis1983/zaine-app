@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/theme_helper.dart';
 import 'dart:math' as math;
 import '../widgets/guardian_card_envelope.dart';
 
@@ -59,9 +60,9 @@ class _PromotionalShowcasePageState extends State<PromotionalShowcasePage> with 
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 _buildStepIndicator(0),
-                const SizedBox(width: 12),
+                const SizedBox(width: ZaiNeSpacing.md),
                 _buildStepIndicator(1),
-                const SizedBox(width: 12),
+                const SizedBox(width: ZaiNeSpacing.md),
                 _buildStepIndicator(2),
               ],
             ),
@@ -129,14 +130,14 @@ class _PromotionalShowcasePageState extends State<PromotionalShowcasePage> with 
 
   // 步骤 0: 3D 信封开启
   Widget _buildEnvelopeStep() {
-    return Column(
+    return const Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const Text(
+        Text(
           '跨越距离的温情传递',
-          style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 2),
+          style: TextStyle(color: Colors.white, fontSize: ZaiNeFontSize.title, fontWeight: FontWeight.bold, letterSpacing: 2),
         ),
-        const SizedBox(height: 40),
+        SizedBox(height: ZaiNeSpacing.xxl),
         GuardianCardEnvelope(
           senderName: '梅先生',
           message: '见字如面，愿你平安喜乐。',
@@ -152,20 +153,20 @@ class _PromotionalShowcasePageState extends State<PromotionalShowcasePage> with 
   // 步骤 1: 健康体征飞入
   Widget _buildHealthStep() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 30),
+      padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.xxl),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           const Text(
             '全天候生命体征守护',
-            style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 2),
+            style: TextStyle(color: Colors.white, fontSize: ZaiNeFontSize.title, fontWeight: FontWeight.bold, letterSpacing: 2),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: ZaiNeSpacing.md),
           const Text(
             '心率、血压、睡眠，一切尽在掌握',
-            style: TextStyle(color: Colors.white70, fontSize: 14),
+            style: TextStyle(color: Colors.white70, fontSize: ZaiNeFontSize.bodySm),
           ),
-          const SizedBox(height: 40),
+          const SizedBox(height: ZaiNeSpacing.xxl),
           _buildHealthGrid(),
         ],
       ),
@@ -201,17 +202,17 @@ class _PromotionalShowcasePageState extends State<PromotionalShowcasePage> with 
             child: Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: color.withOpacity(0.3)),
+                color: Colors.white.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(ZaiNeRadius.card),
+                border: Border.all(color: color.withValues(alpha: 0.3)),
               ),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(icon, color: color, size: 24),
-                  const SizedBox(height: 8),
-                  Text(value, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
-                  Text(title, style: TextStyle(color: Colors.white70, fontSize: 12)),
+                  const SizedBox(height: ZaiNeSpacing.sm),
+                  Text(value, style: const TextStyle(color: Colors.white, fontSize: ZaiNeFontSize.title, fontWeight: FontWeight.bold)),
+                  Text(title, style: const TextStyle(color: Colors.white70, fontSize: ZaiNeFontSize.caption)),
                 ],
               ),
             ),
@@ -228,14 +229,14 @@ class _PromotionalShowcasePageState extends State<PromotionalShowcasePage> with 
       children: [
         const Text(
           '你的专属安全网络',
-          style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 2),
+          style: TextStyle(color: Colors.white, fontSize: ZaiNeFontSize.title, fontWeight: FontWeight.bold, letterSpacing: 2),
         ),
-        const SizedBox(height: 40),
+        const SizedBox(height: ZaiNeSpacing.xxl),
         _buildGuardianCircle(),
-        const SizedBox(height: 40),
+        const SizedBox(height: ZaiNeSpacing.xxl),
         const Text(
           '紧急时刻，自动通知所有守护者',
-          style: TextStyle(color: Colors.white70, fontSize: 14),
+          style: TextStyle(color: Colors.white70, fontSize: ZaiNeFontSize.bodySm),
         ),
       ],
     );
@@ -249,8 +250,8 @@ class _PromotionalShowcasePageState extends State<PromotionalShowcasePage> with 
         alignment: Alignment.center,
         children: [
           // 呼吸光晕
-          _buildPulseCircle(260, Colors.orange.withOpacity(0.1)),
-          _buildPulseCircle(200, Colors.orange.withOpacity(0.2)),
+          _buildPulseCircle(260, Colors.orange.withValues(alpha: 0.1)),
+          _buildPulseCircle(200, Colors.orange.withValues(alpha: 0.2)),
           
           // 中心用户
           Container(

@@ -1,5 +1,6 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'api/auth_service.dart';
 import 'api/card_service.dart';
 
 /// 守护卡服务 — 管理守护卡额度（v2.0 单池模型）
@@ -52,7 +53,7 @@ class GuardianCardService {
       await prefs.setString(firstLaunchKey, today);
       // 使用用户特定的键存储额度（新用户初始 3 张）
       await prefs.setInt('guardian_card_gift_remaining_$syncId', giftCardCount);
-      debugPrint('[GuardianCard] 新用户赠送 $giftCardCount 张守护卡 (syncId=$syncId)');
+      if (kDebugMode) debugPrint('[GuardianCard] 新用户赠送 $giftCardCount 张守护卡 (syncId=$syncId)');
       // 不再立即调用 syncQuotaFromBackend()，避免后端返回 0 覆盖本地值
     }
   }
@@ -78,7 +79,7 @@ class GuardianCardService {
     final giftKey = 'guardian_card_gift_remaining_$syncId';
     final remaining = prefs.getInt(giftKey) ?? 0;
     await prefs.setInt(giftKey, remaining + 1);
-    debugPrint('[GuardianCard] 裂变解锁 +1 张，当前剩余: ${remaining + 1} (syncId=$syncId)');
+    if (kDebugMode) debugPrint('[GuardianCard] 裂变解锁 +1 张，当前剩余: ${remaining + 1} (syncId=$syncId)');
   }
 
   /// 获取已发送的守护卡列表
@@ -132,22 +133,22 @@ class GuardianCardService {
     // 原因：新安装/清缓存后 SharedPreferences 为0，但后端有额度
     // 后端是权威源，以后端返回为准
 
-    // 【修复 v1.9.6】发请求前先检查 token 是否存在，避免无意义请求
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('auth_token');
+    // 【修复 v1.75.0】发请求前先检查 token 是否存在，避免无意义请求
+    // 使用 AuthService.getToken() 统一获取（支持 Keychain + SP 多重来源）
+    final token = await AuthService.getToken();
     if (token == null || token.isEmpty) {
-      debugPrint('[GuardianCard] auth_token 不存在，判定为未登录');
+      if (kDebugMode) debugPrint('[GuardianCard] token 不存在，判定为未登录');
       return {'success': false, 'error': 'not_logged_in'};
     }
 
-    debugPrint('[GuardianCard] 准备发送守护卡：message=$message, recipientName=$recipientName');
+    if (kDebugMode) debugPrint('[GuardianCard] 准备发送守护卡：message=$message, recipientName=$recipientName');
 
     final res = await CardService.sendCard(
       message: message,
       recipientName: recipientName,
     );
 
-    debugPrint('[GuardianCard] 后端返回：$res');
+    if (kDebugMode) debugPrint('[GuardianCard] 后端返回：$res');
 
     if (res['success'] == true) {
       // 【修复 v1.9.5】后端已扣减 available_cards，直接使用返回值更新本地缓存
@@ -156,7 +157,7 @@ class GuardianCardService {
       final newAvailable = backendAvailable ?? (await getGiftRemaining());
       await updateLocalCache(newAvailable);
 
-      debugPrint('[GuardianCard] 发卡成功，剩余: $newAvailable 张');
+      if (kDebugMode) debugPrint('[GuardianCard] 发卡成功，剩余: $newAvailable 张');
 
       return {
         'success': true,
@@ -167,12 +168,12 @@ class GuardianCardService {
     } else if (res['offline'] == true) {
       // 【修复】离线模式：仅本地记录，不扣减余额
       // 联网后 syncQuotaFromBackend() 会同步后端真实状态
-      debugPrint('[GuardianCard] 离线模式：本地记录发卡请求');
+      if (kDebugMode) debugPrint('[GuardianCard] 离线模式：本地记录发卡请求');
       return {'success': true, 'cardCode': '', 'shareUrl': '', 'offline': true};
     } else {
       // 发卡失败（后端返回 success=false）
-      debugPrint('[GuardianCard] 后端发卡失败: ${res['error'] ?? res['message']}');
-      debugPrint('[GuardianCard] 完整响应: $res');
+      if (kDebugMode) debugPrint('[GuardianCard] 后端发卡失败: ${res['error'] ?? res['message']}');
+      if (kDebugMode) debugPrint('[GuardianCard] 完整响应: $res');
 
       // 【新增 v1.9.6】拦截 422 + missing Authorization → 未登录
       // 兜底保护：防止后端 Header 必填校验导致 422 而非 401
@@ -183,7 +184,7 @@ class GuardianCardService {
             detail.any((e) => (e is Map) &&
                 (e['loc'] as List?)?.contains('Authorization') == true);
         if (isMissingAuth) {
-          debugPrint('[GuardianCard] 422 missing Authorization，判定为未登录');
+          if (kDebugMode) debugPrint('[GuardianCard] 422 missing Authorization，判定为未登录');
           return {'success': false, 'error': 'not_logged_in'};
         }
       }
@@ -193,7 +194,7 @@ class GuardianCardService {
       if (statusCode == 401) {
         final detail = res['detail'];
         if (detail != null) {
-          debugPrint('[GuardianCard] 401 + detail，判定为未登录/Token失效');
+          if (kDebugMode) debugPrint('[GuardianCard] 401 + detail，判定为未登录/Token失效');
           return {'success': false, 'error': 'not_logged_in'};
         }
       }
@@ -208,7 +209,7 @@ class GuardianCardService {
     final prefs = await SharedPreferences.getInstance();
     final syncId = await _getCurrentSyncIdAsync();
     await prefs.setInt('guardian_card_gift_remaining_$syncId', availableCards);
-    debugPrint('[GuardianCard] updateLocalCache: $availableCards 张 (syncId=$syncId)');
+    if (kDebugMode) debugPrint('[GuardianCard] updateLocalCache: $availableCards 张 (syncId=$syncId)');
   }
 
   /// 启动时从后端同步额度
@@ -223,12 +224,12 @@ class GuardianCardService {
         if (stats != null) {
           final backendAvailable = (stats['available_cards'] as int?) ?? 0;
           await updateLocalCache(backendAvailable);
-          debugPrint('[GuardianCard] syncQuotaFromBackend (card/list): $backendAvailable 张');
+          if (kDebugMode) debugPrint('[GuardianCard] syncQuotaFromBackend (card/list): $backendAvailable 张');
           return backendAvailable;
         }
       }
     } catch (e) {
-      debugPrint('[GuardianCard] syncQuotaFromBackend (card/list) 失败: $e');
+      if (kDebugMode) debugPrint('[GuardianCard] syncQuotaFromBackend (card/list) 失败: $e');
     }
 
     // 方案2：备用 /invite/stats
@@ -237,18 +238,18 @@ class GuardianCardService {
       if (res['success'] == true) {
         final backendAvailable = (res['available_cards'] as int?) ?? 0;
         await updateLocalCache(backendAvailable);
-        debugPrint('[GuardianCard] syncQuotaFromBackend (invite/stats): $backendAvailable 张');
+        if (kDebugMode) debugPrint('[GuardianCard] syncQuotaFromBackend (invite/stats): $backendAvailable 张');
         return backendAvailable;
       }
     } catch (e) {
-      debugPrint('[GuardianCard] syncQuotaFromBackend (invite/stats) 失败: $e');
+      if (kDebugMode) debugPrint('[GuardianCard] syncQuotaFromBackend (invite/stats) 失败: $e');
     }
 
     // 失败时返回本地缓存值
     final prefs = await SharedPreferences.getInstance();
     final syncId = await _getCurrentSyncIdAsync();
     final cached = prefs.getInt('guardian_card_gift_remaining_$syncId') ?? 0;
-    debugPrint('[GuardianCard] syncQuotaFromBackend 失败，使用本地缓存: $cached 张 (syncId=$syncId)');
+    if (kDebugMode) debugPrint('[GuardianCard] syncQuotaFromBackend 失败，使用本地缓存: $cached 张 (syncId=$syncId)');
     return cached;
   }
 

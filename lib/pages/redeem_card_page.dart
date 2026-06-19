@@ -2,7 +2,6 @@
 // 输入守护码兑换页面 — 安全码兜底绑定方案
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import '../theme/theme_helper.dart';
 import '../services/api/card_service.dart';
 import '../services/api/sync_service.dart';
@@ -79,7 +78,7 @@ class _RedeemCardPageState extends State<RedeemCardPage> {
       context: context,
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.card)),
         contentPadding: const EdgeInsets.all(24),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -88,31 +87,31 @@ class _RedeemCardPageState extends State<RedeemCardPage> {
               width: 64,
               height: 64,
               decoration: BoxDecoration(
-                color: const Color(0xFFFF7F50).withOpacity(0.1),
+                color: const Color(0xFFFF7F50).withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.check_circle, color: Color(0xFFFF7F50), size: 36),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: ZaiNeSpacing.xl),
             Text(
               '守护关系已建立',
               style: TextStyle(
-                fontSize: 18,
+                fontSize: ZaiNeFontSize.subtitle,
                 fontWeight: FontWeight.bold,
                 color: ZaiNeColors.textPrimary(),
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: ZaiNeSpacing.md),
             Text(
               '你已成为 $senderName 的守护人\n你们可以互相守护彼此的安全',
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 14,
+                fontSize: ZaiNeFontSize.bodySm,
                 color: ZaiNeColors.textSecondary(),
                 height: 1.5,
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: ZaiNeSpacing.xl),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
@@ -126,15 +125,15 @@ class _RedeemCardPageState extends State<RedeemCardPage> {
                   }
                   if (!context.mounted) return;
                   Navigator.of(ctx).pop();
-                  Navigator.of(context).pop(); // 返回上一页
+                  if (mounted) Navigator.of(context).pop(); // 返回上一页
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFFF7F50),
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.small)),
+                  padding: const EdgeInsets.symmetric(vertical: ZaiNeSpacing.lg),
                 ),
-                child: const Text('知道了', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                child: const Text('知道了', style: TextStyle(fontSize: ZaiNeFontSize.body, fontWeight: FontWeight.w600)),
               ),
             ),
           ],
@@ -171,18 +170,18 @@ class _RedeemCardPageState extends State<RedeemCardPage> {
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: const Color(0xFFFFF5F0),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: const Color(0xFFFF7F50).withOpacity(0.2)),
+                  borderRadius: BorderRadius.circular(ZaiNeRadius.card),
+                  border: Border.all(color: const Color(0xFFFF7F50).withValues(alpha: 0.2)),
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.info_outline, size: 20, color: const Color(0xFFFF7F50)),
-                    const SizedBox(width: 10),
+                    const Icon(Icons.info_outline, size: 20, color: Color(0xFFFF7F50)),
+                    const SizedBox(width: ZaiNeSpacing.md),
                     Expanded(
                       child: Text(
                         '如果有人发给你守护卡，但你无法扫码或打开链接，可以在这里输入安全码完成绑定',
                         style: TextStyle(
-                          fontSize: 13,
+                          fontSize: ZaiNeFontSize.caption,
                           color: Colors.grey.shade700,
                           height: 1.5,
                         ),
@@ -191,24 +190,24 @@ class _RedeemCardPageState extends State<RedeemCardPage> {
                   ],
                 ),
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: ZaiNeSpacing.xxl),
 
               // 输入框
               Text(
                 '守护安全码',
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: ZaiNeFontSize.bodySm,
                   fontWeight: FontWeight.w600,
                   color: ZaiNeColors.textPrimary(),
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: ZaiNeSpacing.md),
               TextField(
                 controller: _codeController,
                 textCapitalization: TextCapitalization.characters,
                 maxLength: 16,
                 style: const TextStyle(
-                  fontSize: 20,
+                  fontSize: ZaiNeFontSize.title,
                   fontWeight: FontWeight.bold,
                   letterSpacing: 3,
                   fontFamily: 'Courier',
@@ -216,34 +215,34 @@ class _RedeemCardPageState extends State<RedeemCardPage> {
                 decoration: InputDecoration(
                   hintText: '例如: ABC123',
                   hintStyle: TextStyle(
-                    fontSize: 20,
-                    color: Colors.grey.shade400,
+                    fontSize: ZaiNeFontSize.title,
+                    color: ZaiNeColors.textHint(),
                     letterSpacing: 3,
                   ),
                   filled: true,
                   fillColor: Colors.white,
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
+                    borderRadius: BorderRadius.circular(ZaiNeRadius.card),
+                    borderSide: BorderSide(color: ZaiNeColors.borderColor()),
                   ),
                   enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
+                    borderRadius: BorderRadius.circular(ZaiNeRadius.card),
+                    borderSide: BorderSide(color: ZaiNeColors.borderColor()),
                   ),
                   focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(ZaiNeRadius.card),
                     borderSide: const BorderSide(color: Color(0xFFFF7F50), width: 1.5),
                   ),
                   errorText: _errorText,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.xl, vertical: ZaiNeSpacing.lg),
                   counterText: '',
                 ),
                 onSubmitted: (_) => _redeem(),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: ZaiNeSpacing.sm),
               Text(
                 '安全码由发卡人提供，通常在守护卡卡片上显示',
-                style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                style: TextStyle(fontSize: ZaiNeFontSize.caption, color: ZaiNeColors.textSecondary()),
               ),
 
               const Spacer(),
@@ -257,7 +256,7 @@ class _RedeemCardPageState extends State<RedeemCardPage> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFFF7F50),
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.card)),
                     elevation: 4,
                   ),
                   child: _isLoading
@@ -268,11 +267,11 @@ class _RedeemCardPageState extends State<RedeemCardPage> {
                         )
                       : const Text(
                           '确认绑定',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                          style: TextStyle(fontSize: ZaiNeFontSize.body, fontWeight: FontWeight.w600),
                         ),
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: ZaiNeSpacing.xl),
             ],
           ),
         ),

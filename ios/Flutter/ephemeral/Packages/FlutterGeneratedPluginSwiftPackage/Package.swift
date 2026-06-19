@@ -9,7 +9,7 @@ import PackageDescription
 let package = Package(
     name: "FlutterGeneratedPluginSwiftPackage",
     platforms: [
-        .iOS("16.0")
+        .iOS("13.0")
     ],
     products: [
         .library(name: "FlutterGeneratedPluginSwiftPackage", type: .static, targets: ["FlutterGeneratedPluginSwiftPackage"])
@@ -17,6 +17,7 @@ let package = Package(
     dependencies: [
         .package(name: "watch_connectivity", path: "../.packages/watch_connectivity-0.2.8"),
         .package(name: "url_launcher_ios", path: "../.packages/url_launcher_ios-6.4.1"),
+        .package(name: "sqflite_darwin", path: "../.packages/sqflite_darwin-2.4.3"),
         .package(name: "shared_preferences_foundation", path: "../.packages/shared_preferences_foundation-2.5.6"),
         .package(name: "permission_handler_apple", path: "../.packages/permission_handler_apple-9.4.9"),
         .package(name: "package_info_plus", path: "../.packages/package_info_plus-8.3.1"),
@@ -33,6 +34,7 @@ let package = Package(
             dependencies: [
                 .product(name: "watch-connectivity", package: "watch_connectivity"),
                 .product(name: "url-launcher-ios", package: "url_launcher_ios"),
+                .product(name: "sqflite-darwin", package: "sqflite_darwin"),
                 .product(name: "shared-preferences-foundation", package: "shared_preferences_foundation"),
                 .product(name: "permission-handler-apple", package: "permission_handler_apple"),
                 .product(name: "package-info-plus", package: "package_info_plus"),

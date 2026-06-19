@@ -78,9 +78,9 @@ class MembershipService {
       await prefs.setInt(_keyAutoCallLimit, autoCallLimit);
       await prefs.setInt(_keyMaxContacts, maxContacts);
 
-      debugPrint('[Membership] 同步会员信息: level=$level, autoCallLimit=$autoCallLimit, maxContacts=$maxContacts');
+      if (kDebugMode) debugPrint('[Membership] 同步会员信息: level=$level, autoCallLimit=$autoCallLimit, maxContacts=$maxContacts');
     } catch (e) {
-      debugPrint('[Membership] 同步会员信息失败: $e');
+      if (kDebugMode) debugPrint('[Membership] 同步会员信息失败: $e');
     }
   }
 
@@ -93,9 +93,9 @@ class MembershipService {
       _cachedAutoCallLimit = prefs.getInt(_keyAutoCallLimit) ?? 0;
       _cachedMaxContacts = prefs.getInt(_keyMaxContacts) ?? 0;
 
-      debugPrint('[Membership] 从本地加载: level=$_cachedLevel, autoCallLimit=$_cachedAutoCallLimit');
+      if (kDebugMode) debugPrint('[Membership] 从本地加载: level=$_cachedLevel, autoCallLimit=$_cachedAutoCallLimit');
     } catch (e) {
-      debugPrint('[Membership] 加载本地会员信息失败: $e');
+      if (kDebugMode) debugPrint('[Membership] 加载本地会员信息失败: $e');
     }
   }
 
@@ -116,7 +116,7 @@ class MembershipService {
     await prefs.setInt(_keyAutoCallLimit, _cachedAutoCallLimit);
     await prefs.setInt(_keyMaxContacts, _cachedMaxContacts);
 
-    debugPrint('[Membership] 开发者模式切换: level=$level');
+    if (kDebugMode) debugPrint('[Membership] 开发者模式切换: level=$level');
   }
 
   /// 清除会员信息（退出登录时调用）

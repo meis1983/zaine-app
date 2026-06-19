@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/theme_helper.dart';
 import '../services/social/guardian_message_service.dart';
 import '../widgets/guardian_message_board.dart';
 import '../widgets/emoji_interaction_picker.dart';
@@ -40,11 +41,11 @@ class _SocialPageState extends State<SocialPage> with SingleTickerProviderStateM
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: ZaiNeColors.scaffoldBg(),
       appBar: AppBar(
         title: const Text('社交互动'),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black87,
+        backgroundColor: ZaiNeColors.cardBg(),
+        foregroundColor: ZaiNeColors.textPrimary(),
         elevation: 0,
         bottom: TabBar(
           controller: _tabController,
@@ -144,7 +145,7 @@ class _MessagesTabState extends State<_MessagesTab> {
             : RefreshIndicator(
                 onRefresh: _loadMessages,
                 child: ListView.builder(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  padding: const EdgeInsets.symmetric(vertical: ZaiNeSpacing.sm),
                   itemCount: _messages.length,
                   itemBuilder: (context, index) {
                     final message = _messages[index];
@@ -162,23 +163,23 @@ class _MessagesTabState extends State<_MessagesTab> {
           Icon(
             Icons.chat_bubble_outline,
             size: 80,
-            color: Colors.grey.shade300,
+            color: ZaiNeColors.textHint(),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: ZaiNeSpacing.xl),
           Text(
             '暂无消息',
             style: TextStyle(
-              fontSize: 18,
-              color: Colors.grey.shade500,
+              fontSize: ZaiNeFontSize.subtitle,
+              color: ZaiNeColors.textSecondary(),
               fontWeight: FontWeight.w500,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: ZaiNeSpacing.sm),
           Text(
             '开始和守护你的人互动吧~',
             style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey.shade400,
+              fontSize: ZaiNeFontSize.bodySm,
+              color: ZaiNeColors.textHint(),
             ),
           ),
         ],
@@ -188,22 +189,22 @@ class _MessagesTabState extends State<_MessagesTab> {
 
   Widget _buildMessageListItem(GuardianMessage message) {
     return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      margin: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.lg, vertical: ZaiNeSpacing.sm),
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: Colors.grey.shade200),
+        borderRadius: BorderRadius.circular(ZaiNeRadius.card),
+        side: BorderSide(color: ZaiNeColors.borderColor()),
       ),
       child: InkWell(
         onTap: () => _openMessageBoard(message.senderId, message.senderName),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(ZaiNeRadius.card),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Row(
             children: [
               // 头像
               _buildAvatar(message),
-              const SizedBox(width: 12),
+              const SizedBox(width: ZaiNeSpacing.md),
               // 内容
               Expanded(
                 child: Column(
@@ -216,24 +217,24 @@ class _MessagesTabState extends State<_MessagesTab> {
                             message.senderName,
                             style: const TextStyle(
                               fontWeight: FontWeight.bold,
-                              fontSize: 15,
+                              fontSize: ZaiNeFontSize.body,
                             ),
                           ),
                         ),
                         Text(
                           _formatTime(message.createdAt),
                           style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey.shade400,
+                            fontSize: ZaiNeFontSize.caption,
+                            color: ZaiNeColors.textHint(),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: ZaiNeSpacing.xs),
                     Text(
                       _getMessagePreview(message),
                       style: TextStyle(
-                        fontSize: 13,
+                        fontSize: ZaiNeFontSize.caption,
                         color: Colors.grey.shade600,
                       ),
                       maxLines: 1,
@@ -242,7 +243,7 @@ class _MessagesTabState extends State<_MessagesTab> {
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: ZaiNeSpacing.sm),
               // 未读标记
               if (!message.isRead)
                 Container(
@@ -291,14 +292,15 @@ class _MessagesTabState extends State<_MessagesTab> {
       width: 50,
       height: 50,
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(14),
-      ),
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(ZaiNeRadius.card),
+      
+        boxShadow: ZaiNeShadows.card,),
       child: Center(
         child: message.type == MessageType.emoji && message.emojiCode != null
             ? Text(
                 message.emojiCode!,
-                style: const TextStyle(fontSize: 24),
+                style: const TextStyle(fontSize: ZaiNeFontSize.title),
               )
             : Icon(icon, color: color, size: 24),
       ),
@@ -424,14 +426,14 @@ class _EmojisTabState extends State<_EmojisTab> {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (index > 0) const SizedBox(height: 16),
+              if (index > 0) const SizedBox(height: ZaiNeSpacing.lg),
               // 日期标题
               Padding(
                 padding: const EdgeInsets.only(bottom: 12),
                 child: Text(
                   entry.key,
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: ZaiNeFontSize.bodySm,
                     fontWeight: FontWeight.w600,
                     color: Colors.grey.shade600,
                   ),
@@ -460,23 +462,23 @@ class _EmojisTabState extends State<_EmojisTab> {
           Icon(
             Icons.emoji_emotions_outlined,
             size: 80,
-            color: Colors.grey.shade300,
+            color: ZaiNeColors.textHint(),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: ZaiNeSpacing.xl),
           Text(
             '还没有收到表情',
             style: TextStyle(
-              fontSize: 18,
-              color: Colors.grey.shade500,
+              fontSize: ZaiNeFontSize.subtitle,
+              color: ZaiNeColors.textSecondary(),
               fontWeight: FontWeight.w500,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: ZaiNeSpacing.sm),
           Text(
             '守护你的人会发送表情给你~',
             style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey.shade400,
+              fontSize: ZaiNeFontSize.bodySm,
+              color: ZaiNeColors.textHint(),
             ),
           ),
         ],
@@ -490,11 +492,11 @@ class _EmojisTabState extends State<_EmojisTab> {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
+        borderRadius: BorderRadius.circular(ZaiNeRadius.card),
+        border: Border.all(color: ZaiNeColors.borderColor()),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -504,13 +506,13 @@ class _EmojisTabState extends State<_EmojisTab> {
         children: [
           Text(
             emoji.emojiCode,
-            style: const TextStyle(fontSize: 36),
+            style: const TextStyle(fontSize: ZaiNeFontSize.title),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: ZaiNeSpacing.sm),
           Text(
             emoji.senderName,
             style: TextStyle(
-              fontSize: 12,
+              fontSize: ZaiNeFontSize.caption,
               color: Colors.grey.shade600,
             ),
             maxLines: 1,
@@ -519,8 +521,8 @@ class _EmojisTabState extends State<_EmojisTab> {
           Text(
             _formatTime(emoji.createdAt),
             style: TextStyle(
-              fontSize: 10,
-              color: Colors.grey.shade400,
+              fontSize: ZaiNeFontSize.micro,
+              color: ZaiNeColors.textHint(),
             ),
           ),
         ],
