@@ -217,25 +217,31 @@ class _SubscriptionPageState extends State<SubscriptionPage>
         if (verifyResult['success'] == true) {
           await MembershipService.syncFromLoginResponse(verifyResult);
           await _loadSubscriptionStatus();
+          // ✅ 验证成功，标记交易完成（StoreKit 2 规范）
+          IapService().completePurchase(result.purchaseDetails);
           if (mounted) {
-            UpgradeCelebration.show(context);
+            setState(() => _isPurchasing = false);  // ✅ 先停 loading
+            UpgradeCelebration.show(context);            // ✅ 再弹庆祝
           }
         } else {
           setState(() {
             _errorMessage = verifyResult['detail']?.toString() ?? '验证失败，请联系客服';
+            _isPurchasing = false;
           });
+          // ⚠️ 验证失败，不调 completePurchase，让交易重试
         }
       } catch (e) {
-        setState(() => _errorMessage = '验证失败：$e');
+        setState(() {
+          _errorMessage = '验证失败：$e';
+          _isPurchasing = false;
+        });
+        // ⚠️ 异常，不调 completePurchase，让交易重试
       }
     } else {
       setState(() {
         _errorMessage = result.error ?? '购买已取消';
+        _isPurchasing = false;
       });
-    }
-
-    if (mounted) {
-      setState(() => _isPurchasing = false);
     }
   }
 
