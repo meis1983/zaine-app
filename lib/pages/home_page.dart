@@ -424,7 +424,17 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   }
 
   Future<void> _handleCheckIn() async {
-    if (_checkedInToday) {
+    // 【修复 v1.83.0】双重防重复签到：
+    // 1. 内存状态 _checkedInToday
+    // 2. 本地存储 last_check_in_date（防止 Widget 重建后内存状态丢失导致重复签到）
+    final guardPrefs = await SharedPreferences.getInstance();
+    final guardUid = (await AuthService.getUserId()) ?? '';
+    final guardLastDateKey = guardUid.isNotEmpty ? 'last_check_in_date_$guardUid' : 'last_check_in_date';
+    final guardToday = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final guardLastDate = guardPrefs.getString(guardLastDateKey);
+    final alreadyCheckedLocally = guardLastDate == guardToday;
+
+    if (_checkedInToday || alreadyCheckedLocally) {
       // 【修复 v1.9.72】服务端 UTC 时间与本地 UTC+8 可能存在日期偏差
       // 导致 _checkedInToday 被误设为 true，用户点击"签到"却无响应
       // 改为：仍弹出庆祝弹窗，不让用户体验断掉

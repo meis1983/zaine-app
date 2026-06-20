@@ -65,6 +65,9 @@ class _LoginPageState extends State<_LoginPage>
   bool _hasPendingCard = false; // 是否有 deep link 带来的 pending card
   bool _isCheckingPending = true; // 正在检测中
 
+  // 【修复 v1.83.0】记录用户选择的国家/地区，避免选择后仍显示 +86
+  PhoneNumber _selectedNumber = PhoneNumber(isoCode: 'CN', dialCode: '+86');
+
   @override
   void initState() {
     super.initState();
@@ -202,7 +205,7 @@ class _LoginPageState extends State<_LoginPage>
 
           const SizedBox(height: ZaiNeSpacing.xl),
 
-          // 国际手机号输入框
+          // 国际手机号输入框（v1.83.0 优化：选择生效 + 视觉优化）
           Listener(
             onPointerDown: (_) {
               widget.onPhoneChanged?.call();
@@ -219,59 +222,73 @@ class _LoginPageState extends State<_LoginPage>
                       offset: const Offset(0, 2)),
                 ],
               ),
-              child: InternationalPhoneNumberInput(
-                onInputChanged: (PhoneNumber number) {
-                  widget.onPhoneChanged?.call();
-                },
-                selectorConfig: const SelectorConfig(
-                  selectorType: PhoneInputSelectorType.DIALOG,  // 【修复 v1.81.0】改用 Dialog，解决底部弹窗无法选择的问题
-                  showFlags: true,
-                  useEmoji: true,
-                ),
-                ignoreBlank: false,
-                autoValidateMode: AutovalidateMode.disabled,
-                selectorTextStyle: TextStyle(
-                    fontSize: ZaiNeFontSize.body,
-                    color: ZaiNeColors.textPrimary()),
-                textFieldController: widget.phoneController,
-                formatInput: true,
-                keyboardType: TextInputType.phone,
-                inputBorder: InputBorder.none,
-                hintText: '请输入手机号',
-                maxLength: 15,
-                countries: const [
-                  'CN', 'US', 'JP', 'KR', 'SG', 'HK', 'TW', 'MO',
-                  'GB', 'DE', 'FR', 'IT', 'ES', 'PT', 'NL', 'SE', 'NO', 'DK',
-                  'AU', 'NZ', 'CA', 'MY', 'TH', 'VN', 'PH', 'ID', 'IN',
-                  'BR', 'MX', 'AR', 'CL', 'CO', 'PE', 'ZA', 'EG', 'NG',
+              // 【v1.83.0】Stack 叠加下拉箭头，让用户一眼看出可选择国家
+              child: Stack(
+                alignment: Alignment.centerLeft,
+                children: [
+                  // 主输入框（含国旗+区号）
+                  Padding(
+                    padding: const EdgeInsets.only(right: 32),  // 给箭头留空间
+                    child: InternationalPhoneNumberInput(
+                      onInputChanged: (PhoneNumber number) {
+                        // 【修复 v1.83.0】保存用户选择到 state，选择后正确回显
+                        setState(() => _selectedNumber = number);
+                        widget.onPhoneChanged?.call();
+                      },
+                      selectorConfig: SelectorConfig(
+                        selectorType: PhoneInputSelectorType.DIALOG,
+                        showFlags: true,
+                        useEmoji: true,
+                        leadingPadding: 12,   // 国旗不贴边
+                        trailingSpace: false,  // 不自动补空格，由我们控制
+                      ),
+                      ignoreBlank: false,
+                      autoValidateMode: AutovalidateMode.disabled,
+                      initialValue: _selectedNumber,  // 【修复】state 驱动，选择即生效
+                      textFieldController: widget.phoneController,
+                      formatInput: true,
+                      keyboardType: TextInputType.phone,
+                      inputBorder: InputBorder.none,
+                      hintText: '请输入手机号',
+                      maxLength: 15,
+                      countries: const [
+                        'CN', 'US', 'JP', 'KR', 'SG', 'HK', 'TW', 'MO',
+                        'GB', 'DE', 'FR', 'IT', 'ES', 'PT', 'NL', 'SE', 'NO', 'DK',
+                        'AU', 'NZ', 'CA', 'MY', 'TH', 'VN', 'PH', 'ID', 'IN',
+                        'BR', 'MX', 'AR', 'CL', 'CO', 'PE', 'ZA', 'EG', 'NG',
+                      ],
+                    ),
+                  ),
+                  // 下拉箭头 ▼（叠加在区号右侧，品牌橙色醒目提示）
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    top: 0,
+                    bottom: 0,
+                    child: IgnorePointer(
+                      // 让点击穿透到下面的 selector 按钮
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 70, right: 8),
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: Icon(
+                            Icons.keyboard_arrow_down,
+                            size: 22,
+                            color: ZaiNeColors.brandOrange,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
-                initialValue: PhoneNumber(isoCode: 'CN'),
               ),
             ),
           ),
 
-          // 提示文字
-          const SizedBox(height: ZaiNeSpacing.lg),  // 【修复 v1.81.0】增加间距
-          Text(
-            '支持全球手机号注册登录',
-            style: TextStyle(
-                fontSize: ZaiNeFontSize.caption,
-                color: ZaiNeColors.textHint()),
-            textAlign: TextAlign.center,
-          ),
+          // 【v1.83.0 已移除】提示文字——国旗旁已加 ▼ 箭头，用户一目了然
 
-          // Apple ID 登录按钮（白色风格，与 App 整体风格协调）
-          const SizedBox(height: ZaiNeSpacing.lg),  // 【修复 v1.81.0】增加间距
-          SignInWithAppleButton(
-            onPressed: widget.isLoggingIn
-                ? () {}
-                : () {
-                    _handleAppleSignIn();
-                  },
-            style: SignInWithAppleButtonStyle.white,
-            height: 50,
-            borderRadius: BorderRadius.circular(ZaiNeRadius.card),
-          ),
+          // 【暂隐 v1.82.0】Apple ID 登录按钮（等 Sign In with Apple 能力配置好后再启用）
+          const SizedBox(height: ZaiNeSpacing.xl),
 
           // 内联错误提示（取代 SnackBar，避免跨导航残留）
           if (widget.loginError.isNotEmpty) ...[
@@ -556,7 +573,8 @@ class _LoginPageState extends State<_LoginPage>
     );
   }
 
-  /// Apple Sign In 处理逻辑
+  // 【暂隐 v1.82.0】Apple Sign In 处理逻辑（等能力配置好后再启用）
+  // ignore: unused_element
   Future<void> _handleAppleSignIn() async {
     try {
       if (kDebugMode) debugPrint('[Apple Sign In] 开始...');
