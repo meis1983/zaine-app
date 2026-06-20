@@ -6,7 +6,7 @@
       "displayPrice" : "9.00",
       "familyShareable" : false,
       "groupNumber" : 1,
-      "id" : "com.zaine.smart_monthly",
+      "id" : "com.zaine.smart.monthly",
       "internalDescription" : "智能版月度订阅 - 同时在呢+智能版",
       "localizations" : [
         {
@@ -19,7 +19,7 @@
         "autoRenewal" : {
           "enabled" : true,
           "products" : [
-            "com.zaine.smart_yearly"
+            "com.zaine.smart.yearly"
           ]
         },
         "familyShareable" : false,
@@ -33,7 +33,7 @@
       "displayPrice" : "88.00",
       "familyShareable" : false,
       "groupNumber" : 1,
-      "id" : "com.zaine.smart_yearly",
+      "id" : "com.zaine.smart.yearly",
       "internalDescription" : "智能版年度订阅 - 全年在呢+智能版守护",
       "localizations" : [
         {
@@ -46,7 +46,7 @@
         "autoRenewal" : {
           "enabled" : true,
           "products" : [
-            "com.zaine.smart_monthly"
+            "com.zaine.smart.monthly"
           ]
         },
         "familyShareable" : false,

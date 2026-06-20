@@ -13,9 +13,9 @@ class IapService {
 
   final InAppPurchase _iap = InAppPurchase.instance;
 
-  /// 产品 ID
-  static const String productIdMonthly = 'com.zaine.smart_monthly';
-  static const String productIdYearly = 'com.zaine.smart_yearly';
+  /// 产品 ID（与 ASC 后台完全一致，使用点分隔）
+  static const String productIdMonthly = 'com.zaine.smart.monthly';
+  static const String productIdYearly = 'com.zaine.smart.yearly';
   static const Set<String> _productIds = {
     productIdMonthly,
     productIdYearly,

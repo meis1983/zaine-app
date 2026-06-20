@@ -28,6 +28,7 @@ import '../widgets/help_card_widget.dart';
 import '../widgets/guard_status_widget.dart';
 import '../widgets/check_in_button_widget.dart';
 import '../services/api/auth_service.dart';
+import '../services/api/sync_service.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -81,7 +82,20 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   Future<void> _initialize() async {
     _prefs = await SharedPreferences.getInstance();
     await _checkLoginStatus();
-    await _loadCheckInStatus();
+    
+    // 【修复 v1.80.0】登录后从服务器拉取数据到本地缓存（联系人/档案/签到状态）
+    if (_isLoggedIn) {
+      try {
+        if (kDebugMode) debugPrint('[HomePage] 开始从服务器拉取数据...');
+        await SyncService.pullFromServer();
+        if (kDebugMode) debugPrint('[HomePage] ✅ 服务器数据拉取完成');
+      } catch (e) {
+        if (kDebugMode) debugPrint('[HomePage] ⚠️ 拉取服务器数据失败: $e');
+      }
+      // 拉取完成后重新加载本地缓存数据到 UI
+      await _loadCheckInStatus();
+    }
+    
     await _loadPendingPeaceRequests();
     await _loadInviteStats();
     

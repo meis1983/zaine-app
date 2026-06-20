@@ -38,6 +38,7 @@ class _LoginPage extends StatefulWidget {
   final VoidCallback onLogin;
   final VoidCallback onBack;
   final VoidCallback? onAppleLoginSuccess; // 【新增 v1.9.78】Apple 登录成功回调
+  final ValueChanged<String>? onAppleLoginError; // 【修复 v1.81.0】Apple 登录失败回调（内联显示）
 
   const _LoginPage({
     required this.phoneController,
@@ -49,6 +50,7 @@ class _LoginPage extends StatefulWidget {
     required this.onLogin,
     required this.onBack,
     this.onAppleLoginSuccess, // 【新增】
+    this.onAppleLoginError, // 【修复 v1.81.0】Apple 登录失败回调
   });
 
   @override
@@ -181,7 +183,7 @@ class _LoginPageState extends State<_LoginPage>
           ),
 
           // 提示标签
-          const SizedBox(height: ZaiNeSpacing.md),
+          const SizedBox(height: ZaiNeSpacing.xxl),  // 【修复 v1.81.0】增加间距，避免拥挤
           Container(
             padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.lg, vertical: ZaiNeSpacing.sm),
             decoration: BoxDecoration(
@@ -222,7 +224,7 @@ class _LoginPageState extends State<_LoginPage>
                   widget.onPhoneChanged?.call();
                 },
                 selectorConfig: const SelectorConfig(
-                  selectorType: PhoneInputSelectorType.BOTTOM_SHEET,
+                  selectorType: PhoneInputSelectorType.DIALOG,  // 【修复 v1.81.0】改用 Dialog，解决底部弹窗无法选择的问题
                   showFlags: true,
                   useEmoji: true,
                 ),
@@ -237,14 +239,19 @@ class _LoginPageState extends State<_LoginPage>
                 inputBorder: InputBorder.none,
                 hintText: '请输入手机号',
                 maxLength: 15,
-                countries: const ['CN', 'US', 'JP', 'KR', 'SG', 'HK', 'TW', 'MO'],
+                countries: const [
+                  'CN', 'US', 'JP', 'KR', 'SG', 'HK', 'TW', 'MO',
+                  'GB', 'DE', 'FR', 'IT', 'ES', 'PT', 'NL', 'SE', 'NO', 'DK',
+                  'AU', 'NZ', 'CA', 'MY', 'TH', 'VN', 'PH', 'ID', 'IN',
+                  'BR', 'MX', 'AR', 'CL', 'CO', 'PE', 'ZA', 'EG', 'NG',
+                ],
                 initialValue: PhoneNumber(isoCode: 'CN'),
               ),
             ),
           ),
 
           // 提示文字
-          const SizedBox(height: ZaiNeSpacing.sm),
+          const SizedBox(height: ZaiNeSpacing.lg),  // 【修复 v1.81.0】增加间距
           Text(
             '支持全球手机号注册登录',
             style: TextStyle(
@@ -253,15 +260,15 @@ class _LoginPageState extends State<_LoginPage>
             textAlign: TextAlign.center,
           ),
 
-          // Apple ID 登录按钮
+          // Apple ID 登录按钮（白色风格，与 App 整体风格协调）
+          const SizedBox(height: ZaiNeSpacing.lg),  // 【修复 v1.81.0】增加间距
           SignInWithAppleButton(
             onPressed: widget.isLoggingIn
                 ? () {}
                 : () {
-                    // 异步执行，不阻塞 UI
                     _handleAppleSignIn();
                   },
-            style: SignInWithAppleButtonStyle.black,
+            style: SignInWithAppleButtonStyle.white,
             height: 50,
             borderRadius: BorderRadius.circular(ZaiNeRadius.card),
           ),
@@ -587,28 +594,16 @@ class _LoginPageState extends State<_LoginPage>
         // 登录成功，通知父组件
         widget.onAppleLoginSuccess?.call();
       } else {
-        // 登录失败
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Apple 登录失败: ${res['message'] ?? '未知错误'}'),
-              backgroundColor: Colors.red,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        }
+        // 登录失败 → 通过回调显示内联错误（不用 SnackBar）
+        final msg = 'Apple 登录失败：${res['message'] ?? '未知错误'}';
+        if (kDebugMode) debugPrint('[Apple Sign In] $msg');
+        widget.onAppleLoginError?.call(msg);
       }
     } catch (e) {
       if (kDebugMode) debugPrint('[Apple Sign In] 错误: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Apple 登录失败: $e'),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
+      // 异常 → 通过回调显示内联错误
+      final msg = 'Apple 登录失败：$e';
+      widget.onAppleLoginError?.call(msg);
     }
   }
 }
@@ -994,6 +989,10 @@ class _OnboardingPageState extends State<OnboardingPage> {
         onPhoneChanged: () => setState(() {}), // 手机号变化时刷新底部按钮状态
         onLogin: _quickLogin,
         onAppleLoginSuccess: _completeOnboarding, // 【新增 v1.9.78】
+        onAppleLoginError: (msg) {
+          // 【修复 v1.81.0】Apple 登录失败，内联显示错误（不用 SnackBar）
+          setState(() => _loginError = msg);
+        },
         onBack: () {
           _phoneFocusNode.unfocus();
           _pageController.previousPage(

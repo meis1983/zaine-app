@@ -101,11 +101,16 @@ class SyncService {
         await prefs.setBool('is_logged_in', true);
       }
 
-      // 拉取联系人
+      // 拉取联系人 — 【修复 v1.80.0】空数据保护：服务器返回空列表时不覆盖本地非空缓存
       final contactsRes = await ApiService.get('/api/contacts');
       if (contactsRes['success'] == true && contactsRes['contacts'] != null) {
-        await prefs.setString(
-            contactsKey, jsonEncode(contactsRes['contacts']));
+        final serverContacts = contactsRes['contacts'] as List;
+        final localContacts = prefs.getString(contactsKey);
+        if (serverContacts.isNotEmpty || localContacts == null || localContacts.isEmpty) {
+          await prefs.setString(contactsKey, jsonEncode(serverContacts));
+        } else {
+          if (kDebugMode) debugPrint('[SyncService] ⚠️ 服务器返回空联系人列表，保留本地 $contactsKey 缓存');
+        }
       }
 
       // 【修复】拉取签到状态（streak + total_days），使用用户隔离 key

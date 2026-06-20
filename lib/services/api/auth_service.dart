@@ -168,20 +168,24 @@ class AuthService {
     if (res['success'] == true && res['token'] != null) {
       try {
         final prefs = await SharedPreferences.getInstance();
-        // 【修复 v1.9.61】登录前先清除旧账号残留的头像数据（防止切换账号后头像串用）
+        // 【修复 v1.80.0】同一用户重新登录时不清除头像和用户数据
         final oldUid = prefs.getString('user_id');
-        if (oldUid != null && oldUid.isNotEmpty) {
+        final newUid = res['userId'] ?? '';
+        final isSameUser = oldUid != null && oldUid.isNotEmpty && oldUid == newUid;
+        if (!isSameUser && oldUid != null && oldUid.isNotEmpty) {
+          // 只有切换账号时才清除旧账号头像数据
           await prefs.remove('avatar_path_$oldUid');
           await prefs.remove('avatar_base64_$oldUid');
+          await prefs.remove('avatar_path'); // 清 fallback 键
+          await prefs.remove('avatar_base64');
+          await prefs.remove('user_name');
+          try {
+            final dir = await getApplicationDocumentsDirectory();
+            final f = File('${dir.path}/avatar.png');
+            if (await f.exists()) await f.delete();
+          } catch (_) {}
         }
-        await prefs.remove('avatar_path'); // 清 fallback 键
-        await prefs.remove('avatar_base64');
-        await prefs.remove('user_name'); // 【v1.9.73】清除旧账号用户名（防止签到徽章串名）
-        try {
-          final dir = await getApplicationDocumentsDirectory();
-          final f = File('${dir.path}/avatar.png');
-          if (await f.exists()) await f.delete();
-        } catch (_) {}
+        if (kDebugMode) debugPrint('[AuthService] ${isSameUser ? "同一用户重新登录，保留本地数据" : "切换账号，已清除旧数据"}');
 
         await _saveToken(res['token']);
         // 【修复 v1.77.0】敏感信息存储到 Keychain（安全，主存储）
@@ -257,19 +261,21 @@ class AuthService {
     if (res['success'] == true && res['token'] != null) {
       // 存储登录凭证
       final prefs = await SharedPreferences.getInstance();
-      // 【修复 v1.9.61】登录前先清除旧账号残留的头像数据
+      // 【修复 v1.80.0】同一用户重新登录时不清除头像和用户数据
       final oldUid = prefs.getString('user_id');
-      if (oldUid != null && oldUid.isNotEmpty) {
+      final newUid = res['userId'] ?? '';
+      final isSameUser = oldUid != null && oldUid.isNotEmpty && oldUid == newUid;
+      if (!isSameUser && oldUid != null && oldUid.isNotEmpty) {
         await prefs.remove('avatar_path_$oldUid');
         await prefs.remove('avatar_base64_$oldUid');
+        await prefs.remove('avatar_path');
+        await prefs.remove('avatar_base64');
+        try {
+          final dir = await getApplicationDocumentsDirectory();
+          final f = File('${dir.path}/avatar.png');
+          if (await f.exists()) await f.delete();
+        } catch (_) {}
       }
-      await prefs.remove('avatar_path');
-      await prefs.remove('avatar_base64');
-      try {
-        final dir = await getApplicationDocumentsDirectory();
-        final f = File('${dir.path}/avatar.png');
-        if (await f.exists()) await f.delete();
-      } catch (_) {}
 
       await _saveToken(res['token']);
       // 【修复 v1.77.0】敏感信息存储到 Keychain（安全，主存储）
