@@ -1,6 +1,6 @@
 # Uncomment this line to define a global platform for your project
-# 【修改 v1.9.7】最低支持 iOS 16，放弃 iOS 15 及以下兼容性维护
-platform :ios, '16.0'
+# 【修改 v1.19.3】降低最低支持版本到 iOS 15.0，兼容 iPhone XS 等老设备
+platform :ios, '15.0'
 
 # CocoaPods analytics sends network stats synchronously affecting flutter build latency.
 ENV['COCOAPODS_DISABLE_STATS'] = 'true'
@@ -40,7 +40,7 @@ post_install do |installer|
     flutter_additional_ios_build_settings(target)
     
     target.build_configurations.each do |config|
-      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '16.0'
+      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.0'
     end
   end
 end

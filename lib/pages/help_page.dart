@@ -555,9 +555,9 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
     // 先获取最新位置
     await _loadLocation();
 
-    // 【修复 v1.19.1】上传 SOS 位置到后端（守护者可通过后端查询最后位置）
+    // 【修复 v1.19.2】上传 SOS 位置到后端（守护者可通过后端查询最后位置）
     try {
-      await SafetyService.recordLocationOnSOS();
+      await SafetyService().recordLocationOnSOS();
       if (kDebugMode) debugPrint('[Help] SOS位置已上传到后端');
     } catch (e) {
       if (kDebugMode) debugPrint('[Help] SOS位置上传失败: $e');

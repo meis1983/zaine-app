@@ -13,6 +13,7 @@ import 'pages/onboarding_page.dart';
 import 'services/deep_link_service.dart';
 import 'services/silent_login_service.dart';
 import 'services/membership_service.dart';
+import 'services/api/auth_service.dart';
 import 'data/app_constants.dart';
 // import 'config/feature_flags.dart';  // 暂时未使用，保留以备后续功能开发
 
