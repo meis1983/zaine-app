@@ -37,8 +37,8 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _loadGuardians();
-    // 启动定期刷新：每 60 秒同步一次状态
-    _refreshTimer = Timer.periodic(const Duration(seconds: 60), (timer) {
+    // 【优化 v1.19.1】定期刷新改为 5 分钟（原 60 秒太频繁，耗电且浪费服务器资源）
+    _refreshTimer = Timer.periodic(const Duration(minutes: 5), (timer) {
       if (mounted) _loadGuardians(isSilent: true);
     });
   }
@@ -1551,6 +1551,17 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
       // 2. 调用后端接口删除
       final res = await ContactService.deleteContact(contactId);
       if (res['success'] == true) {
+        // 【修复 v1.19.1】清理该守护者的本地缓存（防止重新添加时读到旧数据）
+        final phone = guardian['phone']?.toString() ?? '';
+        if (phone.isNotEmpty) {
+          await prefs.remove('contact_is_registered_phone_$phone');
+          await prefs.remove('contact_user_id_phone_$phone');
+          await prefs.remove('contact_avatar_phone_$phone');
+          await prefs.remove('contact_checked_in_today_phone_$phone');
+          await prefs.remove('contact_last_signin_at_phone_$phone');
+          if (kDebugMode) debugPrint('[GuardianPage] 已清理 $phone 的本地缓存');
+        }
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('已解除与 ${guardian['name']} 的守护关系'), backgroundColor: Colors.blue),

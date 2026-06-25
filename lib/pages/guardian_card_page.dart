@@ -562,6 +562,9 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
       _availableCards = await GuardianCardService.syncQuotaFromBackend();
       if (kDebugMode) debugPrint('[GuardianCardPage] 发卡后同步后端额度: $_availableCards 张');
 
+      // 【修复 v1.19.1】立即刷新UI，确保额度显示即时更新（不用等后面待注册卡片刷新）
+      if (mounted) setState(() {});
+
       // 标记新手任务：发送守护卡完成
       await prefs.setBool('newbie_card_sent', true);
 

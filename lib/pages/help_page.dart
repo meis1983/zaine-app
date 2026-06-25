@@ -8,6 +8,7 @@ import 'dart:convert';
 import '../services/platform/location_service.dart';
 import '../services/membership_service.dart';
 import '../services/api_service.dart';
+import '../services/safety/safety_service.dart';
 import '../theme/theme_helper.dart';
 import '../widgets/help_result_dialog.dart';
 import '../widgets/full_help_page_widget.dart';
@@ -553,6 +554,14 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
     
     // 先获取最新位置
     await _loadLocation();
+
+    // 【修复 v1.19.1】上传 SOS 位置到后端（守护者可通过后端查询最后位置）
+    try {
+      await SafetyService.recordLocationOnSOS();
+      if (kDebugMode) debugPrint('[Help] SOS位置已上传到后端');
+    } catch (e) {
+      if (kDebugMode) debugPrint('[Help] SOS位置上传失败: $e');
+    }
 
     // 获取用户自己的手机号
     _myPhone = prefs.getString('user_phone') ?? '';
