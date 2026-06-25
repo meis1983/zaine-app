@@ -378,6 +378,17 @@ class _SplashScreenState extends State<SplashScreen>
         // token 已在上面从 Keychain 读取
         // 检查是否已完成引导
         if (authToken != null && authToken.isNotEmpty && isLoggedIn) {
+          // 【修复 v1.19.3】已登录用户：先处理待定守护卡（Universal Link 冷启动场景）
+          final prefs = await SharedPreferences.getInstance();
+          final pendingCode = prefs.getString('pending_card_code') ?? prefs.getString('pending-card-code');
+          if (pendingCode != null && pendingCode.isNotEmpty) {
+            final phone = await AuthService.getUserPhone();
+            if (phone != null && phone.isNotEmpty) {
+              if (kDebugMode) debugPrint('[Splash] 已登录用户，处理待定守护卡: $pendingCode');
+              await DeepLinkService.processPendingCardCode(phone);
+            }
+          }
+
           // 已登录 → 直接到主界面
           if (mounted) {
             Navigator.of(context).pushReplacement(

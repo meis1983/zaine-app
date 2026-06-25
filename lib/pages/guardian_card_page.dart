@@ -270,8 +270,9 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
   String get _currentMessage =>
       _isCustomMessage ? _customMsgController.text.trim() : _presetMessages[_selectedMessageIndex];
 
-  /// 【修复 v1.16.0】fallback URL 改为 landing 页，不再指向 App Store
-  String get _appStoreUrl => AppConstants.welcomeUrl;
+  /// 【优化 v1.19.3】备用链接改为 App Store 直链，未装 App 的用户直接跳转下载
+  /// 已装 App 的用户通过 _currentShareUrl（Universal Link）直接打开 App
+  String get _appStoreUrl => AppConstants.appStoreUrl;
 
   int get _totalAvailable => _availableCards;
 
