@@ -226,9 +226,9 @@ class _LoginPageState extends State<_LoginPage>
               child: Stack(
                 alignment: Alignment.centerLeft,
                 children: [
-                  // 主输入框（含国旗+区号）
+                  // 主输入框（含国旗+区号）—— 撑满容器，不截断（v1.87.0 修复右侧被截断问题）
                   Padding(
-                    padding: const EdgeInsets.only(right: 32),  // 给箭头留空间
+                    padding: EdgeInsets.zero,
                     child: InternationalPhoneNumberInput(
                       onInputChanged: (PhoneNumber number) {
                         // 【修复 v1.83.0】保存用户选择到 state，选择后正确回显
@@ -239,8 +239,9 @@ class _LoginPageState extends State<_LoginPage>
                         selectorType: PhoneInputSelectorType.DIALOG,
                         showFlags: true,
                         useEmoji: true,
-                        leadingPadding: 12,   // 国旗不贴边
-                        trailingSpace: false,  // 不自动补空格，由我们控制
+                        // 【v1.91.0 微调】左侧稍微紧凑，给右侧手机号输入框留更多空间
+                        leadingPadding: 12,
+                        trailingSpace: true,
                       ),
                       ignoreBlank: false,
                       autoValidateMode: AutovalidateMode.disabled,
@@ -268,6 +269,7 @@ class _LoginPageState extends State<_LoginPage>
                     child: IgnorePointer(
                       // 让点击穿透到下面的 selector 按钮
                       child: Padding(
+                        // 【v1.91.0 微调】跟随选择器宽度，稍微左移让输入框更宽
                         padding: const EdgeInsets.only(left: 70, right: 8),
                         child: Align(
                           alignment: Alignment.centerLeft,

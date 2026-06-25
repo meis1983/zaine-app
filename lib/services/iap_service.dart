@@ -92,7 +92,9 @@ class IapService {
   }
 
   /// 发起购买
-  Future<String?> purchaseProduct(ProductDetails product) async {
+  /// 【v1.85.0 增强】带自动重试 + 友好的错误分类
+  Future<String?> purchaseProduct(ProductDetails product,
+      {int maxRetries = 1}) async {
     final available = await _iap.isAvailable();
     if (!available) {
       if (kDebugMode) debugPrint('[IAP] StoreKit 不可用，无法购买');
@@ -105,19 +107,74 @@ class IapService {
       applicationUserName: null, // 可选：关联用户标识
     );
 
-    // 订阅型产品使用 buyNonConsumable（底层 StoreKit 统一处理）
-    // 注意：产品类型由 ASC 后台配置决定，API 调用方式相同
-    try {
-      final result = await _iap.buyNonConsumable(purchaseParam: purchaseParam);
-      if (!result) {
-        if (kDebugMode) debugPrint('[IAP] 购买发起失败（返回 false）');
-        return '购买请求发起失败，请重试';
+    // 【修复 v1.85.0】自动重试机制（处理沙盒网络波动）
+    String? lastError;
+    for (int attempt = 0; attempt <= maxRetries; attempt++) {
+      if (attempt > 0) {
+        if (kDebugMode) debugPrint('[IAP] 第 $attempt 次重试购买...');
+        await Future.delayed(Duration(seconds: attempt * 2)); // 渐进延迟
       }
-    } catch (e) {
-      if (kDebugMode) debugPrint('[IAP] 购买异常: $e');
-      return '购买异常: $e';
+
+      try {
+        final result = await _iap.buyNonConsumable(purchaseParam: purchaseParam);
+        if (result) {
+          if (attempt > 0 && kDebugMode) {
+            debugPrint('[IAP] ✅ 第 ${attempt + 1} 次尝试购买成功');
+          }
+          return null; // null 表示成功发起
+        } else {
+          lastError = '购买请求发起失败';
+          if (kDebugMode) debugPrint('[IAP] 购买发起失败（返回 false），尝试: ${attempt + 1}/${maxRetries + 1}');
+        }
+      } catch (e) {
+        lastError = e.toString();
+        if (kDebugMode) debugPrint('[IAP] 购买异常(尝试 ${attempt + 1}/${maxRetries + 1}): $e');
+
+        // 【新增 v1.85.0】判断是否为可重试的网络错误
+        final errStr = e.toString().toLowerCase();
+        final isNetworkError = errStr.contains('nsurlerror') ||
+            errStr.contains('network') ||
+            errStr.contains('socket') ||
+            errStr.contains('connection') ||
+            errStr.contains('timeout') ||
+            errStr.contains('storekit2_failed');
+
+        if (!isNetworkError || attempt >= maxRetries) {
+          // 非网络错误或已达到最大重试次数 → 返回用户友好的错误信息
+          return _classifyError(e);
+        }
+        // 网络错误且还有重试机会 → 继续循环
+      }
     }
-    return null; // null 表示成功发起
+    return '购买失败：$lastError';
+  }
+
+  /// 【新增 v1.85.0】将原始异常转换为用户友好的错误信息（null=用户取消，不显示错误）
+  String? _classifyError(dynamic e) {
+    final errStr = e.toString();
+
+    // 沙盒 SSL/网络错误（最常见）
+    if (errStr.contains('storekit2_failed_to_fetch_product') ||
+        errStr.contains('-1200') ||
+        errStr.contains('nsurlerror')) {
+      return '网络连接不稳定\n请检查网络后重试\n（沙盒测试环境可能需要关闭 VPN）';
+    }
+
+    // 用户取消
+    if (errStr.contains('cancelled') || errStr.contains('canceled')) {
+      return null; // 取消不算错误
+    }
+
+    // 沙盒未就绪
+    if (errStr.contains('cloud_service') || errStr.contains('sandbox')) {
+      return '沙盒服务暂不可用\n请稍后重试或重启 App';
+    }
+
+    // 其他未知错误
+    if (errStr.length > 80) {
+      return '购买遇到问题 (${errStr.substring(0, 60)}...)';
+    }
+    return '购买异常：$errStr';
   }
 
   /// 恢复购买
@@ -160,19 +217,19 @@ class IapService {
     }
   }
 
-  // ---- 内部 ----
-
-  /// 处理交易更新
+  /// 处理交易更新（不直接调 completePurchase，让外部验证成功后再调）
   void _handlePurchaseUpdates(List<PurchaseDetails> purchaseDetailsList) {
     for (final purchaseDetails in purchaseDetailsList) {
       if (purchaseDetails.status == PurchaseStatus.purchased ||
           purchaseDetails.status == PurchaseStatus.restored) {
-        // 购买成功 → 通知外部
+        // 购买成功 → 通知外部（由外部在验证小票成功后再调 completePurchase）
         _purchaseResultController.add(PurchaseResult(
           success: true,
           productId: purchaseDetails.productID,
           transactionId: purchaseDetails.purchaseID,
-          originalTransactionId: purchaseDetails.purchaseID, // MVP：用 transactionId 代替
+          // 注意：in_app_purchase 插件未暴露 originalTransactionId
+          // 后端会通过 App Store Server API 自动查询
+          originalTransactionId: null,
           purchaseDateMs: purchaseDetails.transactionDate != null
               ? DateTime.parse(purchaseDetails.transactionDate!)
                   .millisecondsSinceEpoch
@@ -189,13 +246,20 @@ class IapService {
           purchaseDateMs: DateTime.now().millisecondsSinceEpoch,
           purchaseDetails: purchaseDetails,
         ));
-      }
-
-      // 标记交易已完成（对 StoreKit 1 和 2 都安全）
-      if (purchaseDetails.pendingCompletePurchase) {
+      } else if (purchaseDetails.pendingCompletePurchase) {
+        // 【修复 v1.84.0】对于已经验证过但没调 completePurchase 的交易，自动完成
+        // （防止异常情况下交易卡死）
+        if (kDebugMode) debugPrint('[IAP] ⚠️ 发现 pending 交易，自动完成: ${purchaseDetails.productID}');
         _iap.completePurchase(purchaseDetails);
-        if (kDebugMode) debugPrint('[IAP] 标记交易完成: ${purchaseDetails.productID}');
       }
+    }
+  }
+
+  /// 标记交易完成（应在验证小票成功后再调用）
+  void completePurchase(PurchaseDetails purchaseDetails) {
+    if (purchaseDetails.pendingCompletePurchase) {
+      _iap.completePurchase(purchaseDetails);
+      if (kDebugMode) debugPrint('[IAP] 标记交易完成: ${purchaseDetails.productID}');
     }
   }
 }

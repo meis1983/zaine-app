@@ -42,106 +42,45 @@ class AuthService {
     await _secureStorage.delete(key: 'auth_token');
   }
 
-  /// 【修复 v1.77.0】公共方法：获取 Token（统一入口）
-  /// 优先从 Keychain 读取，失败则尝试 SP 备份（兼容旧版本）
-  /// 注意：SP 备份将在未来版本中移除，请确保所有用户的 token 已迁移到 Keychain
+  /// 获取 Token（统一入口）
+  /// 从 Keychain 读取（主存储）
+  /// 【防御 v1.91.0】捕获 Keychain 异常，失败时返回 null（视为未登录）
   static Future<String?> getToken() async {
-    // 1. 优先从 Keychain 读取（主存储，安全）
-    String? token = await _getToken();
-    if (token != null && token.isNotEmpty) return token;
-
-    // 2. Keychain 失败，尝试从 SP 恢复（兼容旧版本，不安全）
-    // TODO: 在 v1.19.0 中移除 SP 备份恢复逻辑
     try {
-      final prefs = await SharedPreferences.getInstance();
-      // 尝试 auth_token_sp（v1.75.0+ 备份键）
-      token = prefs.getString('auth_token_sp');
-      if (token != null && token.isNotEmpty) {
-        // 恢复成功：写回 Keychain，并从 SP 中删除（迁移完成）
-        await _saveToken(token);
-        await prefs.remove('auth_token_sp'); // 迁移后删除 SP 中的备份
-        if (kDebugMode) {
-          debugPrint('[AuthService] ⚠️ 从 SP(auth_token_sp) 恢复 token 成功（已迁移到 Keychain）');
-          debugPrint('[AuthService] ⚠️ 建议：请在设置中退出并重新登录，以移除不安全的 SP 备份');
-        }
-        return token;
-      }
-      // 3. 尝试 auth_token（旧版本可能使用的键）
-      token = prefs.getString('auth_token');
-      if (token != null && token.isNotEmpty) {
-        await _saveToken(token);
-        await prefs.remove('auth_token'); // 迁移后删除 SP 中的备份
-        if (kDebugMode) {
-          debugPrint('[AuthService] ⚠️ 从 SP(auth_token) 恢复 token 成功（已迁移到 Keychain）');
-          debugPrint('[AuthService] ⚠️ 建议：请在设置中退出并重新登录，以移除不安全的 SP 备份');
-        }
-        return token;
-      }
+      final token = await _getToken();
+      return (token != null && token.isNotEmpty) ? token : null;
     } catch (e) {
-      if (kDebugMode) debugPrint('[AuthService] ⚠️ 从 SP 恢复 token 失败: $e');
+      if (kDebugMode) debugPrint('[AuthService] ⚠️ 读取 Token 失败: $e');
+      return null;
     }
-
-    return null;
   }
 
-  // ========== 【修复 v1.77.0】用户身份信息服务 ==========
+  // ========== 用户身份信息服务 ==========
 
-  /// 【修复 v1.77.0】获取当前用户 ID（统一入口）
-  /// 优先从 Keychain 读取，失败则尝试 SP 备份（兼容旧版本）
-  /// 注意：SP 备份将在未来版本中移除，请确保所有用户的 user_id 已迁移到 Keychain
+  /// 获取当前用户 ID（统一入口）
+  /// 从 Keychain 读取（主存储）
+  /// 【防御 v1.91.0】捕获 Keychain 异常，失败时返回 null
   static Future<String?> getUserId() async {
-    // 1. 优先从 Keychain 读取（主存储，安全）
-    String? userId = await _secureStorage.read(key: 'user_id');
-    if (userId != null && userId.isNotEmpty) return userId;
-
-    // 2. Keychain 失败，尝试从 SP 恢复（兼容旧版本，不安全）
-    // TODO: 在 v1.19.0 中移除 SP 备份恢复逻辑
     try {
-      final prefs = await SharedPreferences.getInstance();
-      userId = prefs.getString('user_id');
-      if (userId != null && userId.isNotEmpty) {
-        // 恢复成功：写回 Keychain，并从 SP 中删除（迁移完成）
-        await _secureStorage.write(key: 'user_id', value: userId);
-        await prefs.remove('user_id'); // 迁移后删除 SP 中的备份
-        if (kDebugMode) {
-          debugPrint('[AuthService] ⚠️ 从 SP(user_id) 恢复成功（已迁移到 Keychain）');
-        }
-        return userId;
-      }
+      final userId = await _secureStorage.read(key: 'user_id');
+      return (userId != null && userId.isNotEmpty) ? userId : null;
     } catch (e) {
-      if (kDebugMode) debugPrint('[AuthService] ⚠️ 从 SP 恢复 user_id 失败: $e');
+      if (kDebugMode) debugPrint('[AuthService] ⚠️ 读取 user_id 失败: $e');
+      return null;
     }
-
-    return null;
   }
 
-  /// 【修复 v1.77.0】获取当前用户手机号（统一入口）
-  /// 优先从 Keychain 读取，失败则尝试 SP 备份（兼容旧版本）
-  /// 注意：SP 备份将在未来版本中移除，请确保所有用户的 user_phone 已迁移到 Keychain
+  /// 获取当前用户手机号（统一入口）
+  /// 从 Keychain 读取（主存储）
+  /// 【防御 v1.91.0】捕获 Keychain 异常，失败时返回 null
   static Future<String?> getUserPhone() async {
-    // 1. 优先从 Keychain 读取（主存储，安全）
-    String? phone = await _secureStorage.read(key: 'user_phone');
-    if (phone != null && phone.isNotEmpty) return phone;
-
-    // 2. Keychain 失败，尝试从 SP 恢复（兼容旧版本，不安全）
-    // TODO: 在 v1.19.0 中移除 SP 备份恢复逻辑
     try {
-      final prefs = await SharedPreferences.getInstance();
-      phone = prefs.getString('user_phone');
-      if (phone != null && phone.isNotEmpty) {
-        // 恢复成功：写回 Keychain，并从 SP 中删除（迁移完成）
-        await _secureStorage.write(key: 'user_phone', value: phone);
-        await prefs.remove('user_phone'); // 迁移后删除 SP 中的备份
-        if (kDebugMode) {
-          debugPrint('[AuthService] ⚠️ 从 SP(user_phone) 恢复成功（已迁移到 Keychain）');
-        }
-        return phone;
-      }
+      final phone = await _secureStorage.read(key: 'user_phone');
+      return (phone != null && phone.isNotEmpty) ? phone : null;
     } catch (e) {
-      if (kDebugMode) debugPrint('[AuthService] ⚠️ 从 SP 恢复 user_phone 失败: $e');
+      if (kDebugMode) debugPrint('[AuthService] ⚠️ 读取 user_phone 失败: $e');
+      return null;
     }
-
-    return null;
   }
 
   /// 手机号快速登录（v1.5 快速登录，无需验证码）
@@ -191,7 +130,7 @@ class AuthService {
         // 【修复 v1.77.0】敏感信息存储到 Keychain（安全，主存储）
         await _secureStorage.write(key: 'user_phone', value: phone);
         await _secureStorage.write(key: 'user_id', value: res['userId'] ?? '');
-        // 【兼容 v1.77.0】双写 SP（兼容现有 40+ 处读取，v1.19.0 逐步迁移到 Keychain）
+        // 【v1.90.0】保留 SP 双写以兼容现有 40+ 处读取（逐步迁移到 Keychain）
         await prefs.setString('user_phone', phone);
         await prefs.setString('user_id', res['userId'] ?? '');
         await prefs.setBool('is_logged_in', true); // 非敏感，保留在 SP
@@ -281,7 +220,7 @@ class AuthService {
       // 【修复 v1.77.0】敏感信息存储到 Keychain（安全，主存储）
       await _secureStorage.write(key: 'user_id', value: res['userId'] ?? '');
       await _secureStorage.write(key: 'user_phone', value: phone);
-      // 【兼容 v1.77.0】双写 SP（兼容现有 40+ 处读取，v1.19.0 逐步迁移到 Keychain）
+      // 【v1.90.0】保留 SP 双写以兼容现有 40+ 处读取（逐步迁移到 Keychain）
       await prefs.setString('user_id', res['userId'] ?? '');
       await prefs.setString('user_phone', phone);
       await prefs.setBool('is_logged_in', true); // 非敏感，保留在 SP
@@ -326,42 +265,48 @@ class AuthService {
   }
 
   /// 检查登录状态
-  /// 【修复 v1.77.0】增强版：Keychain 读取重试 + SP 备份迁移 + user_id 兜底
+  /// 【防御 v1.91.0】捕获所有 Keychain 异常，防止崩溃
+  /// 同时验证 token 和 user_id 同时存在（防止 Keychain 写入不完整）
   static Future<bool> isLoggedIn() async {
-    // 1. 优先从 Keychain 读取（主存储，安全），失败则重试最多 3 次
+    // 1. 优先从 Keychain 读取 token（主存储，安全），失败则重试最多 3 次
     String? token;
     int attempts = 0;
-    for (int retry = 0; retry < 3; retry++) {
-      attempts = retry + 1;
-      token = await _getToken();
-      if (token != null && token.isNotEmpty) break;
-      if (retry < 2) await Future.delayed(const Duration(milliseconds: 150));
+    try {
+      for (int retry = 0; retry < 3; retry++) {
+        attempts = retry + 1;
+        try {
+          token = await _getToken();
+        } catch (e) {
+          if (kDebugMode) debugPrint('[AuthService] ⚠️ Keychain 读取 token 失败 (尝试 $attempts/3): $e');
+          if (retry < 2) await Future.delayed(const Duration(milliseconds: 150));
+          continue;
+        }
+        if (token != null && token.isNotEmpty) break;
+        if (retry < 2) await Future.delayed(const Duration(milliseconds: 150));
+      }
+    } catch (e) {
+      if (kDebugMode) debugPrint('[AuthService] ⚠️ isLoggedIn 异常: $e');
+      return false;
     }
+
     if (token != null && token.isNotEmpty) {
+      // 【防御 v1.91.0】确认 user_id 也存在（防止 Keychain 写入不完整）
+      try {
+        final userId = await _secureStorage.read(key: 'user_id');
+        if (userId == null || userId.isEmpty) {
+          if (kDebugMode) debugPrint('[AuthService] ⚠️ token 存在但 user_id 缺失，视为未登录');
+          return false;
+        }
+      } catch (e) {
+        if (kDebugMode) debugPrint('[AuthService] ⚠️ 验证 user_id 失败: $e');
+        return false;
+      }
       if (kDebugMode && attempts > 1) debugPrint('[AuthService] ✅ Keychain 第 $attempts 次读取成功');
       return true;
     }
 
-    // 2. Keychain 读取失败，尝试从 SharedPreferences 恢复（迁移到 Keychain）
-    // TODO: 在 v1.19.0 中移除 SP 备份恢复逻辑
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final spToken = prefs.getString('auth_token_sp');
-      if (spToken != null && spToken.isNotEmpty) {
-        // 恢复成功：写回 Keychain，并从 SP 中删除（迁移完成）
-        await _saveToken(spToken);
-        await prefs.remove('auth_token_sp'); // 迁移后删除 SP 中的备份
-        if (kDebugMode) {
-          debugPrint('[AuthService] ⚠️ 从 SP 恢复 token 成功，已迁移到 Keychain 并删除 SP 备份');
-          debugPrint('[AuthService] ⚠️ 建议：请在设置中退出并重新登录，以完成安全迁移');
-        }
-        return true;
-      }
-    } catch (e) {
-      if (kDebugMode) debugPrint('[AuthService] ⚠️ 从 SP 恢复 token 失败: $e');
-    }
-
-    // 3. 两者都失败，检查 user_id 是否存在（兜底：旧版本登录的用户可能没有 SP token 备份）
+    // 2. Keychain 读取失败，检查 user_id 是否存在（兜底）
+    // 旧版本登录的用户可能没有 SP token 备份，但有 user_id 记录
     try {
       final prefs = await SharedPreferences.getInstance();
       final userId = prefs.getString('user_id');

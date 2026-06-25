@@ -75,7 +75,9 @@ class _SubscriptionPageState extends State<SubscriptionPage>
 
   @override
   void dispose() {
+    // 【修复 v1.84.0】dispose 时取消监听，防止重复订阅
     _purchaseSubscription?.cancel();
+    _purchaseSubscription = null;
     _pulseController.dispose();
     _floatController.dispose();
     super.dispose();
@@ -186,8 +188,34 @@ class _SubscriptionPageState extends State<SubscriptionPage>
           _isPurchasing = false;
           _errorMessage = error;
         });
-        // 用 SnackBar 让错误更明显
-        if (context.mounted) {
+        // 【修复 v1.85.0】网络错误时显示重试按钮 SnackBar
+        if (context.mounted && error.contains('网络')) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Row(
+                children: [
+                  Icon(Icons.wifi_off, color: Colors.white, size: 20),
+                  SizedBox(width: 12),
+                  Expanded(child: Text('购买失败：网络不稳定，请检查后重试\n（沙盒测试建议关闭 VPN）')),
+                ],
+              ),
+              duration: const Duration(seconds: 6),
+              behavior: SnackBarBehavior.floating,
+              action: SnackBarAction(
+                label: '重试',
+                textColor: ZaiNeColors.brandOrange,
+                onPressed: () {
+                  // 清除错误状态，让用户可以再次点击
+                  setState(() {
+                    _errorMessage = '';
+                    _isPurchasing = false;
+                  });
+                },
+              ),
+            ),
+          );
+        } else if (context.mounted) {
+          // 非网络错误的普通提示
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('❌ $error'),
@@ -215,27 +243,47 @@ class _SubscriptionPageState extends State<SubscriptionPage>
         );
 
         if (verifyResult['success'] == true) {
+          // ✅ 验证成功 → 先标记交易完成（防止异常中断导致交易卡死）
+          IapService().completePurchase(result.purchaseDetails);
+          // 再更新本地状态
           await MembershipService.syncFromLoginResponse(verifyResult);
           await _loadSubscriptionStatus();
-          // ✅ 验证成功，标记交易完成（StoreKit 2 规范）
-          IapService().completePurchase(result.purchaseDetails);
           if (mounted) {
-            setState(() => _isPurchasing = false);  // ✅ 先停 loading
-            UpgradeCelebration.show(context);            // ✅ 再弹庆祝
+            setState(() => _isPurchasing = false);  // ✅ 停止 loading
+            UpgradeCelebration.show(context);            // ✅ 弹庆祝
           }
         } else {
+          // ⚠️ 验证失败 → 给机会让用户手动重试
           setState(() {
-            _errorMessage = verifyResult['detail']?.toString() ?? '验证失败，请联系客服';
+            _errorMessage = verifyResult['detail']?.toString() ?? '验证失败，请重启App重试';
             _isPurchasing = false;
           });
-          // ⚠️ 验证失败，不调 completePurchase，让交易重试
+          // 不调 completePurchase，让交易保留（重启后 StoreKit 会自动重试）
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('⚠️ 支付验证失败\n请重启App自动重试，或联系客服'),
+                duration: Duration(seconds: 5),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
         }
       } catch (e) {
         setState(() {
           _errorMessage = '验证失败：$e';
           _isPurchasing = false;
         });
-        // ⚠️ 异常，不调 completePurchase，让交易重试
+        // ⚠️ 异常 → 不调 completePurchase，让交易保留
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('⚠️ 网络异常，请重启App自动重试'),
+              duration: Duration(seconds: 4),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
       }
     } else {
       setState(() {

@@ -377,12 +377,9 @@ class _ContactsPageState extends State<ContactsPage> {
         );
       }
 
-      // 会员温柔提示：添加第2位起提醒升级智能版
-      if (_contacts.length >= 2 && !MembershipService.isSmartMember() && mounted) {
-        await Future.delayed(const Duration(milliseconds: 800));
-        if (!mounted) return;
-        _showUpgradeHint();
-      }
+      // 【v1.86.0】升级提示改为更简洁的方式（不弹横幅，避免干扰）
+      // 原逻辑：添加第2位联系人后弹 _showUpgradeHint() 横幅
+      // 改为：静默记录，在用户点击"发送邀请"时再提示（如果超出免费额度）
 
       // 添加成功后，询问是否发送短信邀请（仅新添加时，非编辑时）
       if (contactPhone.isNotEmpty && mounted) {
@@ -393,6 +390,15 @@ class _ContactsPageState extends State<ContactsPage> {
 
       // 异步同步到后端（非阻塞）
       _syncAddToBackend(result);
+
+      // 【修复 v1.84.0】同步完成后立即刷新列表（防止需要手动返回再进入）
+      // 延迟1秒等待后端写入，然后刷新
+      Future.delayed(const Duration(seconds: 1), () {
+        if (mounted) {
+          if (kDebugMode) debugPrint('[ContactsPage] 添加联系人后自动刷新列表');
+          _loadContacts();
+        }
+      });
     }
   }
 
@@ -494,32 +500,6 @@ class _ContactsPageState extends State<ContactsPage> {
     } catch (e) {
       if (kDebugMode) debugPrint('[ContactsPage] _syncAddToBackend 异常: $e');
     }
-  }
-
-  /// 温柔提示升级智能版（非弹窗，用底部提示条）
-  void _showUpgradeHint() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Icon(Icons.workspace_premium_rounded, color: Colors.amber.shade700, size: 20),
-            const SizedBox(width: ZaiNeSpacing.md),
-            const Expanded(
-              child: Text(
-                '升级智能版后，前${MembershipService.smartAutoCallLimit}位联系人将自动接收紧急通知 ❤️',
-                style: TextStyle(fontSize: ZaiNeFontSize.caption),
-              ),
-            ),
-          ],
-        ),
-        backgroundColor: Colors.amber.shade50,
-        behavior: SnackBarBehavior.floating,
-        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
-        duration: const Duration(seconds: 4),
-        showCloseIcon: true,
-        closeIconColor: Colors.grey,
-      ),
-    );
   }
 
   /// 添加联系人后弹出邀请短信确认（带昵称编辑）

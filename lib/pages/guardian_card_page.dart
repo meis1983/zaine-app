@@ -67,6 +67,8 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
   bool _isSharing = false;
   bool _needsLogin = false;
   bool _isLoadingData = false;  // 【修复 v1.14.0】区分"加载中"和"真的待解锁"
+  bool _syncFailed = false;  // 【新增 v1.84.0】后端同步失败标记
+  bool _hasFailedCards = false;  // 【新增 v1.84.0】有发送失败的守护卡
 
   // 展开状态（方案C：显示待注册卡片列表）
   bool _isExpanded = false;
@@ -166,19 +168,23 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
     }
 
     // 【性能优化】三个网络请求并行执行，避免串行等待（冷启动从9-12秒降到3-4秒）
-    // P5: 从后端同步额度
-    // 【开发调试】如果刚重置守护卡，跳过一次后端同步，避免后端0张覆盖本地值
-    final skipSync = prefs.getBool('guardian_card_skip_sync_once') ?? false;
-    // 注意：skipSync 需要在 Future.wait 回调中也检查，防止 listMyCards 覆盖本地值
-    if (skipSync) {
-      // 不在此处 remove 标记，改在 Future.wait 完成后统一 remove，
-      // 确保并行回调也能看到 skipSync 标志
-      _availableCards = await GuardianCardService.getGiftRemaining();
-      if (kDebugMode) debugPrint('[GuardianCardPage] 开发者重置，跳过后端同步，使用本地值: $_availableCards');
-    } else {
-      final syncResult = await GuardianCardService.syncQuotaFromBackend();
-      _availableCards = syncResult;
-    }
+    // 【修复 v1.84.0】检查重试队列（发送失败的守护卡）
+    final failedQueue = await GuardianCardService.getFailedQueue();
+    if (kDebugMode) debugPrint('[GuardianCardPage] 重试队列: ${failedQueue.length}条');
+    if (mounted) setState(() => _hasFailedCards = failedQueue.isNotEmpty);
+
+    // 【修复 v1.84.0】如果本地缓存为0，强制从后端同步（处理清除缓存后的场景）
+    final cachedCards = await GuardianCardService.getGiftRemaining();
+    final shouldForceSync = cachedCards == 0 || failedQueue.isNotEmpty;
+    if (kDebugMode) debugPrint('[GuardianCardPage] 本地缓存额度: $cachedCards 张，强制同步: $shouldForceSync');
+
+    final syncResult = shouldForceSync
+        ? await GuardianCardService.forceSyncFromBackend()
+        : await GuardianCardService.syncQuotaFromBackend();
+    _availableCards = syncResult;
+
+    // 【修复 v1.84.0】同步失败标记（用于UI提示）
+    _syncFailed = shouldForceSync && _availableCards == 0;
 
     // P4: 加载邀请统计 + 卡片列表，与上方同步并行
     await Future.wait([
@@ -242,16 +248,12 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
               _initialRemainingDays = stats['initial_remaining_days'] as int?;
               _checkinProgress = stats['checkin_progress'] as Map<String, dynamic>?;
 
-              // 【修复 v1.9.12】仅在非 skipSync 模式下才用后端值覆盖本地额度
-              // 根因：开发者重置守护卡后，Future.wait 并行的 listMyCards 返回
-              // available_cards=0，无条件覆盖本地 3 张，导致重置无效
-              if (!skipSync) {
-                final backendAvailable = (stats['available_cards'] as int?) ?? _availableCards;
-                if (backendAvailable != _availableCards) {
-                  _availableCards = backendAvailable;
-                  // 【修复 v1.12.0】使用服务层统一方法写入，确保 key 带 syncId
-                  await GuardianCardService.updateLocalCache(_availableCards);
-                }
+              // 【修复 v1.84.0】始终使用后端值（forceSyncFromBackend 已处理清除缓存场景）
+              final backendAvailable = (stats['available_cards'] as int?) ?? _availableCards;
+              if (backendAvailable != _availableCards) {
+                _availableCards = backendAvailable;
+                // 【修复 v1.12.0】使用服务层统一方法写入，确保 key 带 syncId
+                await GuardianCardService.updateLocalCache(_availableCards);
               }
             }
           }
@@ -261,11 +263,7 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
       }(),
     ]);
 
-    // Future.wait 完成后，统一清除 skipSync 标记，并结束加载状态
-    if (skipSync) {
-      await prefs.remove('guardian_card_skip_sync_once');
-      if (kDebugMode) debugPrint('[GuardianCardPage] skipSync 标记已清除');
-    }
+    // Future.wait 完成后，结束加载状态
     if (mounted) setState(() => _isLoadingData = false);
   }
 
@@ -450,27 +448,44 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
       );
 
       if (!sendResult['success']) {
+        // 【修复 v1.84.0】发送失败保存到重试队列
+        final err = sendResult['error'];
+        final offline = sendResult['offline'] as bool?;
+        if (offline == true || (err != null && !err.toString().contains('no_quota') && !err.toString().contains('not_logged_in'))) {
+          // 网络错误或非逻辑错误，保存到重试队列
+          await GuardianCardService.saveFailedCard({
+            'message': _currentMessage,
+            'recipientName': _recipientName.isNotEmpty ? _recipientName : null,
+            'timestamp': DateTime.now().toIso8601String(),
+          });
+          if (kDebugMode) debugPrint('[GuardianCard] 发送失败，已保存到重试队列');
+        }
+
         if (mounted) {
           setState(() => _isSharing = false);
-          final err = sendResult['error'];
           final statusCode = sendResult['statusCode'] as int?;
-          final offline = sendResult['offline'] as bool?;
           String errMsg;
           if (offline == true) {
-            errMsg = '网络连接失败，请检查网络后重试';
+            errMsg = '网络连接失败，已保存到重试队列\n恢复网络后将自动重试';
           } else if (err == 'not_logged_in') {
             errMsg = '请先登录后再发送守护卡';
           } else if (statusCode == 401) {
             errMsg = '登录已失效，请退出后重新登录';
           } else if (err == 'no_quota' || err == 'no_available_cards') {
             errMsg = '没有可用的守护卡（可能已过期）\n请等待被邀请人注册后可获得新卡片';
-          } else if (err == 'Parse error') {
-            errMsg = '服务器响应异常，请稍后重试';
           } else {
-            errMsg = '发卡失败，请稍后重试\n($err)';
+            errMsg = '发卡失败，已保存到重试队列\n点击"重试"按钮可重新发送';
           }
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(errMsg), backgroundColor: Colors.red, duration: const Duration(seconds: 4)),
+            SnackBar(
+              content: Text(errMsg),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 4),
+              action: SnackBarAction(
+                label: '重试',
+                onPressed: _retryFailedCards,
+              ),
+            ),
           );
         }
         if (kDebugMode) debugPrint('[GuardianCard] 发卡失败: $sendResult');
@@ -762,6 +777,86 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
     }
   }
 
+  /// 【新增 v1.84.0】后端同步失败提示横幅（清除缓存后网络不可用时显示）
+  Widget _buildSyncFailedBanner() {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.lg, vertical: ZaiNeSpacing.md),
+      decoration: BoxDecoration(
+        color: Colors.red.shade50,
+        borderRadius: BorderRadius.circular(ZaiNeRadius.small),
+        border: Border.all(color: Colors.red.shade200),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.cloud_off, color: Colors.red.shade700, size: 20),
+          const SizedBox(width: ZaiNeSpacing.md),
+          Expanded(
+            child: Text(
+              '无法同步守护卡额度，请检查网络后重试',
+              style: TextStyle(fontSize: ZaiNeFontSize.caption, color: Colors.red.shade800, fontWeight: FontWeight.w500),
+            ),
+          ),
+          TextButton(
+            onPressed: () async {
+              // 重新同步
+              if (kDebugMode) debugPrint('[GuardianCardPage] 用户点击重试同步');
+              setState(() => _syncFailed = false);
+              final result = await GuardianCardService.forceSyncFromBackend();
+              if (mounted) {
+                setState(() {
+                  _availableCards = result;
+                  _syncFailed = result == 0;
+                });
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(result > 0 ? '同步成功，剩余 $_availableCards 张守护卡' : '同步失败，请稍后重试'),
+                    backgroundColor: result > 0 ? Colors.green : Colors.red,
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
+            },
+            child: Text('重试', style: TextStyle(color: Colors.red.shade800, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 【新增 v1.84.0】发送失败的守护卡重试横幅
+  Widget _buildFailedCardsBanner() {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.lg, vertical: ZaiNeSpacing.md),
+      decoration: BoxDecoration(
+        color: Colors.orange.shade50,
+        borderRadius: BorderRadius.circular(ZaiNeRadius.small),
+        border: Border.all(color: Colors.orange.shade200),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.error_outline, color: Colors.orange.shade700, size: 20),
+          const SizedBox(width: ZaiNeSpacing.md),
+          Expanded(
+            child: Text(
+              '有守护卡发送失败，可重试',
+              style: TextStyle(fontSize: ZaiNeFontSize.caption, color: Colors.orange.shade800, fontWeight: FontWeight.w500),
+            ),
+          ),
+          TextButton(
+            onPressed: _isSharing ? null : _retryFailedCards,
+            child: _isSharing
+                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                : Text('重试', style: TextStyle(color: Colors.orange.shade800, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
   /// 未登录提示横幅
   Widget _buildLoginBanner() {
     return Container(
@@ -823,6 +918,12 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
           padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.xl, vertical: ZaiNeSpacing.md),
           child: Column(
                 children: [
+                  // 【修复 v1.84.0】同步失败提示横幅（清除缓存后网络不可用时显示）
+                  if (_syncFailed) _buildSyncFailedBanner(),
+
+                  // 【新增 v1.84.0】有发送失败的守护卡时显示重试横幅
+                  if (_hasFailedCards) _buildFailedCardsBanner(),
+
                   // 【修复】未登录提示横幅
                   if (_needsLogin) _buildLoginBanner(),
 
@@ -2122,6 +2223,46 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
         });
       }
     });
+  }
+
+  /// 【新增 v1.84.0】重试发送失败的守护卡
+  Future<void> _retryFailedCards() async {
+    if (kDebugMode) debugPrint('[GuardianCardPage] 开始重试发送失败的守护卡...');
+    setState(() => _isSharing = true);
+    try {
+      final result = await GuardianCardService.retryFailedCards();
+      if (result['success'] == true) {
+        final retried = result['retried'] as int? ?? 0;
+        final succeeded = result['succeeded'] as int? ?? 0;
+        final remaining = result['remaining'] as int? ?? 0;
+        if (mounted) {
+          setState(() => _isSharing = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('重试完成：成功$succeeded/$retried 条${remaining > 0 ? '，剩余$remaining条' : ''}'),
+              backgroundColor: succeeded > 0 ? Colors.green : Colors.orange,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+          // 刷新页面数据
+          _loadData();
+        }
+      } else {
+        if (mounted) {
+          setState(() => _isSharing = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('重试失败，请稍后重试'), backgroundColor: Colors.red),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isSharing = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('重试异常：$e'), backgroundColor: Colors.red),
+        );
+      }
+    }
   }
 
   /// 取消倒计时定时器

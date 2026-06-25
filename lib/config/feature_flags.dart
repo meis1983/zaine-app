@@ -64,9 +64,6 @@ class FeatureFlags {
   /// 新手任务卡片
   static const bool enableNewbieTask = false;
 
-  /// 升级庆祝动画
-  static const bool enableUpgradeCelebration = false;
-
   /// 营销展示页
   static const bool enablePromotionalShowcase = false;
 

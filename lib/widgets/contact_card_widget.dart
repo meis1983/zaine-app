@@ -97,11 +97,9 @@ class ContactCardWidget extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: ZaiNeSpacing.sm),
-                      // 会员限制锁定图标
-                      if (!isPremium) ...[
-                        Icon(Icons.lock_outline, size: 13, color: ZaiNeColors.textSecondary()),
-                        const SizedBox(width: ZaiNeSpacing.xs),
-                      ],
+                      // 【v1.86.0】隐藏锁定图标 — 原意是提示非会员功能限制，
+                      // 但每个联系人都显示🔒会让用户困惑（误以为联系人被锁了）
+                      // 改为在超出免费额度时统一提示升级
                       // 优先级标签
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.sm, vertical: ZaiNeSpacing.xs),

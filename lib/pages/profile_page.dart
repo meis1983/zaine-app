@@ -30,6 +30,7 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePage> {
   bool _isLoggedIn = false;
+  bool _isProfileComplete = false; // 【v1.91.0】档案完整性标记（替代 _isLoggedIn 判断）
   bool _isLoading = true;
   String? _avatarPath;
 
@@ -72,6 +73,21 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
     _medicineController.dispose();
     _emergencyNoteController.dispose();
     super.dispose();
+  }
+
+  /// 【v1.91.0】检查健康档案是否真正填写完整（与 settings_page 逻辑一致）
+  static bool _checkProfileComplete(String? profileJson) {
+    if (profileJson == null || profileJson.isEmpty) return false;
+    try {
+      final profile = jsonDecode(profileJson) as Map<String, dynamic>;
+      final name = profile['name']?.toString();
+      final ageRaw = profile['age'];
+      final age = ageRaw is int ? ageRaw : int.tryParse(ageRaw?.toString() ?? '');
+      // 有姓名或年龄即视为已完善
+      return (name != null && name.isNotEmpty) || (age != null && age > 0);
+    } catch (_) {
+      return false;
+    }
   }
 
   Future<void> _loadProfile() async {
@@ -146,6 +162,8 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
 
     setState(() {
       _isLoggedIn = isReallyLoggedIn;
+      // 【v1.91.0】基于档案实际内容判断完整性，而非仅看登录状态
+      _isProfileComplete = _checkProfileComplete(profileJson);
       _avatarPath = avatarPath;
       _isLoading = false;
     });
@@ -1033,14 +1051,14 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: _isLoggedIn
+                colors: _isProfileComplete
                     ? [Colors.green.shade400, Colors.teal.shade400]
                     : [Colors.orange.shade300, const Color(0xFFFF7F50)],
               ),
               borderRadius: BorderRadius.circular(14),
               boxShadow: [
                 BoxShadow(
-                  color: (_isLoggedIn ? Colors.green : Colors.orange).withValues(alpha: 38),
+                  color: (_isProfileComplete ? Colors.green : Colors.orange).withValues(alpha: 38),
                   blurRadius: 12,
                   offset: const Offset(0, 4),
                 ),
@@ -1056,7 +1074,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(
-                    _isLoggedIn ? Icons.verified_user : Icons.edit_note_rounded,
+                    _isProfileComplete ? Icons.verified_user : Icons.edit_note_rounded,
                     color: Colors.white,
                     size: 20,
                   ),
@@ -1067,12 +1085,12 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        _isLoggedIn ? '档案已完善' : '请完善健康档案',
+                        _isProfileComplete ? '档案已完善' : '请完善健康档案',
                         style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        _isLoggedIn ? '求助功能已解锁，保护自己从现在开始' : '紧急求助需要您的健康信息',
+                        _isProfileComplete ? '求助功能已解锁，保护自己从现在开始' : '紧急求助需要您的健康信息',
                         style: TextStyle(color: Colors.white.withValues(alpha: 217), fontSize: 12),
                       ),
                     ],

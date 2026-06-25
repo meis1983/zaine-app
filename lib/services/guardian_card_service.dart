@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'api/auth_service.dart';
@@ -215,7 +216,13 @@ class GuardianCardService {
   /// 启动时从后端同步额度
   /// 【重要】优先使用 /card/list 返回的权威数据（包含过期检查）
   /// 返回最新的可用卡片数（若失败则为本地缓存值）
-  static Future<int> syncQuotaFromBackend() async {
+  /// 【修复 v1.84.0】增加 forceSync 参数，清除缓存后强制从后端同步
+  static Future<int> syncQuotaFromBackend({bool forceSync = false}) async {
+    // 【修复 v1.84.0】如果本地为0但 forceSync=true，先尝试后端同步（即使上一次缓存了0）
+    final prefs = await SharedPreferences.getInstance();
+    final syncId = await _getCurrentSyncIdAsync();
+    final cached = prefs.getInt('guardian_card_gift_remaining_$syncId') ?? 0;
+
     try {
       // 方案1：优先使用 /card/list（后端会懒检查过期卡并退回）
       final cardListRes = await CardService.listMyCards();
@@ -224,7 +231,7 @@ class GuardianCardService {
         if (stats != null) {
           final backendAvailable = (stats['available_cards'] as int?) ?? 0;
           await updateLocalCache(backendAvailable);
-          if (kDebugMode) debugPrint('[GuardianCard] syncQuotaFromBackend (card/list): $backendAvailable 张');
+          if (kDebugMode) debugPrint('[GuardianCard] syncQuotaFromBackend (card/list): $backendAvailable 张 (forceSync=$forceSync)');
           return backendAvailable;
         }
       }
@@ -238,7 +245,7 @@ class GuardianCardService {
       if (res['success'] == true) {
         final backendAvailable = (res['available_cards'] as int?) ?? 0;
         await updateLocalCache(backendAvailable);
-        if (kDebugMode) debugPrint('[GuardianCard] syncQuotaFromBackend (invite/stats): $backendAvailable 张');
+        if (kDebugMode) debugPrint('[GuardianCard] syncQuotaFromBackend (invite/stats): $backendAvailable 张 (forceSync=$forceSync)');
         return backendAvailable;
       }
     } catch (e) {
@@ -246,15 +253,104 @@ class GuardianCardService {
     }
 
     // 失败时返回本地缓存值
-    final prefs = await SharedPreferences.getInstance();
-    final syncId = await _getCurrentSyncIdAsync();
-    final cached = prefs.getInt('guardian_card_gift_remaining_$syncId') ?? 0;
-    if (kDebugMode) debugPrint('[GuardianCard] syncQuotaFromBackend 失败，使用本地缓存: $cached 张 (syncId=$syncId)');
+    if (kDebugMode) debugPrint('[GuardianCard] syncQuotaFromBackend 失败，使用本地缓存: $cached 张 (syncId=$syncId, forceSync=$forceSync)');
     return cached;
   }
 
-  /// 获取守护卡总数（v2.0 单池，直接返回 giftRemaining）
-  static Future<int> getTotalAvailable() async {
-    return getGiftRemaining();
+  /// 【新增 v1.84.0】强制从后端同步额度（清除缓存后调用）
+  static Future<int> forceSyncFromBackend() async {
+    if (kDebugMode) debugPrint('[GuardianCard] forceSyncFromBackend() 开始强制同步...');
+    final result = await syncQuotaFromBackend(forceSync: true);
+    if (kDebugMode) debugPrint('[GuardianCard] forceSyncFromBackend() 完成，后端返回: $result 张');
+    return result;
+  }
+
+  /// 【新增 v1.84.0】保存发送失败的守护卡到重试队列
+  static Future<void> saveFailedCard(Map<String, dynamic> cardData) async {
+    final prefs = await SharedPreferences.getInstance();
+    final syncId = await _getCurrentSyncIdAsync();
+    final key = 'guardian_card_failed_queue_$syncId';
+    final existing = prefs.getString(key) ?? '[]';
+    try {
+      final List<dynamic> queue = jsonDecode(existing);
+      queue.add({
+        ...cardData,
+        'retry_count': 0,
+        'saved_at': DateTime.now().toIso8601String(),
+      });
+      await prefs.setString(key, jsonEncode(queue));
+      if (kDebugMode) debugPrint('[GuardianCard] saveFailedCard: 已保存到重试队列 (${queue.length}条)');
+    } catch (e) {
+      if (kDebugMode) debugPrint('[GuardianCard] saveFailedCard 失败: $e');
+    }
+  }
+
+  /// 【新增 v1.84.0】获取重试队列
+  static Future<List<Map<String, dynamic>>> getFailedQueue() async {
+    final prefs = await SharedPreferences.getInstance();
+    final syncId = await _getCurrentSyncIdAsync();
+    final key = 'guardian_card_failed_queue_$syncId';
+    final existing = prefs.getString(key) ?? '[]';
+    try {
+      final List<dynamic> queue = jsonDecode(existing);
+      return queue.map((item) => Map<String, dynamic>.from(item)).toList();
+    } catch (e) {
+      if (kDebugMode) debugPrint('[GuardianCard] getFailedQueue 失败: $e');
+      return [];
+    }
+  }
+
+  /// 【新增 v1.84.0】重试发送失败的守护卡
+  static Future<Map<String, dynamic>> retryFailedCards() async {
+    final prefs = await SharedPreferences.getInstance();
+    final syncId = await _getCurrentSyncIdAsync();
+    final key = 'guardian_card_failed_queue_$syncId';
+    final existing = prefs.getString(key) ?? '[]';
+    try {
+      final List<dynamic> queue = jsonDecode(existing);
+      if (queue.isEmpty) {
+        return {'success': true, 'retried': 0, 'succeeded': 0};
+      }
+
+      int succeeded = 0;
+      final List<dynamic> remaining = [];
+      for (final item in queue) {
+        final card = Map<String, dynamic>.from(item);
+        final message = card['message']?.toString() ?? '';
+        final recipientName = card['recipientName']?.toString();
+        if (message.isEmpty) continue;
+        final result = await sendCardWithBackend(
+          message: message,
+          recipientName: recipientName,
+        );
+        if (result['success'] == true) {
+          succeeded++;
+        } else {
+          remaining.add(card);
+        }
+      }
+      await prefs.setString(key, jsonEncode(remaining));
+      if (kDebugMode) {
+        debugPrint('[GuardianCard] retryFailedCards: 重试${queue.length}条，成功$succeeded条，剩余${remaining.length}条');
+      }
+      return {
+        'success': true,
+        'retried': queue.length,
+        'succeeded': succeeded,
+        'remaining': remaining.length,
+      };
+    } catch (e) {
+      if (kDebugMode) debugPrint('[GuardianCard] retryFailedCards 失败: $e');
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  /// 【新增 v1.84.0】清空重试队列
+  static Future<void> clearFailedQueue() async {
+    final prefs = await SharedPreferences.getInstance();
+    final syncId = await _getCurrentSyncIdAsync();
+    final key = 'guardian_card_failed_queue_$syncId';
+    await prefs.remove(key);
+    if (kDebugMode) debugPrint('[GuardianCard] clearFailedQueue: 已清空重试队列');
   }
 }

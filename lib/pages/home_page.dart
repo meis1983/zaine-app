@@ -304,31 +304,43 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     final prefs = await SharedPreferences.getInstance();
     final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
 
-    // 【修复 v1.77.0】签到日期按用户隔离读取，与守护圈保持一致
-    final uid = (await AuthService.getUserId()) ?? '';
-    final lastDateKey = uid.isNotEmpty ? 'last_check_in_date_$uid' : 'last_check_in_date';
-    final lastDate = prefs.getString(lastDateKey);
+    // 【修复 v1.91.0】先读取全局 last_check_in_date，立即 setState，消除闪烁
+    // 根因：之前先 await AuthService.getUserId() 导致第一次渲染时 _checkedInToday=false
+    // 修复：读取到 prefs 后立即展示本地状态，不再等待用户 ID 解析
+    String? lastDate = prefs.getString('last_check_in_date');
+    String uid = '';
+
+    // 尝试获取用户 ID（异步），但不阻塞第一次 setState
+    try {
+      uid = (await AuthService.getUserId()) ?? '';
+      // 如果用户已登录，优先使用用户隔离的键值
+      if (uid.isNotEmpty) {
+        final userSpecificDate = prefs.getString('last_check_in_date_$uid');
+        if (userSpecificDate != null) {
+          lastDate = userSpecificDate;
+        }
+      }
+    } catch (_) {}
 
     if (!mounted) return;
     setState(() {
-      // 【修复】签到数据按用户隔离读取，防止切换账号后状态污染
-      final streakKey = uid.isNotEmpty ? 'continuous_days_$uid' : 'continuous_days';
-      final totalKey = uid.isNotEmpty ? 'total_check_in_days_$uid' : 'total_check_in_days';
-      final historyKey = uid.isNotEmpty ? 'checkin_history_$uid' : 'checkin_history';
-
+      // 【修复 v1.91.0】先设置本地读取的状态，避免闪烁
       _checkedInToday = lastDate == today;
       if (lastDate != null) {
         try {
           _lastCheckIn = DateTime.parse(lastDate);
         } catch (_) {}
       }
+      // 使用用户隔离的键值（如果已读取到）
+      final streakKey = uid.isNotEmpty ? 'continuous_days_$uid' : 'continuous_days';
+      final totalKey = uid.isNotEmpty ? 'total_check_in_days_$uid' : 'total_check_in_days';
+      final historyKey = uid.isNotEmpty ? 'checkin_history_$uid' : 'checkin_history';
       _continuousDays = prefs.getInt(streakKey) ?? 0;
       _totalDays = prefs.getInt(totalKey) ?? 0;
-      // 计算本周签到天数
       _weeklyDays = _calculateWeeklyDays(prefs, historyKey);
     });
 
-    // 同步服务器获取断签天数和签到状态
+    // 同步服务器获取断签天数和签到状态（覆盖本地状态，确保准确性）
     if (_isLoggedIn) {
       try {
         final res = await CheckinService.getTodayStatus();
@@ -351,7 +363,6 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
             }
           });
           // 同步到本地缓存（用户隔离 key）【修复 v1.77.0】
-          final uid = (await AuthService.getUserId()) ?? '';
           final streakKey = uid.isNotEmpty ? 'continuous_days_$uid' : 'continuous_days';
           final totalKey = uid.isNotEmpty ? 'total_check_in_days_$uid' : 'total_check_in_days';
           final lastDateKey = uid.isNotEmpty ? 'last_check_in_date_$uid' : 'last_check_in_date';
