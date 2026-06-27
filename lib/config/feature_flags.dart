@@ -56,7 +56,7 @@ class FeatureFlags {
   static const bool enableStatistics = false;
 
   /// 经期预测
-  static const bool enableMenstruation = false;
+  static const bool enableMenstruation = true;
 
   /// 成就系统
   static const bool enableAchievements = false;

@@ -235,7 +235,7 @@ class _LoginPageState extends State<_LoginPage>
                         setState(() => _selectedNumber = number);
                         widget.onPhoneChanged?.call();
                       },
-                      selectorConfig: SelectorConfig(
+                      selectorConfig: const SelectorConfig(
                         selectorType: PhoneInputSelectorType.DIALOG,
                         showFlags: true,
                         useEmoji: true,
@@ -261,7 +261,7 @@ class _LoginPageState extends State<_LoginPage>
                     ),
                   ),
                   // 下拉箭头 ▼（叠加在区号右侧，品牌橙色醒目提示）
-                  Positioned(
+                  const Positioned(
                     left: 0,
                     right: 0,
                     top: 0,
@@ -270,7 +270,7 @@ class _LoginPageState extends State<_LoginPage>
                       // 让点击穿透到下面的 selector 按钮
                       child: Padding(
                         // 【v1.91.0 微调】跟随选择器宽度，稍微左移让输入框更宽
-                        padding: const EdgeInsets.only(left: 70, right: 8),
+                        padding: EdgeInsets.only(left: 70, right: 8),
                         child: Align(
                           alignment: Alignment.centerLeft,
                           child: Icon(

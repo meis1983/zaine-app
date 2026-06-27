@@ -21,6 +21,11 @@ class WatchDataService {
   bool _isPaired = false;
   bool _isReachable = false;
 
+  /// 公开访问器
+  bool get isSupported => _isSupported;
+  bool get isPaired => _isPaired;
+  bool get isReachable => _isReachable;
+
   /// 初始化监听
   Future<void> init() async {
     try {

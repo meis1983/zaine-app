@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
-import '../theme/theme_helper.dart';
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
+import '../theme/theme_helper.dart';
 import '../services/platform/health_service.dart';
 import '../services/api/user_service.dart';
+import 'menstrual_page.dart';
+import 'menstrual_settings_page.dart';
 
 class HealthOverviewPage extends StatefulWidget {
   const HealthOverviewPage({super.key});
@@ -458,6 +460,53 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
                   ),
                 ],
               ),
+            ),
+          ],
+          // ✅ 第二步：添加按钮（记录经期 + 设置）
+          if (hasData) ...[
+            const SizedBox(height: ZaiNeSpacing.lg),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const MenstrualPage()),
+                      ).then((_) => _loadHealthData());
+                    },
+                    icon: const Icon(Icons.edit_calendar, size: 16),
+                    label: const Text('记录经期'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.pink,
+                      side: BorderSide(color: Colors.pink.shade200),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(ZaiNeRadius.small),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: ZaiNeSpacing.md),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const MenstrualSettingsPage()),
+                      );
+                    },
+                    icon: const Icon(Icons.settings, size: 16),
+                    label: const Text('设置'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.grey.shade700,
+                      side: BorderSide(color: Colors.grey.shade300),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(ZaiNeRadius.small),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ],

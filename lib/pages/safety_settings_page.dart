@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/theme_helper.dart';
 import '../services/safety/safety_service.dart';
+import '../services/platform/watch_data_service.dart';
 import '../widgets/safety_features.dart';
 import 'location_history_page.dart';
 import 'fall_event_history_page.dart';
@@ -23,6 +24,8 @@ class _SafetySettingsPageState extends State<SafetySettingsPage> {
   DateTime? _lastRecordTime;
   bool _isLocationTracking = false;
   bool _isLoading = true;
+  bool _watchPaired = false;
+  bool _watchReachable = false;
 
   @override
   void initState() {
@@ -36,6 +39,14 @@ class _SafetySettingsPageState extends State<SafetySettingsPage> {
     final track = await _safetyService.getLocationTrackForDay(DateTime.now());
     final falls = await _safetyService.getFallEvents();
     final lastRecordTime = await _safetyService.getLastRecordTime();
+
+    // 检查 Apple Watch 连接状态
+    try {
+      final watch = WatchDataService();
+      await watch.init();
+      _watchPaired = watch.isPaired;
+      _watchReachable = watch.isReachable;
+    } catch (_) {}
 
     if (mounted) {
       setState(() {
@@ -146,6 +157,8 @@ class _SafetySettingsPageState extends State<SafetySettingsPage> {
 
                     FallDetectionCard(
                       recentFalls: _fallEvents,
+                      watchPaired: _watchPaired,
+                      watchReachable: _watchReachable,
                       onViewHistory: () {
                         Navigator.push(
                           context,
