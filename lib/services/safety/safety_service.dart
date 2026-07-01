@@ -11,6 +11,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../api_service.dart';
+import '../api/notify_service.dart';
+import '../api/checkin_service.dart';
+import '../../services/platform/health_service.dart';
+import 'package:intl/intl.dart';
 
 /// 定时确认状态
 enum CheckInReminderStatus {
@@ -409,19 +413,37 @@ class SafetyService {
 
   void _triggerReminder() {
     if (kDebugMode) debugPrint('[SafetyService] 触发定时确认提醒');
+    
+    // 【v1.90.2】Apple Watch 辅助确认：检查 Watch 近期活动
+    _tryWatchAuxiliaryCheckin();
+    
     _showReminderNotification();
     onReminderDue?.call(const _CheckInReminderImpl(enabled: true, status: CheckInReminderStatus.daily));
+  }
+
+  /// 【v1.90.2】尝试通过 Apple Watch 数据辅助完成签到
+  Future<void> _tryWatchAuxiliaryCheckin() async {
+    try {
+      final hasRecentActivity = await HealthService.checkRecentHeartbeat();
+      if (hasRecentActivity) {
+        if (kDebugMode) debugPrint('[SafetyService] Watch 检测到近期活动，辅助完成签到');
+        final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+        await CheckinService.checkIn(date: today, mood: 0);
+        if (kDebugMode) debugPrint('[SafetyService] Watch 辅助签到成功');
+      }
+    } catch (e) {
+      if (kDebugMode) debugPrint('[SafetyService] Watch 辅助签到失败: $e');
+    }
   }
 
   Future<void> _handleMissedReminder(CheckInReminder config) async {
     final updated = config.copyWith(missedCount: config.missedCount + 1);
     await saveReminderConfig(updated);
 
-    // 如果连续错过3次，发送通知给守护人
-    // TODO (v1.20.0+): 守护人通知功能（需营业执照申请短信模板或接入微信订阅消息）
-    // if (updated.missedCount >= 3) {
-    //   await _notifyGuardiansAboutMissedCheckIn(updated.missedCount);
-    // }
+    // 通知守护人（App 内 Push，通过后端 APNs 推送）
+    if (updated.missedCount >= 1) {
+      await NotifyService.notifyGuardiansAboutMissedCheckIn(updated.missedCount);
+    }
   }
 
   Future<void> _showReminderNotification() async {
@@ -765,6 +787,17 @@ class SafetyService {
 
     if (kDebugMode) debugPrint('[SafetyService] 跌倒事件已记录: ${event.id}');
     onFallDetected?.call(event);
+
+    // 通知守护者
+    try {
+      await NotifyService.notifyGuardiansAboutFall(
+        timestamp: event.timestamp,
+        latitude: event.latitude.toString(),
+        longitude: event.longitude.toString(),
+      );
+    } catch (e) {
+      if (kDebugMode) debugPrint('[SafetyService] 跌倒通知守护者失败: $e');
+    }
   }
 
   /// 确认跌倒事件

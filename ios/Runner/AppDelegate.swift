@@ -2,9 +2,14 @@ import Flutter
 import UIKit
 import WatchConnectivity
 import UserNotifications
+import HealthKit
 
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate, WCSessionDelegate {
+  
+  private var healthStore: HKHealthStore?
+  private let fallMethodChannel = "zaine/healthkit"
+  
   override func application(
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
@@ -15,7 +20,109 @@ import UserNotifications
         session.delegate = self
         session.activate()
     }
+    
+    // 初始化 HealthKit 与 MethodChannel（延迟到引擎准备就绪）
+    if HKHealthStore.isHealthDataAvailable() {
+        healthStore = HKHealthStore()
+    }
+    
+    // 注册 MethodChannel 需要在 Flutter 引擎可用后执行
+    DispatchQueue.main.async {
+        self.setupHealthKitMethodChannel()
+    }
+    
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+  }
+
+  // MARK: - HealthKit Method Channel
+  
+  private func setupHealthKitMethodChannel() {
+    guard let controller = window?.rootViewController as? FlutterViewController else {
+        print("[AppDelegate] 无法获取 FlutterViewController，MethodChannel 注册失败")
+        return
+    }
+    
+    let channel = FlutterMethodChannel(name: fallMethodChannel, binaryMessenger: controller.binaryMessenger)
+    channel.setMethodCallHandler { [weak self] call, result in
+        guard let self = self else {
+            result(FlutterError(code: "UNAVAILABLE", message: "AppDelegate released", details: nil))
+            return
+        }
+        
+        switch call.method {
+        case "requestFallDetectionAuthorization":
+            self.requestFallDetectionAuthorization(result: result)
+        case "getRecentFallEvents":
+            let args = call.arguments as? [String: Any] ?? [:]
+            let hours = args["hours"] as? Int ?? 24
+            self.getRecentFallEvents(hours: hours, result: result)
+        default:
+            result(FlutterMethodNotImplemented)
+        }
+    }
+  }
+  
+  private func requestFallDetectionAuthorization(result: @escaping FlutterResult) {
+    guard let healthStore = healthStore else {
+        result(false)
+        return
+    }
+
+    // 使用字符串构造 identifier，兼容不同 SDK 版本
+    // HKCategoryTypeIdentifierFall 在 iOS 15.2+ 可用，但 Swift overlay 可能未导出 .fall
+    let fallTypeId = HKCategoryTypeIdentifier(rawValue: "HKCategoryTypeIdentifierFall")
+    guard let fallType = HKObjectType.categoryType(forIdentifier: fallTypeId) else {
+        result(false)
+        return
+    }
+
+    healthStore.requestAuthorization(toShare: nil, read: [fallType]) { success, error in
+        DispatchQueue.main.async {
+            if let error = error {
+                print("[AppDelegate] 请求跌倒检测授权失败: \(error)")
+            }
+            result(success)
+        }
+    }
+  }
+  
+  private func getRecentFallEvents(hours: Int, result: @escaping FlutterResult) {
+    guard let healthStore = healthStore else {
+        result([])
+        return
+    }
+
+    let fallTypeId = HKCategoryTypeIdentifier(rawValue: "HKCategoryTypeIdentifierFall")
+    guard let fallType = HKObjectType.categoryType(forIdentifier: fallTypeId) else {
+        result([])
+        return
+    }
+
+    let now = Date()
+    let startDate = Calendar.current.date(byAdding: .hour, value: -hours, to: now) ?? now.addingTimeInterval(TimeInterval(-hours * 3600))
+    let predicate = HKQuery.predicateForSamples(withStart: startDate, end: now, options: .strictStartDate)
+    
+    let query = HKSampleQuery(sampleType: fallType, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: [NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)]) { _, samples, error in
+        
+        if let error = error {
+            print("[AppDelegate] 查询跌倒事件失败: \(error)")
+            DispatchQueue.main.async { result([]) }
+            return
+        }
+        
+        let events = samples?.compactMap { sample -> [String: Any]? in
+            guard let categorySample = sample as? HKCategorySample else { return nil }
+            return [
+                "timestamp": ISO8601DateFormatter().string(from: categorySample.startDate),
+                "endTimestamp": ISO8601DateFormatter().string(from: categorySample.endDate),
+                "value": categorySample.value
+            ]
+        } ?? []
+        
+        DispatchQueue.main.async { result(events) }
+    }
+    
+    healthStore.execute(query)
   }
 
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
@@ -30,10 +137,22 @@ import UserNotifications
       }
 
       switch action {
-      case "checkin":
+      case "checkin", "auto_checkin":
+          // 【感应签到】Watch 自动检测到心率后触发的签到
+          let isAutoCheckin = action == "auto_checkin"
+          if isAutoCheckin {
+              print("[AppDelegate] 💓 收到 Watch 感应签到请求（心率: \(message["heart_rate"] ?? "unknown")）")
+          }
+          
           UserDefaults.standard.set(true, forKey: "pending_watch_checkin")
-          UserDefaults.standard.set("checkin", forKey: "watch_last_action")
+          UserDefaults.standard.set(action, forKey: "watch_last_action")
           UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: "watch_last_action_ts")
+          if isAutoCheckin {
+              UserDefaults.standard.set(message["heart_rate"], forKey: "watch_auto_checkin_hr")
+          }
+          
+          // 【修复 v1.91.0】立即通知 Flutter 执行签到（不再只设 flag 等待被动触发）
+          self.notifyFlutterWatchCheckin()
           replyHandler(["success": true])
 
       case "sos":
@@ -49,6 +168,27 @@ import UserNotifications
           UserDefaults.standard.set(action, forKey: "watch_last_action")
           UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: "watch_last_action_ts")
           replyHandler(["success": true])
+      }
+  }
+
+  /// 【v1.91.0】通知 Flutter 端执行 Watch 签到
+  private func notifyFlutterWatchCheckin() {
+      // 确保在主线程调用
+      DispatchQueue.main.async {
+          guard let controller = self.window?.rootViewController as? FlutterViewController else {
+              print("[AppDelegate] FlutterViewController 不可用，Watch 签到通知失败")
+              return
+          }
+          let channel = FlutterMethodChannel(name: "zaine/watch", binaryMessenger: controller.binaryMessenger)
+          channel.invokeMethod("watchCheckin", arguments: nil) { result in
+              DispatchQueue.main.async {
+                  if let error = result as? FlutterError {
+                      print("[AppDelegate] Watch 签到 Flutter 回调失败: \(error.message ?? "unknown")")
+                  } else {
+                      print("[AppDelegate] ✅ Watch 签到已通知 Flutter 侧")
+                  }
+              }
+          }
       }
   }
 

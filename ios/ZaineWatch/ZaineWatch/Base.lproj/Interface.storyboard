@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<document type="com.apple.InterfaceBuilder.WatchKit.Storyboard" version="2.0" toolsVersion="22154" targetRuntime="watchOS" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" colorMatched="YES">
+    <device id="watch38" orientation="portrait" layout="fullScreen">
+        <adaptation id="watch38-extension"/>
+    </device>
+    <dependencies>
+        <deployment identifier="watchOS"/>
+        <plugIn identifier="com.apple.Interfaces.WatchKit"/>
+        <capability name="watchKit nonzero sizing" minToolsVersion="7.0"/>
+    </dependencies>
+    <scenes>
+        <!--Interface Controller-->
+        <scene sceneID="0SZ-mZ-Jjb">
+            <objects>
+                <controller title="在呢+" id="Jng-6y-0PU" customClass="InterfaceController" customModule="ZaineWatch" sceneMemberID="viewController">
+                    <view key="view" contentMode="scaleToFill" id="dDZ-JK-X8M">
+                        <nativeButton title="签到" id="QnR-vJ-Vnz">
+                            <buttonAction selector="checkIn"/>
+                        </nativeButton>
+                        <nativeButton title="SOS" id="xYh-KJ-8Mn">
+                            <buttonAction selector="triggerSOS"/>
+                        </nativeButton>
+                    </view>
+                </controller>
+            </objects>
+            <point key="canvasLocation" x="0.0" y="0.0"/>
+        </scene>
+    </scenes>
+</document>

@@ -21,6 +21,8 @@ class CheckinMilestoneDialog extends StatefulWidget {
   final int moodIndex;
   final String userName;
   final bool isReturnCheckin;
+  /// 断签天数（仅当 isReturnCheckin=true 时使用）
+  final int absentDays;
 
   const CheckinMilestoneDialog({
     super.key,
@@ -29,6 +31,7 @@ class CheckinMilestoneDialog extends StatefulWidget {
     required this.moodIndex,
     required this.userName,
     this.isReturnCheckin = false,
+    this.absentDays = 0,
   });
 
   @override
@@ -223,7 +226,8 @@ class _CheckinMilestoneDialogState extends State<CheckinMilestoneDialog>
   @override
   Widget build(BuildContext context) {
     final badge = BadgeGenerator.generate(widget.continuousDays,
-        isReturnCheckin: widget.isReturnCheckin);
+        isReturnCheckin: widget.isReturnCheckin,
+        absentDays: widget.absentDays);
     final gradient = ShareCardGenerator.getGradientByDays(widget.continuousDays);
 
     // 【修复 v1.9.9】计算安全最大高度，防止小屏设备 BOTTOM OVERFLOWED

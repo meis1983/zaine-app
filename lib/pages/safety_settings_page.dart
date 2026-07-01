@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import '../theme/theme_helper.dart';
 import '../services/safety/safety_service.dart';
 import '../services/platform/watch_data_service.dart';
@@ -26,11 +28,34 @@ class _SafetySettingsPageState extends State<SafetySettingsPage> {
   bool _isLoading = true;
   bool _watchPaired = false;
   bool _watchReachable = false;
+  Timer? _watchTimer;
 
   @override
   void initState() {
     super.initState();
     _loadData();
+    _startWatchTimer();
+  }
+
+  void _startWatchTimer() {
+    _watchTimer?.cancel();
+    _watchTimer = Timer.periodic(const Duration(seconds: 5), (_) async {
+      try {
+        final state = await WatchDataService().refreshWatchState();
+        if (mounted) {
+          setState(() {
+            _watchPaired = state['paired'] ?? false;
+            _watchReachable = state['reachable'] ?? false;
+          });
+        }
+      } catch (_) {}
+    });
+  }
+
+  @override
+  void dispose() {
+    _watchTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadData() async {
@@ -40,13 +65,19 @@ class _SafetySettingsPageState extends State<SafetySettingsPage> {
     final falls = await _safetyService.getFallEvents();
     final lastRecordTime = await _safetyService.getLastRecordTime();
 
-    // 检查 Apple Watch 连接状态
+    // 检查 Apple Watch 连接状态 - 使用 refreshWatchState 确保状态最新
     try {
       final watch = WatchDataService();
       await watch.init();
-      _watchPaired = watch.isPaired;
-      _watchReachable = watch.isReachable;
-    } catch (_) {}
+      final state = await watch.refreshWatchState();
+      _watchPaired = state['paired'] ?? false;
+      _watchReachable = state['reachable'] ?? false;
+      if (kDebugMode) {
+        debugPrint('[SafetySettings] Watch 状态: paired=$_watchPaired, reachable=$_watchReachable');
+      }
+    } catch (e) {
+      if (kDebugMode) debugPrint('[SafetySettings] 读取 Watch 状态失败: $e');
+    }
 
     if (mounted) {
       setState(() {

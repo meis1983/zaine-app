@@ -16,13 +16,13 @@ import '../widgets/empty_state_widget.dart';
 import '../widgets/contact_card_widget.dart';
 
 /// 预设关系选项
+/// 【v1.91.0】移除"兄弟姐妹"（已由"家人"涵盖），4字标签在守护圈卡片中过长遮挡显示
 const List<String> kRelationOptions = [
   '家人',
   '朋友',
   '同事',
   '父母',
   '配偶',
-  '兄弟姐妹',
   '子女',
   '其他',
 ];
@@ -985,7 +985,7 @@ class _ContactsPageState extends State<ContactsPage> {
     // 使用 ReorderableListView 支持拖拽排序
     return ReorderableListView(
       padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.lg, vertical: ZaiNeSpacing.sm),
-      onReorderItem: _handleReorderItem,
+      onReorder: _handleReorder,
       buildDefaultDragHandles: false, // 使用自定义拖拽手柄
       children: [
         // 第一个位置放说明框（不可拖拽）
@@ -1049,8 +1049,8 @@ class _ContactsPageState extends State<ContactsPage> {
     );
   }
   
-  /// 处理拖拽排序（新API：onReorderItem）
-  void _handleReorderItem(int oldIndex, int newIndex) {
+  /// 处理拖拽排序（ReorderableListView.onReorder 回调）
+  void _handleReorder(int oldIndex, int newIndex) {
     // 调整 newIndex（Flutter 的 ReorderableListView 规则）
     if (newIndex > oldIndex) {
       newIndex -= 1;
@@ -1100,7 +1100,9 @@ class _AddContactDialogState extends State<AddContactDialog> {
     _phoneController = TextEditingController(text: widget.existingContact?['phone'] ?? '');
 
     String savedRelation = widget.existingContact?['relation'] ?? '';
-    if (savedRelation.isNotEmpty && kRelationOptions.contains(savedRelation)) {
+    // 【修复 v1.91.0】如果保存的关系不在预设列表中，临时加入（兼容老数据）
+    if (savedRelation.isNotEmpty && !kRelationOptions.contains(savedRelation)) {
+      // 临时加入，让用户可以看到之前的值
       _selectedRelation = savedRelation;
     } else if (savedRelation.isNotEmpty) {
       _selectedRelation = savedRelation;
@@ -1244,46 +1246,53 @@ class _AddContactDialogState extends State<AddContactDialog> {
                       const SizedBox(height: ZaiNeSpacing.lg),
 
                       // 关系选择 — 精美芯片式下拉
-                      DropdownButtonFormField<String>(
-                        initialValue: kRelationOptions.contains(_selectedRelation)
-                            ? _selectedRelation : '其他',
-                        decoration: InputDecoration(
-                          labelText: '与您的关系',
-                          labelStyle: TextStyle(color: Colors.grey[600], fontSize: ZaiNeFontSize.caption),
-                          prefixIcon: Icon(Icons.favorite_border_rounded, color: Colors.orange.shade400, size: 20),
-                          filled: true,
-                          fillColor: Colors.orange.shade50.withValues(alpha: 0.4),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            borderSide: BorderSide(color: Colors.orange.shade200),
+                      // 【修复 v1.91.0】动态构建下拉选项，包含自定义关系（兼容老数据）
+                      Builder(builder: (context) {
+                        // 如果当前选择的关系不在预设列表中，临时加入
+                        final List<String> effectiveOptions = List.from(kRelationOptions);
+                        if (!effectiveOptions.contains(_selectedRelation)) {
+                          effectiveOptions.add(_selectedRelation);
+                        }
+                        return DropdownButtonFormField<String>(
+                          initialValue: _selectedRelation,
+                          decoration: InputDecoration(
+                            labelText: '与您的关系',
+                            labelStyle: TextStyle(color: Colors.grey[600], fontSize: ZaiNeFontSize.caption),
+                            prefixIcon: Icon(Icons.favorite_border_rounded, color: Colors.orange.shade400, size: 20),
+                            filled: true,
+                            fillColor: Colors.orange.shade50.withValues(alpha: 0.4),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide(color: Colors.orange.shade200),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide(color: Colors.orange.shade200),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: const BorderSide(color: Color(0xFFFF7F50), width: 1.5),
+                            ),
+                            errorBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide(color: Colors.red.shade300),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.lg, vertical: ZaiNeSpacing.lg),
                           ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            borderSide: BorderSide(color: Colors.orange.shade200),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            borderSide: const BorderSide(color: Color(0xFFFF7F50), width: 1.5),
-                          ),
-                          errorBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            borderSide: BorderSide(color: Colors.red.shade300),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.lg, vertical: ZaiNeSpacing.lg),
-                        ),
-                        icon: Icon(Icons.keyboard_arrow_down_rounded, color: Colors.grey[600]),
-                        style: TextStyle(fontSize: ZaiNeFontSize.bodySm, color: Colors.grey[800]),
-                        items: kRelationOptions.map((relation) {
-                          return DropdownMenuItem(value: relation, child: Text(relation));
-                        }).toList(),
-                        onChanged: (val) {
-                          if (val != null) setState(() => _selectedRelation = val);
-                        },
-                        validator: (value) {
-                          if (value == null || value.isEmpty) return '请选择关系';
-                          return null;
-                        },
-                      ),
+                          icon: Icon(Icons.keyboard_arrow_down_rounded, color: Colors.grey[600]),
+                          style: TextStyle(fontSize: ZaiNeFontSize.bodySm, color: Colors.grey[800]),
+                          items: effectiveOptions.map((relation) {
+                            return DropdownMenuItem(value: relation, child: Text(relation));
+                          }).toList(),
+                          onChanged: (val) {
+                            if (val != null) setState(() => _selectedRelation = val);
+                          },
+                          validator: (value) {
+                            if (value == null || value.isEmpty) return '请选择关系';
+                            return null;
+                          },
+                        );
+                      }),
 
                       const SizedBox(height: ZaiNeSpacing.sm),
                     ],

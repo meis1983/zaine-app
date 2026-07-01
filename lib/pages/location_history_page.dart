@@ -228,6 +228,13 @@ class _LocationHistoryPageState extends State<LocationHistoryPage> {
                     '经度: ${record.longitude.toStringAsFixed(6)}',
                     style: TextStyle(fontSize: ZaiNeFontSize.caption, color: Colors.grey.shade700, fontFamily: 'monospace'),
                   ),
+                  if (record.accuracy != null) ...[
+                    const SizedBox(height: ZaiNeSpacing.xs),
+                    Text(
+                      '定位精度约 ${record.accuracy!.toStringAsFixed(0)} 米（数值越小越精确）',
+                      style: TextStyle(fontSize: ZaiNeFontSize.micro, color: Colors.grey.shade500),
+                    ),
+                  ],
                   if (record.address != null && record.address!.isNotEmpty) ...[
                     const SizedBox(height: ZaiNeSpacing.sm),
                     Row(

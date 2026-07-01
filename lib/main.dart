@@ -14,6 +14,7 @@ import 'services/deep_link_service.dart';
 import 'services/silent_login_service.dart';
 import 'services/membership_service.dart';
 import 'services/api/auth_service.dart';
+import 'services/platform/health_service.dart'; // 【v1.91.0】Watch 签到通道
 import 'data/app_constants.dart';
 // import 'config/feature_flags.dart';  // 暂时未使用，保留以备后续功能开发
 
@@ -57,6 +58,9 @@ void main() async {
     ),
   );
   await themeNotifier.load();
+
+  // 【v1.91.0】初始化 Watch MethodChannel — AppDelegate 收到 Watch 签到后立即通知 Flutter
+  HealthService.initWatchChannel();
 
   // 【修复 v1.77.0】迁移敏感信息从 SP 到 Keychain（安全）
   await _migrateSensitiveDataToKeychain();

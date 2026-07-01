@@ -14,6 +14,8 @@ class CheckInButtonWidget extends StatelessWidget {
   final bool checkedInToday;
   final VoidCallback onTap;
   final Animation<double> scaleAnimation;
+  /// 【修复 v1.91.0】数据是否已就绪（首次启动无本地缓存时显示骨架屏，避免 "连续 0 天" 视觉错）
+  final bool isDataReady;
 
   const CheckInButtonWidget({
     super.key,
@@ -21,6 +23,7 @@ class CheckInButtonWidget extends StatelessWidget {
     required this.checkedInToday,
     required this.onTap,
     required this.scaleAnimation,
+    this.isDataReady = true,
   });
 
   @override
@@ -92,7 +95,28 @@ class CheckInButtonWidget extends StatelessWidget {
                     ),
                   ),
                   // 【P3】连续签到 >=1 天即显示徽章和天数
-                  if (continuousDays >= 1) ...[
+                  // 【修复 v1.91.0】数据未就绪时显示骨架屏占位，避免"短暂显示 0 天"
+                  if (!isDataReady) ...[
+                    const SizedBox(height: ZaiNeSpacing.xs),
+                    // 占位骨架（两个浅色横条）
+                    Container(
+                      width: 60,
+                      height: 10,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.3),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Container(
+                      width: 80,
+                      height: 10,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.4),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                  ] else if (continuousDays >= 1) ...[
                     const SizedBox(height: ZaiNeSpacing.xs),
                     Text(
                       badgeLevel.title,

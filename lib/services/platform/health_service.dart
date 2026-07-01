@@ -1,5 +1,6 @@
 import 'package:health/health.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import '../api/checkin_service.dart';
 import '../api/user_service.dart';
 import '../api/notify_service.dart';
@@ -29,6 +30,9 @@ class HealthService {
     HealthDataType.BODY_TEMPERATURE,     // 体温 (手腕温度)
     HealthDataType.BLOOD_PRESSURE_SYSTOLIC,  // 收缩压 (高压)
     HealthDataType.BLOOD_PRESSURE_DIASTOLIC, // 舒张压 (低压)
+    HealthDataType.STEPS,                // 步数
+    HealthDataType.DISTANCE_WALKING_RUNNING, // 行走+跑步距离
+    HealthDataType.ACTIVE_ENERGY_BURNED, // 活跃能量
   ];
 
   // 权限定义：只读
@@ -207,6 +211,30 @@ class HealthService {
           if (prev == null || pointTime.isAfter(prev)) {
             summary['bp_diastolic'] = numVal;
             latestAt['bp_diastolic'] = pointTime;
+          }
+        } else if (type == HealthDataType.STEPS) {
+          // 步数：累加今天的所有数据点
+          final today = DateTime.now();
+          final todayDate = DateTime(today.year, today.month, today.day);
+          final pointDate = DateTime(point.dateFrom.year, point.dateFrom.month, point.dateFrom.day);
+          if (pointDate == todayDate) {
+            summary['steps'] = (summary['steps'] ?? 0) + (numVal?.round() ?? 0);
+          }
+        } else if (type == HealthDataType.DISTANCE_WALKING_RUNNING) {
+          // 行走+跑步距离：累加今天的所有数据点（单位：米）
+          final today = DateTime.now();
+          final todayDate = DateTime(today.year, today.month, today.day);
+          final pointDate = DateTime(point.dateFrom.year, point.dateFrom.month, point.dateFrom.day);
+          if (pointDate == todayDate) {
+            summary['distance_m'] = (summary['distance_m'] ?? 0) + (numVal != null ? (numVal * 1000).round() : 0);
+          }
+        } else if (type == HealthDataType.ACTIVE_ENERGY_BURNED) {
+          // 活跃能量：累加今天的所有数据点（单位：千卡）
+          final today = DateTime.now();
+          final todayDate = DateTime(today.year, today.month, today.day);
+          final pointDate = DateTime(point.dateFrom.year, point.dateFrom.month, point.dateFrom.day);
+          if (pointDate == todayDate) {
+            summary['active_energy'] = (summary['active_energy'] ?? 0) + (numVal?.round() ?? 0);
           }
         }
         // 注意: MENSTRUATION_FLOW 在当前 health 包版本中不支持
@@ -580,5 +608,95 @@ class HealthService {
         }
       }
     }
+  }
+
+  // ==================== HealthKit 跌倒检测 MethodChannel ====================
+
+  static const MethodChannel _healthKitChannel = MethodChannel('zaine/healthkit');
+
+  /// 【v1.91.0】Watch 签到 MethodChannel — AppDelegate 收到 Watch 签到后立即通知 Flutter
+  static const MethodChannel _watchChannel = MethodChannel('zaine/watch');
+  static bool _watchChannelInitialized = false;
+
+  /// 初始化 Watch MethodChannel 监听（在 App 启动时调用一次）
+  static void initWatchChannel() {
+    if (_watchChannelInitialized) return;
+    _watchChannelInitialized = true;
+    _watchChannel.setMethodCallHandler((call) async {
+      if (call.method == 'watchCheckin') {
+        if (kDebugMode) debugPrint('[HealthService] 📱 收到 Watch 签到通知，立即执行签到...');
+        await performSilentHeartbeatCheckin();
+      }
+    });
+    if (kDebugMode) debugPrint('[HealthService] ✅ Watch MethodChannel 已初始化');
+  }
+
+  /// 请求跌倒检测授权
+  static Future<bool> requestFallDetectionAuthorization() async {
+    try {
+      final bool? result = await _healthKitChannel.invokeMethod<bool>('requestFallDetectionAuthorization');
+      if (kDebugMode) debugPrint('[HealthService] 跌倒检测授权结果: $result');
+      return result ?? false;
+    } catch (e) {
+      if (kDebugMode) debugPrint('[HealthService] 请求跌倒检测授权失败: $e');
+      return false;
+    }
+  }
+
+  /// 获取最近 N 小时的跌倒事件
+  static Future<List<Map<String, dynamic>>> getRecentFallEvents({int hours = 24}) async {
+    try {
+      final List<dynamic>? result = await _healthKitChannel.invokeMethod<List<dynamic>>(
+        'getRecentFallEvents',
+        {'hours': hours},
+      );
+      if (result == null) return [];
+      return result.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+    } catch (e) {
+      if (kDebugMode) debugPrint('[HealthService] 获取跌倒事件失败: $e');
+      return [];
+    }
+  }
+
+  /// 检查是否有新的跌倒事件，并记录到 SafetyService
+  /// [onNewFall] 发现新事件时的回调
+  static Future<List<Map<String, dynamic>>> checkForNewFallEvents({
+    void Function(Map<String, dynamic>)? onNewFall,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final lastCheckStr = prefs.getString('last_fall_check_time');
+    final lastCheck = lastCheckStr != null
+        ? DateTime.tryParse(lastCheckStr)
+        : null;
+    
+    // 请求授权（首次会弹出权限框）
+    await requestFallDetectionAuthorization();
+    
+    // 拉取过去 7 天的跌倒事件（避免遗漏）
+    final events = await getRecentFallEvents(hours: 24 * 7);
+    final now = DateTime.now();
+    final newEvents = <Map<String, dynamic>>[];
+    
+    for (final event in events) {
+      final ts = DateTime.tryParse(event['timestamp']?.toString() ?? '');
+      if (ts == null) continue;
+      if (lastCheck == null || ts.isAfter(lastCheck)) {
+        newEvents.add(event);
+      }
+    }
+    
+    // 更新时间戳
+    await prefs.setString('last_fall_check_time', now.toIso8601String());
+    
+    if (newEvents.isNotEmpty) {
+      if (kDebugMode) debugPrint('[HealthService] 发现 ${newEvents.length} 个新的跌倒事件');
+      if (onNewFall != null) {
+        for (final event in newEvents) {
+          onNewFall(event);
+        }
+      }
+    }
+    
+    return newEvents;
   }
 }

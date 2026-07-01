@@ -50,6 +50,29 @@ class WatchDataService {
     _isReachable = await _wc.isReachable;
   }
 
+  /// 主动刷新 Watch 连接状态（供 UI 层调用）
+  Future<Map<String, bool>> refreshWatchState() async {
+    try {
+      _isSupported = await _wc.isSupported;
+      if (!_isSupported) {
+        return {'supported': false, 'paired': false, 'reachable': false};
+      }
+      _isPaired = await _wc.isPaired;
+      _isReachable = await _wc.isReachable;
+      if (kDebugMode) {
+        debugPrint('[WatchData] 刷新状态: supported=$_isSupported, paired=$_isPaired, reachable=$_isReachable');
+      }
+      return {
+        'supported': _isSupported,
+        'paired': _isPaired,
+        'reachable': _isReachable,
+      };
+    } catch (e) {
+      if (kDebugMode) debugPrint('[WatchData] 刷新状态失败: $e');
+      return {'supported': false, 'paired': false, 'reachable': false};
+    }
+  }
+
   /// 推送健康数据摘要到 Watch
   ///
   /// [summary] 来自 HealthService.getHealthSummary() 的数据

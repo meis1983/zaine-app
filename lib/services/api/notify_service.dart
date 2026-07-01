@@ -17,4 +17,25 @@ class NotifyService {
       'alerts': alerts,
     });
   }
+
+  /// 通知守护人：定时平安确认超时未确认
+  static Future<Map<String, dynamic>> notifyGuardiansAboutMissedCheckIn(int missedCount) async {
+    return await ApiService.post('/api/notify/guardians-missed-checkin', body: {
+      'missed_count': missedCount,
+      'timestamp': DateTime.now().toIso8601String(),
+    });
+  }
+
+  /// 通知守护人：检测到跌倒事件
+  static Future<Map<String, dynamic>> notifyGuardiansAboutFall({
+    required DateTime timestamp,
+    String? latitude,
+    String? longitude,
+  }) async {
+    return await ApiService.post('/api/notify/guardians-fall', body: {
+      'timestamp': timestamp.toIso8601String(),
+      'latitude': latitude,
+      'longitude': longitude,
+    });
+  }
 }

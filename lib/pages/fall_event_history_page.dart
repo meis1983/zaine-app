@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import '../theme/theme_helper.dart';
 import 'package:intl/intl.dart';
 import '../services/safety/safety_service.dart';
+import '../services/platform/watch_data_service.dart';
 
 /// 跌倒事件历史页面
 ///
-/// 展示历史跌倒事件记录（即使功能未实现，也支持展示后端已记录的事件）
+/// 展示 Apple Watch 检测到的跌倒事件记录
 class FallEventHistoryPage extends StatefulWidget {
   const FallEventHistoryPage({super.key});
 
@@ -15,21 +16,27 @@ class FallEventHistoryPage extends StatefulWidget {
 
 class _FallEventHistoryPageState extends State<FallEventHistoryPage> {
   final SafetyService _safetyService = SafetyService();
+  final WatchDataService _watchService = WatchDataService();
   List<FallEvent> _events = [];
   bool _isLoading = true;
+  bool _watchPaired = false;
+  bool _watchReachable = false;
 
   @override
   void initState() {
     super.initState();
-    _loadEvents();
+    _loadData();
   }
 
-  Future<void> _loadEvents() async {
+  Future<void> _loadData() async {
     setState(() => _isLoading = true);
     await _safetyService.initialize();
     final events = await _safetyService.getFallEvents();
+    await _watchService.refreshWatchState();
     setState(() {
       _events = events;
+      _watchPaired = _watchService.isPaired;
+      _watchReachable = _watchService.isReachable;
       _isLoading = false;
     });
   }
@@ -46,39 +53,47 @@ class _FallEventHistoryPageState extends State<FallEventHistoryPage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: _loadEvents,
+            onPressed: _loadData,
           ),
         ],
       ),
       body: Column(
         children: [
-          // 功能状态提示
+          // 功能状态提示（根据 Apple Watch 配对状态显示）
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(16),
-            color: Colors.orange.shade50,
+            color: _watchPaired ? Colors.green.shade50 : Colors.orange.shade50,
             child: Row(
               children: [
-                Icon(Icons.info_outline, color: Colors.orange.shade400, size: 20),
+                Icon(
+                  _watchPaired ? Icons.check_circle_outline : Icons.info_outline,
+                  color: _watchPaired ? Colors.green.shade600 : Colors.orange.shade400,
+                  size: 20,
+                ),
                 const SizedBox(width: ZaiNeSpacing.sm),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '跌倒检测功能即将推出',
+                        _watchPaired
+                            ? (_watchReachable ? '跌倒检测已启用，Apple Watch 正在监测' : '跌倒检测已启用，Apple Watch 已配对')
+                            : '跌倒检测需要 Apple Watch 支持',
                         style: TextStyle(
                           fontSize: ZaiNeFontSize.bodySm,
                           fontWeight: FontWeight.w600,
-                          color: Colors.orange.shade700,
+                          color: _watchPaired ? Colors.green.shade700 : Colors.orange.shade700,
                         ),
                       ),
                       const SizedBox(height: ZaiNeSpacing.xs),
                       Text(
-                        '需要 Apple Watch 支持，目前可查看测试记录',
+                        _watchPaired
+                            ? '检测到跌倒后会自动记录在这里，并在 10 秒内允许您取消误报'
+                            : '请确保 iPhone 已与 Apple Watch 配对，并在 Watch 上启用跌倒检测',
                         style: TextStyle(
                           fontSize: ZaiNeFontSize.caption,
-                          color: Colors.orange.shade600,
+                          color: _watchPaired ? Colors.green.shade600 : Colors.orange.shade600,
                         ),
                       ),
                     ],
@@ -121,7 +136,7 @@ class _FallEventHistoryPageState extends State<FallEventHistoryPage> {
           ),
           const SizedBox(height: ZaiNeSpacing.sm),
           Text(
-            '功能上线后，检测到跌倒会自动记录在这里',
+            'Apple Watch 会持续监测，检测到跌倒后会自动记录在这里',
             style: TextStyle(fontSize: ZaiNeFontSize.caption, color: ZaiNeColors.textHint()),
             textAlign: TextAlign.center,
           ),
@@ -269,7 +284,7 @@ class _FallEventHistoryPageState extends State<FallEventHistoryPage> {
               child: OutlinedButton.icon(
                 onPressed: () async {
                   await _safetyService.acknowledgeFallEvent(event.id);
-                  await _loadEvents();
+                  await _loadData();
                 },
                 icon: const Icon(Icons.check, size: 16),
                 label: const Text('确认为误报'),

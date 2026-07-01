@@ -213,6 +213,31 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
           color: Colors.cyan,
           subtitle: '夜晚体温偏移',
         ),
+        _buildMetricCard(
+          title: '步数',
+          value: _metrics['steps'] != null ? '${_parseValue(_metrics['steps']).toInt()} 步' : '--',
+          icon: Icons.directions_walk,
+          color: Colors.green,
+          subtitle: '今日累计',
+        ),
+        _buildMetricCard(
+          title: '行走距离',
+          value: _metrics['distance_m'] != null
+              ? '${(_parseValue(_metrics['distance_m']) / 1000).toStringAsFixed(1)} km'
+              : '--',
+          icon: Icons.straight,
+          color: Colors.blue,
+          subtitle: '今日累计',
+        ),
+        _buildMetricCard(
+          title: '活跃能量',
+          value: _metrics['active_energy'] != null
+              ? '${_parseValue(_metrics['active_energy']).toInt()} 千卡'
+              : '--',
+          icon: Icons.local_fire_department,
+          color: Colors.deepOrange,
+          subtitle: '今日消耗',
+        ),
       ],
     );
   }
@@ -324,6 +349,11 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
               _buildSleepBit('REM', _metrics['sleep_rem'] ?? 0, Colors.purple.shade200),
               _buildSleepBit('核心睡眠', _metrics['sleep_asleep'] ?? 0, Colors.indigo.shade200),
             ],
+          ),
+          const SizedBox(height: ZaiNeSpacing.sm),
+          Text(
+            '数据来源：HealthKit（可能包含 iPhone 和 Apple Watch）',
+            style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: ZaiNeFontSize.micro),
           ),
         ],
       ),

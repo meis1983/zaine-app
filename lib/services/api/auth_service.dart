@@ -11,6 +11,7 @@
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider/path_provider.dart';
@@ -118,11 +119,18 @@ class AuthService {
           await prefs.remove('avatar_path'); // 清 fallback 键
           await prefs.remove('avatar_base64');
           await prefs.remove('user_name');
+          // 【修复 v1.91.0】清除旧账号的签到隔离缓存
+          await prefs.remove('last_check_in_date_$oldUid');
+          await prefs.remove('continuous_days_$oldUid');
+          await prefs.remove('total_check_in_days_$oldUid');
+          await prefs.remove('checkin_history_$oldUid');
           try {
             final dir = await getApplicationDocumentsDirectory();
             final f = File('${dir.path}/avatar.png');
             if (await f.exists()) await f.delete();
           } catch (_) {}
+          // 【修复 v1.91.0】清除 Flutter 图像内存缓存，防止旧头像残影
+          try { PaintingBinding.instance.imageCache.clear(); } catch (_) {}
         }
         if (kDebugMode) debugPrint('[AuthService] ${isSameUser ? "同一用户重新登录，保留本地数据" : "切换账号，已清除旧数据"}');
 
@@ -147,6 +155,11 @@ class AuthService {
         await prefs.remove('continuous_days');
         await prefs.remove('total_check_in_days');
         await prefs.remove('checkin_history');
+        // 【修复 v1.91.0】同时清除新账号可能残余的隔离缓存
+        await prefs.remove('last_check_in_date_$newUid');
+        await prefs.remove('continuous_days_$newUid');
+        await prefs.remove('total_check_in_days_$newUid');
+        await prefs.remove('checkin_history_$newUid');
       } catch (e) {
         // 后处理异常（如裂变绑定API失败）不影响登录，token已保存，用户已登录成功
         if (kDebugMode) debugPrint('[AuthService] ⚠️ quickLogin 后处理异常（不影响登录）: $e');
@@ -209,11 +222,18 @@ class AuthService {
         await prefs.remove('avatar_base64_$oldUid');
         await prefs.remove('avatar_path');
         await prefs.remove('avatar_base64');
+        // 【修复 v1.91.0】清除旧账号的签到隔离缓存
+        await prefs.remove('last_check_in_date_$oldUid');
+        await prefs.remove('continuous_days_$oldUid');
+        await prefs.remove('total_check_in_days_$oldUid');
+        await prefs.remove('checkin_history_$oldUid');
         try {
           final dir = await getApplicationDocumentsDirectory();
           final f = File('${dir.path}/avatar.png');
           if (await f.exists()) await f.delete();
         } catch (_) {}
+        // 【修复 v1.91.0】清除 Flutter 图像内存缓存
+        try { PaintingBinding.instance.imageCache.clear(); } catch (_) {}
       }
 
       await _saveToken(res['token']);
@@ -246,6 +266,10 @@ class AuthService {
   static Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
 
+    // 【修复 v1.90.1】清除 SharedPreferences 中的 user_id（防止 AvatarHelper 读到旧账号 ID）
+    await prefs.remove('user_id');
+    await prefs.remove('user_phone');
+
     // 【修复 v1.9.73】保留头像缓存和文件（与健康档案/紧急联系人保持一致）
     // 不退出时清除头像，确保重新登录后头像仍然存在
     await _deleteToken();
@@ -253,7 +277,6 @@ class AuthService {
     await _secureStorage.delete(key: 'user_id');
     await _secureStorage.delete(key: 'user_phone');
     // 【修复 v1.77.0】同时从 SP 中清除敏感信息（双写兼容，退出时双清）
-    await prefs.remove('user_phone');
     await prefs.remove('user_name'); // 【v1.9.73】退出时清除用户名（SP 中，非敏感）
     await prefs.setBool('is_logged_in', false);
     await MembershipService.clear();

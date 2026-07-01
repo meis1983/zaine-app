@@ -46,6 +46,10 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   int _totalDays = 0;
   int _weeklyDays = 0;
   int _daysSinceLastCheckin = 0; // 断签天数，>0 表示回归
+  /// 【修复 v1.91.0】签到数据是否就绪。
+  /// 首次启动时如果本地无任何缓存，会立即渲染 0 出现"短暂显示 0 天"的视觉错。
+  /// 引入这个标志位：在本地无缓存且服务端未返回前，签到数字区域显示占位 skeleton。
+  bool _isCheckinDataReady = false;
   bool _isLoggedIn = false;
   String? _userName;
   int _guardianCount = 0;
@@ -262,8 +266,29 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     int guardianCount = 0;
     String? userId;
     String? phone;
+    // 【修复 v1.90.1】提前读取签到状态，避免首次渲染显示"未签到"
+    bool checkedInToday = false;
+    DateTime? lastCheckIn;
     try {
       userId = await AuthService.getUserId();
+      final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+      final lastDate = prefs.getString('last_check_in_date');
+      if (lastDate == today) {
+        checkedInToday = true;
+      }
+      // 如果用户已登录，优先使用用户隔离的键值
+      if (userId != null && userId.isNotEmpty) {
+        final userSpecificDate = prefs.getString('last_check_in_date_$userId');
+        if (userSpecificDate == today) {
+          checkedInToday = true;
+        }
+      }
+      if (lastDate != null) {
+        try { lastCheckIn = DateTime.parse(lastDate); } catch (_) {}
+      }
+      // 读取守护人数量（与 contacts_page.dart 保持一致的 key 规则）
+      int guardianCount = 0;
+      String? phone;
       final contactsKey = (userId != null && userId.isNotEmpty)
           ? 'emergency_contacts_$userId'
           : 'emergency_contacts';
@@ -272,12 +297,14 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         final contacts = jsonDecode(contactsJson) as List<dynamic>?;
         guardianCount = contacts?.length ?? 0;
       }
-      // 提前读取 user_phone（供 setState 内使用）
       phone = await AuthService.getUserPhone();
     } catch (_) {}
 
     setState(() {
       _isLoggedIn = prefs.getBool('is_logged_in') ?? false;
+      // 【修复 v1.90.1】立即设置签到状态，避免首次渲染闪现"未签到"
+      _checkedInToday = checkedInToday;
+      if (lastCheckIn != null) _lastCheckIn = lastCheckIn;
       // 【修复 v1.9.73】从 per‑user 档案读姓名，避免切账号串名
       String? userName;
       final uid = userId ?? '';
@@ -309,6 +336,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     // 修复：读取到 prefs 后立即展示本地状态，不再等待用户 ID 解析
     String? lastDate = prefs.getString('last_check_in_date');
     String uid = '';
+    bool hasLocalCache = false; // 【修复 v1.91.0】是否已有任何本地签到缓存
 
     // 尝试获取用户 ID（异步），但不阻塞第一次 setState
     try {
@@ -318,9 +346,17 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         final userSpecificDate = prefs.getString('last_check_in_date_$uid');
         if (userSpecificDate != null) {
           lastDate = userSpecificDate;
+          hasLocalCache = true;
+        } else if (lastDate != null) {
+          // 全局有缓存但用户隔离没有（新登录 / 切号），也认为有缓存
+          hasLocalCache = true;
         }
+      } else if (lastDate != null) {
+        hasLocalCache = true;
       }
-    } catch (_) {}
+    } catch (_) {
+      if (lastDate != null) hasLocalCache = true;
+    }
 
     if (!mounted) return;
     setState(() {
@@ -335,9 +371,13 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       final streakKey = uid.isNotEmpty ? 'continuous_days_$uid' : 'continuous_days';
       final totalKey = uid.isNotEmpty ? 'total_check_in_days_$uid' : 'total_check_in_days';
       final historyKey = uid.isNotEmpty ? 'checkin_history_$uid' : 'checkin_history';
+      // 【修复 v1.91.0】优先信任本地隔离缓存；首次登录时 continuousDays=0 是正确的（新用户）
       _continuousDays = prefs.getInt(streakKey) ?? 0;
       _totalDays = prefs.getInt(totalKey) ?? 0;
       _weeklyDays = _calculateWeeklyDays(prefs, historyKey);
+      // 【修复 v1.91.0】如果有本地缓存，标记数据已就绪；否则保持未就绪，
+      // 等服务端返回后再标记就绪，避免出现"短暂显示 0 天"的视觉错
+      if (hasLocalCache) _isCheckinDataReady = true;
     });
 
     // 同步服务器获取断签天数和签到状态（覆盖本地状态，确保准确性）
@@ -353,12 +393,17 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
               _continuousDays = serverStreak as int;
             }
             _daysSinceLastCheckin = res['days_since_last_checkin'] ?? 0;
-            // 【修复 v1.9.61】以服务端真实签到状态覆盖本地缓存（防止切换账号后状态污染）
+            // 【彻底修复 v1.90.1】如果本地已经是 true，不要覆盖为 false（防止服务器时区问题）
             if (res.containsKey('checked_in_today')) {
               final serverChecked = res['checked_in_today'] == true;
               if (_checkedInToday != serverChecked) {
-                _checkedInToday = serverChecked;
-                if (kDebugMode) debugPrint('[HomePage] ⚠️ 签到状态已修正: 本地=$_checkedInToday → 服务端=$serverChecked');
+                // 本地已签到，但服务器返回未签到：相信本地（可能是服务器时区问题）
+                if (_checkedInToday && !serverChecked) {
+                  if (kDebugMode) debugPrint('[HomePage] ⚠️ 本地已签到，但服务器返回未签到，相信本地状态（可能是服务器时区问题）');
+                } else {
+                  _checkedInToday = serverChecked;
+                  if (kDebugMode) debugPrint('[HomePage] ⚠️ 签到状态已修正: 本地=$_checkedInToday → 服务端=$serverChecked');
+                }
               }
             }
           });
@@ -374,8 +419,12 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           }
           if (kDebugMode) debugPrint('[HomePage] 服务器签到状态: totalDays=$_totalDays, daysSinceLastCheckin=$_daysSinceLastCheckin, checkedInToday=$_checkedInToday');
         }
+        // 【修复 v1.91.0】无论服务端返回成功还是失败，都标记数据就绪
+        if (mounted) setState(() => _isCheckinDataReady = true);
       } catch (e) {
         if (kDebugMode) debugPrint('[HomePage] 同步服务器签到状态失败: $e');
+        // 【修复 v1.91.0】服务端失败也要标记就绪，否则会一直 loading
+        if (mounted) setState(() => _isCheckinDataReady = true);
       }
     }
   }
@@ -461,6 +510,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
               moodIndex: -1,
               userName: _userName ?? '在呢用户',
               isReturnCheckin: _daysSinceLastCheckin > 0,
+              absentDays: _daysSinceLastCheckin,
             ),
           );
         }
@@ -613,6 +663,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
             moodIndex: -1,
             userName: _userName ?? '在呢用户',
             isReturnCheckin: _daysSinceLastCheckin > 0,
+            absentDays: _daysSinceLastCheckin,
           ),
         );
       }
@@ -703,6 +754,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
             children: [
               // ====== 顶部标题栏（提取为 HomeHeaderWidget）======
               HomeHeaderWidget(
+                key: ValueKey('home_header_${_avatarPath ?? _userName ?? 'default'}'),
                 isLoggedIn: _isLoggedIn,
                 checkedInToday: _checkedInToday,
                 userName: _userName,
@@ -812,6 +864,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                 checkedInToday: _checkedInToday,
                 onTap: _handleCheckIn,
                 scaleAnimation: _scaleAnimation,
+                isDataReady: _isCheckinDataReady,
               ),
 
               const SizedBox(height: ZaiNeSpacing.xl),

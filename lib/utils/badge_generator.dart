@@ -203,24 +203,80 @@ class BadgeGenerator {
   }
 
   // ───────── 法定节假日（7个）─────────
-  static final List<_SpecialDate> _festivals = [
-    const _SpecialDate('元旦', '新年第一天，从这个签到开始。今年，也要好好守护自己。', '🎉', 1, 1, Color(0xFFE91E63)),
-    const _SpecialDate('春节', '新年快乐！无论在哪过年，记得有人一直在牵挂你。', '🧧', 2, 17, Color(0xFFFF4500)),
-    const _SpecialDate('清明', '慎终追远，珍惜当下。好好活着，就是最好的告慰。', '🌿', 4, 5, Color(0xFF4CAF50)),
-    const _SpecialDate('劳动节', '致敬每一个认真生活的你。今天，让自己歇一歇。', '🏋️', 5, 1, Color(0xFFFF9800)),
-    const _SpecialDate('端午', '端午安康。系一根彩绳，也系住对自己的那份关心。', '🎋', 6, 19, Color(0xFF795548)),
-    const _SpecialDate('中秋', '海上生明月，天涯共此时。你并不孤单。', '🌕', 9, 25, Color(0xFFFFD700)),
-    const _SpecialDate('国庆', '普天同庆，山河远阔。别忘了，对自己好一点。', '🇨🇳', 10, 1, Color(0xFFF44336)),
+  // 说明：端午、中秋等基于农历的节日此处使用「近似公历日期」，
+  //       春节和除夕由 _festivalsForDate(year) 动态按农历推算，保证不偏年。
+  static const List<_SpecialDate> _festivalsStatic = [
+    _SpecialDate('元旦', '新年第一天，从这个签到开始。今年，也要好好守护自己。', '🎉', 1, 1, Color(0xFFE91E63)),
+    _SpecialDate('清明', '慎终追远，珍惜当下。好好活着，就是最好的告慰。', '🌿', 4, 5, Color(0xFF4CAF50)),
+    _SpecialDate('劳动节', '致敬每一个认真生活的你。今天，让自己歇一歇。', '🏋️', 5, 1, Color(0xFFFF9800)),
+    _SpecialDate('端午', '端午安康。系一根彩绳，也系住对自己的那份关心。', '🎋', 6, 19, Color(0xFF795548)),
+    _SpecialDate('中秋', '海上生明月，天涯共此时。你并不孤单。', '🌕', 9, 25, Color(0xFFFFD700)),
+    _SpecialDate('国庆', '普天同庆，山河远阔。别忘了，对自己好一点。', '🇨🇳', 10, 1, Color(0xFFF44336)),
   ];
 
-  // ───────── 传统节日（5个）─────────
-  static final List<_SpecialDate> _tradFestivals = [
-    const _SpecialDate('元宵', '花灯如昼，月圆人圆。愿你每一天都温暖明亮。', '🏮', 3, 3, Color(0xFFFF69B4)),
-    const _SpecialDate('龙抬头', '二月二，龙抬头。春天来了，你的好运也开始抬头。', '🐉', 3, 20, Color(0xFF4CAF50)),
-    const _SpecialDate('七夕', '今夜星河璀璨。先爱自己，再爱他人。', '💖', 8, 19, Color(0xFFE91E63)),
-    const _SpecialDate('重阳', '登高望远，天高云淡。人生不怕晚，就怕不上山。', '🏔️', 10, 18, Color(0xFFFF9800)),
-    const _SpecialDate('除夕', '岁末的最后一次签到。这一年，你辛苦了。', '🎊', 2, 16, Color(0xFFD32F2F)),
-  ];
+  /// 春节（正月初一）公历日期速查表（2020-2030）。
+  /// 农历年与公历年的对应每年不同，必须按当前年份查表，不能硬编码单一日期。
+  /// 数据来源：紫金山天文台 / 香港天文台公开发布的农历日期表（权威）。
+  static const Map<int, List<int>> _lunarNewYearDates = {
+    2020: [1, 25],
+    2021: [2, 12],
+    2022: [2, 1],
+    2023: [1, 22],
+    2024: [2, 10],
+    2025: [1, 29],
+    2026: [2, 17],
+    2027: [2, 6],
+    2028: [1, 26],
+    2029: [2, 13],
+    2030: [2, 3],
+  };
+
+  /// 除夕（农历年最后一天）公历日期速查表。
+  /// 除夕 = 春节前一天
+  static const Map<int, List<int>> _lunarNewYearEveDates = {
+    2020: [1, 24],
+    2021: [2, 11],
+    2022: [1, 31],
+    2023: [1, 21],
+    2024: [2, 9],
+    2025: [1, 28],
+    2026: [2, 16],
+    2027: [2, 5],
+    2028: [1, 25],
+    2029: [2, 12],
+    2030: [2, 2],
+  };
+
+  /// 根据年份返回「春节」配置，日期自动按公历查表
+  static _SpecialDate _springFestivalForYear(int year) {
+    final md = _lunarNewYearDates[year] ?? _lunarNewYearDates[2026]!;
+    return _SpecialDate('春节', '新年快乐！无论在哪过年，记得有人一直在牵挂你。', '🧧', md[0], md[1], const Color(0xFFFF4500));
+  }
+
+  /// 根据年份返回「除夕」配置
+  static _SpecialDate _newYearEveForYear(int year) {
+    final md = _lunarNewYearEveDates[year] ?? _lunarNewYearEveDates[2026]!;
+    return _SpecialDate('除夕', '岁末的最后一次签到。这一年，你辛苦了。', '🎊', md[0], md[1], const Color(0xFFD32F2F));
+  }
+
+  /// 根据年份返回当年的法定节日列表（春节+除夕按年动态）
+  static List<_SpecialDate> _festivalsForDate(int year) {
+    return [
+      _springFestivalForYear(year),
+      ..._festivalsStatic,
+    ];
+  }
+
+  /// 根据年份返回当年的传统节日列表（含除夕）
+  static List<_SpecialDate> _tradFestivalsForDate(int year) {
+    return [
+      const _SpecialDate('元宵', '花灯如昼，月圆人圆。愿你每一天都温暖明亮。', '🏮', 3, 3, Color(0xFFFF69B4)),
+      const _SpecialDate('龙抬头', '二月二，龙抬头。春天来了，你的好运也开始抬头。', '🐉', 3, 20, Color(0xFF4CAF50)),
+      const _SpecialDate('七夕', '今夜星河璀璨。先爱自己，再爱他人。', '💖', 8, 19, Color(0xFFE91E63)),
+      const _SpecialDate('重阳', '登高望远，天高云淡。人生不怕晚，就怕不上山。', '🏔️', 10, 18, Color(0xFFFF9800)),
+      _newYearEveForYear(year),
+    ];
+  }
 
   // ───────── 二十四节气（24个）─────────
   // 8个「四立二分二至」大节点保留emoji，其余16个普通覆盖
@@ -263,9 +319,14 @@ class BadgeGenerator {
   }
 
   /// 核心生成方法
-  static BadgeData generate(int days, {bool isReturnCheckin = false, DateTime? date}) {
+  /// [days] 当前连续签到天数
+  /// [isReturnCheckin] 是否是断签后回归签到
+  /// [absentDays] 断签天数（仅 isReturnCheckin=true 时需要）
+  /// [date] 指定日期（用于测试）
+  static BadgeData generate(int days, {bool isReturnCheckin = false, int absentDays = 0, DateTime? date}) {
     final now = date ?? DateTime.now();
     final m = now.month, d = now.day;
+    final year = now.year;
 
     final dayOfYear = now.difference(DateTime(now.year, 1, 1)).inDays;
 
@@ -279,8 +340,8 @@ class BadgeGenerator {
     final bgOpacity = 0.06 + (days % 10) * 0.01;
 
     // ====== 优先级匹配 ======
-    // 🥇 法定节假日
-    final festival = _findByDate(_festivals, m, d);
+    // 🥇 法定节假日（春节按年动态查表，2026年=2/17）
+    final festival = _findByDate(_festivalsForDate(year), m, d);
     if (festival != null) {
       return BadgeData(
         days: days, emoji: festival.emoji, title: festival.name,
@@ -291,8 +352,8 @@ class BadgeGenerator {
       );
     }
 
-    // 🥈 传统节日
-    final trad = _findByDate(_tradFestivals, m, d);
+    // 🥈 传统节日（含除夕，按年动态查表）
+    final trad = _findByDate(_tradFestivalsForDate(year), m, d);
     if (trad != null) {
       final lvl = getLevel(days);
       return BadgeData(
@@ -332,9 +393,10 @@ class BadgeGenerator {
 
     // 💪 断签回归
     if (isReturnCheckin) {
+      final actualAbsentDays = absentDays > 0 ? absentDays : days; // 兜底：如果没传 absentDays，用 days 估算
       return BadgeData(
         days: days, emoji: '🤗', title: '欢迎回来',
-        badgeColor: const Color(0xFFFF9800), message: _getReturnMessage(days),
+        badgeColor: const Color(0xFFFF9800), message: _getReturnMessage(actualAbsentDays),
         bgStyle: bgStyle, ringStyle: ringStyle, decoType: decoType,
         hueShift: hueShift.toDouble(), particleCount: particleCount,
         glowRadius: glowRadius, bgOpacity: bgOpacity, isReturnCheckin: true,
