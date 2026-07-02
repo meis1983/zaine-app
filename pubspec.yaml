@@ -3,7 +3,7 @@ description: 在呢 - 独居守护App
 
 publish_to: 'none'
 
-version: 1.92.0+92
+version: 1.93.0+93
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -19,6 +19,8 @@ dependencies:
   geocoding: ^3.0.0
   # 权限管理
   permission_handler: ^11.1.0
+  # 传感器（手机端跌倒检测）
+  sensors_plus: ^6.0.0
   # 通知
   flutter_local_notifications: ^16.3.0
   timezone: ^0.9.4

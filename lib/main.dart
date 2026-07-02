@@ -586,6 +586,27 @@ class _MainNavigationState extends State<MainNavigation> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    // 【v1.93.0 修复】Watch SOS → 自动切换到求助 Tab
+    HealthService.watchSOSSignal.addListener(_onWatchSOS);
+  }
+
+  @override
+  void dispose() {
+    HealthService.watchSOSSignal.removeListener(_onWatchSOS);
+    super.dispose();
+  }
+
+  /// 【v1.93.0 修复】收到 Watch SOS 信号时切换到求助页面
+  void _onWatchSOS() {
+    if (mounted) {
+      if (kDebugMode) debugPrint('[MainNavigation] 🚨 Watch SOS → 自动切换到求助页面');
+      setState(() => _currentIndex = 2); // 切换到求助 Tab
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     // 根据主题模式获取 Tab 栏背景色
     Color navBgColor;

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/safety/safety_service.dart';
+import '../services/safety/geofence_service.dart';
 import 'package:intl/intl.dart';
 import '../theme/theme_helper.dart';
 
@@ -292,11 +293,15 @@ class CheckInReminderCard extends StatelessWidget {
 }
 
 /// 位置轨迹卡片
-class LocationTrackCard extends StatelessWidget {
+/// 【v1.93.0】重构：添加追踪模式选择、UI说明文字、地图预览
+class LocationTrackCard extends StatefulWidget {
   final List<LocationRecord> todayTrack;
   final VoidCallback? onViewFullMap;
   final VoidCallback? onStartTracking;
+  final VoidCallback? onStopTracking;
+  final ValueChanged<LocationTrackingMode>? onModeChanged;
   final bool isTracking;
+  final LocationTrackingMode currentMode;
   final DateTime? lastRecordTime;
 
   const LocationTrackCard({
@@ -304,10 +309,18 @@ class LocationTrackCard extends StatelessWidget {
     required this.todayTrack,
     this.onViewFullMap,
     this.onStartTracking,
+    this.onStopTracking,
+    this.onModeChanged,
     this.isTracking = false,
+    this.currentMode = LocationTrackingMode.normal,
     this.lastRecordTime,
   });
 
+  @override
+  State<LocationTrackCard> createState() => _LocationTrackCardState();
+}
+
+class _LocationTrackCardState extends State<LocationTrackCard> {
   @override
   Widget build(BuildContext context) {
     return Card(
@@ -329,8 +342,8 @@ class LocationTrackCard extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: Colors.blue.shade50,
                     borderRadius: BorderRadius.circular(12),
-                  
-                    boxShadow: ZaiNeShadows.card,),
+                    boxShadow: ZaiNeShadows.card,
+                  ),
                   child: Icon(
                     Icons.location_on,
                     color: Colors.blue.shade400,
@@ -350,7 +363,7 @@ class LocationTrackCard extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        isTracking ? '正在追踪...' : '保护您的行踪安全',
+                        widget.isTracking ? _getModeDescription() : '保护您的行踪安全',
                         style: TextStyle(
                           fontSize: 12,
                           color: ZaiNeColors.textSecondary(),
@@ -362,10 +375,10 @@ class LocationTrackCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: isTracking ? Colors.green.shade100 : Colors.grey.shade100,
+                    color: widget.isTracking ? Colors.green.shade100 : Colors.grey.shade100,
                     borderRadius: BorderRadius.circular(12),
-                  
-                    boxShadow: ZaiNeShadows.card,),
+                    boxShadow: ZaiNeShadows.card,
+                  ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -374,15 +387,15 @@ class LocationTrackCard extends StatelessWidget {
                         height: 8,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: isTracking ? Colors.green : Colors.grey,
+                          color: widget.isTracking ? Colors.green : Colors.grey,
                         ),
                       ),
                       const SizedBox(width: 6),
                       Text(
-                        isTracking ? '开启' : '关闭',
+                        widget.isTracking ? '开启' : '关闭',
                         style: TextStyle(
                           fontSize: 12,
-                          color: isTracking ? Colors.green.shade700 : Colors.grey.shade600,
+                          color: widget.isTracking ? Colors.green.shade700 : Colors.grey.shade600,
                         ),
                       ),
                     ],
@@ -391,17 +404,83 @@ class LocationTrackCard extends StatelessWidget {
               ],
             ),
 
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
+
+            // 【v1.93.0】说明文字：守护者可见提示
+            if (widget.isTracking)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.visibility, size: 14, color: Colors.blue.shade500),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        '守护者可查看你的实时位置 · ${_getIntervalText()}',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.blue.shade600,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+            if (widget.isTracking) const SizedBox(height: 12),
+
+            // 【v1.93.0】地图预览缩略图
+            if (widget.todayTrack.length >= 2 && widget.isTracking)
+              _buildMiniMapPreview()
+            else if (widget.isTracking && widget.todayTrack.length < 2)
+              Container(
+                height: 80,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.map_outlined, size: 28, color: Colors.grey.shade400),
+                      const SizedBox(height: 4),
+                      Text(
+                        '轨迹数据收集中...',
+                        style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+            if (widget.isTracking && widget.todayTrack.length >= 2) const SizedBox(height: 12),
+
+            // 【v1.93.0】追踪模式选择
+            if (widget.isTracking) ...[
+              const Text(
+                '追踪模式',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 8),
+              _buildModeSelector(),
+              const SizedBox(height: 12),
+            ],
 
             // 今日轨迹摘要
-            if (todayTrack.isNotEmpty) ...[
+            if (widget.todayTrack.isNotEmpty) ...[
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: Colors.blue.shade50,
                   borderRadius: BorderRadius.circular(12),
-                
-                  boxShadow: ZaiNeShadows.card,),
+                  boxShadow: ZaiNeShadows.card,
+                ),
                 child: Row(
                   children: [
                     Icon(Icons.timeline, color: Colors.blue.shade400, size: 20),
@@ -418,7 +497,7 @@ class LocationTrackCard extends StatelessWidget {
                             ),
                           ),
                           Text(
-                            '${todayTrack.length} 个位置记录',
+                            '${widget.todayTrack.length} 个位置记录',
                             style: TextStyle(
                               fontSize: 11,
                               color: Colors.blue.shade500,
@@ -428,7 +507,7 @@ class LocationTrackCard extends StatelessWidget {
                       ),
                     ),
                     TextButton(
-                      onPressed: onViewFullMap,
+                      onPressed: widget.onViewFullMap,
                       child: const Text('查看详情'),
                     ),
                   ],
@@ -440,8 +519,8 @@ class LocationTrackCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: Colors.grey.shade50,
                   borderRadius: BorderRadius.circular(12),
-                
-                  boxShadow: ZaiNeShadows.card,),
+                  boxShadow: ZaiNeShadows.card,
+                ),
                 child: Row(
                   children: [
                     Icon(Icons.info_outline, color: ZaiNeColors.textSecondary(), size: 20),
@@ -460,17 +539,15 @@ class LocationTrackCard extends StatelessWidget {
               ),
             ],
 
-            const SizedBox(height: 12),
-
-            // 上次记录时间
-            if (lastRecordTime != null) ...[
+            if (widget.lastRecordTime != null && widget.isTracking) ...[
+              const SizedBox(height: 12),
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: Colors.green.shade50,
                   borderRadius: BorderRadius.circular(12),
-                
-                  boxShadow: ZaiNeShadows.card,),
+                  boxShadow: ZaiNeShadows.card,
+                ),
                 child: Row(
                   children: [
                     Icon(Icons.access_time, color: Colors.green.shade400, size: 20),
@@ -487,7 +564,7 @@ class LocationTrackCard extends StatelessWidget {
                             ),
                           ),
                           Text(
-                            _formatLastRecordTime(lastRecordTime!),
+                            _formatLastRecordTime(widget.lastRecordTime!),
                             style: TextStyle(
                               fontSize: 11,
                               color: Colors.green.shade500,
@@ -499,21 +576,22 @@ class LocationTrackCard extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(height: 12),
             ],
+
+            const SizedBox(height: 12),
 
             // 操作按钮
             Row(
               children: [
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: onStartTracking,
-                    icon: Icon(isTracking ? Icons.stop : Icons.play_arrow),
-                    label: Text(isTracking ? '停止追踪' : '开始追踪'),
+                    onPressed: widget.isTracking ? widget.onStopTracking : widget.onStartTracking,
+                    icon: Icon(widget.isTracking ? Icons.stop : Icons.play_arrow),
+                    label: Text(widget.isTracking ? '停止追踪' : '开始追踪'),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: isTracking ? Colors.red : Colors.blue,
+                      foregroundColor: widget.isTracking ? Colors.red : Colors.blue,
                       side: BorderSide(
-                        color: isTracking ? Colors.red : Colors.blue,
+                        color: widget.isTracking ? Colors.red : Colors.blue,
                       ),
                       padding: const EdgeInsets.symmetric(vertical: 10),
                       shape: RoundedRectangleBorder(
@@ -525,6 +603,137 @@ class LocationTrackCard extends StatelessWidget {
               ],
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  String _getModeDescription() {
+    switch (widget.currentMode) {
+      case LocationTrackingMode.realtime:
+        return '实时追踪中 · ⚡耗电较高';
+      case LocationTrackingMode.normal:
+        return '普通追踪中 · 推荐模式';
+      case LocationTrackingMode.powersave:
+        return '省电追踪中 · 🔋省电';
+    }
+  }
+
+  String _getIntervalText() {
+    switch (widget.currentMode) {
+      case LocationTrackingMode.realtime:
+        return '每30秒更新';
+      case LocationTrackingMode.normal:
+        return '每5分钟更新';
+      case LocationTrackingMode.powersave:
+        return '每15分钟更新';
+    }
+  }
+
+  Widget _buildModeSelector() {
+    final modes = [
+      (LocationTrackingMode.realtime, '实时', '每30秒'),
+      (LocationTrackingMode.normal, '普通', '每5分钟'),
+      (LocationTrackingMode.powersave, '省电', '每15分钟'),
+    ];
+
+    return SegmentedButton<LocationTrackingMode>(
+      segments: modes.map((m) {
+        return ButtonSegment<LocationTrackingMode>(
+          value: m.$1,
+          label: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(m.$2, style: const TextStyle(fontSize: 12)),
+              Text(m.$3, style: const TextStyle(fontSize: 10)),
+            ],
+          ),
+        );
+      }).toList(),
+      selected: {widget.currentMode},
+      onSelectionChanged: (selected) {
+        widget.onModeChanged?.call(selected.first);
+      },
+      style: ButtonStyle(
+        visualDensity: VisualDensity.compact,
+        backgroundColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return Colors.blue.shade100;
+          }
+          return Colors.grey.shade100;
+        }),
+        foregroundColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return Colors.blue.shade700;
+          }
+          return Colors.grey.shade600;
+        }),
+      ),
+    );
+  }
+
+  /// 【v1.93.0】轨迹缩略图（CustomPainter）
+  Widget _buildMiniMapPreview() {
+    final points = widget.todayTrack.reversed.toList();
+
+    // 计算边界
+    double minLat = points.first.latitude;
+    double maxLat = points.first.latitude;
+    double minLng = points.first.longitude;
+    double maxLng = points.first.longitude;
+    for (final p in points) {
+      if (p.latitude < minLat) minLat = p.latitude;
+      if (p.latitude > maxLat) maxLat = p.latitude;
+      if (p.longitude < minLng) minLng = p.longitude;
+      if (p.longitude > maxLng) maxLng = p.longitude;
+    }
+
+    // 防止单点情况下无边界
+    if ((maxLat - minLat) < 0.0001) { maxLat += 0.0005; minLat -= 0.0005; }
+    if ((maxLng - minLng) < 0.0001) { maxLng += 0.0005; minLng -= 0.0005; }
+
+    return GestureDetector(
+      onTap: widget.onViewFullMap,
+      child: Container(
+        height: 120,
+        decoration: BoxDecoration(
+          color: const Color(0xFFE8F0FE),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.blue.shade100),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Stack(
+            children: [
+              // 地图网格背景
+              CustomPaint(
+                size: Size.infinite,
+                painter: _MiniMapPainter(
+                  points: points,
+                  minLat: minLat,
+                  maxLat: maxLat,
+                  minLng: minLng,
+                  maxLng: maxLng,
+                ),
+              ),
+              // 叠加信息
+              Positioned(
+                bottom: 6,
+                left: 8,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.black54,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    '${widget.todayTrack.length}个定位点 · 点击查看详情',
+                    style: const TextStyle(fontSize: 10, color: Colors.white),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -542,22 +751,103 @@ class LocationTrackCard extends StatelessWidget {
   }
 }
 
+/// 【v1.93.0】迷你地图绘制器
+class _MiniMapPainter extends CustomPainter {
+  final List<LocationRecord> points;
+  final double minLat, maxLat, minLng, maxLng;
+
+  _MiniMapPainter({
+    required this.points,
+    required this.minLat,
+    required this.maxLat,
+    required this.minLng,
+    required this.maxLng,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.blue.withValues(alpha: 0.6)
+      ..strokeWidth = 2.5
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
+      ..style = PaintingStyle.stroke;
+
+    final startDotPaint = Paint()
+      ..color = Colors.green.shade600
+      ..strokeWidth = 0
+      ..style = PaintingStyle.fill;
+
+    final endDotPaint = Paint()
+      ..color = Colors.red.shade600
+      ..strokeWidth = 0
+      ..style = PaintingStyle.fill;
+
+    // 添加内边距
+    const padding = 12.0;
+    final w = size.width - padding * 2;
+    final h = size.height - padding * 2;
+
+    // 转换函数：经纬度 → 画布坐标
+    Offset toCanvas(LocationRecord p) {
+      final x = padding + ((p.longitude - minLng) / (maxLng - minLng)) * w;
+      final y = padding + ((maxLat - p.latitude) / (maxLat - minLat)) * h;
+      return Offset(x, y);
+    }
+
+    // 画路径线
+    if (points.length >= 2) {
+      final path = Path();
+      path.moveTo(toCanvas(points.first).dx, toCanvas(points.first).dy);
+      for (int i = 1; i < points.length; i++) {
+        path.lineTo(toCanvas(points[i]).dx, toCanvas(points[i]).dy);
+      }
+      canvas.drawPath(path, paint);
+    }
+
+    // 画起始点（绿点）
+    if (points.isNotEmpty) {
+      final start = toCanvas(points.last); // 最早的点
+      canvas.drawCircle(start, 5, startDotPaint);
+    }
+
+    // 画终点（红点）
+    if (points.isNotEmpty) {
+      final end = toCanvas(points.first); // 最新的点
+      canvas.drawCircle(end, 5, endDotPaint..color = Colors.red.shade600);
+      // 红色脉冲圈
+      canvas.drawCircle(end, 9, Paint()
+        ..color = Colors.red.withValues(alpha: 0.2)
+        ..style = PaintingStyle.fill);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _MiniMapPainter oldDelegate) {
+    return oldDelegate.points != points;
+  }
+}
+
 /// 跌倒检测卡片
-/// 与 Apple Watch 联动，利用加速度传感器检测跌倒并通知守护人
+/// 整合 Apple Watch 跌倒检测 + 手机端加速度传感器检测
 class FallDetectionCard extends StatelessWidget {
   final List<FallEvent> recentFalls;
   final bool watchPaired;
   final bool watchReachable;
+  final bool phoneDetectionEnabled;
   final Function(String)? onAcknowledge;
   final VoidCallback? onViewHistory;
+  final VoidCallback? onTogglePhoneDetection;
 
   const FallDetectionCard({
     super.key,
     required this.recentFalls,
     this.watchPaired = false,
     this.watchReachable = false,
+    this.phoneDetectionEnabled = false,
     this.onAcknowledge,
     this.onViewHistory,
+    this.onTogglePhoneDetection,
   });
 
   @override
@@ -565,6 +855,7 @@ class FallDetectionCard extends StatelessWidget {
     final bool hasWatch = watchPaired;
     final bool hasEvents = recentFalls.isNotEmpty;
     final int unackedCount = recentFalls.where((f) => !f.acknowledged).length;
+    final bool anyDetectionActive = hasWatch || phoneDetectionEnabled;
 
     return Card(
       elevation: 0,
@@ -583,13 +874,13 @@ class FallDetectionCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: hasWatch ? Colors.orange.shade100 : Colors.grey.shade100,
+                    color: anyDetectionActive ? Colors.orange.shade100 : Colors.grey.shade100,
                     borderRadius: BorderRadius.circular(12),
                     boxShadow: ZaiNeShadows.card,
                   ),
                   child: Icon(
-                    hasWatch ? Icons.watch_outlined : Icons.watch_off_outlined,
-                    color: hasWatch ? Colors.orange.shade600 : Colors.grey.shade500,
+                    anyDetectionActive ? Icons.health_and_safety : Icons.health_and_safety_outlined,
+                    color: anyDetectionActive ? Colors.orange.shade600 : Colors.grey.shade500,
                     size: 22,
                   ),
                 ),
@@ -604,48 +895,85 @@ class FallDetectionCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        hasWatch
-                            ? (watchReachable ? 'Apple Watch 已连接' : 'Apple Watch 已配对')
-                            : '需要 Apple Watch 支持',
+                        _getStatusText(hasWatch, phoneDetectionEnabled),
                         style: TextStyle(
                           fontSize: 12,
-                          color: hasWatch ? Colors.orange.shade700 : Colors.grey.shade500,
-                          fontWeight: hasWatch ? FontWeight.w600 : FontWeight.normal,
+                          color: anyDetectionActive ? Colors.orange.shade700 : Colors.grey.shade500,
+                          fontWeight: anyDetectionActive ? FontWeight.w600 : FontWeight.normal,
                         ),
                       ),
                     ],
                   ),
                 ),
+                // 功能说明按钮
+                GestureDetector(
+                  onTap: () => _showFeatureExplanation(context),
+                  child: Container(
+                    width: 28,
+                    height: 28,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade100,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
+                      child: Icon(Icons.help_outline, size: 16, color: Colors.grey.shade600),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: hasWatch
-                        ? (watchReachable ? Colors.green.shade50 : Colors.grey.shade100)
+                    color: anyDetectionActive
+                        ? Colors.green.shade50
                         : Colors.grey.shade100,
                     borderRadius: BorderRadius.circular(12),
                     boxShadow: ZaiNeShadows.card,
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        hasWatch ? Icons.bluetooth_connected : Icons.bluetooth_disabled,
-                        size: 14,
-                        color: hasWatch ? Colors.green.shade600 : Colors.grey.shade500,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        hasWatch ? (watchReachable ? '已连接' : '已配对') : '未连接',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: hasWatch ? Colors.green.shade700 : Colors.grey.shade500,
-                        ),
-                      ),
-                    ],
+                  child: Text(
+                    anyDetectionActive ? '已启用' : '未启用',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: anyDetectionActive ? Colors.green.shade700 : Colors.grey.shade500,
+                    ),
                   ),
                 ),
               ],
+            ),
+
+            const SizedBox(height: ZaiNeSpacing.lg),
+
+            // 检测状态说明
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: anyDetectionActive ? Colors.green.shade50 : Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                children: [
+                  // Apple Watch 状态
+                  _buildDetectionStatusRow(
+                    icon: Icons.watch,
+                    label: 'Apple Watch 跌倒检测',
+                    status: hasWatch
+                        ? (watchReachable ? '已连接 · 精准检测' : '已配对')
+                        : '未连接',
+                    active: hasWatch && watchReachable,
+                  ),
+                  const SizedBox(height: 8),
+                  const Divider(height: 1),
+                  const SizedBox(height: 8),
+                  // 手机端检测状态
+                  _buildDetectionStatusRow(
+                    icon: Icons.phone_android,
+                    label: '手机端跌倒检测（简化版）',
+                    status: phoneDetectionEnabled ? '已开启' : '未开启',
+                    active: phoneDetectionEnabled,
+                  ),
+                ],
+              ),
             ),
 
             const SizedBox(height: ZaiNeSpacing.lg),
@@ -691,67 +1019,15 @@ class FallDetectionCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: ZaiNeShadows.card,
                 ),
-                child: Column(
+                child: const Row(
                   children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildFallInfoItem(
-                            icon: Icons.shield_outlined,
-                            label: 'Apple Watch 跌倒检测',
-                            value: hasWatch ? '已启用' : '未检测到',
-                            color: hasWatch ? Colors.green : Colors.grey,
-                          ),
-                        ),
-                        const SizedBox(width: ZaiNeSpacing.lg),
-                        Expanded(
-                          child: _buildFallInfoItem(
-                            icon: Icons.info_outline,
-                            label: '参考信息',
-                            value: '非医疗诊断',
-                            color: Colors.blue.shade300,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: ZaiNeSpacing.md),
-                    Row(
-                      children: [
-                        Icon(Icons.sensors, size: 14, color: Colors.orange.shade300),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            '利用 Apple Watch 加速度传感器检测跌倒',
-                            style: TextStyle(fontSize: 11, color: ZaiNeColors.textSecondary()),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Icon(Icons.timer, size: 14, color: Colors.orange.shade300),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            '检测后 10 秒内可取消误报',
-                            style: TextStyle(fontSize: 11, color: ZaiNeColors.textSecondary()),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Icon(Icons.notifications_active, size: 14, color: Colors.orange.shade300),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            '超时未取消自动通知守护人',
-                            style: TextStyle(fontSize: 11, color: ZaiNeColors.textSecondary()),
-                          ),
-                        ),
-                      ],
+                    Icon(Icons.check_circle_outline, size: 20, color: Colors.green),
+                    SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        '暂无跌倒记录，检测系统正在运行中',
+                        style: TextStyle(fontSize: 13, color: Colors.grey),
+                      ),
                     ),
                   ],
                 ),
@@ -771,9 +1047,7 @@ class FallDetectionCard extends StatelessWidget {
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
-                      !hasWatch
-                          ? '在 Apple Watch 上开启"设置 → SOS 紧急联络 → 跌倒检测"'
-                          : '跌倒检测数据仅用于安全参考，不作为医疗诊断依据',
+                      '跌倒检测数据仅用于安全参考，不作为医疗诊断依据',
                       style: TextStyle(fontSize: 11, color: ZaiNeColors.textSecondary()),
                     ),
                   ),
@@ -798,23 +1072,31 @@ class FallDetectionCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                if (!hasWatch) ...[
-                  const SizedBox(width: ZaiNeSpacing.md),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () => _showWatchGuide(context),
-                      icon: const Icon(Icons.info_outline, size: 16),
-                      label: const Text('如何开启'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.grey.shade700,
-                        side: BorderSide(color: Colors.grey.shade300),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
+                // 手机端检测开关
+                const SizedBox(width: ZaiNeSpacing.sm),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: onTogglePhoneDetection,
+                    icon: Icon(
+                      phoneDetectionEnabled ? Icons.stop : Icons.play_arrow,
+                      size: 16,
+                    ),
+                    label: Text(phoneDetectionEnabled ? '关闭手机检测' : '开启手机检测'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: phoneDetectionEnabled
+                          ? Colors.red.shade600
+                          : Colors.blue.shade600,
+                      side: BorderSide(
+                        color: phoneDetectionEnabled
+                            ? Colors.red.shade200
+                            : Colors.blue.shade200,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
                       ),
                     ),
                   ),
-                ],
+                ),
               ],
             ),
           ],
@@ -823,84 +1105,213 @@ class FallDetectionCard extends StatelessWidget {
     );
   }
 
-  Widget _buildFallItem(FallEvent event) {
-    final timeStr = DateFormat('MM/dd HH:mm').format(event.timestamp);
-    return Padding(
-      padding: const EdgeInsets.only(top: 6),
-      child: Row(
-        children: [
-          Container(
-            width: 6,
-            height: 6,
-            decoration: BoxDecoration(
-              color: event.acknowledged ? Colors.green.shade400 : Colors.orange.shade500,
-              shape: BoxShape.circle,
-            ),
-          ),
-          const SizedBox(width: 6),
-          Text(timeStr, style: TextStyle(fontSize: 11, color: ZaiNeColors.textSecondary())),
-          const SizedBox(width: 6),
-          Text(
-            event.acknowledged ? '已确认' : '待确认',
-            style: TextStyle(
-              fontSize: 11,
-              color: event.acknowledged ? Colors.green.shade600 : Colors.orange.shade600,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    );
+  String _getStatusText(bool hasWatch, bool phoneEnabled) {
+    if (hasWatch && watchReachable) return 'Apple Watch 精准检测中';
+    if (hasWatch) return 'Apple Watch 已配对';
+    if (phoneEnabled) return '手机端检测中 · 简化版';
+    return '需要 Apple Watch 或开启手机端检测';
   }
 
-  Widget _buildFallInfoItem({
-    required String label,
-    required String value,
+  Widget _buildDetectionStatusRow({
     required IconData icon,
-    required Color color,
+    required String label,
+    required String status,
+    required bool active,
   }) {
     return Row(
       children: [
-        Icon(icon, color: color, size: 18),
-        const SizedBox(width: 6),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(label, style: TextStyle(color: ZaiNeColors.textSecondary(), fontSize: 11)),
-            Text(value, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-          ],
+        Icon(
+          icon,
+          size: 16,
+          color: active ? Colors.green : Colors.grey,
+        ),
+        const SizedBox(width: 8),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: active ? Colors.green.shade700 : Colors.grey.shade600,
+          ),
+        ),
+        const Spacer(),
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: active ? Colors.green : Colors.grey.shade400,
+          ),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          status,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: active ? Colors.green.shade700 : Colors.grey.shade500,
+          ),
         ),
       ],
     );
   }
 
-  void _showWatchGuide(BuildContext context) {
+  Widget _buildFallItem(FallEvent event) {
+    final timeStr = DateFormat('MM/dd HH:mm').format(event.timestamp);
+    final isPhoneEvent = event.id.startsWith('phone_');
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: event.acknowledged ? Colors.green.shade50 : Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: event.acknowledged ? Colors.green.shade100 : Colors.orange.shade100,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: event.acknowledged ? Colors.green.shade400 : Colors.orange.shade500,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(timeStr, style: TextStyle(fontSize: 11, color: ZaiNeColors.textSecondary())),
+                const SizedBox(width: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: isPhoneEvent ? Colors.blue.shade50 : Colors.purple.shade50,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    isPhoneEvent ? '手机端' : 'Watch',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      color: isPhoneEvent ? Colors.blue.shade700 : Colors.purple.shade700,
+                    ),
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  event.acknowledged ? '✓ 已确认' : '⚠ 待确认',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: event.acknowledged ? Colors.green.shade600 : Colors.orange.shade600,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Icon(Icons.location_on, size: 12, color: Colors.grey.shade500),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    '(${event.latitude.toStringAsFixed(4)}, ${event.longitude.toStringAsFixed(4)})',
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: Colors.grey.shade500,
+                      fontFamily: 'monospace',
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showFeatureExplanation(BuildContext context) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Row(
           children: [
-            Icon(Icons.watch_outlined, color: Colors.orange, size: 24),
+            Icon(Icons.health_and_safety, color: Colors.orange, size: 24),
             SizedBox(width: 8),
-            Text('Apple Watch 跌倒检测设置'),
+            Text('跌倒检测说明'),
           ],
         ),
         content: const Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('在 Apple Watch 上开启跌倒检测：',
+            Text('本功能提供两种跌倒检测方式：',
                 style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
             SizedBox(height: 12),
-            _GuideStep(step: '1', text: '打开 Apple Watch 的"设置" App'),
-            _GuideStep(step: '2', text: '轻点"SOS 紧急联络"'),
-            _GuideStep(step: '3', text: '打开"跌倒检测"开关'),
-            _GuideStep(step: '4', text: '建议选择"始终开启"以获得最佳保护'),
-            SizedBox(height: 12),
-            Text(
-              '开启后，Apple Watch 会在检测到严重跌倒时自动拨打紧急电话，并通过本 App 通知你的守护人。',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
+            // Apple Watch 检测
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.watch, size: 18, color: Colors.purple),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Apple Watch 跌倒检测（精准版）',
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                      SizedBox(height: 4),
+                      Text(
+                        '需要 Apple Watch Series 4 及以上机型。利用手表的加速度传感器和陀螺仪精确检测跌倒。检测到跌倒时，会自动通知你的守护者。',
+                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 16),
+            // 手机端检测
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.phone_android, size: 18, color: Colors.blue),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('手机端跌倒检测（简化版）',
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                      SizedBox(height: 4),
+                      Text(
+                        '使用手机的加速度传感器检测跌倒，精度不如 Apple Watch，但"有总比没有好"。适合没有 Apple Watch 的用户。',
+                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 16),
+            Divider(),
+            SizedBox(height: 8),
+            Row(
+              children: [
+                Icon(Icons.warning_amber, size: 14, color: Colors.orange),
+                SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    '跌倒检测数据仅用于安全参考，不作为医疗诊断依据。',
+                    style: TextStyle(fontSize: 11, color: Colors.orange),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -916,35 +1327,206 @@ class FallDetectionCard extends StatelessWidget {
   }
 }
 
-/// 引导步骤组件
-class _GuideStep extends StatelessWidget {
-  final String step;
-  final String text;
+/// 安全围栏卡片
+/// 【v1.93.0】在安全设置页面展示地理围栏状态
+class GeoFenceCard extends StatefulWidget {
+  final VoidCallback? onManageFences;
 
-  const _GuideStep({required this.step, required this.text});
+  const GeoFenceCard({super.key, this.onManageFences});
+
+  @override
+  State<GeoFenceCard> createState() => _GeoFenceCardState();
+}
+
+class _GeoFenceCardState extends State<GeoFenceCard> {
+  final GeoFenceService _service = GeoFenceService();
+  List<GeoFence> _fences = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFences();
+  }
+
+  Future<void> _loadFences() async {
+    await _service.init();
+    final fences = await _service.getAllFences();
+    if (mounted) {
+      setState(() {
+        _fences = fences;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final enabledFences = _fences.where((f) => f.enabled).toList();
+    final outsideCount = enabledFences.where((f) => f.status == GeoFenceStatus.outside).length;
+    final insideCount = enabledFences.where((f) => f.status == GeoFenceStatus.inside).length;
+
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: ZaiNeColors.borderColor()),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 标题行
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: _fences.isEmpty ? Colors.grey.shade100 : Colors.purple.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: ZaiNeShadows.card,
+                  ),
+                  child: Icon(
+                    Icons.fence,
+                    color: _fences.isEmpty ? Colors.grey.shade400 : Colors.purple.shade400,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        '安全围栏',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                      Text(
+                        _fences.isEmpty ? '未设置安全区域' : '${enabledFences.length}个围栏 · $insideCount在区内',
+                        style: TextStyle(fontSize: 12, color: ZaiNeColors.textSecondary()),
+                      ),
+                    ],
+                  ),
+                ),
+                if (outsideCount > 0)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.shade100,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      '$outsideCount 已离开',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.orange.shade700,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+
+            if (_fences.isNotEmpty) ...[
+              const SizedBox(height: 12),
+
+              // 说明文字
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.purple.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, size: 14, color: Colors.purple.shade400),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        '离开安全区域时会自动通知守护者',
+                        style: TextStyle(fontSize: 11, color: Colors.purple.shade600),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 8),
+
+              // 围栏列表
+              ...enabledFences.map((fence) => _buildFenceRow(fence)),
+            ],
+
+            const SizedBox(height: 12),
+
+            // 管理按钮
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  widget.onManageFences?.call();
+                  // 返回后刷新
+                  Future.delayed(const Duration(milliseconds: 500), _loadFences);
+                },
+                icon: Icon(
+                  _fences.isEmpty ? Icons.add : Icons.settings,
+                  size: 18,
+                ),
+                label: Text(_fences.isEmpty ? '设置安全围栏' : '管理围栏'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: _fences.isEmpty ? Colors.blue : Colors.purple.shade600,
+                  side: BorderSide(
+                    color: _fences.isEmpty ? Colors.blue.shade300 : Colors.purple.shade200,
+                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFenceRow(GeoFence fence) {
+    final isInside = fence.status == GeoFenceStatus.inside;
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 22,
-            height: 22,
-            decoration: BoxDecoration(
-              color: Colors.orange.shade100,
-              shape: BoxShape.circle,
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: isInside ? Colors.green.shade50 : Colors.orange.shade50,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              fence.type == GeoFenceType.home
+                  ? Icons.home
+                  : fence.type == GeoFenceType.work
+                      ? Icons.work
+                      : Icons.location_on,
+              size: 16,
+              color: isInside ? Colors.green.shade600 : Colors.orange.shade600,
             ),
-            child: Center(
-              child: Text(step,
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.orange.shade700)),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                '${fence.name} (${fence.radius.toStringAsFixed(0)}米)',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: isInside ? Colors.green.shade800 : Colors.orange.shade800,
+                ),
+              ),
             ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(child: Text(text, style: const TextStyle(fontSize: 13))),
-        ],
+            Icon(
+              isInside ? Icons.check_circle : Icons.warning_amber,
+              size: 18,
+              color: isInside ? Colors.green : Colors.orange,
+            ),
+          ],
+        ),
       ),
     );
   }

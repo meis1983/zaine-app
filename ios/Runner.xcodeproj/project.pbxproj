@@ -492,7 +492,7 @@
 				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 93;
 				DEVELOPMENT_TEAM = KK27TYK93U;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -500,6 +500,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "在呢";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "需要读取您的心率数据以实现感应签到功能";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "暂不使用写入功能，保留权限以便未来扩展";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.zaine.app;
 				INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp = NO;
@@ -508,7 +509,7 @@
 					"@executable_path/Frameworks",
 				);
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.93.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = com.zaine.app.watchkitapp;
@@ -541,7 +542,7 @@
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CODE_SIGN_ENTITLEMENTS = "ZaineWatch Watch App/ZaineWatch Watch AppRelease.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 93;
 				DEVELOPMENT_TEAM = KK27TYK93U;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -549,6 +550,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "在呢";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "需要读取您的心率数据以实现感应签到功能";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "暂不使用写入功能，保留权限以便未来扩展";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.zaine.app;
 				INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp = NO;
@@ -557,7 +559,7 @@
 					"@executable_path/Frameworks",
 				);
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.93.0;
 				MTL_FAST_MATH = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = com.zaine.app.watchkitapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -586,7 +588,7 @@
 				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 93;
 				DEVELOPMENT_TEAM = KK27TYK93U;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -594,6 +596,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "在呢";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "需要读取您的心率数据以实现感应签到功能";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "暂不使用写入功能，保留权限以便未来扩展";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.zaine.app;
 				INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp = NO;
@@ -602,7 +605,7 @@
 					"@executable_path/Frameworks",
 				);
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.93.0;
 				MTL_FAST_MATH = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = com.zaine.app.watchkitapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";

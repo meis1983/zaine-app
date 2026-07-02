@@ -618,6 +618,11 @@ class HealthService {
   static const MethodChannel _watchChannel = MethodChannel('zaine/watch');
   static bool _watchChannelInitialized = false;
 
+  /// 【v1.93.0 修复】Watch SOS 信号 — ValueNotifier 通知 UI 层触发紧急求助
+  /// MainNavigation 监听此信号切换到求助 Tab，HelpPage 监听此信号自动触发倒计时
+  static final ValueNotifier<int> watchSOSSignal = ValueNotifier(0);
+  static bool pendingWatchSOS = false;
+
   /// 初始化 Watch MethodChannel 监听（在 App 启动时调用一次）
   static void initWatchChannel() {
     if (_watchChannelInitialized) return;
@@ -626,9 +631,14 @@ class HealthService {
       if (call.method == 'watchCheckin') {
         if (kDebugMode) debugPrint('[HealthService] 📱 收到 Watch 签到通知，立即执行签到...');
         await performSilentHeartbeatCheckin();
+      } else if (call.method == 'watchSOS') {
+        // 【v1.93.0 修复】Watch SOS — 通知 Flutter 端触发紧急求助流程
+        if (kDebugMode) debugPrint('[HealthService] 🚨 收到 Watch SOS 通知，触发紧急求助...');
+        pendingWatchSOS = true;
+        watchSOSSignal.value++;
       }
     });
-    if (kDebugMode) debugPrint('[HealthService] ✅ Watch MethodChannel 已初始化');
+    if (kDebugMode) debugPrint('[HealthService] ✅ Watch MethodChannel 已初始化（含 SOS 监听）');
   }
 
   /// 请求跌倒检测授权

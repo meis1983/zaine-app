@@ -139,6 +139,13 @@ class LocationRecord {
   }
 }
 
+/// 位置追踪模式
+enum LocationTrackingMode {
+  realtime,  // 实时追踪：每30秒
+  normal,    // 普通模式：每5分钟
+  powersave, // 省电模式：每15分钟
+}
+
 /// 位置活动类型
 enum LocationActivityType {
   stationary,  // 静止
@@ -159,6 +166,8 @@ class FallEvent {
   final bool acknowledged; // 是否已确认
   final DateTime? acknowledgedAt;
   final String? notes;
+  final bool guardianNotified; // 【v1.92.0】是否已通知守护者
+  final String source; // 【v1.92.0】检测来源: 'watch' / 'phone'
 
   const FallEvent({
     required this.id,
@@ -169,7 +178,12 @@ class FallEvent {
     this.acknowledged = false,
     this.acknowledgedAt,
     this.notes,
+    this.guardianNotified = false,
+    this.source = 'watch',
   });
+
+  /// 是否来自手机端检测
+  bool get isPhoneSource => source == 'phone';
 
   FallEvent copyWith({
     String? id,
@@ -180,6 +194,8 @@ class FallEvent {
     bool? acknowledged,
     DateTime? acknowledgedAt,
     String? notes,
+    bool? guardianNotified,
+    String? source,
   }) {
     return FallEvent(
       id: id ?? this.id,
@@ -190,6 +206,8 @@ class FallEvent {
       acknowledged: acknowledged ?? this.acknowledged,
       acknowledgedAt: acknowledgedAt ?? this.acknowledgedAt,
       notes: notes ?? this.notes,
+      guardianNotified: guardianNotified ?? this.guardianNotified,
+      source: source ?? this.source,
     );
   }
 
@@ -202,6 +220,8 @@ class FallEvent {
         'acknowledged': acknowledged,
         'acknowledged_at': acknowledgedAt?.toIso8601String(),
         'notes': notes,
+        'guardian_notified': guardianNotified,
+        'source': source,
       };
 
   factory FallEvent.fromJson(Map<String, dynamic> json) {
@@ -216,6 +236,8 @@ class FallEvent {
           ? DateTime.parse(json['acknowledged_at'] as String)
           : null,
       notes: json['notes'] as String?,
+      guardianNotified: json['guardian_notified'] as bool? ?? false,
+      source: json['source'] as String? ?? 'watch',
     );
   }
 }
@@ -503,10 +525,28 @@ class SafetyService {
   // ==================== 位置共享功能 ====================
   
   static const String _lastLocationKey = 'last_location_record';
+  static const String _trackingModeKey = 'location_tracking_mode'; // 【v1.93.0】
   Timer? _locationTimer; // 位置记录定时器
+  LocationTrackingMode _trackingMode = LocationTrackingMode.normal; // 【v1.93.0】
 
-  /// 开始位置跟踪（每5分钟记录一次）
-  Future<bool> startLocationTracking() async {
+  /// 获取追踪间隔（根据模式）
+  Duration _getTrackingInterval(LocationTrackingMode mode) {
+    switch (mode) {
+      case LocationTrackingMode.realtime:
+        return const Duration(seconds: 30);
+      case LocationTrackingMode.normal:
+        return const Duration(minutes: 5);
+      case LocationTrackingMode.powersave:
+        return const Duration(minutes: 15);
+    }
+  }
+
+  /// 获取当前追踪模式
+  LocationTrackingMode get trackingMode => _trackingMode;
+
+  /// 开始位置跟踪
+  /// [mode] 追踪模式，默认为普通模式
+  Future<bool> startLocationTracking({LocationTrackingMode mode = LocationTrackingMode.normal}) async {
     // 1. 请求权限
     final status = await Permission.locationWhenInUse.request();
     if (!status.isGranted) {
@@ -524,16 +564,50 @@ class SafetyService {
     // 3. 停止之前的定时器（如果有）
     _stopLocationTimer();
 
-    // 4. 立即记录一次位置
+    // 4. 保存模式
+    _trackingMode = mode;
+    await _ensureInitialized();
+    await _prefs!.setString(_trackingModeKey, mode.name);
+
+    // 5. 立即记录一次位置
     await _recordLocation();
 
-    // 5. 启动定时器（每5分钟记录一次）
-    _locationTimer = Timer.periodic(const Duration(minutes: 5), (timer) async {
+    // 6. 启动定时器（根据模式设置间隔）
+    final interval = _getTrackingInterval(mode);
+    _locationTimer = Timer.periodic(interval, (timer) async {
       await _recordLocation();
     });
 
-    if (kDebugMode) debugPrint('[SafetyService] 位置跟踪已启动（每5分钟记录一次）');
+    if (kDebugMode) debugPrint('[SafetyService] 位置跟踪已启动（模式: ${mode.name}, 间隔: ${interval.inSeconds}s）');
     return true;
+  }
+
+  /// 切换追踪模式（不停止追踪）
+  Future<void> switchTrackingMode(LocationTrackingMode mode) async {
+    if (_locationTimer == null) return; // 没在追踪就别切
+    _trackingMode = mode;
+    await _ensureInitialized();
+    await _prefs!.setString(_trackingModeKey, mode.name);
+
+    _stopLocationTimer();
+    final interval = _getTrackingInterval(mode);
+    _locationTimer = Timer.periodic(interval, (timer) async {
+      await _recordLocation();
+    });
+
+    if (kDebugMode) debugPrint('[SafetyService] 追踪模式已切换: ${mode.name} (间隔: ${interval.inSeconds}s)');
+  }
+
+  /// 加载上次保存的追踪模式
+  Future<LocationTrackingMode> getSavedTrackingMode() async {
+    await _ensureInitialized();
+    final modeStr = _prefs!.getString(_trackingModeKey);
+    if (modeStr == null) return LocationTrackingMode.normal;
+    try {
+      return LocationTrackingMode.values.firstWhere((e) => e.name == modeStr);
+    } catch (_) {
+      return LocationTrackingMode.normal;
+    }
   }
 
   /// 停止位置跟踪
@@ -775,7 +849,11 @@ class SafetyService {
   }
 
   /// 记录跌倒事件
-  Future<void> recordFallEvent(FallEvent event) async {
+  ///
+  /// [notifyGuardians] — 【v1.93.0】控制是否立即通知守护者。
+  ///   手端跌倒检测设为 false，等用户确认或超时后再通知；
+  ///   Apple Watch 端检测保持 true 立即通知。
+  Future<void> recordFallEvent(FallEvent event, {bool notifyGuardians = true}) async {
     await _ensureInitialized();
     final events = await getFallEvents();
     events.insert(0, event);
@@ -788,15 +866,19 @@ class SafetyService {
     if (kDebugMode) debugPrint('[SafetyService] 跌倒事件已记录: ${event.id}');
     onFallDetected?.call(event);
 
-    // 通知守护者
-    try {
-      await NotifyService.notifyGuardiansAboutFall(
-        timestamp: event.timestamp,
-        latitude: event.latitude.toString(),
-        longitude: event.longitude.toString(),
-      );
-    } catch (e) {
-      if (kDebugMode) debugPrint('[SafetyService] 跌倒通知守护者失败: $e');
+    // 【v1.93.0】手机端检测默认不立即通知，等用户确认
+    if (notifyGuardians) {
+      try {
+        await NotifyService.notifyGuardiansAboutFall(
+          timestamp: event.timestamp,
+          latitude: event.latitude.toString(),
+          longitude: event.longitude.toString(),
+        );
+      } catch (e) {
+        if (kDebugMode) debugPrint('[SafetyService] 跌倒通知守护者失败: $e');
+      }
+    } else {
+      if (kDebugMode) debugPrint('[SafetyService] 跌倒事件已记录，等待用户确认后再通知守护者');
     }
   }
 

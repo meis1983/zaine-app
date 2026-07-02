@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'dart:convert';
 import '../services/platform/location_service.dart';
+import '../services/platform/health_service.dart'; // 【v1.93.0】Watch SOS 信号
 import '../services/membership_service.dart';
 import '../services/api_service.dart';
 import '../services/safety/safety_service.dart';
@@ -72,10 +73,32 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
       duration: const Duration(milliseconds: 1200),
     )..repeat(reverse: true);
     _checkPrerequisites();
+    // 【v1.93.0 修复】监听 Watch SOS 信号 — Watch 触发 SOS 时自动启动求助倒计时
+    HealthService.watchSOSSignal.addListener(_onWatchSOS);
+    // 如果在 HelpPage 构建之前就收到了 SOS 信号（首次切到求助 Tab），立即触发
+    if (HealthService.pendingWatchSOS) {
+      HealthService.pendingWatchSOS = false;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && !_isTriggering) {
+          if (kDebugMode) debugPrint('[HelpPage] 🚨 检测到待处理 Watch SOS，自动触发紧急求助');
+          _triggerHelp();
+        }
+      });
+    }
+  }
+
+  /// 【v1.93.0 修复】Watch SOS 信号回调
+  void _onWatchSOS() {
+    if (mounted && !_isTriggering) {
+      HealthService.pendingWatchSOS = false;
+      if (kDebugMode) debugPrint('[HelpPage] 🚨 收到 Watch SOS 信号，自动触发紧急求助');
+      _triggerHelp();
+    }
   }
 
   @override
   void dispose() {
+    HealthService.watchSOSSignal.removeListener(_onWatchSOS);
     _pulseController.dispose();
     super.dispose();
   }

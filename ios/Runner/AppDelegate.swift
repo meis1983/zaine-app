@@ -156,12 +156,14 @@ import HealthKit
           replyHandler(["success": true])
 
       case "sos":
-          // Watch 端紧急求助 → 记录到 UserDefaults，Flutter 端读取后触发 SOS
+          // Watch 端紧急求助 → 记录到 UserDefaults + 立即通知 Flutter 执行 SOS 流程
           UserDefaults.standard.set(true, forKey: "pending_watch_sos")
           UserDefaults.standard.set("sos", forKey: "watch_last_action")
           UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: "watch_last_action_ts")
           // 发送本地通知提醒用户
           self.sendLocalNotification(title: "紧急求助", body: "Apple Watch 发起了 SOS 紧急求助")
+          // 【v1.93.0 修复】立即通知 Flutter 执行 SOS 流程（之前只设 flag，Flutter 端无人读取）
+          self.notifyFlutterWatchSOS()
           replyHandler(["success": true])
 
       default:
@@ -186,6 +188,27 @@ import HealthKit
                       print("[AppDelegate] Watch 签到 Flutter 回调失败: \(error.message ?? "unknown")")
                   } else {
                       print("[AppDelegate] ✅ Watch 签到已通知 Flutter 侧")
+                  }
+              }
+          }
+      }
+  }
+
+  /// 【v1.93.0 修复】通知 Flutter 端执行 Watch SOS 紧急求助
+  /// 之前 Watch SOS 只设了 UserDefaults flag，但 Flutter 端无人读取，导致 SOS 永远不触发
+  private func notifyFlutterWatchSOS() {
+      DispatchQueue.main.async {
+          guard let controller = self.window?.rootViewController as? FlutterViewController else {
+              print("[AppDelegate] FlutterViewController 不可用，Watch SOS 通知失败")
+              return
+          }
+          let channel = FlutterMethodChannel(name: "zaine/watch", binaryMessenger: controller.binaryMessenger)
+          channel.invokeMethod("watchSOS", arguments: nil) { result in
+              DispatchQueue.main.async {
+                  if let error = result as? FlutterError {
+                      print("[AppDelegate] Watch SOS Flutter 回调失败: \(error.message ?? "unknown")")
+                  } else {
+                      print("[AppDelegate] ✅ Watch SOS 已通知 Flutter 侧")
                   }
               }
           }

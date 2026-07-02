@@ -3,10 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import '../theme/theme_helper.dart';
 import '../services/safety/safety_service.dart';
+import '../services/safety/fall_detection_service.dart';
+import '../services/safety/geofence_service.dart';
 import '../services/platform/watch_data_service.dart';
 import '../widgets/safety_features.dart';
+import '../widgets/fall_confirmation_dialog.dart';
 import 'location_history_page.dart';
 import 'fall_event_history_page.dart';
+import 'geofence_page.dart';
 
 /// 安全设置页面
 ///
@@ -20,14 +24,18 @@ class SafetySettingsPage extends StatefulWidget {
 
 class _SafetySettingsPageState extends State<SafetySettingsPage> {
   final SafetyService _safetyService = SafetyService();
+  final FallDetectionService _fallDetectionService = FallDetectionService();
+  final GeoFenceService _geoFenceService = GeoFenceService(); // 【v1.93.0】
   CheckInReminder _reminderConfig = const CheckInReminder();
   List<LocationRecord> _todayTrack = [];
   List<FallEvent> _fallEvents = [];
   DateTime? _lastRecordTime;
   bool _isLocationTracking = false;
+  LocationTrackingMode _trackingMode = LocationTrackingMode.normal; // 【v1.93.0】
   bool _isLoading = true;
   bool _watchPaired = false;
   bool _watchReachable = false;
+  bool _phoneDetectionEnabled = false;
   Timer? _watchTimer;
 
   @override
@@ -35,6 +43,57 @@ class _SafetySettingsPageState extends State<SafetySettingsPage> {
     super.initState();
     _loadData();
     _startWatchTimer();
+    _setupFallDetectionCallbacks();
+  }
+
+  /// 【v1.93.0】设置跌倒检测回调
+  void _setupFallDetectionCallbacks() {
+    _fallDetectionService.onFallDetected = () {
+      if (kDebugMode) debugPrint('[SafetySettings] 跌倒检测回调触发');
+      _showFallConfirmationDialog();
+    };
+    _fallDetectionService.onFallTimeout = () {
+      if (kDebugMode) debugPrint('[SafetySettings] 跌倒超时回调触发');
+      // 超时后自动通知已在 service 中处理，这里可选择性刷新数据
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.warning_amber, color: Colors.white),
+                SizedBox(width: 8),
+                Expanded(child: Text('跌倒未响应，已自动通知守护者')),
+              ],
+            ),
+            backgroundColor: Colors.orange,
+            behavior: SnackBarBehavior.floating,
+            duration: Duration(seconds: 5),
+          ),
+        );
+        _loadData();
+      }
+    };
+    _fallDetectionService.onFallCancelled = () {
+      if (kDebugMode) debugPrint('[SafetySettings] 跌倒取消回调触发');
+      if (mounted) _loadData();
+    };
+  }
+
+  /// 【v1.93.0】显示跌倒确认对话框
+  void _showFallConfirmationDialog() {
+    if (!mounted || !_phoneDetectionEnabled) return;
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (context) => FallConfirmationDialog(
+          detectionService: _fallDetectionService,
+          safetyService: _safetyService,
+          onDismissed: () {
+            _loadData();
+          },
+        ),
+      ),
+    );
   }
 
   void _startWatchTimer() {
@@ -60,6 +119,7 @@ class _SafetySettingsPageState extends State<SafetySettingsPage> {
 
   Future<void> _loadData() async {
     await _safetyService.initialize();
+    await _fallDetectionService.init();
     final reminder = await _safetyService.getReminderConfig();
     final track = await _safetyService.getLocationTrackForDay(DateTime.now());
     final falls = await _safetyService.getFallEvents();
@@ -79,12 +139,16 @@ class _SafetySettingsPageState extends State<SafetySettingsPage> {
       if (kDebugMode) debugPrint('[SafetySettings] 读取 Watch 状态失败: $e');
     }
 
+    // 加载已保存的追踪模式 【v1.93.0】
+    final savedMode = await _safetyService.getSavedTrackingMode();
+
     if (mounted) {
       setState(() {
         _reminderConfig = reminder;
         _todayTrack = track;
         _fallEvents = falls;
         _lastRecordTime = lastRecordTime;
+        _trackingMode = savedMode;
         _isLoading = false;
       });
     }
@@ -107,6 +171,38 @@ class _SafetySettingsPageState extends State<SafetySettingsPage> {
           behavior: SnackBarBehavior.floating,
         ),
       );
+    }
+  }
+
+  /// 切换手机端跌倒检测
+  void _togglePhoneDetection() {
+    setState(() {
+      _phoneDetectionEnabled = !_phoneDetectionEnabled;
+    });
+    if (_phoneDetectionEnabled) {
+      _fallDetectionService.startPhoneDetection(safetyService: _safetyService);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('📱 手机端跌倒检测已开启（简化版）'),
+            backgroundColor: Colors.blue,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } else {
+      _fallDetectionService.stopPhoneDetection();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('📱 手机端跌倒检测已关闭'),
+            backgroundColor: Colors.grey.shade700,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
     }
   }
 
@@ -154,6 +250,7 @@ class _SafetySettingsPageState extends State<SafetySettingsPage> {
                     LocationTrackCard(
                       todayTrack: _todayTrack,
                       isTracking: _isLocationTracking,
+                      currentMode: _trackingMode,
                       lastRecordTime: _lastRecordTime,
                       onViewFullMap: _todayTrack.isNotEmpty
                           ? () {
@@ -166,22 +263,41 @@ class _SafetySettingsPageState extends State<SafetySettingsPage> {
                             }
                           : null,
                       onStartTracking: () async {
-                        final ctx = context; // 保存 context 引用
-                        if (_isLocationTracking) {
-                          setState(() => _isLocationTracking = false);
-                        } else {
-                          final success = await _safetyService.startLocationTracking();
-                          if (!mounted) return;
-                          setState(() => _isLocationTracking = success);
-                          if (!success && ctx.mounted) {
-                            ScaffoldMessenger.of(ctx).showSnackBar(
-                              const SnackBar(
-                                content: Text('请开启位置权限'),
-                                backgroundColor: Colors.orange,
-                              ),
-                            );
-                          }
+                        final success = await _safetyService.startLocationTracking(mode: _trackingMode);
+                        if (!mounted) return;
+                        setState(() => _isLocationTracking = success);
+                        if (success) {
+                          // 【v1.93.0】启动围栏定时检查
+                          _geoFenceService.startPeriodicCheck();
                         }
+                        if (!success) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('请开启位置权限'),
+                              backgroundColor: Colors.orange,
+                            ),
+                          );
+                        }
+                      },
+                      onStopTracking: () {
+                        _safetyService.stopLocationTracking();
+                        _geoFenceService.stopPeriodicCheck(); // 【v1.93.0】
+                        if (mounted) setState(() => _isLocationTracking = false);
+                      },
+                      onModeChanged: (mode) {
+                        _safetyService.switchTrackingMode(mode);
+                        setState(() => _trackingMode = mode);
+                      },
+                    ),
+                    const SizedBox(height: ZaiNeSpacing.lg),
+
+                    // 【v1.93.0】安全围栏
+                    GeoFenceCard(
+                      onManageFences: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const GeoFencePage()),
+                        ).then((_) => _loadData());
                       },
                     ),
                     const SizedBox(height: ZaiNeSpacing.lg),
@@ -190,6 +306,8 @@ class _SafetySettingsPageState extends State<SafetySettingsPage> {
                       recentFalls: _fallEvents,
                       watchPaired: _watchPaired,
                       watchReachable: _watchReachable,
+                      phoneDetectionEnabled: _phoneDetectionEnabled,
+                      onTogglePhoneDetection: _togglePhoneDetection,
                       onViewHistory: () {
                         Navigator.push(
                           context,

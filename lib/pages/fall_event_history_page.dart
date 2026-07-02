@@ -6,7 +6,7 @@ import '../services/platform/watch_data_service.dart';
 
 /// 跌倒事件历史页面
 ///
-/// 展示 Apple Watch 检测到的跌倒事件记录
+/// 展示 Apple Watch / 手机端 检测到的跌倒事件记录
 class FallEventHistoryPage extends StatefulWidget {
   const FallEventHistoryPage({super.key});
 
@@ -41,6 +41,11 @@ class _FallEventHistoryPageState extends State<FallEventHistoryPage> {
     });
   }
 
+  /// 获取友好的位置描述
+  String _formatLocation(double lat, double lng) {
+    return '${lat.toStringAsFixed(4)}, ${lng.toStringAsFixed(4)}';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -51,6 +56,12 @@ class _FallEventHistoryPageState extends State<FallEventHistoryPage> {
         foregroundColor: ZaiNeColors.textPrimary(),
         elevation: 0,
         actions: [
+          // 【v1.92.0】功能说明按钮
+          IconButton(
+            icon: const Icon(Icons.help_outline, size: 20),
+            tooltip: '功能说明',
+            onPressed: () => _showHelpDialog(context),
+          ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _loadData,
@@ -59,50 +70,8 @@ class _FallEventHistoryPageState extends State<FallEventHistoryPage> {
       ),
       body: Column(
         children: [
-          // 功能状态提示（根据 Apple Watch 配对状态显示）
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            color: _watchPaired ? Colors.green.shade50 : Colors.orange.shade50,
-            child: Row(
-              children: [
-                Icon(
-                  _watchPaired ? Icons.check_circle_outline : Icons.info_outline,
-                  color: _watchPaired ? Colors.green.shade600 : Colors.orange.shade400,
-                  size: 20,
-                ),
-                const SizedBox(width: ZaiNeSpacing.sm),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        _watchPaired
-                            ? (_watchReachable ? '跌倒检测已启用，Apple Watch 正在监测' : '跌倒检测已启用，Apple Watch 已配对')
-                            : '跌倒检测需要 Apple Watch 支持',
-                        style: TextStyle(
-                          fontSize: ZaiNeFontSize.bodySm,
-                          fontWeight: FontWeight.w600,
-                          color: _watchPaired ? Colors.green.shade700 : Colors.orange.shade700,
-                        ),
-                      ),
-                      const SizedBox(height: ZaiNeSpacing.xs),
-                      Text(
-                        _watchPaired
-                            ? '检测到跌倒后会自动记录在这里，并在 10 秒内允许您取消误报'
-                            : '请确保 iPhone 已与 Apple Watch 配对，并在 Watch 上启用跌倒检测',
-                        style: TextStyle(
-                          fontSize: ZaiNeFontSize.caption,
-                          color: _watchPaired ? Colors.green.shade600 : Colors.orange.shade600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-
+          // 功能状态提示
+          _buildStatusBanner(),
           // 事件列表
           Expanded(
             child: _isLoading
@@ -112,193 +81,418 @@ class _FallEventHistoryPageState extends State<FallEventHistoryPage> {
                     : ListView.builder(
                         padding: const EdgeInsets.all(16),
                         itemCount: _events.length,
-                        itemBuilder: (context, index) {
-                          final event = _events[index];
-                          return _buildEventCard(event, index);
-                        },
+                        itemBuilder: (context, index) => _buildEventCard(_events[index]),
                       ),
           ),
         ],
       ),
+    );
+  }
+
+  /// 状态横幅：同时展示 Watch 和手机端检测状态
+  Widget _buildStatusBanner() {
+    final bool hasWatch = _watchPaired && _watchReachable;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: hasWatch
+              ? [Colors.green.shade50, Colors.teal.shade50]
+              : [Colors.indigo.shade50, Colors.blue.shade50],
+        ),
+        border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Apple Watch 状态
+          _buildStatusIndicator(
+            icon: Icons.watch_outlined,
+            label: 'Apple Watch',
+            active: hasWatch,
+            activeText: '精准检测已启用',
+            inactiveText: '未连接',
+          ),
+          const SizedBox(width: 8),
+          Container(width: 1, height: 36, color: Colors.grey.shade300),
+          const SizedBox(width: 8),
+          // 手机端状态
+          _buildStatusIndicator(
+            icon: Icons.phone_android_outlined,
+            label: '手机端',
+            active: true,
+            activeText: '辅助检测已就绪',
+            inactiveText: '',
+          ),
+          const Spacer(),
+          // 总计事件数
+          if (_events.isNotEmpty)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.7),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                '${_events.length} 条记录',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey.shade700,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusIndicator({
+    required IconData icon,
+    required String label,
+    required bool active,
+    required String activeText,
+    required String inactiveText,
+  }) {
+    return Row(
+      children: [
+        Container(
+          width: 10, height: 10,
+          margin: const EdgeInsets.only(right: 6),
+          decoration: BoxDecoration(
+            color: active ? Colors.green : Colors.grey.shade400,
+            shape: BoxShape.circle,
+            boxShadow: active
+                ? [BoxShadow(color: Colors.green.withValues(alpha: 0.4), blurRadius: 4)]
+                : null,
+          ),
+        ),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, size: 14, color: active ? Colors.green.shade700 : Colors.grey),
+                const SizedBox(width: 4),
+                Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600,
+                    color: active ? Colors.green.shade800 : Colors.grey)),
+              ],
+            ),
+            Text(active ? activeText : inactiveText,
+                style: TextStyle(fontSize: 10, color: active ? Colors.green.shade600 : Colors.grey.shade500)),
+          ],
+        ),
+      ],
     );
   }
 
   Widget _buildEmptyState() {
     return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.indigo.shade50,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.sensors_off, size: 48, color: Colors.indigo.shade300),
+            ),
+            const SizedBox(height: ZaiNeSpacing.xl),
+            Text(
+              '暂无跌倒事件',
+              style: TextStyle(fontSize: ZaiNeFontSize.body, fontWeight: FontWeight.w600,
+                  color: ZaiNeColors.textSecondary()),
+            ),
+            const SizedBox(height: ZaiNeSpacing.sm),
+            Text(
+              '系统正在持续监测中。\nApple Watch 提供精准跌倒检测，\n手机端提供辅助加速度检测。',
+              style: TextStyle(fontSize: ZaiNeFontSize.caption,
+                  color: ZaiNeColors.textHint(), height: 1.6),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: ZaiNeSpacing.sm),
+            Text(
+              '检测到跌倒后会自动记录并通知守护者',
+              style: TextStyle(fontSize: ZaiNeFontSize.micro,
+                  color: Colors.indigo.shade400),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEventCard(FallEvent event) {
+    final timeStr = DateFormat('MM/dd HH:mm').format(event.timestamp);
+    final confidencePercent = event.confidence != null
+        ? '${(event.confidence! * 100).toStringAsFixed(0)}%'
+        : '--';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: event.acknowledged ? Colors.grey.shade200 : Colors.orange.shade200,
+        ),
+        boxShadow: event.acknowledged ? null : [
+          BoxShadow(color: Colors.orange.withValues(alpha: 0.08), blurRadius: 8, offset: const Offset(0, 2)),
+        ],
+      ),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.sensors, size: 64, color: ZaiNeColors.textHint()),
-          const SizedBox(height: ZaiNeSpacing.lg),
-          Text(
-            '暂无跌倒事件',
-            style: TextStyle(fontSize: ZaiNeFontSize.body, color: ZaiNeColors.textSecondary()),
+          // ── 顶部状态栏：检测来源 + 状态 + 时间 ──
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+            child: Row(
+              children: [
+                // 检测来源图标
+                _buildSourceBadge(event),
+                const Spacer(),
+                // 时间
+                Text(timeStr,
+                    style: TextStyle(fontSize: ZaiNeFontSize.micro, color: ZaiNeColors.textHint())),
+              ],
+            ),
           ),
-          const SizedBox(height: ZaiNeSpacing.sm),
+
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ── 位置信息行 ──
+                _buildInfoRow(
+                  icon: Icons.location_on_outlined,
+                  iconColor: Colors.red.shade400,
+                  label: '位置',
+                  value: _formatLocation(event.latitude, event.longitude),
+                ),
+                const SizedBox(height: 8),
+
+                // ── 置信度 + 检测来源 ──
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildInfoRow(
+                        icon: Icons.analytics_outlined,
+                        iconColor: _getConfidenceColor(event.confidence),
+                        label: '置信度',
+                        value: confidencePercent,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    // ── 守护者通知状态 ──
+                    _buildGuardianNotifiedBadge(event),
+                  ],
+                ),
+                const SizedBox(height: 6),
+
+                // ── 确认时间 ──
+                if (event.acknowledgedAt != null)
+                  _buildInfoRow(
+                    icon: Icons.check_circle_outline,
+                    iconColor: Colors.green,
+                    label: '确认于',
+                    value: DateFormat('HH:mm').format(event.acknowledgedAt!),
+                  ),
+
+                // ── 备注 ──
+                if (event.notes != null && event.notes!.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(Icons.note_alt_outlined, size: 14, color: Colors.grey.shade500),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(event.notes!, style: TextStyle(fontSize: 12, color: Colors.grey.shade600, height: 1.4)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+
+          // ── 操作按钮：未确认时显示 ──
+          if (!event.acknowledged)
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.orange.shade50,
+                borderRadius: const BorderRadius.only(
+                  bottomLeft: Radius.circular(14),
+                  bottomRight: Radius.circular(14),
+                ),
+              ),
+              child: SizedBox(
+                width: double.infinity,
+                child: TextButton.icon(
+                  onPressed: () async {
+                    await _safetyService.acknowledgeFallEvent(event.id);
+                    await _loadData();
+                  },
+                  icon: Icon(Icons.check, size: 16, color: Colors.orange.shade700),
+                  label: Text('确认为误报',
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.orange.shade700)),
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: const RoundedRectangleBorder(
+                      borderRadius: BorderRadius.only(bottomLeft: Radius.circular(14), bottomRight: Radius.circular(14)),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// 检测来源徽章
+  Widget _buildSourceBadge(FallEvent event) {
+    final bool isWatch = !event.isPhoneSource;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: isWatch ? Colors.purple.shade50 : Colors.indigo.shade50,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            isWatch ? Icons.watch : Icons.phone_android,
+            size: 14,
+            color: isWatch ? Colors.purple.shade600 : Colors.indigo.shade600,
+          ),
+          const SizedBox(width: 4),
           Text(
-            'Apple Watch 会持续监测，检测到跌倒后会自动记录在这里',
-            style: TextStyle(fontSize: ZaiNeFontSize.caption, color: ZaiNeColors.textHint()),
-            textAlign: TextAlign.center,
+            isWatch ? 'Apple Watch' : '手机端',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: isWatch ? Colors.purple.shade700 : Colors.indigo.shade700,
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildEventCard(FallEvent event, int index) {
-    final timeStr = DateFormat('MM/dd HH:mm').format(event.timestamp);
-    final confidencePercent = event.confidence != null
-        ? '${(event.confidence! * 100).toStringAsFixed(0)}%'
-        : '未知';
-
+  /// 守护者通知状态徽章
+  Widget _buildGuardianNotifiedBadge(FallEvent event) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(ZaiNeRadius.card),
-        border: Border.all(
-          color: event.acknowledged ? Colors.grey.shade200 : Colors.orange.shade200,
-        ),
+        color: event.guardianNotified ? Colors.green.shade50 : Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(8),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          // 顶部：状态 + 时间
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.sm, vertical: ZaiNeSpacing.xs),
-                decoration: BoxDecoration(
-                  color: event.acknowledged
-                      ? Colors.green.shade50
-                      : Colors.orange.shade50,
-                  borderRadius: BorderRadius.circular(ZaiNeRadius.small),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      event.acknowledged ? Icons.check_circle : Icons.warning_amber,
-                      size: 14,
-                      color: event.acknowledged ? Colors.green : Colors.orange,
-                    ),
-                    const SizedBox(width: ZaiNeSpacing.xs),
-                    Text(
-                      event.acknowledged ? '已确认' : '待确认',
-                      style: TextStyle(
-                        fontSize: ZaiNeFontSize.caption,
-                        fontWeight: FontWeight.w600,
-                        color: event.acknowledged ? Colors.green : Colors.orange,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const Spacer(),
-              Text(
-                timeStr,
-                style: TextStyle(fontSize: ZaiNeFontSize.caption, color: ZaiNeColors.textSecondary()),
-              ),
-            ],
+          Icon(
+            event.guardianNotified ? Icons.people : Icons.people_outline,
+            size: 13,
+            color: event.guardianNotified ? Colors.green.shade600 : Colors.grey.shade500,
           ),
-
-          const SizedBox(height: ZaiNeSpacing.md),
-
-          // 位置信息
-          Row(
-            children: [
-              Icon(Icons.location_on, size: 16, color: ZaiNeColors.textSecondary()),
-              const SizedBox(width: ZaiNeSpacing.sm),
-              Expanded(
-                child: Text(
-                  '纬度: ${event.latitude.toStringAsFixed(6)}, 经度: ${event.longitude.toStringAsFixed(6)}',
-                  style: TextStyle(
-                    fontSize: ZaiNeFontSize.caption,
-                    color: Colors.grey.shade700,
-                    fontFamily: 'monospace',
-                  ),
-                ),
-              ),
-            ],
+          const SizedBox(width: 4),
+          Text(
+            event.guardianNotified ? '已通知守护者' : '未通知',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+              color: event.guardianNotified ? Colors.green.shade700 : Colors.grey.shade600,
+            ),
           ),
+        ],
+      ),
+    );
+  }
 
-          const SizedBox(height: ZaiNeSpacing.sm),
+  /// 通用信息行
+  Widget _buildInfoRow({
+    required IconData icon,
+    required Color iconColor,
+    required String label,
+    required String value,
+  }) {
+    return Row(
+      children: [
+        Icon(icon, size: 15, color: iconColor),
+        const SizedBox(width: 6),
+        Text('$label  ', style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
+        Expanded(
+          child: Text(value,
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.grey.shade800),
+              overflow: TextOverflow.ellipsis),
+        ),
+      ],
+    );
+  }
 
-          // 置信度 + 确认时间
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.sm, vertical: ZaiNeSpacing.xs),
-                decoration: BoxDecoration(
-                  color: _getConfidenceColor(event.confidence).withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(ZaiNeRadius.small),
-                ),
-                child: Text(
-                  '置信度: $confidencePercent',
-                  style: TextStyle(
-                    fontSize: ZaiNeFontSize.micro,
-                    color: _getConfidenceColor(event.confidence),
-                  ),
-                ),
-              ),
-              const SizedBox(width: ZaiNeSpacing.sm),
-              if (event.acknowledgedAt != null)
-                Expanded(
-                  child: Text(
-                    '确认于 ${DateFormat('HH:mm').format(event.acknowledgedAt!)}',
-                    style: TextStyle(fontSize: ZaiNeFontSize.micro, color: ZaiNeColors.textSecondary()),
-                  ),
-                ),
-            ],
-          ),
-
-          if (event.notes != null && event.notes!.isNotEmpty) ...[
-            const SizedBox(height: ZaiNeSpacing.sm),
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade50,
-                borderRadius: BorderRadius.circular(ZaiNeRadius.small),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.note, size: 14, color: ZaiNeColors.textSecondary()),
-                  const SizedBox(width: ZaiNeSpacing.sm),
-                  Expanded(
-                    child: Text(
-                      event.notes!,
-                      style: TextStyle(fontSize: ZaiNeFontSize.caption, color: Colors.grey.shade600),
-                    ),
-                  ),
-                ],
-              ),
+  /// 【v1.92.0】功能说明弹窗
+  void _showHelpDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.info_outline, color: Colors.indigo, size: 24),
+            SizedBox(width: 8),
+            Text('跌倒检测说明', style: TextStyle(fontSize: 16)),
+          ],
+        ),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _HelpItem(
+              icon: Icons.watch,
+              title: 'Apple Watch 精准检测',
+              desc: '利用 Watch 高精度加速度传感器，可精准识别跌倒动作。\n需 Apple Watch Series 4 及以上机型。',
+            ),
+            SizedBox(height: 14),
+            _HelpItem(
+              icon: Icons.phone_android,
+              title: '手机端辅助检测',
+              desc: '使用 iPhone 加速度传感器进行简化版跌倒判断。\n精度不如 Watch，但作为备用方案依然可提供基础保护。',
+            ),
+            SizedBox(height: 14),
+            _HelpItem(
+              icon: Icons.people,
+              title: '通知守护者',
+              desc: '当检测到跌倒且60秒内无响应时，系统将自动通知您设置的紧急联系人。',
+            ),
+            SizedBox(height: 14),
+            _HelpItem(
+              icon: Icons.warning_amber,
+              title: '免责声明',
+              desc: '本功能仅作为安全参考辅助工具，不能替代专业的医疗诊断或紧急救援服务。',
             ),
           ],
-
-          // 操作按钮（未确认时显示）
-          if (!event.acknowledged) ...[
-            const SizedBox(height: ZaiNeSpacing.md),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: () async {
-                  await _safetyService.acknowledgeFallEvent(event.id);
-                  await _loadData();
-                },
-                icon: const Icon(Icons.check, size: 16),
-                label: const Text('确认为误报'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.orange.shade700,
-                  side: BorderSide(color: Colors.orange.shade300),
-                  padding: const EdgeInsets.symmetric(vertical: ZaiNeSpacing.sm),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(ZaiNeRadius.small),
-                  ),
-                ),
-              ),
-            ),
-          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            style: TextButton.styleFrom(backgroundColor: Colors.indigo.shade50),
+            child: Text('知道了', style: TextStyle(color: Colors.indigo.shade700)),
+          ),
         ],
       ),
     );
@@ -309,5 +503,46 @@ class _FallEventHistoryPageState extends State<FallEventHistoryPage> {
     if (confidence >= 0.8) return Colors.red;
     if (confidence >= 0.5) return Colors.orange;
     return Colors.green;
+  }
+}
+
+/// 帮助弹窗中的说明条目
+class _HelpItem extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String desc;
+
+  const _HelpItem({
+    required this.icon,
+    required this.title,
+    required this.desc,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.indigo.shade50,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, size: 18, color: Colors.indigo.shade600),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 4),
+              Text(desc, style: TextStyle(fontSize: 12, color: Colors.grey.shade600, height: 1.5)),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 }
