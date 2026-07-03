@@ -11,7 +11,7 @@ struct ContentView: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 12) {
+            VStack(spacing: 8) {
                 // Header
                 HStack {
                     Text("在呢+")
@@ -22,6 +22,29 @@ struct ContentView: View {
                         .fill(watchManager.isReachable ? Color.green : Color.red)
                         .frame(width: 8, height: 8)
                 }
+                
+                // 🆕 诊断信息
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("状态: \(watchManager.activationState)")
+                        .font(.system(size: 9))
+                        .foregroundColor(watchManager.activationState.contains("✅") ? .green : .orange)
+                    Text("连接: \(watchManager.isReachable ? "可达" : "不可达")")
+                        .font(.system(size: 9))
+                        .foregroundColor(watchManager.isReachable ? .green : .red)
+                    if !watchManager.lastAction.isEmpty {
+                        Text("操作: \(watchManager.lastAction)")
+                            .font(.system(size: 9))
+                            .foregroundColor(.cyan)
+                    }
+                    if !watchManager.lastError.isEmpty {
+                        Text("错误: \(watchManager.lastError)")
+                            .font(.system(size: 9))
+                            .foregroundColor(.red)
+                    }
+                }
+                .padding(6)
+                .background(Color.white.opacity(0.08))
+                .cornerRadius(8)
 
                 // Sign-in Button
                 Button(action: {
@@ -55,7 +78,6 @@ struct ContentView: View {
                         .foregroundColor(.cyan)
                         .frame(maxWidth: .infinity, alignment: .leading)
 
-                    // Health data grid
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2), spacing: 8) {
                         if let heartRate = watchManager.healthData["heart_rate"] as? String {
                             HealthItemView(icon: "heart.fill", value: heartRate, unit: "bpm", color: .red)

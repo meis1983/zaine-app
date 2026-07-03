@@ -599,8 +599,21 @@ class HealthService {
         final uid = prefs.getString('user_id') ?? '';
         final lastDateKey =
             uid.isNotEmpty ? 'last_check_in_date_$uid' : 'last_check_in_date';
+        // 【修复 v1.93.1】同时保存连续天数和累计天数到本地
+        final streakKey = uid.isNotEmpty ? 'continuous_days_$uid' : 'continuous_days';
+        final totalKey = uid.isNotEmpty ? 'total_check_in_days_$uid' : 'total_check_in_days';
+        final serverStreak = res['streak'] as int?;
+        final serverTotal = res['total_days'] as int?;
+        if (serverStreak != null && serverStreak > 0) {
+          await prefs.setInt(streakKey, serverStreak);
+        }
+        if (serverTotal != null) {
+          await prefs.setInt(totalKey, serverTotal);
+        }
         await prefs.setString(lastDateKey, today);
         await prefs.setString('last_check_in_date', today);
+        // 【v1.93.1 修复】通知 HomePage 刷新签到 UI（Watch 签到后手机端有视觉反馈）
+        watchCheckinCompleteSignal.value++;
         unawaited(SyncService.pullFromServer());
         // 清除 Watch 信号
         if (hasWatchSignal) {
@@ -623,22 +636,35 @@ class HealthService {
   static final ValueNotifier<int> watchSOSSignal = ValueNotifier(0);
   static bool pendingWatchSOS = false;
 
+  /// 【v1.93.1 修复】Watch 签到完成信号 — HomePage 监听此信号刷新签到 UI
+  /// 修复：Watch 点击确认签到后，手机端无任何视觉反馈
+  static final ValueNotifier<int> watchCheckinCompleteSignal = ValueNotifier<int>(0);
+
   /// 初始化 Watch MethodChannel 监听（在 App 启动时调用一次）
   static void initWatchChannel() {
-    if (_watchChannelInitialized) return;
+    if (_watchChannelInitialized) {
+      if (kDebugMode) debugPrint('[HealthService] ⚠️ Watch MethodChannel 已初始化，跳过');
+      return;
+    }
     _watchChannelInitialized = true;
+    if (kDebugMode) debugPrint('[HealthService] 📱 initWatchChannel() 被调用，开始注册 MethodChannel 监听...');
     _watchChannel.setMethodCallHandler((call) async {
+      if (kDebugMode) debugPrint('[HealthService] 📨 MethodChannel 收到调用: method=${call.method}, arguments=${call.arguments}');
       if (call.method == 'watchCheckin') {
         if (kDebugMode) debugPrint('[HealthService] 📱 收到 Watch 签到通知，立即执行签到...');
         await performSilentHeartbeatCheckin();
+        if (kDebugMode) debugPrint('[HealthService] ✅ Watch 签到执行完成');
       } else if (call.method == 'watchSOS') {
         // 【v1.93.0 修复】Watch SOS — 通知 Flutter 端触发紧急求助流程
         if (kDebugMode) debugPrint('[HealthService] 🚨 收到 Watch SOS 通知，触发紧急求助...');
         pendingWatchSOS = true;
         watchSOSSignal.value++;
+        if (kDebugMode) debugPrint('[HealthService] ✅ Watch SOS 信号已发出 (watchSOSSignal=${watchSOSSignal.value})');
+      } else {
+        if (kDebugMode) debugPrint('[HealthService] ❓ 未知的 MethodChannel 调用: ${call.method}');
       }
     });
-    if (kDebugMode) debugPrint('[HealthService] ✅ Watch MethodChannel 已初始化（含 SOS 监听）');
+    if (kDebugMode) debugPrint('[HealthService] ✅ Watch MethodChannel 已初始化（含 SOS 监听）, _watchChannelInitialized=$_watchChannelInitialized');
   }
 
   /// 请求跌倒检测授权

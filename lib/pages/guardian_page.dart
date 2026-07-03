@@ -69,7 +69,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
         : 'emergency_contacts';
 
     // 第1步：立即从本地缓存加载联系人列表（秒显）
-    List<Map<String, dynamic>> contacts = _loadContactsFromCache(prefs, contactsKey);
+    List<Map<String, dynamic>> contacts = await _loadContactsFromCache(prefs, contactsKey);
 
     // 已有缓存数据 → 立即渲染（从缓存恢复状态，避免硬编码 false）
     if (contacts.isNotEmpty && mounted) {
@@ -316,8 +316,8 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
   }
 
   /// 从本地缓存读取联系人列表
-  List<Map<String, dynamic>> _loadContactsFromCache(
-      SharedPreferences prefs, String contactsKey) {
+  Future<List<Map<String, dynamic>>> _loadContactsFromCache(
+      SharedPreferences prefs, String contactsKey) async {
     final contactsJson = prefs.getString(contactsKey);
     if (contactsJson == null || contactsJson.isEmpty) return [];
 
@@ -325,17 +325,32 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
       final decoded = jsonDecode(contactsJson);
       if (decoded is List) {
         final contacts = <Map<String, dynamic>>[];
+        bool hasMigration = false;
         for (final item in decoded) {
           if (item is Map<String, dynamic>) {
+            // 【v1.93.1 修复】迁移旧关系"兄弟姐妹" → "家人"
+            if (item['relation'] == '兄弟姐妹') {
+              item['relation'] = '家人';
+              hasMigration = true;
+            }
             final name = (item['name'] ?? '').toString().trim();
             final phone = (item['phone'] ?? '').toString().trim();
             if (name.isNotEmpty && phone.isNotEmpty) contacts.add(item);
           } else if (item is Map) {
             final map = Map<String, dynamic>.from(item);
+            if (map['relation'] == '兄弟姐妹') {
+              map['relation'] = '家人';
+              hasMigration = true;
+            }
             final name = (map['name'] ?? '').toString().trim();
             final phone = (map['phone'] ?? '').toString().trim();
             if (name.isNotEmpty && phone.isNotEmpty) contacts.add(map);
           }
+        }
+        // 迁移后持久化保存
+        if (hasMigration) {
+          await prefs.setString(contactsKey, jsonEncode(contacts));
+          if (kDebugMode) debugPrint('[GuardianPage] ✅ 已迁移"兄弟姐妹"→"家人"并保存');
         }
         return contacts;
       }

@@ -79,7 +79,16 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     _scaleAnimation = Tween<double>(begin: 1.0, end: 0.92).animate(
       CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
     );
+    // 【v1.93.1 修复】监听 Watch 签到完成信号，刷新签到 UI
+    HealthService.watchCheckinCompleteSignal.addListener(_onWatchCheckinComplete);
     _initialize();
+  }
+
+  /// 【v1.93.1 修复】Watch 签到完成后刷新 UI
+  void _onWatchCheckinComplete() {
+    if (!mounted) return;
+    if (kDebugMode) debugPrint('[HomePage] 🔔 收到 Watch 签到完成信号，刷新签到 UI');
+    _loadCheckInStatus();
   }
 
   /// 【修复 v1.9.77】串行初始化，避免 _loadCheckInStatus 执行时 _isLoggedIn 仍为 false
@@ -215,6 +224,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _animationController.dispose();
+    HealthService.watchCheckinCompleteSignal.removeListener(_onWatchCheckinComplete);
     super.dispose();
   }
 
@@ -385,28 +395,46 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       try {
         final res = await CheckinService.getTodayStatus();
         if (res['success'] == true && mounted) {
-          setState(() {
-            _totalDays = res['total_days'] ?? _totalDays;
-            // 【P0】优先使用服务端 streak，确保签到圆圈正确显示
-            final serverStreak = res['streak'];
-            if (serverStreak != null) {
-              _continuousDays = serverStreak as int;
+          // 【修复 v1.93.2】先计算本地兜底值（异步不能在 setState 里执行）
+          final serverStreak = res['streak'];
+          int? localStreak;
+          if (serverStreak == null || (serverStreak as int) <= 0) {
+            localStreak = await _calculateStreakFromHistory();
+            if (localStreak > 0) {
+              // 修正本地缓存中被错误写入的 0
+              await prefs.setInt(
+                uid.isNotEmpty ? 'continuous_days_$uid' : 'continuous_days',
+                localStreak,
+              );
             }
-            _daysSinceLastCheckin = res['days_since_last_checkin'] ?? 0;
-            // 【彻底修复 v1.90.1】如果本地已经是 true，不要覆盖为 false（防止服务器时区问题）
-            if (res.containsKey('checked_in_today')) {
-              final serverChecked = res['checked_in_today'] == true;
-              if (_checkedInToday != serverChecked) {
-                // 本地已签到，但服务器返回未签到：相信本地（可能是服务器时区问题）
-                if (_checkedInToday && !serverChecked) {
-                  if (kDebugMode) debugPrint('[HomePage] ⚠️ 本地已签到，但服务器返回未签到，相信本地状态（可能是服务器时区问题）');
-                } else {
-                  _checkedInToday = serverChecked;
-                  if (kDebugMode) debugPrint('[HomePage] ⚠️ 签到状态已修正: 本地=$_checkedInToday → 服务端=$serverChecked');
+          }
+
+          if (mounted) {
+            setState(() {
+              _totalDays = res['total_days'] ?? _totalDays;
+              // 【P0】优先使用服务端 streak，确保签到圆圈正确显示
+              // 【修复 v1.93.2】服务器 streak 不可信时，从本地签到历史重新计算
+              if (serverStreak != null && (serverStreak as int) > 0) {
+                _continuousDays = serverStreak as int;
+              } else if (localStreak != null && localStreak > 0) {
+                _continuousDays = localStreak;
+              }
+              _daysSinceLastCheckin = res['days_since_last_checkin'] ?? 0;
+              // 【彻底修复 v1.90.1】如果本地已经是 true，不要覆盖为 false（防止服务器时区问题）
+              if (res.containsKey('checked_in_today')) {
+                final serverChecked = res['checked_in_today'] == true;
+                if (_checkedInToday != serverChecked) {
+                  // 本地已签到，但服务器返回未签到：相信本地（可能是服务器时区问题）
+                  if (_checkedInToday && !serverChecked) {
+                    if (kDebugMode) debugPrint('[HomePage] ⚠️ 本地已签到，但服务器返回未签到，相信本地状态（可能是服务器时区问题）');
+                  } else {
+                    _checkedInToday = serverChecked;
+                    if (kDebugMode) debugPrint('[HomePage] ⚠️ 签到状态已修正: 本地=$_checkedInToday → 服务端=$serverChecked');
+                  }
                 }
               }
-            }
-          });
+            });
+          }
           // 同步到本地缓存（用户隔离 key）【修复 v1.77.0】
           final streakKey = uid.isNotEmpty ? 'continuous_days_$uid' : 'continuous_days';
           final totalKey = uid.isNotEmpty ? 'total_check_in_days_$uid' : 'total_check_in_days';
@@ -481,6 +509,47 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       if (history.contains(dateStr)) count++;
     }
     return count;
+  }
+
+  /// 【v1.93.2 修复】从本地签到历史重新计算连续天数（兜底服务端 streak=0）
+  /// 场景：静默签到（mood=0）后服务器可能返回 streak=0，但本地历史记录能准确计算
+  Future<int> _calculateStreakFromHistory() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final uid = (await AuthService.getUserId()) ?? '';
+      final historyKey = uid.isNotEmpty ? 'checkin_history_$uid' : 'checkin_history';
+      final history = prefs.getStringList(historyKey);
+      if (history == null || history.isEmpty) return 0;
+
+      final dates = history
+          .map((s) {
+            try { return DateTime.tryParse(s); } catch (_) { return null; }
+          })
+          .where((d) => d != null)
+          .map((d) => DateTime(d!.year, d.month, d.day))
+          .toSet()
+          .toList()
+        ..sort((a, b) => b.compareTo(a)); // 降序：最新在前
+
+      if (dates.isEmpty) return 0;
+
+      final today = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
+      var streak = 0;
+
+      for (int i = 0; i < 365; i++) {
+        final checkDate = today.subtract(Duration(days: i));
+        if (dates.any((d) => d == checkDate)) {
+          streak++;
+        } else if (i > 0) {
+          break; // 中间有断签
+        }
+        // i == 0（今天）即使没签到，继续往前检查，断签判在昨天之后
+      }
+      return streak;
+    } catch (e) {
+      if (kDebugMode) debugPrint('[HomePage] 本地计算连续天数失败: $e');
+      return 0;
+    }
   }
 
   Future<void> _handleCheckIn() async {

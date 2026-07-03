@@ -77,16 +77,22 @@ struct ContentView: View {
             }
             .padding()
         }
+        .onAppear {
+            print("[Watch UI] ✅ ContentView 已显示（Watch App 已启动）")
+            print("[Watch UI] WCSession.isSupported=\(WCSession.isSupported()), isReachable=\(WCSession.default.isReachable)")
+        }
     }
     
     private func checkIn() {
         // 发送签到消息到 iOS App
+        print("[Watch UI] 📨 用户点击签到，发送 WatchCheckIn 通知")
         NotificationCenter.default.post(name: NSNotification.Name("WatchCheckIn"), object: nil)
         lastCheckIn = "刚刚签到"
     }
     
     private func sendSOS() {
         // 发送 SOS 消息到 iOS App
+        print("[Watch UI] 🚨 用户点击 SOS，发送 WatchSOS 通知")
         NotificationCenter.default.post(name: NSNotification.Name("WatchSOS"), object: nil)
     }
 }

@@ -16,7 +16,7 @@ import '../widgets/empty_state_widget.dart';
 import '../widgets/contact_card_widget.dart';
 
 /// 预设关系选项
-/// 【v1.91.0】移除"兄弟姐妹"（已由"家人"涵盖），4字标签在守护圈卡片中过长遮挡显示
+/// 【v1.93.2 修复】增加"自定义..."选项，允许用户自由输入任意关系
 const List<String> kRelationOptions = [
   '家人',
   '朋友',
@@ -25,6 +25,7 @@ const List<String> kRelationOptions = [
   '配偶',
   '子女',
   '其他',
+  '自定义...',
 ];
 
 class ContactsPage extends StatefulWidget {
@@ -99,6 +100,7 @@ class _ContactsPageState extends State<ContactsPage> {
 
     if (contactsJson != null && contactsJson.isNotEmpty) {
       List<Map<String, dynamic>> contacts = [];
+      bool hasMigration = false; // 【v1.93.1】在循环内直接标记是否需要迁移
       try {
         final decoded = jsonDecode(contactsJson);
         if (kDebugMode) debugPrint('[ContactsPage] jsonDecode 类型: ${decoded.runtimeType}, 内容: $decoded');
@@ -106,9 +108,19 @@ class _ContactsPageState extends State<ContactsPage> {
         if (decoded is List) {
           for (final item in decoded) {
             if (item is Map<String, dynamic>) {
+              // 【v1.93.1 修复】迁移旧关系"兄弟姐妹" → "家人"
+              if (item['relation'] == '兄弟姐妹') {
+                item['relation'] = '家人';
+                hasMigration = true;
+              }
               contacts.add(item);
             } else if (item is Map) {
-              contacts.add(Map<String, dynamic>.from(item));
+              final mutable = Map<String, dynamic>.from(item);
+              if (mutable['relation'] == '兄弟姐妹') {
+                mutable['relation'] = '家人';
+                hasMigration = true;
+              }
+              contacts.add(mutable);
             }
           }
         }
@@ -118,6 +130,20 @@ class _ContactsPageState extends State<ContactsPage> {
       }
 
       if (kDebugMode) debugPrint('[ContactsPage] 本地缓存: ${contacts.length} 个联系人');
+
+      // 【v1.93.1 修复】如果发生了关系迁移，立即持久化到本地
+      if (hasMigration) {
+        try {
+          final userId = prefs.getString('user_id');
+          final saveKey = (userId != null && userId.isNotEmpty)
+              ? 'emergency_contacts_$userId'
+              : 'emergency_contacts';
+          await prefs.setString(saveKey, jsonEncode(contacts));
+          if (kDebugMode) debugPrint('[ContactsPage] ✅ 已迁移"兄弟姐妹"→"家人"并持久化保存');
+        } catch (e) {
+          if (kDebugMode) debugPrint('[ContactsPage] ⚠️ 迁移后保存失败: $e');
+        }
+      }
 
       // 即时展示本地数据
       if (mounted) {
@@ -153,13 +179,29 @@ class _ContactsPageState extends State<ContactsPage> {
 
       final serverContacts = res['contacts'] as List<dynamic>? ?? [];
       final List<Map<String, dynamic>> parsed = [];
+      bool hasMigration = false;
 
       for (final item in serverContacts) {
         if (item is Map<String, dynamic>) {
+          // 【v1.93.2 修复】迁移旧关系"兄弟姐妹" → "家人"
+          if (item['relation'] == '兄弟姐妹') {
+            item['relation'] = '家人';
+            hasMigration = true;
+          }
           parsed.add(item);
         } else if (item is Map) {
-          parsed.add(Map<String, dynamic>.from(item));
+          final mutable = Map<String, dynamic>.from(item);
+          if (mutable['relation'] == '兄弟姐妹') {
+            mutable['relation'] = '家人';
+            hasMigration = true;
+          }
+          parsed.add(mutable);
         }
+      }
+
+      // 【v1.93.2 修复】如果发生了关系迁移，立即回写服务端防止下次同步覆盖
+      if (hasMigration) {
+        _syncMigrationToServer(parsed);
       }
 
       if (kDebugMode) debugPrint('[ContactsPage] 后端返回 ${parsed.length} 个联系人，本地 ${_contacts.length} 个');
@@ -178,6 +220,26 @@ class _ContactsPageState extends State<ContactsPage> {
     } catch (e) {
       if (kDebugMode) debugPrint('[ContactsPage] _syncFromServer 异常: $e');
     }
+  }
+
+  /// 【v1.93.2 修复】迁移关系后立即回写服务端，防止下次同步又覆盖回来
+  /// 异步执行，不阻塞 UI
+  void _syncMigrationToServer(List<Map<String, dynamic>> migratedContacts) {
+    Future.microtask(() async {
+      try {
+        for (final contact in migratedContacts) {
+          final id = contact['id'];
+          if (id != null) {
+            await ContactService.updateContact(id.toString(), {
+              'relation': contact['relation'],
+            });
+          }
+        }
+        if (kDebugMode) debugPrint('[ContactsPage] ✅ 已回写服务端：${migratedContacts.length} 个联系人的关系已迁移');
+      } catch (e) {
+        if (kDebugMode) debugPrint('[ContactsPage] ⚠️ 回写服务端迁移失败（下次刷新重试）: $e');
+      }
+    });
   }
 
   /// 用后端数据覆盖本地缓存
@@ -749,6 +811,13 @@ class _ContactsPageState extends State<ContactsPage> {
 
     if (result != null) {
       final contactId = _contacts[index]['id'];
+      final oldRelation = _contacts[index]['relation'];
+      final newRelation = result['relation'];
+
+      if (kDebugMode) {
+        debugPrint('[ContactsPage] 编辑联系人 index=$index, id=$contactId, '
+            '旧关系=$oldRelation, 新关系=$newRelation');
+      }
 
       // 乐观更新：先写本地
       setState(() {
@@ -760,6 +829,8 @@ class _ContactsPageState extends State<ContactsPage> {
 
       // 异步同步到后端
       if (contactId != null) {
+        // 保存后不主动重拉服务端数据，避免时序问题
+        // _syncEditToBackend 成功后已用服务端返回数据更新本地
         _syncEditToBackend(contactId, result);
       } else {
         // 【修复 v1.17.3-Bug2】本地有但后端无 id → 改为新增而非跳过
@@ -772,19 +843,38 @@ class _ContactsPageState extends State<ContactsPage> {
   /// 异步编辑联系人到后端
   Future<void> _syncEditToBackend(dynamic contactId, Map<String, dynamic> contact) async {
     try {
+      final relation = (contact['relation'] ?? '').toString();
+      if (kDebugMode) {
+        debugPrint('[ContactsPage] 开始编辑联系人 id=$contactId, '
+            'name=${contact['name']}, relation=$relation');
+      }
+
       final res = await ContactService.updateContact(
         contactId.toString(),
         {
           'name': (contact['name'] ?? '').toString(),
           'phone': (contact['phone'] ?? '').toString(),
-          'relation': (contact['relation'] ?? '').toString(),
+          'relation': relation,
         },
       );
 
       if (res['success'] == true) {
-        if (kDebugMode) debugPrint('[ContactsPage] 后端编辑成功 id=$contactId');
+        if (kDebugMode) debugPrint('[ContactsPage] ✅ 后端编辑成功 id=$contactId, relation=$relation');
+        // 用服务端返回的数据更新本地（如果有返回）
+        final serverContacts = res['contacts'] as List<dynamic>? ?? [];
+        if (serverContacts.isNotEmpty && mounted) {
+          setState(() {
+            for (int i = 0; i < _contacts.length; i++) {
+              if (_contacts[i]['id'] == contactId) {
+                _contacts[i] = Map<String, dynamic>.from(serverContacts[0]);
+                break;
+              }
+            }
+          });
+          await _saveContacts();
+        }
       } else {
-        if (kDebugMode) debugPrint('[ContactsPage] 后端编辑失败: ${res['error'] ?? res}');
+        if (kDebugMode) debugPrint('[ContactsPage] ❌ 后端编辑失败: ${res['error'] ?? res}');
         // 【修复 v1.17.3-Bug2】编辑失败时提示用户
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -1089,7 +1179,9 @@ class AddContactDialog extends StatefulWidget {
 class _AddContactDialogState extends State<AddContactDialog> {
   late TextEditingController _nameController;
   late TextEditingController _phoneController;
+  late TextEditingController _customRelationController;
   String _selectedRelation = '家人';
+  bool _isCustomRelation = false;
   final _formKey = GlobalKey<FormState>();
   bool _obscurePhone = true;
 
@@ -1098,12 +1190,25 @@ class _AddContactDialogState extends State<AddContactDialog> {
     super.initState();
     _nameController = TextEditingController(text: widget.existingContact?['name'] ?? '');
     _phoneController = TextEditingController(text: widget.existingContact?['phone'] ?? '');
+    _customRelationController = TextEditingController();
 
     String savedRelation = widget.existingContact?['relation'] ?? '';
-    // 【修复 v1.91.0】如果保存的关系不在预设列表中，临时加入（兼容老数据）
-    if (savedRelation.isNotEmpty && !kRelationOptions.contains(savedRelation)) {
-      // 临时加入，让用户可以看到之前的值
-      _selectedRelation = savedRelation;
+    // 【v1.93.1 修复】归一化旧关系"兄弟姐妹" → "家人"，防止老数据在 UI 中显示
+    if (savedRelation == '兄弟姐妹') {
+      savedRelation = '家人';
+    }
+
+    // 检查保存的关系是否为自定义关系（不在预设列表中，且不是'自定义...'）
+    final isCustom = savedRelation.isNotEmpty &&
+        savedRelation != '自定义...' &&
+        !kRelationOptions.take(kRelationOptions.length - 1).contains(savedRelation);
+    // kRelationOptions 最后一个元素是 '自定义...'，不计入预设
+
+    if (isCustom) {
+      // 自定义关系：激活自定义输入模式
+      _isCustomRelation = true;
+      _customRelationController.text = savedRelation;
+      _selectedRelation = '自定义...';
     } else if (savedRelation.isNotEmpty) {
       _selectedRelation = savedRelation;
     } else {
@@ -1115,6 +1220,7 @@ class _AddContactDialogState extends State<AddContactDialog> {
   void dispose() {
     _nameController.dispose();
     _phoneController.dispose();
+    _customRelationController.dispose();
     super.dispose();
   }
 
@@ -1285,7 +1391,19 @@ class _AddContactDialogState extends State<AddContactDialog> {
                             return DropdownMenuItem(value: relation, child: Text(relation));
                           }).toList(),
                           onChanged: (val) {
-                            if (val != null) setState(() => _selectedRelation = val);
+                            if (val != null) {
+                              if (val == '自定义...') {
+                                setState(() {
+                                  _isCustomRelation = true;
+                                  _selectedRelation = '自定义...';
+                                });
+                              } else {
+                                setState(() {
+                                  _isCustomRelation = false;
+                                  _selectedRelation = val;
+                                });
+                              }
+                            }
                           },
                           validator: (value) {
                             if (value == null || value.isEmpty) return '请选择关系';
@@ -1293,6 +1411,49 @@ class _AddContactDialogState extends State<AddContactDialog> {
                           },
                         );
                       }),
+
+                      const SizedBox(height: ZaiNeSpacing.sm),
+
+                      // 【v1.93.2】自定义关系输入框
+                      if (_isCustomRelation)
+                        Container(
+                          margin: const EdgeInsets.only(top: ZaiNeSpacing.sm),
+                          padding: const EdgeInsets.all(ZaiNeSpacing.md),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.shade50.withValues(alpha: 0.3),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: Colors.orange.shade200),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('请输入自定义关系', style: TextStyle(fontSize: ZaiNeFontSize.caption, color: Colors.grey[600])),
+                              const SizedBox(height: ZaiNeSpacing.sm),
+                              TextFormField(
+                                controller: _customRelationController,
+                                decoration: InputDecoration(
+                                  hintText: '例如：师兄、邻居、室友',
+                                  hintStyle: TextStyle(color: Colors.grey[400], fontSize: ZaiNeFontSize.bodySm),
+                                  prefixIcon: Icon(Icons.edit_note_rounded, color: Colors.orange.shade400, size: 20),
+                                  filled: true,
+                                  fillColor: Colors.white,
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    borderSide: BorderSide.none,
+                                  ),
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.md, vertical: ZaiNeSpacing.sm),
+                                ),
+                                style: TextStyle(fontSize: ZaiNeFontSize.body, color: Colors.grey[800]),
+                                validator: (value) {
+                                  if (_isCustomRelation && (value == null || value.trim().isEmpty)) {
+                                    return '请输入自定义关系';
+                                  }
+                                  return null;
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
 
                       const SizedBox(height: ZaiNeSpacing.sm),
                     ],
@@ -1325,10 +1486,13 @@ class _AddContactDialogState extends State<AddContactDialog> {
                       child: ElevatedButton(
                         onPressed: () {
                           if (_formKey.currentState!.validate()) {
+                            final relation = _isCustomRelation
+                                ? _customRelationController.text.trim()
+                                : _selectedRelation;
                             Navigator.of(context).pop({
                               'name': _nameController.text.trim(),
                               'phone': _phoneController.text.trim(),
-                              'relation': _selectedRelation,
+                              'relation': relation,
                             });
                           }
                         },

@@ -14,11 +14,16 @@ import HealthKit
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
+    print("[iOS AppDelegate] ✅ application didFinishLaunching")
+    
     // 初始化 WatchConnectivity
     if WCSession.isSupported() {
         let session = WCSession.default
         session.delegate = self
         session.activate()
+        print("[iOS AppDelegate] ✅ WCSession 已激活，isReachable=\(session.isReachable)")
+    } else {
+        print("[iOS AppDelegate] ❌ WCSession 不支持")
     }
     
     // 初始化 HealthKit 与 MethodChannel（延迟到引擎准备就绪）
@@ -131,10 +136,14 @@ import HealthKit
 
   // 处理来自 Watch 的消息
   func session(_ session: WCSession, didReceiveMessage message: [String : Any], replyHandler: @escaping ([String : Any]) -> Void) {
+        print("[iOS AppDelegate] 📥 收到 Watch 消息: \(message)")
+        
       guard let action = message["action"] as? String else {
+          print("[iOS AppDelegate] ❌ Watch 消息缺少 action 字段")
           replyHandler(["success": false, "error": "missing_action"])
           return
       }
+        print("[iOS AppDelegate] ✅ Watch 消息 action=\(action)")
 
       switch action {
       case "checkin", "auto_checkin":
@@ -235,9 +244,56 @@ import HealthKit
       }
   }
   
-  func session(_ session: WCSession, activationDidCompleteWith activationState: WCSessionActivationState, error: Error?) {}
-  func sessionDidBecomeInactive(_ session: WCSession) {}
+  func session(_ session: WCSession, activationDidCompleteWith activationState: WCSessionActivationState, error: Error?) {
+      print("[iOS AppDelegate] 📡 WCSession 激活完成，state=\(activationState.rawValue), isReachable=\(session.isReachable)")
+  }
+  func sessionDidBecomeInactive(_ session: WCSession) {
+      print("[iOS AppDelegate] ⚠️ WCSession 变为 inactive")
+  }
   func sessionDidDeactivate(_ session: WCSession) {
+      print("[iOS AppDelegate] ⚠️ WCSession deactivate，重新激活")
       session.activate()
+  }
+
+  /// 【v1.93.2 修复】Watch 端使用 transferUserInfo 发送的消息走这里
+  /// 当 iOS App 在后台时，Watch 用 sendMessage 会失败（isReachable=false），
+  /// 此时改用 transferUserInfo 兜底，iOS 唤醒后通过此回调收到
+  func session(_ session: WCSession, didReceiveUserInfo userInfo: [String : Any]) {
+      print("[iOS AppDelegate] 📥 收到 Watch transferUserInfo: \(userInfo)")
+
+      // 处理逻辑与 didReceiveMessage 相同
+      guard let action = userInfo["action"] as? String else {
+          print("[iOS AppDelegate] ❌ transferUserInfo 缺少 action 字段")
+          return
+      }
+
+      switch action {
+      case "checkin", "auto_checkin":
+          let isAutoCheckin = action == "auto_checkin"
+          UserDefaults.standard.set(true, forKey: "pending_watch_checkin")
+          UserDefaults.standard.set(action, forKey: "watch_last_action")
+          UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: "watch_last_action_ts")
+          if isAutoCheckin {
+              if let hr = userInfo["heart_rate"] {
+                  UserDefaults.standard.set(hr, forKey: "watch_auto_checkin_hr")
+              }
+          }
+          self.notifyFlutterWatchCheckin()
+
+      case "sos":
+          UserDefaults.standard.set(true, forKey: "pending_watch_sos")
+          UserDefaults.standard.set("sos", forKey: "watch_last_action")
+          UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: "watch_last_action_ts")
+          self.sendLocalNotification(title: "紧急求助", body: "Apple Watch 发起了 SOS 紧急求助")
+          self.notifyFlutterWatchSOS()
+
+      default:
+          break
+      }
+  }
+
+  /// 【v1.93.2 修复】监听可达性变化
+  func sessionReachabilityDidChange(_ session: WCSession) {
+      print("[iOS AppDelegate] 📡 WCSession 可达性变化: isReachable=\(session.isReachable)")
   }
 }
