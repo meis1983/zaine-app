@@ -37,27 +37,27 @@ class _MenstrualSettingsPageState extends State<MenstrualSettingsPage> {
         elevation: 0,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(ZaiNeSpacing.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // 月经周期长度
             _buildSectionTitle('月经周期长度'),
-            const SizedBox(height: 8),
+            const SizedBox(height: ZaiNeSpacing.sm),
             _buildCycleLengthSelector(),
-            const SizedBox(height: 16),
+            const SizedBox(height: ZaiNeSpacing.lg),
 
             // 经期长度
             _buildSectionTitle('经期长度'),
-            const SizedBox(height: 8),
+            const SizedBox(height: ZaiNeSpacing.sm),
             _buildPeriodLengthSelector(),
-            const SizedBox(height: 16),
+            const SizedBox(height: ZaiNeSpacing.lg),
 
             // 提醒设置
             _buildSectionTitle('提醒设置'),
-            const SizedBox(height: 8),
+            const SizedBox(height: ZaiNeSpacing.sm),
             _buildReminderSettings(),
-            const SizedBox(height: 24),
+            const SizedBox(height: ZaiNeSpacing.xl),
 
             // 保存按钮
             SizedBox(
@@ -69,7 +69,7 @@ class _MenstrualSettingsPageState extends State<MenstrualSettingsPage> {
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(ZaiNeRadius.small),
                   ),
                 ),
                 child: const Text('保存设置'),
@@ -95,10 +95,10 @@ class _MenstrualSettingsPageState extends State<MenstrualSettingsPage> {
   /// 月经周期长度选择器
   Widget _buildCycleLengthSelector() {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(ZaiNeSpacing.md),
       decoration: BoxDecoration(
         border: Border.all(color: ZaiNeColors.borderColor()),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(ZaiNeRadius.small),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -110,7 +110,7 @@ class _MenstrualSettingsPageState extends State<MenstrualSettingsPage> {
               fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: ZaiNeSpacing.sm),
           Slider(
             value: _settings.cycleLength.toDouble(),
             min: 21,
@@ -139,10 +139,10 @@ class _MenstrualSettingsPageState extends State<MenstrualSettingsPage> {
   /// 经期长度选择器
   Widget _buildPeriodLengthSelector() {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(ZaiNeSpacing.md),
       decoration: BoxDecoration(
         border: Border.all(color: ZaiNeColors.borderColor()),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(ZaiNeRadius.small),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -154,7 +154,7 @@ class _MenstrualSettingsPageState extends State<MenstrualSettingsPage> {
               fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: ZaiNeSpacing.sm),
           Slider(
             value: _settings.periodLength.toDouble(),
             min: 3,
@@ -198,12 +198,12 @@ class _MenstrualSettingsPageState extends State<MenstrualSettingsPage> {
         ),
 
         if (_settings.enableReminder) ...[
-          const SizedBox(height: 8),
+          const SizedBox(height: ZaiNeSpacing.sm),
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(ZaiNeSpacing.md),
             decoration: BoxDecoration(
               border: Border.all(color: ZaiNeColors.borderColor()),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(ZaiNeRadius.small),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -215,7 +215,7 @@ class _MenstrualSettingsPageState extends State<MenstrualSettingsPage> {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: ZaiNeSpacing.sm),
                 Slider(
                   value: _settings.reminderDaysBefore.toDouble(),
                   min: 1,
@@ -234,7 +234,7 @@ class _MenstrualSettingsPageState extends State<MenstrualSettingsPage> {
           ),
         ],
 
-        const SizedBox(height: 8),
+        const SizedBox(height: ZaiNeSpacing.sm),
 
         // 排卵期提醒
         SwitchListTile(

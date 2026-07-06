@@ -253,7 +253,7 @@ class _CheckinMilestoneDialogState extends State<CheckinMilestoneDialog>
                     margin: const EdgeInsets.only(top: 50),
                     decoration: BoxDecoration(
                       color: ZaiNeColors.cardBg(),
-                      borderRadius: BorderRadius.circular(28),
+                      borderRadius: BorderRadius.circular(ZaiNeRadius.xl),
                       boxShadow: [
                         BoxShadow(
                           color: badge.badgeColor.withValues(alpha: 0.2),
@@ -286,7 +286,7 @@ class _CheckinMilestoneDialogState extends State<CheckinMilestoneDialog>
                                 ],
                                 stops: const [0.0, 0.35, 0.45],
                               ),
-                              borderRadius: BorderRadius.circular(28),
+                              borderRadius: BorderRadius.circular(ZaiNeRadius.xl),
                             
                               boxShadow: ZaiNeShadows.card,),
                             padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
@@ -295,7 +295,7 @@ class _CheckinMilestoneDialogState extends State<CheckinMilestoneDialog>
                                 // 背景图案（每日不同）
                                 Positioned.fill(
                                   child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(28),
+                                    borderRadius: BorderRadius.circular(ZaiNeRadius.xl),
                                     child: CustomPaint(
                                       painter: BadgeGenerator.bgPainter(
                                         badge.bgStyle, badge.badgeColor,
@@ -436,12 +436,12 @@ class _CheckinMilestoneDialogState extends State<CheckinMilestoneDialog>
 
                                 // ====== 二维码/邀请卡片区 ======
                                 Container(
-                                  padding: const EdgeInsets.all(14),
+                                  padding: const EdgeInsets.all(ZaiNeSpacing.cardSm),
                                   decoration: BoxDecoration(
                                     gradient: LinearGradient(
                                       colors: [Colors.grey.shade50.withValues(alpha: 0.5), Colors.grey.shade100.withValues(alpha: 0.3)],
                                     ),
-                                    borderRadius: BorderRadius.circular(16),
+                                    borderRadius: BorderRadius.circular(ZaiNeRadius.card),
                                     border: Border.all(color: ZaiNeColors.borderColor()),
                                   
                                     boxShadow: ZaiNeShadows.card,),
@@ -450,10 +450,10 @@ class _CheckinMilestoneDialogState extends State<CheckinMilestoneDialog>
                                       // iOS 显示真二维码，Android 显示敬请期待
                                       if (Platform.isIOS)
                                         Container(
-                                          padding: const EdgeInsets.all(5),
+                                          padding: const EdgeInsets.all(ZaiNeSpacing.xs),
                                           decoration: BoxDecoration(
                                             color: Colors.white,
-                                            borderRadius: BorderRadius.circular(12),
+                                            borderRadius: BorderRadius.circular(ZaiNeRadius.small),
                                             border: Border.all(color: badge.badgeColor.withValues(alpha: 0.2)),
                                             boxShadow: [
                                               BoxShadow(
@@ -484,7 +484,7 @@ class _CheckinMilestoneDialogState extends State<CheckinMilestoneDialog>
                                           height: 60,
                                           decoration: BoxDecoration(
                                             color: Colors.orange.shade50,
-                                            borderRadius: BorderRadius.circular(10),
+                                            borderRadius: BorderRadius.circular(ZaiNeRadius.input),
                                             border: Border.all(color: Colors.orange.shade200),
                                           
                                             boxShadow: ZaiNeShadows.card,),
@@ -543,7 +543,7 @@ class _CheckinMilestoneDialogState extends State<CheckinMilestoneDialog>
                                             padding: const EdgeInsets.symmetric(vertical: ZaiNeSpacing.lg),
                                             decoration: BoxDecoration(
                                               color: Colors.grey.shade100,
-                                              borderRadius: BorderRadius.circular(14),
+                                              borderRadius: BorderRadius.circular(ZaiNeRadius.cardSm),
                                             
                                               boxShadow: ZaiNeShadows.card,),
                                             child: const Text('关闭', textAlign: TextAlign.center,
@@ -566,7 +566,7 @@ class _CheckinMilestoneDialogState extends State<CheckinMilestoneDialog>
                                             padding: const EdgeInsets.symmetric(vertical: ZaiNeSpacing.lg),
                                             decoration: BoxDecoration(
                                               color: Colors.teal.shade50,
-                                              borderRadius: BorderRadius.circular(14),
+                                              borderRadius: BorderRadius.circular(ZaiNeRadius.cardSm),
                                               border: Border.all(color: Colors.teal.shade200),
                                             
                                               boxShadow: ZaiNeShadows.card,),

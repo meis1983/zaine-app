@@ -128,7 +128,7 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('已设置每天 ${time.format(context)} 提醒签到'),
-          backgroundColor: const Color(0xFFFF7F50),
+          backgroundColor: ZaiNeColors.brandOrange,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.small)),
         ),
@@ -149,7 +149,7 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('签到提醒已开启，每天 ${_reminderTime.format(context)}'),
-            backgroundColor: const Color(0xFFFF7F50),
+            backgroundColor: ZaiNeColors.brandOrange,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.small)),
           ),
@@ -360,7 +360,7 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('系统提醒已开启，当天未签到时将发送额外提醒'),
-          backgroundColor: Color(0xFFFF7F50),
+          backgroundColor: ZaiNeColors.brandOrange,
           behavior: SnackBarBehavior.floating,
         ));
       }
@@ -389,7 +389,7 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
           data: Theme.of(context).copyWith(
             timePickerTheme: TimePickerThemeData(
               backgroundColor: ZaiNeColors.cardBg(),  // 自动适配暗黑模式
-              hourMinuteTextColor: const Color(0xFFFF7F50),
+              hourMinuteTextColor: ZaiNeColors.brandOrange,
             ),
           ),
           child: child!,
@@ -523,7 +523,7 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('已退出登录'),
-          backgroundColor: Color(0xFFFF7F50),
+          backgroundColor: ZaiNeColors.brandOrange,
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -547,7 +547,7 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
       builder: (context) => StatefulBuilder(
         builder: (context, setModalState) {
           return Padding(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(ZaiNeSpacing.xl),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -613,15 +613,15 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
       },
       borderRadius: BorderRadius.circular(ZaiNeRadius.card),
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(ZaiNeSpacing.lg),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(ZaiNeRadius.card),
           border: Border.all(
-            color: isSelected ? const Color(0xFFFF7F50) : Colors.grey.shade200,
+            color: isSelected ? ZaiNeColors.brandOrange : Colors.grey.shade200,
             width: isSelected ? 2 : 1,
           ),
           color: isSelected
-              ? const Color(0xFFFF7F50).withValues(alpha: 0.05)
+              ? ZaiNeColors.brandOrange.withValues(alpha: 0.05)
               : Colors.transparent,
         ),
         child: Row(
@@ -634,7 +634,7 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
                 borderRadius: BorderRadius.circular(ZaiNeRadius.small),
                 border: Border.all(color: ZaiNeColors.borderColor()),
               ),
-              child: Icon(icon, size: 20, color: const Color(0xFFFF7F50)),
+              child: Icon(icon, size: 20, color: ZaiNeColors.brandOrange),
             ),
             const SizedBox(width: ZaiNeSpacing.lg),
             Expanded(
@@ -650,7 +650,7 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
               ),
             ),
             if (isSelected)
-              const Icon(Icons.check_circle, color: Color(0xFFFF7F50)),
+              const Icon(Icons.check_circle, color: ZaiNeColors.brandOrange),
           ],
         ),
       ),
@@ -830,7 +830,7 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: const Color(0xFFFF7F50),
+                color: ZaiNeColors.brandOrange,
                 borderRadius: BorderRadius.circular(ZaiNeRadius.small),
               ),
               child: const Icon(Icons.favorite, color: Colors.white),
@@ -906,7 +906,7 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.card)),
       title: const Row(
         children: [
-          Icon(Icons.system_update, color: Color(0xFFFF7F50)),
+          Icon(Icons.system_update, color: ZaiNeColors.brandOrange),
           SizedBox(width: ZaiNeSpacing.sm),
           Text('检查更新'),
         ],
@@ -970,16 +970,16 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
       body: SafeArea(
         bottom: true,
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(ZaiNeSpacing.lg),
         children: [
           // 用户信息卡片（【修复 v1.17.1】用档案完整性判断代替登录状态判断）
           if (_isProfileComplete)
             Container(
-              padding: const EdgeInsets.all(16),
-              margin: const EdgeInsets.only(bottom: 24),
+              padding: const EdgeInsets.all(ZaiNeSpacing.lg),
+              margin: const EdgeInsets.only(bottom: ZaiNeSpacing.xl),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [Color(0xFFFF7F50), Color(0xFFFF8C42)],
+                  colors: [ZaiNeColors.brandOrange, Color(0xFFFF8C42)],
                 ),
                 borderRadius: BorderRadius.circular(ZaiNeRadius.card),
               ),
@@ -1024,8 +1024,8 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
             )
           else
             Container(
-              padding: const EdgeInsets.all(16),
-              margin: const EdgeInsets.only(bottom: 24),
+              padding: const EdgeInsets.all(ZaiNeSpacing.lg),
+              margin: const EdgeInsets.only(bottom: ZaiNeSpacing.xl),
               decoration: BoxDecoration(
                 color: Colors.orange.shade50,
                 borderRadius: BorderRadius.circular(ZaiNeRadius.card),
@@ -1051,7 +1051,7 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
                   ElevatedButton(
                     onPressed: _openProfile,
                     style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFFF7F50)),
+                        backgroundColor: ZaiNeColors.brandOrange),
                     child: const Text('去填写'),
                   ),
                 ],
@@ -1092,7 +1092,7 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
                   subtitle: const Text('提醒你进行每日签到'),
                   value: _reminderEnabled,
                   onChanged: _toggleReminder,
-                  activeThumbColor: const Color(0xFFFF7F50),
+                  activeThumbColor: ZaiNeColors.brandOrange,
                 ),
                 AnimatedSize(
                   duration: const Duration(milliseconds: 250),
@@ -1114,7 +1114,7 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
                               subtitle: const Text('当天未签到时，系统将发送额外提醒'),
                               value: _systemReminderEnabled,
                               onChanged: _toggleSystemReminder,
-                              activeThumbColor: const Color(0xFFFF7F50),
+                              activeThumbColor: ZaiNeColors.brandOrange,
                             ),
                           ],
                         )
@@ -1414,7 +1414,7 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
                       Text(
                         '版本',
                         style: TextStyle(
-                          color: devTapCount >= 1 ? const Color(0xFFFF7F50) : null,
+                          color: devTapCount >= 1 ? ZaiNeColors.brandOrange : null,
                           fontWeight: devTapCount >= 1 ? FontWeight.bold : null,
                         ),
                       ),
@@ -1460,7 +1460,7 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
                   style: TextStyle(
                     fontSize: ZaiNeFontSize.subtitle,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFFFF7F50),
+                    color: ZaiNeColors.brandOrange,
                   ),
                 ),
                 const SizedBox(height: ZaiNeSpacing.xs),

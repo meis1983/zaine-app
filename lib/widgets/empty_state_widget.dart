@@ -12,7 +12,7 @@ class EmptyStateWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32),
+        padding: const EdgeInsets.all(ZaiNeSpacing.xxl),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -21,7 +21,7 @@ class EmptyStateWidget extends StatelessWidget {
               height: 100,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: const Color(0xFFFF7F50).withValues(alpha: 0.1),
+                color: ZaiNeColors.brandOrange.withValues(alpha: 0.1),
               ),
               child: Icon(
                 Icons.people_outline,

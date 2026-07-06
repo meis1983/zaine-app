@@ -8,7 +8,7 @@ import '../services/safety/geofence_service.dart';
 import '../services/platform/watch_data_service.dart';
 import '../widgets/safety_features.dart';
 import '../widgets/fall_confirmation_dialog.dart';
-import 'location_history_page.dart';
+import 'location_map_page.dart';
 import 'fall_event_history_page.dart';
 import 'geofence_page.dart';
 
@@ -61,7 +61,7 @@ class _SafetySettingsPageState extends State<SafetySettingsPage> {
             content: Row(
               children: [
                 Icon(Icons.warning_amber, color: Colors.white),
-                SizedBox(width: 8),
+                SizedBox(width: ZaiNeSpacing.sm),
                 Expanded(child: Text('跌倒未响应，已自动通知守护者')),
               ],
             ),
@@ -86,9 +86,10 @@ class _SafetySettingsPageState extends State<SafetySettingsPage> {
       MaterialPageRoute(
         fullscreenDialog: true,
         builder: (context) => FallConfirmationDialog(
-          detectionService: _fallDetectionService,
-          safetyService: _safetyService,
-          onDismissed: () {
+          onCancel: () {
+            _loadData();
+          },
+          onConfirm: () {
             _loadData();
           },
         ),
@@ -149,6 +150,7 @@ class _SafetySettingsPageState extends State<SafetySettingsPage> {
         _fallEvents = falls;
         _lastRecordTime = lastRecordTime;
         _trackingMode = savedMode;
+        _isLocationTracking = _safetyService.isLocationTracking;
         _isLoading = false;
       });
     }
@@ -228,7 +230,7 @@ class _SafetySettingsPageState extends State<SafetySettingsPage> {
               onRefresh: _loadData,
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(ZaiNeSpacing.lg),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -257,7 +259,7 @@ class _SafetySettingsPageState extends State<SafetySettingsPage> {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => LocationHistoryPage(day: DateTime.now()),
+                                  builder: (context) => LocationMapPage(day: DateTime.now()),
                                 ),
                               ).then((_) => _loadData());
                             }
@@ -270,7 +272,7 @@ class _SafetySettingsPageState extends State<SafetySettingsPage> {
                           // 【v1.93.0】启动围栏定时检查
                           _geoFenceService.startPeriodicCheck();
                         }
-                        if (!success) {
+                        if (!success && mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                               content: Text('请开启位置权限'),
@@ -348,7 +350,7 @@ class _SafetySettingsPageState extends State<SafetySettingsPage> {
     }
 
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(ZaiNeSpacing.section),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
@@ -497,7 +499,7 @@ class _SafetySettingsPageState extends State<SafetySettingsPage> {
 
   Widget _buildSafetyTips() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(ZaiNeSpacing.lg),
       decoration: BoxDecoration(
         color: Colors.blue.shade50,
         borderRadius: BorderRadius.circular(ZaiNeRadius.card),
@@ -531,7 +533,7 @@ class _SafetySettingsPageState extends State<SafetySettingsPage> {
 
   Widget _buildTipItem(String number, String text) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.only(bottom: ZaiNeSpacing.sm),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

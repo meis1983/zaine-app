@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:math' show Random;
 import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import '../theme/theme_helper.dart';
 import '../data/app_constants.dart';
 
 /// 守护卡模板配置
@@ -142,7 +143,7 @@ class _GuardianCardWidgetState extends State<_GuardianCardWidget> {
   Widget _buildInvitationCard(GuardianCardTemplate theme) {
     return Container(
       width: 340,
-      padding: const EdgeInsets.all(28),
+      padding: const EdgeInsets.all(ZaiNeSpacing.xl),
       decoration: BoxDecoration(
         color: theme.bgColor,
         borderRadius: BorderRadius.circular(4),
@@ -177,7 +178,7 @@ class _GuardianCardWidgetState extends State<_GuardianCardWidget> {
           Transform.rotate(
             angle: 0.04,
             child: Container(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.all(ZaiNeSpacing.sm),
               decoration: BoxDecoration(
                 color: Colors.white,
                 boxShadow: [
@@ -353,7 +354,7 @@ class _GuardianCardWidgetState extends State<_GuardianCardWidget> {
   Widget _buildWelcomeCard(GuardianCardTemplate theme) {
     return Container(
       width: 340,
-      padding: const EdgeInsets.all(28),
+      padding: const EdgeInsets.all(ZaiNeSpacing.xl),
       decoration: BoxDecoration(
         color: theme.bgColor,
         borderRadius: BorderRadius.circular(4),

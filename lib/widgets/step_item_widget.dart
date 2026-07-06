@@ -3,6 +3,7 @@
 // v1.17.4 P3-2 代码复杂度优化
 
 import 'package:flutter/material.dart';
+import '../theme/theme_helper.dart';
 
 /// 引导步骤项
 /// 显示步骤编号/图标、标签、描述，支持完成/未完成/锁定状态
@@ -43,14 +44,14 @@ class StepItemWidget extends StatelessWidget {
         onTap: onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(ZaiNeSpacing.lg),
           decoration: BoxDecoration(
             color: isDone
                 ? Colors.green.shade50
                 : (isLocationAction
                     ? Colors.green.shade50
                     : (isActive ? Colors.white : Colors.grey.shade100)),
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(ZaiNeRadius.card),
             border: Border.all(
               color: isDone
                   ? Colors.green.shade300
@@ -76,7 +77,7 @@ class StepItemWidget extends StatelessWidget {
                 _buildDoneIcon()
               else
                 _buildNormalIcon(),
-              const SizedBox(width: 14),
+              const SizedBox(width: ZaiNeSpacing.cardSm),
               // 中间：文字
               Expanded(
                 child: Column(
@@ -166,10 +167,10 @@ class StepItemWidget extends StatelessWidget {
 
   Widget _buildActionButton() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.md, vertical: 6),
       decoration: BoxDecoration(
         color: Colors.green,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(ZaiNeRadius.pill),
         boxShadow: [BoxShadow(color: Colors.green.withValues(alpha: 0.3), blurRadius: 6, offset: const Offset(0, 2))],
       ),
       child: const Row(

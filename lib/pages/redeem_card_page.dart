@@ -79,7 +79,7 @@ class _RedeemCardPageState extends State<RedeemCardPage> {
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.card)),
-        contentPadding: const EdgeInsets.all(24),
+        contentPadding: const EdgeInsets.all(ZaiNeSpacing.xl),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -87,10 +87,10 @@ class _RedeemCardPageState extends State<RedeemCardPage> {
               width: 64,
               height: 64,
               decoration: BoxDecoration(
-                color: const Color(0xFFFF7F50).withValues(alpha: 0.1),
+                color: ZaiNeColors.brandOrange.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.check_circle, color: Color(0xFFFF7F50), size: 36),
+              child: const Icon(Icons.check_circle, color: ZaiNeColors.brandOrange, size: 36),
             ),
             const SizedBox(height: ZaiNeSpacing.xl),
             Text(
@@ -128,7 +128,7 @@ class _RedeemCardPageState extends State<RedeemCardPage> {
                   if (mounted) Navigator.of(context).pop(); // 返回上一页
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFFF7F50),
+                  backgroundColor: ZaiNeColors.brandOrange,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.small)),
                   padding: const EdgeInsets.symmetric(vertical: ZaiNeSpacing.lg),
@@ -161,21 +161,21 @@ class _RedeemCardPageState extends State<RedeemCardPage> {
       ),
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(ZaiNeSpacing.xl),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // 说明文字
               Container(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(ZaiNeSpacing.lg),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFFF5F0),
+                  color: ZaiNeColors.brandOrangeLight,
                   borderRadius: BorderRadius.circular(ZaiNeRadius.card),
-                  border: Border.all(color: const Color(0xFFFF7F50).withValues(alpha: 0.2)),
+                  border: Border.all(color: ZaiNeColors.brandOrange.withValues(alpha: 0.2)),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.info_outline, size: 20, color: Color(0xFFFF7F50)),
+                    const Icon(Icons.info_outline, size: 20, color: ZaiNeColors.brandOrange),
                     const SizedBox(width: ZaiNeSpacing.md),
                     Expanded(
                       child: Text(
@@ -231,7 +231,7 @@ class _RedeemCardPageState extends State<RedeemCardPage> {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(ZaiNeRadius.card),
-                    borderSide: const BorderSide(color: Color(0xFFFF7F50), width: 1.5),
+                    borderSide: const BorderSide(color: ZaiNeColors.brandOrange, width: 1.5),
                   ),
                   errorText: _errorText,
                   contentPadding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.xl, vertical: ZaiNeSpacing.lg),
@@ -254,7 +254,7 @@ class _RedeemCardPageState extends State<RedeemCardPage> {
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : _redeem,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFF7F50),
+                    backgroundColor: ZaiNeColors.brandOrange,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.card)),
                     elevation: 4,

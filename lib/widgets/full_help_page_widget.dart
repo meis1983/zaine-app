@@ -108,7 +108,7 @@ class FullHelpPageWidget extends StatelessWidget {
   /// 警告提示横幅
   Widget _buildWarningBanner() {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(ZaiNeSpacing.md),
       decoration: BoxDecoration(
         color: Colors.orange.shade50,
         borderRadius: BorderRadius.circular(12),
@@ -160,7 +160,7 @@ class FullHelpPageWidget extends StatelessWidget {
   /// 档案预览卡片
   Widget _buildProfilePreview() {
     return Container(
-      padding: const EdgeInsets.all(10),
+      padding: const EdgeInsets.all(ZaiNeSpacing.cardXs),
       decoration: BoxDecoration(
         color: ZaiNeColors.cardBg(),
         borderRadius: BorderRadius.circular(10),

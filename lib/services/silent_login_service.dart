@@ -57,7 +57,9 @@ class SilentLoginService {
     return (token, phone);
   }
 
-  /// 保存待处理的 Token 和 Phone（使用 SharedPreferences，非敏感）
+  /// 保存待处理的 Token 和 Phone（临时存储，随后会转入 Keychain）
+  /// 【v1.93.7 安全说明】Token 在此处明文存储存在时间窗口风险；
+  /// 已在 performSilentLogin 成功后将 token 转入 Keychain 并立即清除此处。
   static Future<void> savePendingAuth(String token, String phone) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_pendingTokenKey, token);

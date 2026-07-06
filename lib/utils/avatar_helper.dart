@@ -1,22 +1,26 @@
 // lib/utils/avatar_helper.dart
 // 头像存储工具 — 用用户ID隔离 key，防止切换账号时头像串用
-// 【修复 v1.90.1】优先从 SharedPreferences 读取 user_id（登录后立即保存，比 secureStorage 更及时）
+// 【v1.93.8】读取优先级反转：Keychain 优先，SP 降级（安全加固）
 
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api/auth_service.dart';
 
 class AvatarHelper {
   /// 获取当前用户ID（可能为空）
-  /// 【修复】优先从 SharedPreferences 读取（登录后立即保存，比 secureStorage 更及时）
+  /// 【v1.93.8】Keychain 优先，SP 降级（安全加固）
   static Future<String> _getUserId() async {
-    // 先尝试从 SharedPreferences 读取（登录成功后会立即保存到这里）
-    final prefs = await SharedPreferences.getInstance();
-    String? userId = prefs.getString('user_id');
+    // 【安全加固】优先从 Keychain 读取（主存储，加密）
+    String? userId = await AuthService.getUserId();
     if (userId != null && userId.isNotEmpty) {
       return userId;
     }
-    // 降级到 secureStorage（延迟保存的场景）
-    userId = await AuthService.getUserId();
+    // 降级到 SharedPreferences（兼容旧版本写入，非加密）
+    final prefs = await SharedPreferences.getInstance();
+    userId = prefs.getString('user_id');
+    if (kDebugMode && userId != null && userId.isNotEmpty) {
+      debugPrint('[AvatarHelper] ⚠️ user_id 从 SP 读取（Keychain 未命中），建议检查登录流程');
+    }
     return userId ?? '';
   }
 

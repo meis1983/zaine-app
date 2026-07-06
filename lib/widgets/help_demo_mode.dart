@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../theme/theme_helper.dart';
 
 /// 求助演示模式 — 让用户无需真出事就能体验完整求助流程
 ///
@@ -294,7 +295,7 @@ class _HelpDemoModeState extends State<HelpDemoMode> with TickerProviderStateMix
                       opacity: _fadeAnim,
                       child: Container(
                         width: double.infinity,
-                        padding: const EdgeInsets.all(20),
+                        padding: const EdgeInsets.all(ZaiNeSpacing.section),
                         decoration: BoxDecoration(
                           color: cardColor,
                           borderRadius: BorderRadius.circular(16),
@@ -408,7 +409,7 @@ class _HelpDemoModeState extends State<HelpDemoMode> with TickerProviderStateMix
                       const SizedBox(height: 20),
                       Container(
                         width: double.infinity,
-                        padding: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.all(ZaiNeSpacing.lg),
                         decoration: BoxDecoration(
                           color: Colors.green.shade50,
                           borderRadius: BorderRadius.circular(14),

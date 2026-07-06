@@ -92,7 +92,7 @@ class _GeoFencePageState extends State<GeoFencePage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.card)),
         title: const Text('删除围栏'),
         content: Text('确定要删除「${fence.name}」这个安全围栏吗？'),
         actions: [
@@ -116,7 +116,7 @@ class _GeoFencePageState extends State<GeoFencePage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.card)),
         title: const Text('清除所有围栏'),
         content: const Text('确定要删除所有安全围栏吗？此操作不可撤销。'),
         actions: [
@@ -159,7 +159,7 @@ class _GeoFencePageState extends State<GeoFencePage> {
           : _fences.isEmpty
               ? _buildEmptyState()
               : ListView.builder(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(ZaiNeSpacing.lg),
                   itemCount: _fences.length,
                   itemBuilder: (context, index) => _buildFenceCard(_fences[index]),
                 ),
@@ -179,25 +179,25 @@ class _GeoFencePageState extends State<GeoFencePage> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(ZaiNeSpacing.xl),
             decoration: BoxDecoration(
               color: Colors.blue.shade50,
               shape: BoxShape.circle,
             ),
             child: Icon(Icons.fence, size: 64, color: Colors.blue.shade300),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: ZaiNeSpacing.xl),
           const Text(
             '暂无安全围栏',
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: ZaiNeSpacing.sm),
           Text(
             '设置家的位置或常去地点作为安全区域\n离开时会自动通知你的守护者',
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 14, color: ZaiNeColors.textSecondary()),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: ZaiNeSpacing.xl),
           ElevatedButton.icon(
             onPressed: _addFence,
             icon: const Icon(Icons.add),
@@ -206,7 +206,7 @@ class _GeoFencePageState extends State<GeoFencePage> {
               backgroundColor: Colors.blue,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.small)),
             ),
           ),
         ],
@@ -221,16 +221,16 @@ class _GeoFencePageState extends State<GeoFencePage> {
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(ZaiNeRadius.card),
         side: BorderSide(
           color: isOutside
               ? Colors.orange.shade300
               : ZaiNeColors.borderColor(),
         ),
       ),
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: ZaiNeSpacing.md),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(ZaiNeSpacing.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -238,12 +238,12 @@ class _GeoFencePageState extends State<GeoFencePage> {
               children: [
                 // 类型图标
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(ZaiNeSpacing.sm),
                   decoration: BoxDecoration(
                     color: fence.enabled
                         ? (isInside ? Colors.green.shade50 : Colors.orange.shade50)
                         : Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(ZaiNeRadius.input),
                   ),
                   child: Icon(
                     _getTypeIcon(fence.type),
@@ -253,7 +253,7 @@ class _GeoFencePageState extends State<GeoFencePage> {
                         : Colors.grey,
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: ZaiNeSpacing.md),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -265,7 +265,7 @@ class _GeoFencePageState extends State<GeoFencePage> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      const SizedBox(height: 2),
+                      const SizedBox(height: ZaiNeSpacing.xxs),
                       Text(
                         '${fence.typeLabel} · ${fence.radius.toStringAsFixed(0)}米范围',
                         style: TextStyle(fontSize: 12, color: ZaiNeColors.textSecondary()),
@@ -279,7 +279,7 @@ class _GeoFencePageState extends State<GeoFencePage> {
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
                       color: isInside ? Colors.green.shade50 : Colors.orange.shade50,
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(ZaiNeRadius.small),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -289,7 +289,7 @@ class _GeoFencePageState extends State<GeoFencePage> {
                           size: 14,
                           color: isInside ? Colors.green.shade600 : Colors.orange.shade600,
                         ),
-                        const SizedBox(width: 4),
+                        const SizedBox(width: ZaiNeSpacing.xs),
                         Text(
                           fence.statusLabel,
                           style: TextStyle(
@@ -303,7 +303,7 @@ class _GeoFencePageState extends State<GeoFencePage> {
                   ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: ZaiNeSpacing.md),
             // 操作按钮行
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
@@ -322,7 +322,7 @@ class _GeoFencePageState extends State<GeoFencePage> {
                   onChanged: (_) => _toggleFence(fence.id),
                   materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: ZaiNeSpacing.sm),
                 TextButton(
                   onPressed: () => _deleteFence(fence),
                   style: TextButton.styleFrom(foregroundColor: Colors.red.shade400),
@@ -389,11 +389,11 @@ class _AddFenceDialogState extends State<_AddFenceDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.card)),
       title: const Row(
         children: [
           Icon(Icons.fence, color: Colors.blue, size: 24),
-          SizedBox(width: 8),
+          SizedBox(width: ZaiNeSpacing.sm),
           Text('添加安全围栏'),
         ],
       ),
@@ -408,15 +408,15 @@ class _AddFenceDialogState extends State<_AddFenceDialog> {
               decoration: InputDecoration(
                 labelText: '围栏名称',
                 hintText: '如：家、公司、健身房',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.input)),
                 isDense: true,
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: ZaiNeSpacing.md),
 
             // 围栏类型
             const Text('类型', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-            const SizedBox(height: 6),
+            const SizedBox(height: ZaiNeSpacing.tight),
             SegmentedButton<String>(
               segments: const [
                 ButtonSegment(value: 'home', label: Text('家')),
@@ -427,7 +427,7 @@ class _AddFenceDialogState extends State<_AddFenceDialog> {
               onSelectionChanged: (v) => setState(() => _selectedType = v.first),
               style: ButtonStyle(visualDensity: VisualDensity.compact),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: ZaiNeSpacing.md),
 
             // 半径
             TextField(
@@ -437,34 +437,34 @@ class _AddFenceDialogState extends State<_AddFenceDialog> {
                 labelText: '半径（米）',
                 hintText: '如：200',
                 suffix: const Text('米'),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.input)),
                 isDense: true,
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: ZaiNeSpacing.md),
 
             // 坐标（可选手动输入）
             ExpansionTile(
               title: const Text('手动设置坐标（可选）', style: TextStyle(fontSize: 13)),
               initiallyExpanded: false,
-              childrenPadding: const EdgeInsets.only(bottom: 8),
+              childrenPadding: const EdgeInsets.only(bottom: ZaiNeSpacing.sm),
               children: [
                 TextField(
                   controller: _latController,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   decoration: InputDecoration(
                     labelText: '纬度',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.input)),
                     isDense: true,
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: ZaiNeSpacing.sm),
                 TextField(
                   controller: _lngController,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   decoration: InputDecoration(
                     labelText: '经度',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.input)),
                     isDense: true,
                   ),
                 ),
@@ -473,15 +473,15 @@ class _AddFenceDialogState extends State<_AddFenceDialog> {
 
             if (_latController.text.isEmpty || _lngController.text.isEmpty) ...[
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(ZaiNeSpacing.sm),
                 decoration: BoxDecoration(
                   color: Colors.blue.shade50,
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(ZaiNeRadius.button),
                 ),
                 child: Row(
                   children: [
                     Icon(Icons.info_outline, size: 16, color: Colors.blue.shade400),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: ZaiNeSpacing.tight),
                     Expanded(
                       child: Text(
                         '留空则使用当前位置',

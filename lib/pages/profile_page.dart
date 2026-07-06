@@ -6,6 +6,7 @@ import 'package:image/image.dart' as img;
 import 'dart:convert';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../main.dart';
 import '../theme/theme_helper.dart';
 import '../data/app_constants.dart';
@@ -32,6 +33,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
   bool _isLoggedIn = false;
   bool _isProfileComplete = false; // 【v1.91.0】档案完整性标记（替代 _isLoggedIn 判断）
   bool _isLoading = true;
+  bool _medicalIDSetupDone = false; // 【v1.93.10】医疗急救卡设置完成标记
   String? _avatarPath;
 
   // 健康档案 - 必填
@@ -165,6 +167,8 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
       // 【v1.91.0】基于档案实际内容判断完整性，而非仅看登录状态
       _isProfileComplete = _checkProfileComplete(profileJson);
       _avatarPath = avatarPath;
+      // 【v1.93.10】读取医疗急救卡设置完成标记
+      _medicalIDSetupDone = prefs.getBool('medical_id_setup_done') ?? false;
       _isLoading = false;
     });
   }
@@ -283,12 +287,12 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
   /// 调试信息行
   Widget _buildDebugRow(IconData icon, String label, String value) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
+      padding: const EdgeInsets.only(bottom: ZaiNeSpacing.xxs),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(icon, size: 14, color: Colors.grey.shade500),
-          const SizedBox(width: 6),
+          const SizedBox(width: ZaiNeSpacing.tight),
           SizedBox(
             width: 110,
             child: Text('$label:', style: TextStyle(fontSize: 11, color: Colors.grey.shade600, fontWeight: FontWeight.w500)),
@@ -390,7 +394,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
             children: [
               Icon(syncOk ? Icons.check_circle : Icons.cloud_off,
                   color: Colors.white),
-              const SizedBox(width: 12),
+              const SizedBox(width: ZaiNeSpacing.md),
               Text(syncOk
                   ? '健康档案保存成功！'
                   : '本地保存成功，云端同步失败，请检查网络'),
@@ -398,7 +402,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
           ),
           backgroundColor: syncOk ? Colors.green : Colors.orange,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.small)),
         ),
       );
       // push 模式下保存成功后自动返回（求助三道门/首页等场景）
@@ -421,11 +425,11 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.pill)),
         title: const Row(
           children: [
-            Icon(Icons.palette, color: Color(0xFFFF7F50)),
-            SizedBox(width: 8),
+            Icon(Icons.palette, color: ZaiNeColors.brandOrange),
+            SizedBox(width: ZaiNeSpacing.sm),
             Text('主题设置'),
           ],
         ),
@@ -436,13 +440,13 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
             return Padding(
               padding: const EdgeInsets.symmetric(vertical: 4),
               child: ListTile(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.small)),
                 leading: Icon(t['icon'] as IconData, color: t['color'] as Color),
                 title: Text(t['name'] as String),
                 trailing: isSelected
-                    ? const Icon(Icons.check_circle, color: Color(0xFFFF7F50))
+                    ? const Icon(Icons.check_circle, color: ZaiNeColors.brandOrange)
                     : null,
-                tileColor: isSelected ? const Color(0xFFFF7F50).withValues(alpha: 20) : null,
+                tileColor: isSelected ? ZaiNeColors.brandOrange.withValues(alpha: 20) : null,
                 onTap: () {
                   themeNotifier.setMode(t['mode'] as ZaiNeThemeMode);
                   Navigator.pop(context);
@@ -461,11 +465,11 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.pill)),
         title: const Row(
           children: [
-            Icon(Icons.feedback, color: Color(0xFFFF7F50)),
-            SizedBox(width: 8),
+            Icon(Icons.feedback, color: ZaiNeColors.brandOrange),
+            SizedBox(width: ZaiNeSpacing.sm),
             Text('问题反馈'),
           ],
         ),
@@ -476,16 +480,16 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
               '您的反馈对我们非常重要，我们会尽快处理。',
               style: TextStyle(fontSize: 13, color: Colors.grey),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: ZaiNeSpacing.lg),
             TextField(
               controller: controller,
               maxLines: 4,
               decoration: InputDecoration(
                 hintText: '请描述您遇到的问题或建议...',
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(ZaiNeRadius.small),
                 ),
-                contentPadding: const EdgeInsets.all(12),
+                contentPadding: const EdgeInsets.all(ZaiNeSpacing.md),
               ),
             ),
           ],
@@ -517,14 +521,14 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                   content: Text('感谢您的反馈，我们会尽快处理！✓'),
-                  backgroundColor: Color(0xFFFF7F50),
+                  backgroundColor: ZaiNeColors.brandOrange,
                   behavior: SnackBarBehavior.floating,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(10))),
                 ),
               );
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFFF7F50),
+              backgroundColor: ZaiNeColors.brandOrange,
             ),
             child: const Text('提交反馈'),
           ),
@@ -563,14 +567,14 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
             Container(
               margin: const EdgeInsets.symmetric(vertical: 12),
               width: 40, height: 4,
-              decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
+              decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(ZaiNeRadius.tiny)),
             ),
             Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(ZaiNeSpacing.lg),
               child: Row(
                 children: [
                   Icon(Icons.feedback_outlined, color: Colors.orange.shade700),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: ZaiNeSpacing.sm),
                   Text('用户反馈 (${rawList.length}条)',
                       style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   const Spacer(),
@@ -618,11 +622,11 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
                   final item = jsonDecode(rawList[index]);
                   final timeStr = DateTime.tryParse(item['time'] ?? '')?.toString().substring(0, 19) ?? '未知时间';
                   return Card(
-                    margin: const EdgeInsets.only(bottom: 10),
+                    margin: const EdgeInsets.only(bottom: ZaiNeSpacing.cardXs),
                     elevation: 0,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.small)),
                     child: Padding(
-                      padding: const EdgeInsets.all(14),
+                      padding: const EdgeInsets.all(ZaiNeSpacing.cardSm),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -634,10 +638,10 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
                               Text(timeStr, style: TextStyle(fontSize: 11, color: Colors.grey[400])),
                             ],
                           ),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: ZaiNeSpacing.sm),
                           Text(item['content'] ?? '',
                               style: const TextStyle(fontSize: 14, height: 1.4)),
-                          const SizedBox(height: 6),
+                          const SizedBox(height: ZaiNeSpacing.tight),
                           Text('v${item['version'] ?? '?'}',
                               style: TextStyle(fontSize: 10, color: Colors.orange.shade400)),
                         ],
@@ -675,18 +679,18 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
               controller: controller,
               padding: EdgeInsets.fromLTRB(24, 16, 24, 24 + bottomSafe),
               children: [
-                Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)))),
-                const SizedBox(height: 16),
+                Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(ZaiNeRadius.tiny)))),
+                const SizedBox(height: ZaiNeSpacing.lg),
                 const Row(children: [
-                  const Icon(Icons.shield, color: const Color(0xFFFF7F50)),
-                  const SizedBox(width: 8),
+                  const Icon(Icons.shield, color: ZaiNeColors.brandOrange),
+                  const SizedBox(width: ZaiNeSpacing.sm),
                   const Text('守护关系', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 ]),
-                const SizedBox(height: 20),
+                const SizedBox(height: ZaiNeSpacing.section),
 
                 // 输入守护码
                 ListTile(
-                  leading: Container(width: 40, height: 40, decoration: BoxDecoration(color: const Color(0xFFFFF5F0), borderRadius: BorderRadius.circular(10)), child: const Icon(Icons.vpn_key, color: Color(0xFFFF7F50), size: 20)),
+                  leading: Container(width: 40, height: 40, decoration: BoxDecoration(color: ZaiNeColors.brandOrangeLight, borderRadius: BorderRadius.circular(ZaiNeRadius.input)), child: const Icon(Icons.vpn_key, color: ZaiNeColors.brandOrange, size: 20)),
                   title: const Text('输入守护码', style: TextStyle(fontWeight: FontWeight.w600)),
                   subtitle: const Text('手动输入安全码，接受他人的守护卡'),
                   trailing: const Icon(Icons.chevron_right),
@@ -698,14 +702,14 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
                   },
                 ),
 
-                const SizedBox(height: 24),
+                const SizedBox(height: ZaiNeSpacing.xl),
                 Row(children: [
-                  Icon(Icons.code_rounded, color: Colors.purple.shade700), const SizedBox(width: 8),
+                  Icon(Icons.code_rounded, color: Colors.purple.shade700), const SizedBox(width: ZaiNeSpacing.sm),
                   const Text('开发者模式', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   const Spacer(),
-                  Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3), decoration: BoxDecoration(color: Colors.purple.shade100, borderRadius: BorderRadius.circular(10)), child: const Text('DEV', style: TextStyle(fontSize: 10, color: Colors.purple, fontWeight: FontWeight.bold))),
+                  Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3), decoration: BoxDecoration(color: Colors.purple.shade100, borderRadius: BorderRadius.circular(ZaiNeRadius.input)), child: const Text('DEV', style: TextStyle(fontSize: 10, color: Colors.purple, fontWeight: FontWeight.bold))),
                 ]),
-                const SizedBox(height: 20),
+                const SizedBox(height: ZaiNeSpacing.section),
 
             // 【调试信息】显示USER-ID和头像详情
             FutureBuilder<SharedPreferences>(
@@ -736,10 +740,10 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
                 final pathVal = prefs.getString(pathKey);
 
                 return Container(
-                  padding: const EdgeInsets.all(14),
+                  padding: const EdgeInsets.all(ZaiNeSpacing.cardSm),
                   decoration: BoxDecoration(
                     color: Colors.grey.shade50,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(ZaiNeRadius.small),
                     border: Border.all(color: Colors.grey.shade200),
                   ),
                   child: Column(
@@ -748,7 +752,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
                       Row(
                         children: [
                           Icon(Icons.perm_identity, size: 16, color: Colors.purple.shade400),
-                          const SizedBox(width: 6),
+                          const SizedBox(width: ZaiNeSpacing.tight),
                           Text('USER-ID: $uidShort', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.purple.shade700)),
                           const Spacer(),
                           if (uid != '未登录')
@@ -764,13 +768,13 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
                               },
                               child: Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                decoration: BoxDecoration(color: Colors.purple.shade50, borderRadius: BorderRadius.circular(8)),
+                                decoration: BoxDecoration(color: Colors.purple.shade50, borderRadius: BorderRadius.circular(ZaiNeRadius.button)),
                                 child: Text('复制', style: TextStyle(fontSize: 11, color: Colors.purple.shade600, fontWeight: FontWeight.w500)),
                               ),
                             ),
                         ],
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: ZaiNeSpacing.sm),
                       _buildDebugRow(Icons.image, 'profile.avatar', profileAvatar != null && profileAvatar.isNotEmpty ? '${profileAvatar.substring(0, profileAvatar.length > 40 ? 40 : profileAvatar.length)}...' : '无'),
                       _buildDebugRow(Icons.data_array, 'avatar_base64', base64Len > 0 ? '$base64Len chars' : '无'),
                       _buildDebugRow(Icons.folder, 'avatar_path', pathVal ?? '无'),
@@ -779,11 +783,11 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
                 );
               },
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: ZaiNeSpacing.lg),
 
             // 签到模拟器
             ListTile(
-              leading: Container(width: 40, height: 40, decoration: BoxDecoration(color: Colors.amber.shade50, borderRadius: BorderRadius.circular(10)), child: Icon(Icons.science_rounded, color: Colors.amber.shade700, size: 20)),
+              leading: Container(width: 40, height: 40, decoration: BoxDecoration(color: Colors.amber.shade50, borderRadius: BorderRadius.circular(ZaiNeRadius.input)), child: Icon(Icons.science_rounded, color: Colors.amber.shade700, size: 20)),
               title: const Text('签到模拟器', style: TextStyle(fontWeight: FontWeight.w600)),
               subtitle: const Text('设置连续签到天数，测试徽章和里程碑弹窗'),
               trailing: const Icon(Icons.chevron_right),
@@ -792,7 +796,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
 
             // 重置守护卡（完整链路测试）
             ListTile(
-              leading: Container(width: 40, height: 40, decoration: BoxDecoration(color: Colors.pink.shade50, borderRadius: BorderRadius.circular(10)), child: Icon(Icons.card_giftcard, color: Colors.pink.shade700, size: 20)),
+              leading: Container(width: 40, height: 40, decoration: BoxDecoration(color: Colors.pink.shade50, borderRadius: BorderRadius.circular(ZaiNeRadius.input)), child: Icon(Icons.card_giftcard, color: Colors.pink.shade700, size: 20)),
               title: const Text('重置守护卡', style: TextStyle(fontWeight: FontWeight.w600)),
               subtitle: const Text('恢复为初始3张卡状态，方便测试发卡全链路'),
               trailing: const Icon(Icons.chevron_right),
@@ -801,7 +805,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
 
             // 清除引导标记
             ListTile(
-              leading: Container(width: 40, height: 40, decoration: BoxDecoration(color: Colors.blue.shade50, borderRadius: BorderRadius.circular(10)), child: Icon(Icons.replay_rounded, color: Colors.blue.shade700, size: 20)),
+              leading: Container(width: 40, height: 40, decoration: BoxDecoration(color: Colors.blue.shade50, borderRadius: BorderRadius.circular(ZaiNeRadius.input)), child: Icon(Icons.replay_rounded, color: Colors.blue.shade700, size: 20)),
               title: const Text('重新显示引导页', style: TextStyle(fontWeight: FontWeight.w600)),
               subtitle: const Text('下次启动App时再次显示开机引导'),
               trailing: const Icon(Icons.chevron_right),
@@ -816,7 +820,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
 
             // 【新增 v1.9.5】重置新手任务
             ListTile(
-              leading: Container(width: 40, height: 40, decoration: BoxDecoration(color: Colors.pink.shade50, borderRadius: BorderRadius.circular(10)), child: Icon(Icons.task_alt, color: Colors.pink.shade700, size: 20)),
+              leading: Container(width: 40, height: 40, decoration: BoxDecoration(color: Colors.pink.shade50, borderRadius: BorderRadius.circular(ZaiNeRadius.input)), child: Icon(Icons.task_alt, color: Colors.pink.shade700, size: 20)),
               title: const Text('重置新手任务', style: TextStyle(fontWeight: FontWeight.w600)),
               subtitle: const Text('清除新手任务完成状态，重新体验5步引导'),
               trailing: const Icon(Icons.chevron_right),
@@ -834,7 +838,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
 
             // 切换会员等级（测试用）
             ListTile(
-              leading: Container(width: 40, height: 40, decoration: BoxDecoration(color: Colors.orange.shade50, borderRadius: BorderRadius.circular(10)), child: const Icon(Icons.workspace_premium_rounded, color: Colors.orange, size: 20)),
+              leading: Container(width: 40, height: 40, decoration: BoxDecoration(color: Colors.orange.shade50, borderRadius: BorderRadius.circular(ZaiNeRadius.input)), child: const Icon(Icons.workspace_premium_rounded, color: Colors.orange, size: 20)),
               title: const Text('切换会员等级', style: TextStyle(fontWeight: FontWeight.w600)),
               subtitle: const Text('体验版 ↔ 智能版，测试会员权益差异'),
               trailing: const Icon(Icons.chevron_right),
@@ -846,7 +850,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
 
             // 模拟会员过期降级（测试用）
             ListTile(
-              leading: Container(width: 40, height: 40, decoration: BoxDecoration(color: Colors.red.shade50, borderRadius: BorderRadius.circular(10)), child: Icon(Icons.timer_off_rounded, color: Colors.red.shade400, size: 20)),
+              leading: Container(width: 40, height: 40, decoration: BoxDecoration(color: Colors.red.shade50, borderRadius: BorderRadius.circular(ZaiNeRadius.input)), child: Icon(Icons.timer_off_rounded, color: Colors.red.shade400, size: 20)),
               title: const Text('模拟会员过期降级', style: TextStyle(fontWeight: FontWeight.w600)),
               subtitle: const Text('智能版 → 体验版，联系人保留但锁定'),
               trailing: const Icon(Icons.chevron_right),
@@ -858,7 +862,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
 
             // 查看用户反馈（profile 独有）
             ListTile(
-                leading: Container(width: 40, height: 40, decoration: BoxDecoration(color: Colors.orange.shade50, borderRadius: BorderRadius.circular(10)), child: Icon(Icons.feedback_outlined, color: Colors.orange.shade700, size: 20)),
+                leading: Container(width: 40, height: 40, decoration: BoxDecoration(color: Colors.orange.shade50, borderRadius: BorderRadius.circular(ZaiNeRadius.input)), child: Icon(Icons.feedback_outlined, color: Colors.orange.shade700, size: 20)),
                 title: const Text('查看用户反馈', style: TextStyle(fontWeight: FontWeight.w600)),
                 subtitle: const Text('查看所有已提交的反馈内容'),
                 trailing: const Icon(Icons.chevron_right),
@@ -924,27 +928,32 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
                   // ====== 1. 渐变头部 — 头像 + 档案状态 ======
                   _buildProfileHeader(isDark),
 
-                  const SizedBox(height: 8),
+                  const SizedBox(height: ZaiNeSpacing.sm),
 
                   // ====== 2. 快捷功能卡片 ======
                   _buildQuickActions(isDark),
 
-                  const SizedBox(height: 8),
+                  const SizedBox(height: ZaiNeSpacing.sm),
 
                   // ====== 2.5 安全中心入口（从底部Tab降级） ======
                   _buildSafetyCenterEntry(isDark),
 
-                  const SizedBox(height: 8),
+                  const SizedBox(height: ZaiNeSpacing.sm),
+
+                  // ====== 2.6 医疗急救卡引导（iOS 原生功能） ======
+                  _buildMedicalIDGuide(isDark),
+
+                  const SizedBox(height: ZaiNeSpacing.sm),
 
                   // ====== 3. 基本信息表单 ======
                   _buildFormSection(isDark),
 
-                  const SizedBox(height: 16),
+                  const SizedBox(height: ZaiNeSpacing.lg),
 
                   // ====== 4. 保存按钮 ======
                   _buildSaveButton(),
 
-                  const SizedBox(height: 16),
+                  const SizedBox(height: ZaiNeSpacing.lg),
 
                   // ====== 5. 其他 ======
                   _buildOtherSection(isDark),
@@ -968,14 +977,14 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
           end: Alignment.bottomRight,
           colors: isDark
               ? [const Color(0xFF1E1E2E), const Color(0xFF2A2A3E)]
-              : [const Color(0xFFFF7F50).withValues(alpha: 20), const Color(0xFFFFB347).withValues(alpha: 15)],
+              : [ZaiNeColors.brandOrange.withValues(alpha: 20), const Color(0xFFFFB347).withValues(alpha: 15)],
           stops: const [0.0, 1.0],
         ),
         borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(20), bottomRight: Radius.circular(20)),
       ),
       child: Column(
         children: [
-          const SizedBox(height: 8),
+          const SizedBox(height: ZaiNeSpacing.sm),
 
           // 头像
           GestureDetector(
@@ -985,7 +994,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFFFF7F50).withValues(alpha: 64),
+                    color: ZaiNeColors.brandOrange.withValues(alpha: 64),
                     blurRadius: 16,
                     offset: const Offset(0, 6),
                   ),
@@ -1000,7 +1009,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
                       shape: BoxShape.circle,
                       gradient: _avatarPath == null
                           ? LinearGradient(colors: [
-                              const Color(0xFFFF7F50).withValues(alpha: 64),
+                              ZaiNeColors.brandOrange.withValues(alpha: 64),
                               const Color(0xFFFFB347).withValues(alpha: 64),
                             ])
                           : null,
@@ -1010,7 +1019,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
                       border: Border.all(color: Colors.white, width: 3),
                     ),
                     child: _avatarPath == null
-                        ? const Icon(Icons.person, size: 38, color: Color(0xFFFF7F50))
+                        ? const Icon(Icons.person, size: 38, color: ZaiNeColors.brandOrange)
                         : null,
                   ),
                   Positioned(
@@ -1020,7 +1029,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
                       width: 26,
                       height: 26,
                       decoration: BoxDecoration(
-                        gradient: const LinearGradient(colors: [Color(0xFFFF7F50), Color(0xFFFF6B35)]),
+                        gradient: const LinearGradient(colors: [ZaiNeColors.brandOrange, Color(0xFFFF6B35)]),
                         shape: BoxShape.circle,
                         border: Border.all(color: isDark ? const Color(0xFF1E1E2E) : Colors.white, width: 2),
                       ),
@@ -1031,7 +1040,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
               ),
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: ZaiNeSpacing.cardXs),
           Text(
             _nameController.text.isNotEmpty ? _nameController.text : '点击头像设置',
             style: TextStyle(
@@ -1043,7 +1052,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
           if (_avatarPath != null)
             Text('点击头像更换照片', style: TextStyle(fontSize: 12, color: Colors.grey.shade400)),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: ZaiNeSpacing.lg),
 
           // 档案状态卡片
           Container(
@@ -1053,9 +1062,9 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
               gradient: LinearGradient(
                 colors: _isProfileComplete
                     ? [Colors.green.shade400, Colors.teal.shade400]
-                    : [Colors.orange.shade300, const Color(0xFFFF7F50)],
+                    : [Colors.orange.shade300, ZaiNeColors.brandOrange],
               ),
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(ZaiNeRadius.cardSm),
               boxShadow: [
                 BoxShadow(
                   color: (_isProfileComplete ? Colors.green : Colors.orange).withValues(alpha: 38),
@@ -1071,7 +1080,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
                   height: 36,
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 51),
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(ZaiNeRadius.input),
                   ),
                   child: Icon(
                     _isProfileComplete ? Icons.verified_user : Icons.edit_note_rounded,
@@ -1079,7 +1088,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
                     size: 20,
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: ZaiNeSpacing.md),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -1088,7 +1097,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
                         _isProfileComplete ? '档案已完善' : '请完善健康档案',
                         style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
                       ),
-                      const SizedBox(height: 2),
+                      const SizedBox(height: ZaiNeSpacing.xxs),
                       Text(
                         _isProfileComplete ? '求助功能已解锁，保护自己从现在开始' : '紧急求助需要您的健康信息',
                         style: TextStyle(color: Colors.white.withValues(alpha: 217), fontSize: 12),
@@ -1100,7 +1109,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
               ],
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: ZaiNeSpacing.lg),
         ],
       ),
     );
@@ -1113,7 +1122,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
       margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
         color: ZaiNeColors.cardBg(),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(ZaiNeRadius.card),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withAlpha(((isDark ? 0.12 : 0.04) * 255).round()),
@@ -1128,7 +1137,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
             MaterialPageRoute(builder: (_) => const SafetySettingsPage()),
           );
         },
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(ZaiNeRadius.card),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
           child: Row(
@@ -1141,11 +1150,11 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
                   gradient: LinearGradient(
                     colors: [Colors.blue.shade400, Colors.blue.shade600],
                   ),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(ZaiNeRadius.small),
                 ),
                 child: const Icon(Icons.security_rounded, color: Colors.white, size: 22),
               ),
-              const SizedBox(width: 14),
+              const SizedBox(width: ZaiNeSpacing.cardSm),
               // 中间文字
               Expanded(
                 child: Column(
@@ -1169,13 +1178,526 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
     );
   }
 
+  // ==================== 医疗急救卡引导（iOS 原生功能） ====================
+  Widget _buildMedicalIDGuide(bool isDark) {
+    // 【v1.93.10】已设置完成 → 弱化显示（小卡片 + 灰色）
+    if (_medicalIDSetupDone) {
+      return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16),
+        child: InkWell(
+          onTap: () => _showMedicalIDGuideDialog(),
+          borderRadius: BorderRadius.circular(ZaiNeRadius.small),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.check_circle, color: Colors.green.shade500, size: 16),
+                const SizedBox(width: 6),
+                Text(
+                  '医疗急救卡 ✓ 已设置',
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                ),
+                const SizedBox(width: 4),
+                Icon(Icons.edit, color: Colors.grey.shade400, size: 14),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    // 未设置 → 醒目的红色卡片（与安全中心同尺寸）
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: ZaiNeColors.cardBg(),
+        borderRadius: BorderRadius.circular(ZaiNeRadius.card),
+        border: Border.all(color: Colors.red.shade200.withValues(alpha: 0.6), width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.red.withAlpha((0.06 * 255).round()),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: InkWell(
+        onTap: () {
+          _showMedicalIDGuideDialog();
+        },
+        borderRadius: BorderRadius.circular(ZaiNeRadius.card),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16), // 与安全中心一致
+          child: Row(
+            children: [
+              // 左侧图标（与安全中心同尺寸同风格）
+              Container(
+                width: 44,  // 与安全中心一致
+                height: 44, // 与安全中心一致
+                decoration: BoxDecoration(
+                  color: Colors.red.shade500, // 红色醒目标识
+                  borderRadius: BorderRadius.circular(ZaiNeRadius.small), // 与安全中心一致（圆角方形）
+                ),
+                child: Icon(
+                  Icons.medical_services_rounded,
+                  color: Colors.white, // 白色图标更醒目
+                  size: 22,             // 与安全中心一致
+                ),
+              ),
+              const SizedBox(width: ZaiNeSpacing.cardSm),
+              // 中间文字
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          '医疗急救卡',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.red.shade700, // 红色标题强调
+                          ),
+                        ),
+                        const SizedBox(width: ZaiNeSpacing.tight),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.red.shade500,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            'iOS 原生',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 3), // 与安全中心一致
+                    Text(
+                      '锁屏可查看 · 无需解锁手机',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.red.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // 右侧箭头
+              Icon(Icons.chevron_right_rounded, color: Colors.red.shade400, size: 22),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 显示医疗急救卡设置引导对话框
+  void _showMedicalIDGuideDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.card)),
+        title: Row(
+          children: [
+            Icon(Icons.medical_services_rounded, color: Colors.red.shade600, size: 28),
+            const SizedBox(width: ZaiNeSpacing.md),
+            const Text('医疗急救卡设置引导', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 功能介绍
+              Container(
+                padding: const EdgeInsets.all(ZaiNeSpacing.md),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade50,
+                  borderRadius: BorderRadius.circular(ZaiNeRadius.small),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '什么是医疗急救卡？',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.red.shade800,
+                      ),
+                    ),
+                    const SizedBox(height: ZaiNeSpacing.sm),
+                    Text(
+                      '医疗急救卡是 iPhone 系统级功能，在锁屏状态下，任何人都可以查看你的紧急医疗信息，而无需解锁手机。',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.red.shade700,
+                        height: 1.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: ZaiNeSpacing.lg),
+
+              // 设置步骤
+              Text(
+                '设置步骤（共 4 步）',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: ZaiNeColors.textPrimary(),
+                ),
+              ),
+
+              const SizedBox(height: ZaiNeSpacing.md),
+
+              _buildGuideStep(
+                step: 1,
+                title: '打开"健康" App',
+                description: '在 iPhone 上找到并打开"健康"App（绿色心形图标）',
+                icon: Icons.favorite,
+              ),
+
+              _buildGuideStep(
+                step: 2,
+                title: '点击右上角头像',
+                description: '在"摘要"页面，点击右上角的头像进入个人资料',
+                icon: Icons.person,
+              ),
+
+              _buildGuideStep(
+                step: 3,
+                title: '选择"医疗急救卡"',
+                description: '向下滑动，找到"医疗急救卡"选项，点击进入',
+                icon: Icons.medical_services,
+              ),
+
+              _buildGuideStep(
+                step: 4,
+                title: '填写并保存',
+                description: '填写姓名、血型、过敏信息、紧急联系人等，完成后点击"完成"',
+                icon: Icons.check_circle,
+              ),
+
+              const SizedBox(height: ZaiNeSpacing.lg),
+
+              // 温馨提示
+              Container(
+                padding: const EdgeInsets.all(ZaiNeSpacing.md),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(ZaiNeRadius.small),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.blue.shade700, size: 20),
+                    const SizedBox(width: ZaiNeSpacing.sm),
+                    Expanded(
+                      child: Text(
+                        '提示：设置完成后，在锁屏界面点击"紧急"→"医疗急救卡"即可查看',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.blue.shade700,
+                          height: 1.5,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: _buildMedicalIDDialogActions(),
+      ),
+    );
+  }
+
+  /// 【v1.93.10】构建医疗急救卡对话框的 actions 按钮
+  List<Widget> _buildMedicalIDDialogActions() {
+    final List<Widget> actions = [];
+
+    // 关闭按钮（始终显示）
+    actions.add(
+      TextButton(
+        onPressed: () => Navigator.pop(context),
+        child: Text('关闭', style: TextStyle(color: Colors.grey.shade600)),
+      ),
+    );
+
+    if (!_medicalIDSetupDone) {
+      // 未设置：显示"我已完成设置"和"去健康App设置"
+      actions.add(
+        TextButton.icon(
+          onPressed: () => _confirmMedicalIDSetup(),
+          icon: Icon(Icons.check, size: 18),
+          label: const Text('我已完成设置'),
+          style: TextButton.styleFrom(foregroundColor: Colors.green.shade700),
+        ),
+      );
+      actions.add(
+        ElevatedButton.icon(
+          onPressed: () async {
+            Navigator.pop(context);
+            final healthUrl = Uri.parse('x-apple-health://');
+            try {
+              if (await canLaunchUrl(healthUrl)) {
+                await launchUrl(healthUrl, mode: LaunchMode.externalApplication);
+              } else {
+                final fallbackUrl = Uri.parse('healthapp://');
+                if (await canLaunchUrl(fallbackUrl)) {
+                  await launchUrl(fallbackUrl, mode: LaunchMode.externalApplication);
+                } else {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: const Text('请在 iPhone 上手动打开"健康"App 进行设置'),
+                        backgroundColor: Colors.blue.shade700,
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }
+                }
+              }
+            } catch (e) {
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('无法打开健康App，请手动查找：$e'),
+                    backgroundColor: Colors.orange.shade700,
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
+            }
+          },
+          icon: Icon(Icons.open_in_new, size: 18),
+          label: const Text('去健康App设置'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.red.shade600,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          ),
+        ),
+      );
+    } else {
+      // 已设置：只显示"去健康App修改"
+      actions.add(
+        ElevatedButton.icon(
+          onPressed: () async {
+            Navigator.pop(context);
+            final healthUrl = Uri.parse('x-apple-health://');
+            try {
+              if (await canLaunchUrl(healthUrl)) {
+                await launchUrl(healthUrl, mode: LaunchMode.externalApplication);
+              } else {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: const Text('请在 iPhone 上手动打开"健康"App 进行修改'),
+                      backgroundColor: Colors.blue.shade700,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              }
+            } catch (e) {
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('无法打开健康App：$e'),
+                    backgroundColor: Colors.orange.shade700,
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
+            }
+          },
+          icon: Icon(Icons.edit, size: 18),
+          label: const Text('去健康App修改'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.blue.shade600,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          ),
+        ),
+      );
+    }
+
+    return actions;
+  }
+
+  /// 【v1.93.10】二次确认：用户已完成医疗急救卡设置
+  void _confirmMedicalIDSetup() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.card)),
+        title: Row(
+          children: [
+            Icon(Icons.help_outline, color: Colors.orange.shade600, size: 28),
+            const SizedBox(width: ZaiNeSpacing.md),
+            const Text('确认完成设置', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              '你确定已经在 iPhone "健康" App 中完成了医疗急救卡的填写和保存吗？',
+              style: TextStyle(fontSize: 14, height: 1.5),
+            ),
+            const SizedBox(height: ZaiNeSpacing.md),
+            Container(
+              padding: const EdgeInsets.all(ZaiNeSpacing.md),
+              decoration: BoxDecoration(
+                color: Colors.orange.shade50,
+                borderRadius: BorderRadius.circular(ZaiNeRadius.small),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.info_outline, color: Colors.orange.shade700, size: 20),
+                  const SizedBox(width: ZaiNeSpacing.sm),
+                  Expanded(
+                    child: Text(
+                      '设置后可在锁屏界面通过"紧急"→"医疗急救卡"查看你的信息',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.orange.shade800,
+                        height: 1.5,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('再检查一下', style: TextStyle(color: Colors.grey.shade600)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context); // 关闭确认框
+              Navigator.pop(context); // 关闭引导对话框
+
+              // 保存标记
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.setBool('medical_id_setup_done', true);
+
+              if (mounted) {
+                setState(() => _medicalIDSetupDone = true);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: const Text('✅ 医疗急救卡已标记为完成！'),
+                    backgroundColor: Colors.green.shade700,
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green.shade600,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('✅ 确定已完成'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 引导步骤条目
+  Widget _buildGuideStep({
+    required int step,
+    required String title,
+    required String description,
+    required IconData icon,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: ZaiNeSpacing.md),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 步骤编号
+          Container(
+            width: 28,
+            height: 28,
+            decoration: BoxDecoration(
+              color: Colors.red.shade600,
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: Text(
+                '$step',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: ZaiNeSpacing.sm),
+          // 内容
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(icon, size: 16, color: Colors.red.shade600),
+                    const SizedBox(width: ZaiNeSpacing.tight),
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: ZaiNeColors.textPrimary(),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: ZaiNeSpacing.xs),
+                Text(
+                  description,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: ZaiNeColors.textSecondary(),
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildQuickActions(bool isDark) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.symmetric(vertical: 8),
       decoration: BoxDecoration(
         color: ZaiNeColors.cardBg(),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(ZaiNeRadius.card),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withAlpha(((isDark ? 0.15 : 0.04) * 255).round()),
@@ -1232,7 +1754,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
     return Expanded(
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(ZaiNeRadius.small),
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 12),
           child: Column(
@@ -1242,13 +1764,13 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
                 height: 40,
                 decoration: BoxDecoration(
                   color: iconBgColor,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(ZaiNeRadius.small),
                 ),
                 child: Icon(icon, color: iconColor, size: 20),
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: ZaiNeSpacing.tight),
               Text(label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: ZaiNeColors.textPrimary())),
-              const SizedBox(height: 2),
+              const SizedBox(height: ZaiNeSpacing.xxs),
               Text(value, style: TextStyle(fontSize: 11, color: ZaiNeColors.textSecondary())),
             ],
           ),
@@ -1268,7 +1790,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
       margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
         color: cardBg,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(ZaiNeRadius.card),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withAlpha(((isDark ? 0.15 : 0.04) * 255).round()),
@@ -1289,13 +1811,13 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
                   width: 4,
                   height: 16,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFF7F50),
-                    borderRadius: BorderRadius.circular(2),
+                    color: ZaiNeColors.brandOrange,
+                    borderRadius: BorderRadius.circular(ZaiNeRadius.tiny),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: ZaiNeSpacing.sm),
                 Text('基本信息', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: ZaiNeColors.textPrimary())),
-                const SizedBox(width: 6),
+                const SizedBox(width: ZaiNeSpacing.tight),
                 Text('必填', style: TextStyle(fontSize: 11, color: Colors.red.shade400, fontWeight: FontWeight.w500)),
               ],
             ),
@@ -1313,11 +1835,11 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
                   label: '姓名',
                   hint: '请输入您的姓名',
                   icon: Icons.badge_outlined,
-                  iconColor: const Color(0xFFFF7F50),
+                  iconColor: ZaiNeColors.brandOrange,
                   fieldBg: fieldBg,
                   validator: (v) => (v == null || v.isEmpty) ? '请输入姓名' : null,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: ZaiNeSpacing.md),
                 _buildModernField(
                   controller: _ageController,
                   label: '年龄',
@@ -1333,7 +1855,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
                     return null;
                   },
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: ZaiNeSpacing.md),
 
                 // 性别 + 血型 横排（紧凑型）
                 Row(
@@ -1345,23 +1867,23 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
                         padding: const EdgeInsets.symmetric(horizontal: 12),
                         decoration: BoxDecoration(
                           color: fieldBg,
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(ZaiNeRadius.small),
                           border: Border.all(color: borderColor, width: 1),
                         ),
                         child: Row(
                           children: [
                             Icon(Icons.wc_outlined, size: 16, color: Colors.pink.shade400),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: ZaiNeSpacing.sm),
                             Text('性别', style: TextStyle(fontSize: 13, color: labelColor)),
                             const Spacer(),
                             _buildGenderChip('男'),
-                            const SizedBox(width: 4),
+                            const SizedBox(width: ZaiNeSpacing.xs),
                             _buildGenderChip('女'),
                           ],
                         ),
                       ),
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: ZaiNeSpacing.cardXs),
                     // 血型选择器
                     Expanded(
                       child: Container(
@@ -1369,7 +1891,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
                         padding: const EdgeInsets.symmetric(horizontal: 8),
                         decoration: BoxDecoration(
                           color: fieldBg,
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(ZaiNeRadius.small),
                           border: Border.all(color: borderColor, width: 1),
                         ),
                         child: DropdownButtonHideUnderline(
@@ -1387,7 +1909,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: ZaiNeSpacing.md),
                 _buildModernField(
                   controller: _allergyController,
                   label: '过敏史',
@@ -1400,7 +1922,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
                 ),
 
                 // --- 选填区域 ---
-                const SizedBox(height: 20),
+                const SizedBox(height: ZaiNeSpacing.section),
                 Divider(height: 1, color: borderColor, indent: 0, endIndent: 0),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(2, 12, 0, 8),
@@ -1411,12 +1933,12 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
                         height: 16,
                         decoration: BoxDecoration(
                           color: Colors.teal.shade400,
-                          borderRadius: BorderRadius.circular(2),
+                          borderRadius: BorderRadius.circular(ZaiNeRadius.tiny),
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: ZaiNeSpacing.sm),
                       Text('健康信息', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: ZaiNeColors.textPrimary())),
-                      const SizedBox(width: 6),
+                      const SizedBox(width: ZaiNeSpacing.tight),
                       Text('选填', style: TextStyle(fontSize: 11, color: Colors.grey.shade400)),
                     ],
                   ),
@@ -1431,7 +1953,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
                   fieldBg: fieldBg,
                   maxLines: 2,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: ZaiNeSpacing.md),
                 _buildModernField(
                   controller: _medicineController,
                   label: '常用药物',
@@ -1441,7 +1963,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
                   fieldBg: fieldBg,
                   maxLines: 2,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: ZaiNeSpacing.md),
                 _buildModernField(
                   controller: _emergencyNoteController,
                   label: '紧急备注',
@@ -1466,10 +1988,10 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFFF7F50).withValues(alpha: 31) : Colors.transparent,
-          borderRadius: BorderRadius.circular(6),
+          color: isSelected ? ZaiNeColors.brandOrange.withValues(alpha: 31) : Colors.transparent,
+          borderRadius: BorderRadius.circular(ZaiNeRadius.button),
           border: Border.all(
-            color: isSelected ? const Color(0xFFFF7F50) : (ZaiNeColors.scaffoldBg() == const Color(0xFF121212) ? Colors.white.withValues(alpha: 31) : Colors.grey.shade300),
+            color: isSelected ? ZaiNeColors.brandOrange : (ZaiNeColors.scaffoldBg() == const Color(0xFF121212) ? Colors.white.withValues(alpha: 31) : Colors.grey.shade300),
           ),
         ),
         child: Text(
@@ -1477,7 +1999,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
           style: TextStyle(
             fontSize: 12,
             fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-            color: isSelected ? const Color(0xFFFF7F50) : ZaiNeColors.textSecondary(),
+            color: isSelected ? ZaiNeColors.brandOrange : ZaiNeColors.textSecondary(),
           ),
         ),
       ),
@@ -1500,7 +2022,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: ZaiNeColors.textSecondary())),
-        const SizedBox(height: 6),
+        const SizedBox(height: ZaiNeSpacing.tight),
         TextFormField(
           controller: controller,
           keyboardType: keyboardType,
@@ -1513,24 +2035,24 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
             filled: true,
             fillColor: fieldBg,
             prefixIcon: Container(
-              margin: const EdgeInsets.all(10),
-              decoration: BoxDecoration(color: iconColor.withValues(alpha: 26), borderRadius: BorderRadius.circular(8)),
+              margin: const EdgeInsets.all(ZaiNeSpacing.cardXs),
+              decoration: BoxDecoration(color: iconColor.withValues(alpha: 26), borderRadius: BorderRadius.circular(ZaiNeRadius.button)),
               child: Icon(icon, color: iconColor, size: 18),
             ),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(ZaiNeRadius.small),
               borderSide: BorderSide(color: borderColor),
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(ZaiNeRadius.small),
               borderSide: BorderSide(color: borderColor),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFFFF7F50), width: 1.5),
+              borderRadius: BorderRadius.circular(ZaiNeRadius.small),
+              borderSide: const BorderSide(color: ZaiNeColors.brandOrange, width: 1.5),
             ),
             errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(ZaiNeRadius.small),
               borderSide: const BorderSide(color: Colors.red, width: 1),
             ),
             contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
@@ -1547,10 +2069,10 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Container(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(ZaiNeRadius.card),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFFFF7F50).withValues(alpha: 76),
+              color: ZaiNeColors.brandOrange.withValues(alpha: 76),
               blurRadius: 16,
               offset: const Offset(0, 6),
             ),
@@ -1562,16 +2084,16 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
           child: ElevatedButton(
             onPressed: _saveProfile,
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFFF7F50),
+              backgroundColor: ZaiNeColors.brandOrange,
               foregroundColor: Colors.white,
               elevation: 0,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.card)),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(_isLoggedIn ? Icons.check_rounded : Icons.shield_rounded, size: 20),
-                const SizedBox(width: 8),
+                const SizedBox(width: ZaiNeSpacing.sm),
                 Text(
                   _isLoggedIn ? '更新档案' : '保存并启用求助',
                   style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
@@ -1586,40 +2108,47 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
 
   // ==================== 隐私说明 ====================
   Widget _buildOtherSection(bool isDark) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: ZaiNeColors.cardBg(),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha(((isDark ? 0.12 : 0.04) * 255).round()),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: isDark ? Colors.blue.shade900.withValues(alpha: 38) : Colors.blue.shade50,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(Icons.shield_outlined, color: Colors.blue.shade600, size: 18),
-            const SizedBox(width: 10),
-            const Expanded(
-              child: Text(
-                '您的健康档案和紧急联系人信息已加密同步到云端，换设备登录后数据不会丢失。我们严格保护您的隐私安全。',
-                style: TextStyle(fontSize: 12, color: Color(0xFF666666), height: 1.5),
+    return Column(
+      children: [
+        const SizedBox(height: ZaiNeSpacing.md),
+
+        // 隐私说明
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.all(ZaiNeSpacing.lg),
+          decoration: BoxDecoration(
+            color: ZaiNeColors.cardBg(),
+            borderRadius: BorderRadius.circular(ZaiNeRadius.card),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withAlpha(((isDark ? 0.12 : 0.04) * 255).round()),
+                blurRadius: 10,
+                offset: const Offset(0, 2),
               ),
+            ],
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(ZaiNeSpacing.md),
+            decoration: BoxDecoration(
+              color: isDark ? Colors.blue.shade900.withValues(alpha: 38) : Colors.blue.shade50,
+              borderRadius: BorderRadius.circular(ZaiNeRadius.small),
             ),
-          ],
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.shield_outlined, color: Colors.blue.shade600, size: 18),
+                const SizedBox(width: ZaiNeSpacing.cardXs),
+                const Expanded(
+                  child: Text(
+                    '您的健康档案和紧急联系人信息已加密同步到云端，换设备登录后数据不会丢失。我们严格保护您的隐私安全。',
+                    style: TextStyle(fontSize: 12, color: Color(0xFF666666), height: 1.5),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
-      ),
+      ],
     );
   }
 

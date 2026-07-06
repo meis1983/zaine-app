@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // 触觉反馈
+import '../theme/theme_helper.dart';
 import 'guardian_card_painter.dart';
 import '../utils/season_theme.dart';
 
@@ -336,7 +337,7 @@ class _GuardianCardEnvelopeState extends State<GuardianCardEnvelope>
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.9),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(ZaiNeRadius.button),
         border: Border.all(
           color: _theme.accentColor.withValues(alpha: 0.3),
           width: 1,
@@ -350,7 +351,7 @@ class _GuardianCardEnvelopeState extends State<GuardianCardEnvelope>
             size: const Size(60, 24),
             painter: SignatureCurvePainter(color: _theme.accentColor),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: ZaiNeSpacing.sm),
           Text(
             widget.senderName,
             style: TextStyle(

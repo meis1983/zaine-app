@@ -259,7 +259,7 @@ class _GuardianMessageBoardState extends State<GuardianMessageBoard> {
 
   Widget _buildInputArea() {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(ZaiNeSpacing.md),
       decoration: BoxDecoration(
         color: ZaiNeColors.cardBg(),
         boxShadow: [
@@ -345,7 +345,7 @@ class MessageCard extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(ZaiNeSpacing.md),
           child: Row(
             children: [
               _buildTypeIcon(),

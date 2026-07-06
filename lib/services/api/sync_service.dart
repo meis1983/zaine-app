@@ -101,13 +101,71 @@ class SyncService {
         await prefs.setBool('is_logged_in', true);
       }
 
-      // 拉取联系人 — 【修复 v1.80.0】空数据保护：服务器返回空列表时不覆盖本地非空缓存
+      // 拉取联系人 — 【修复 v1.93.10】合并策略：保留本地的 relation，防止后端未保存时被覆盖
       final contactsRes = await ApiService.get('/api/contacts');
       if (contactsRes['success'] == true && contactsRes['contacts'] != null) {
         final serverContacts = contactsRes['contacts'] as List;
-        final localContacts = prefs.getString(contactsKey);
-        if (serverContacts.isNotEmpty || localContacts == null || localContacts.isEmpty) {
-          await prefs.setString(contactsKey, jsonEncode(serverContacts));
+        final localContactsJson = prefs.getString(contactsKey);
+        
+        if (serverContacts.isNotEmpty || localContactsJson == null || localContactsJson.isEmpty) {
+          // 【关键修复】合并本地和服务器数据：优先使用本地 relation
+          if (localContactsJson != null && localContactsJson.isNotEmpty) {
+            try {
+              final localContacts = jsonDecode(localContactsJson) as List;
+              final mergedContacts = <Map<String, dynamic>>[];
+              
+              for (final serverContact in serverContacts) {
+                if (serverContact is! Map) continue;
+                final serverId = serverContact['id']?.toString() ?? '';
+                final serverPhone = serverContact['phone']?.toString() ?? '';
+                
+                // 【修复 v1.93.10】用 phone 匹配本地联系人（因为本地 id 可能是临时 ID）
+                Map<String, dynamic>? localMatch;
+                try {
+                  for (final local in localContacts) {
+                    if (local is Map) {
+                      final localPhone = local['phone']?.toString() ?? '';
+                      // 优先用 phone 匹配，其次用 id 匹配
+                      if ((serverPhone.isNotEmpty && localPhone == serverPhone) ||
+                          (serverId.isNotEmpty && local['id']?.toString() == serverId)) {
+                        localMatch = local as Map<String, dynamic>;
+                        break;
+                      }
+                    }
+                  }
+                } catch (_) {}
+                
+                // 合并：使用服务器数据，但保留本地的 relation（如果服务器的 relation 为空或为默认值）
+                final merged = Map<String, dynamic>.from(serverContact);
+                if (localMatch != null) {
+                  final localRelation = localMatch['relation']?.toString() ?? '';
+                  final serverRelation = serverContact['relation']?.toString() ?? '';
+                  
+                  // 如果本地有 relation 且服务器的 relation 为空或为默认值"守护人"，保留本地值
+                  if (localRelation.isNotEmpty && 
+                      (serverRelation.isEmpty || serverRelation == '守护人')) {
+                    merged['relation'] = localRelation;
+                    if (kDebugMode) {
+                      debugPrint('[SyncService] ✅ 保留本地 relation: id=$serverId, relation=$localRelation');
+                    }
+                  }
+                }
+                
+                mergedContacts.add(merged);
+              }
+              
+              await prefs.setString(contactsKey, jsonEncode(mergedContacts));
+              if (kDebugMode) {
+                debugPrint('[SyncService] ✅ 已合并服务器联系人和本地 relation');
+              }
+            } catch (e) {
+              // 合并失败，降级为直接覆盖
+              if (kDebugMode) debugPrint('[SyncService] ⚠️ 合并失败，直接覆盖: $e');
+              await prefs.setString(contactsKey, jsonEncode(serverContacts));
+            }
+          } else {
+            await prefs.setString(contactsKey, jsonEncode(serverContacts));
+          }
         } else {
           if (kDebugMode) debugPrint('[SyncService] ⚠️ 服务器返回空联系人列表，保留本地 $contactsKey 缓存');
         }
@@ -122,8 +180,10 @@ class SyncService {
       try {
         final statusRes = await ApiService.get('/api/checkin/status');
         if (statusRes['success'] == true) {
-          if (statusRes['streak'] != null) {
-            await prefs.setInt(streakKey, statusRes['streak'] as int);
+          // 【修复 v1.93.10】后端返回 signin_streak，兼容 streak 字段名
+          final serverStreak = statusRes['streak'] ?? statusRes['signin_streak'] ?? 0;
+          if (serverStreak > 0) {
+            await prefs.setInt(streakKey, serverStreak as int);
           }
           if (statusRes['total_days'] != null) {
             await prefs.setInt(totalKey, statusRes['total_days'] as int);
@@ -163,6 +223,15 @@ class SyncService {
               .toList();
           await prefs.setStringList(historyKey, dateStrings);
           if (kDebugMode) debugPrint('[SyncService] ✅ 拉取签到历史 ${dateStrings.length} 条');
+          
+          // 【P0 修复 v1.93.9】重新计算连续天数，防止服务端 streak=0 导致数据丢失
+          final calculatedStreak = calculateStreakFromHistory(dateStrings);
+          final serverStreak = prefs.getInt(streakKey) ?? 0;
+          
+          if (calculatedStreak > serverStreak) {
+            await prefs.setInt(streakKey, calculatedStreak);
+            if (kDebugMode) debugPrint('[SyncService] ✅ 重新计算连续天数=$calculatedStreak（服务端=$serverStreak），已修正本地缓存');
+          }
         }
       } catch (e) {
         if (kDebugMode) debugPrint('[SyncService] ⚠️ 拉取签到历史失败: $e');
@@ -170,5 +239,39 @@ class SyncService {
     } catch (e) {
       if (kDebugMode) debugPrint('SyncService.pullFromServer error: $e');
     }
+  }
+  
+  /// 从签到历史重新计算连续天数
+  static int calculateStreakFromHistory(List<String> dateStrings) {
+    if (dateStrings.isEmpty) return 0;
+    
+    // 解析日期并归一化（去掉时间部分）
+    final dates = dateStrings
+        .map((s) => DateTime.tryParse(s))
+        .where((d) => d != null)
+        .map((d) => DateTime(d!.year, d.month, d.day))
+        .toSet()  // 去重
+        .toList();
+    
+    if (dates.isEmpty) return 0;
+    
+    // 降序排序（最新在前）
+    dates.sort((a, b) => b.compareTo(a));
+    
+    final today = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
+    int streak = 0;
+    
+    // 从今天或昨天开始往前检查
+    for (int i = 0; i < 365; i++) {
+      final checkDate = today.subtract(Duration(days: i));
+      if (dates.any((d) => d == checkDate)) {
+        streak++;
+      } else if (i > 0) {
+        // 中间有断签（i=0 是今天，允许今天还没签到）
+        break;
+      }
+    }
+    
+    return streak;
   }
 }

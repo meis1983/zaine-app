@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/theme_helper.dart';
 
 /// 经期周期可视化图表
 ///
@@ -37,20 +38,20 @@ class MenstruationCycleChart extends StatelessWidget {
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(ZaiNeRadius.card),
         side: BorderSide(color: Colors.grey.shade200),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(ZaiNeSpacing.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // 标题和当前状态
             _buildHeader(),
-            const SizedBox(height: 20),
+            const SizedBox(height: ZaiNeSpacing.section),
             // 周期可视化
             _buildCycleVisualization(),
-            const SizedBox(height: 20),
+            const SizedBox(height: ZaiNeSpacing.section),
             // 周期历史
             _buildPeriodHistory(),
           ],
@@ -63,12 +64,12 @@ class MenstruationCycleChart extends StatelessWidget {
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(ZaiNeRadius.card),
         side: BorderSide(color: Colors.grey.shade200),
       ),
       child: Container(
         height: 200,
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(ZaiNeSpacing.lg),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -565,11 +566,11 @@ class MenstruationPredictionCard extends StatelessWidget {
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(ZaiNeRadius.card),
         side: BorderSide(color: Colors.grey.shade200),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(ZaiNeSpacing.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

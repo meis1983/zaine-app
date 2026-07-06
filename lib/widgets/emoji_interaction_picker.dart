@@ -83,7 +83,7 @@ class _EmojiPickerState extends State<EmojiPicker> with SingleTickerProviderStat
           ),
           // 标题
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(ZaiNeSpacing.lg),
             child: Row(
               children: [
                 Text(
@@ -135,7 +135,7 @@ class _EmojiPickerState extends State<EmojiPicker> with SingleTickerProviderStat
     final emojis = _categorizedEmojis[category] ?? [];
     
     return GridView.builder(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(ZaiNeSpacing.lg),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 4,
         childAspectRatio: 1,
@@ -403,7 +403,7 @@ class EmojiHistoryList extends StatelessWidget {
     return RefreshIndicator(
       onRefresh: () async => onRefresh?.call(),
       child: ListView.builder(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(ZaiNeSpacing.lg),
         itemCount: interactions.length,
         itemBuilder: (context, index) {
           final interaction = interactions[index];
@@ -453,7 +453,7 @@ class EmojiHistoryList extends StatelessWidget {
         side: BorderSide(color: ZaiNeColors.borderColor()),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(ZaiNeSpacing.md),
         child: Row(
           children: [
             Container(

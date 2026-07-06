@@ -76,7 +76,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
       final initialGuardians = contacts.map((c) {
         final name = (c['name'] ?? '未命名').toString();
         final phone = (c['phone'] ?? '').toString();
-        final relation = (c['relation'] ?? '守护者').toString();
+        final relation = (c['relation'] == null || c['relation'].toString().isEmpty) ? '守护者' : c['relation'].toString();
 
         final cachedAvatar = prefs.getString('contact_avatar_phone_$phone') ?? '';
         final cachedCheckedIn =
@@ -161,7 +161,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
         for (final c in contacts) {
           final phone = (c['phone'] ?? '').toString();
           final name = (c['name'] ?? '未命名').toString();
-          final relation = (c['relation'] ?? '守护者').toString();
+          final relation = (c['relation'] == null || c['relation'].toString().isEmpty) ? '守护者' : c['relation'].toString();
 
           final status = resultsMap[phone];
           if (status == null || status['found'] == false) {
@@ -187,12 +187,14 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
           final avatarBase64 = status['avatar_base64']?.toString() ?? '';
           final lastSigninAt = status['last_signin_at']?.toString() ?? '';
           final checkedInToday = status['checked_in_today'] == true;
+          final todayMood = status['today_mood'] as int?;  // 1-5，null 表示未签到
 
           if (avatarBase64.isNotEmpty && foundUserId != null) {
             await prefs.setString('contact_avatar_$foundUserId', avatarBase64);
             await prefs.setString('contact_avatar_phone_$phone', avatarBase64);
           }
           await prefs.setBool('contact_checked_in_today_phone_$phone', checkedInToday);
+          await prefs.setInt('contact_today_mood_phone_$phone', todayMood ?? 0);  // 0 表示未签到
           await prefs.setString('contact_last_signin_at_phone_$phone', lastSigninAt);
           // 【修复 v1.76.0】将注册状态写入缓存，避免下次加载时显示错误
           await prefs.setBool('contact_is_registered_phone_$phone', true);
@@ -205,6 +207,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
             'isRegistered': true,
             'userId': foundUserId,
             'checkedInToday': checkedInToday,
+            'todayMood': todayMood,  // 今日心情（1-5，null 或 0 表示未签到）
             'statusError': null,
             'avatarBase64': avatarBase64.isNotEmpty
                 ? avatarBase64
@@ -473,6 +476,17 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
     }
 
     if (checkedInToday) {
+      // 心情 emoji 映射（1-5）
+      final moodEmoji = {
+        1: '😢',  // 很差
+        2: '😟',  // 不好
+        3: '😐',  // 一般
+        4: '😊',  // 不错
+        5: '🥰',  // 非常好
+      };
+      final todayMood = guardian['todayMood'] as int? ?? 0;
+      final emoji = moodEmoji[todayMood] ?? '';
+
       return Row(
         children: [
           Container(
@@ -480,7 +494,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
             decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.green),
           ),
           const SizedBox(width: ZaiNeSpacing.xs),
-          Text('今日已签到', style: TextStyle(fontSize: ZaiNeFontSize.micro, color: Colors.green.shade700, fontWeight: FontWeight.w500)),
+          Text('今日已签到${emoji.isNotEmpty ? ' $emoji' : ''}', style: TextStyle(fontSize: ZaiNeFontSize.micro, color: Colors.green.shade700, fontWeight: FontWeight.w500)),
         ],
       );
     }
@@ -798,7 +812,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.xl),
                     child: Container(
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(ZaiNeSpacing.lg),
                       decoration: BoxDecoration(
                         color: ZaiNeColors.cardBg(),
                         borderRadius: BorderRadius.circular(ZaiNeRadius.card),
@@ -940,14 +954,14 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
               ),
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.all(ZaiNeSpacing.section),
                   child: Column(
                     children: [
                       _buildFunctionEntry(
                         icon: Icons.person_add_rounded,
                         title: '紧急联系人管理',
                         subtitle: '添加、修改、排序你的守护者（最多 10 位）',
-                        color: const Color(0xFFFF7F50),
+                        color: ZaiNeColors.brandOrange,
                         onTap: () {
                           Navigator.of(context).push(
                             MaterialPageRoute(
@@ -1046,7 +1060,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
   /// 守护者卡片
   Widget _buildGuardianCard(Map<String, dynamic> guardian, int index) {
     final colors = [
-      const Color(0xFFFF7F50),
+      ZaiNeColors.brandOrange,
       const Color(0xFF7C4DFF),
       Colors.teal,
       Colors.blue,
@@ -1056,8 +1070,8 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
     return GestureDetector(
       onLongPress: () => _showRemoveGuardianDialog(guardian),
       child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.all(16),
+        margin: const EdgeInsets.only(bottom: ZaiNeSpacing.cardXs),
+        padding: const EdgeInsets.all(ZaiNeSpacing.lg),
         decoration: BoxDecoration(
           color: ZaiNeColors.cardBg(),
           borderRadius: BorderRadius.circular(ZaiNeRadius.card),
@@ -1081,29 +1095,40 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // 【v1.93.5 修复】Row 布局加 overflow 保护 + relation 空字符串兜底
                   Row(
                     children: [
-                      Text(
-                        guardian['name'] ?? '未命名',
-                        style: const TextStyle(
-                          fontSize: ZaiNeFontSize.body,
-                          fontWeight: FontWeight.w600,
+                      Flexible(
+                        child: Text(
+                          guardian['name'] ?? '未命名',
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                          style: const TextStyle(
+                            fontSize: ZaiNeFontSize.body,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
                       const SizedBox(width: ZaiNeSpacing.sm),
                       // 关系标签
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.sm, vertical: ZaiNeSpacing.xs),
-                        decoration: BoxDecoration(
-                          color: accentColor.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(ZaiNeRadius.small),
-                        ),
-                        child: Text(
-                          guardian['relation'] ?? '守护者',
-                          style: TextStyle(
-                            fontSize: ZaiNeFontSize.micro,
-                            color: accentColor,
-                            fontWeight: FontWeight.w600,
+                      Flexible(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.sm, vertical: ZaiNeSpacing.xs),
+                          decoration: BoxDecoration(
+                            color: accentColor.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(ZaiNeRadius.small),
+                          ),
+                          child: Text(
+                            (guardian['relation'] == null || guardian['relation'].toString().isEmpty)
+                                ? '守护者'
+                                : guardian['relation'].toString(),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                            style: TextStyle(
+                              fontSize: ZaiNeFontSize.micro,
+                              color: accentColor,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
                       ),
@@ -1223,7 +1248,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(ZaiNeSpacing.lg),
         decoration: BoxDecoration(
           color: ZaiNeColors.cardBg(),
           borderRadius: BorderRadius.circular(ZaiNeRadius.card),
@@ -1294,7 +1319,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.card)),
         title: Row(
           children: [
-            const Icon(Icons.phone, color: Color(0xFFFF7F50)),
+            const Icon(Icons.phone, color: ZaiNeColors.brandOrange),
             const SizedBox(width: ZaiNeSpacing.sm),
             Expanded(
               child: Text('拨打给 $name'),
@@ -1309,7 +1334,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF7F50)),
+            style: ElevatedButton.styleFrom(backgroundColor: ZaiNeColors.brandOrange),
             child: const Text('拨打'),
           ),
         ],

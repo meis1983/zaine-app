@@ -98,8 +98,8 @@ class _GuardianAchievementsPageState extends State<GuardianAchievementsPage>
     final progress = _totalCount > 0 ? _unlockedCount / _totalCount : 0.0;
 
     return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(20),
+      margin: const EdgeInsets.all(ZaiNeSpacing.lg),
+      padding: const EdgeInsets.all(ZaiNeSpacing.section),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
@@ -233,7 +233,7 @@ class AchievementCard extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(ZaiNeSpacing.lg),
           child: Row(
             children: [
               // 成就图标
@@ -511,7 +511,7 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
           );
         },
         child: Container(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(ZaiNeSpacing.xl),
           decoration: BoxDecoration(
             color: ZaiNeColors.cardBg(),
             borderRadius: BorderRadius.circular(24),

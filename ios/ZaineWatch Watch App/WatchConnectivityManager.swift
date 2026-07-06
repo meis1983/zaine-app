@@ -7,6 +7,7 @@ import Foundation
 import WatchConnectivity
 import WatchKit
 import Combine
+import HealthKit
 
 class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
     static let shared = WatchConnectivityManager()
@@ -18,6 +19,21 @@ class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
     @Published var lastActionTime: Date?
     @Published var healthData: [String: Any] = [:]
     @Published var lastCheckIn: String?
+
+    // 【v1.94.0】签到结果状态（用于酷炫庆祝 UI）
+    @Published var checkInSuccess = false
+    @Published var checkInFailed = false
+    @Published var checkInStreak = 0
+    @Published var checkInTotal = 0
+    @Published var checkInAlreadyDone = false
+    @Published var autoCheckInSuccess = false   // 【P0 心跳自动签到】独立庆祝态
+    @Published var isHeartbeatGuardian = false  // 【P0 心跳守护中】状态指示
+    @Published var lastHeartRate: Double = 0
+    private var pendingClientId: String?
+
+    // 【P0】HealthKit 心率监控
+    private let healthStore = HKHealthStore()
+    private var heartRateQuery: HKAnchoredObjectQuery?
 
     private override init() {
         super.init()
@@ -35,104 +51,93 @@ class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
     }
 
     // MARK: - Send Check-in
+    /// 【v1.94.0 重写】以 transferUserInfo 为主路径（可靠队列，不依赖可达性，后台也能投递）
+    /// sendMessage 仅作为「加速」：手机可达时即时拿到回包，失败不影响（transferUserInfo 已兜底）
     func sendCheckIn() {
         print("[Watch] 📨 用户点击签到")
-        lastAction = "签到"
         lastActionTime = Date()
         lastError = ""
-        
+        checkInSuccess = false
+        checkInFailed = false
+        checkInAlreadyDone = false
+
         // 触觉反馈
         WKInterfaceDevice.current().play(.click)
-        
-        let message = ["action": "checkin", "timestamp": Date().timeIntervalSince1970] as [String : Any]
-        
-        print("[Watch] WCSession 状态: isReachable=\(WCSession.default.isReachable), activationState=\(WCSession.default.activationState.rawValue)")
-        
+
+        let clientId = UUID().uuidString
+        pendingClientId = clientId
+        let message: [String: Any] = [
+            "action": "checkin",
+            "client_id": clientId,
+            "timestamp": Date().timeIntervalSince1970,
+        ]
+
         if WCSession.default.activationState != .activated {
             lastError = "WCSession 未激活"
+            checkInFailed = true
             print("[Watch] ❌ WCSession 未激活，无法发送")
             WKInterfaceDevice.current().play(.failure)
             return
         }
-        
+
+        // 主路径：可靠队列（一定会被 iPhone 接收并处理）
+        WCSession.default.transferUserInfo(message)
+        print("[Watch] 📤 transferUserInfo 已排队签到 (clientId=\(clientId))")
+
+        // 乐观 UI：立即进入「签到中」状态
+        lastAction = "签到中..."
+
+        // 加速路径：手机可达时尝试 sendMessage 即时确认（失败不影响主路径）
         if WCSession.default.isReachable {
-            print("[Watch] 📡 手机可达，发送 sendMessage...")
-            lastAction = "签到 (sendMessage)"
-            WCSession.default.sendMessage(message, replyHandler: { reply in
-                print("[Watch] ✅ sendMessage 成功: \(reply)")
-                DispatchQueue.main.async {
-                    self.lastAction = "签到 ✅"
-                    self.lastError = ""
-                }
-                WKInterfaceDevice.current().play(.success)
+            WCSession.default.sendMessage(message, replyHandler: { _ in
+                print("[Watch] ✅ sendMessage 即时回包成功")
             }, errorHandler: { error in
-                print("[Watch] ❌ sendMessage 失败: \(error.localizedDescription)，自动转 transferUserInfo 兜底...")
-                // 【v1.93.4 修复】sendMessage 失败时立即用 transferUserInfo 兜底重发
-                // 解决：isReachable=true 但实际发送时连接断开导致消息丢失
-                WCSession.default.transferUserInfo(message)
-                DispatchQueue.main.async {
-                    self.lastAction = "签到 📤 已发送(兜底)"
-                    self.lastError = "实时发送失败，已转后台队列"
-                }
-                WKInterfaceDevice.current().play(.click)
+                print("[Watch] ℹ️ sendMessage 即时回包失败(已走 transferUserInfo 兜底，无影响): \(error.localizedDescription)")
             })
-        } else {
-            print("[Watch] ⚠️ 手机不可达，用 transferUserInfo 兜底")
-            lastAction = "签到 (transferUserInfo)"
-            let userInfo = WCSession.default.transferUserInfo(message)
-            print("[Watch] transferUserInfo 已排队: \(userInfo.isTransferring ? "传输中" : "等待中")")
-            DispatchQueue.main.async {
-                self.lastAction = "签到 📤 已发送"
-                self.lastError = "等待 iPhone 接收..."
+        }
+
+        // 兜底：1.4s 内未收到 ack 则先显示「已发送」，避免一直转圈
+        let capturedClientId = clientId
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.4) { [weak self] in
+            guard let self = self else { return }
+            if !self.checkInSuccess && self.pendingClientId == capturedClientId {
+                self.lastAction = "签到已发送 ⏳"
             }
-            WKInterfaceDevice.current().play(.click)
         }
     }
 
     // MARK: - Send SOS
+    /// 【v1.94.0 重写】同样以 transferUserInfo 为主路径
     func sendSOS() {
         print("[Watch] 🚨 用户点击 SOS")
         lastAction = "SOS"
         lastActionTime = Date()
         lastError = ""
-        
+
         // 强触觉反馈
         WKInterfaceDevice.current().play(.notification)
-        
+
         let message = ["action": "sos", "timestamp": Date().timeIntervalSince1970] as [String : Any]
-        
+
         if WCSession.default.activationState != .activated {
             lastError = "WCSession 未激活"
             print("[Watch] ❌ WCSession 未激活，无法发送 SOS")
             WKInterfaceDevice.current().play(.failure)
             return
         }
-        
+
+        // 主路径：可靠队列（SOS 绝不能丢）
+        WCSession.default.transferUserInfo(message)
+        print("[Watch] 📤 SOS transferUserInfo 已排队")
+        lastAction = "SOS 已发送 📤"
+
+        // 加速路径
         if WCSession.default.isReachable {
-            print("[Watch] 📡 手机可达，发送 SOS sendMessage...")
-            WCSession.default.sendMessage(message, replyHandler: { reply in
+            WCSession.default.sendMessage(message, replyHandler: { _ in
                 print("[Watch] ✅ SOS sendMessage 成功")
-                DispatchQueue.main.async {
-                    self.lastAction = "SOS ✅ 已发送"
-                }
-                WKInterfaceDevice.current().play(.success)
             }, errorHandler: { error in
-                print("[Watch] ❌ SOS sendMessage 失败: \(error.localizedDescription)，自动转 transferUserInfo 兜底...")
-                // 【v1.93.4 修复】SOS 绝不能丢 — sendMessage 失败时立即用 transferUserInfo 兜底重发
-                WCSession.default.transferUserInfo(message)
-                DispatchQueue.main.async {
-                    self.lastAction = "SOS 📤 已发送(兜底)"
-                    self.lastError = "实时发送失败，已转后台队列"
-                }
-                WKInterfaceDevice.current().play(.notification)
+                print("[Watch] ℹ️ SOS sendMessage 失败(已走 transferUserInfo 兜底): \(error.localizedDescription)")
             })
-        } else {
-            print("[Watch] ⚠️ 手机不可达，SOS 用 transferUserInfo")
-            WCSession.default.transferUserInfo(message)
-            DispatchQueue.main.async {
-                self.lastAction = "SOS 📤 已发送"
-                self.lastError = "等待 iPhone 接收..."
-            }
         }
     }
 
@@ -143,6 +148,109 @@ class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
         WCSession.default.sendMessage(message, replyHandler: nil) { error in
             print("Watch: request health data failed - \(error.localizedDescription)")
         }
+    }
+
+    // MARK: - 【P0】自动心跳签到（核心酷炫功能）
+    /// 由 ContentView.onAppear 调用，启动 HealthKit 心率监控
+    /// 检测到有效心率后自动触发签到，用户零操作
+    func startHeartRateMonitoring() {
+        guard HKHealthStore.isHealthDataAvailable() else {
+            print("[Watch] ⚠️ HealthKit 不可用，无法启用心跳守护")
+            return
+        }
+        let hrType = HKObjectType.quantityType(forIdentifier: .heartRate)!
+        healthStore.requestAuthorization(toShare: nil, read: [hrType]) { [weak self] success, error in
+            guard let self = self else { return }
+            if !success {
+                print("[Watch] ⚠️ 心率授权失败: \(error?.localizedDescription ?? "unknown")")
+                return
+            }
+            DispatchQueue.main.async { self.isHeartbeatGuardian = true }
+            self.startHeartRateQuery()
+        }
+    }
+
+    private func startHeartRateQuery() {
+        let hrType = HKObjectType.quantityType(forIdentifier: .heartRate)!
+        let query = HKAnchoredObjectQuery(
+            type: hrType,
+            predicate: nil,
+            anchor: nil,
+            limit: HKObjectQueryNoLimit
+        ) { [weak self] _, samples, _, _, _ in
+            self?.processHeartRateSamples(samples)
+        }
+        query.updateHandler = { [weak self] _, samples, _, _, _ in
+            self?.processHeartRateSamples(samples)
+        }
+        healthStore.execute(query)
+        heartRateQuery = query
+        print("[Watch] 💓 心率守护监听已启动")
+    }
+
+    private func processHeartRateSamples(_ samples: [HKSample]?) {
+        guard let samples = samples as? [HKQuantitySample], !samples.isEmpty else { return }
+        let today = Calendar.current.component(.day, from: Date())
+        let lastDay = UserDefaults.standard.integer(forKey: "watch_last_auto_checkin_day")
+
+        // 更新实时心率显示 + 守护状态
+        if let latest = samples.last {
+            let hr = latest.quantity.doubleValue(for: HKUnit(from: "count/min"))
+            DispatchQueue.main.async {
+                self.lastHeartRate = hr
+                self.isHeartbeatGuardian = true
+            }
+        }
+
+        // 今天已自动签过 → 只更新心率，不再触发
+        if lastDay == today { return }
+
+        // 检测有效心率（48-130bpm，排除噪声/异常）
+        for sample in samples.reversed() {
+            let hr = sample.quantity.doubleValue(for: HKUnit(from: "count/min"))
+            if hr >= 48 && hr <= 130 {
+                DispatchQueue.main.async { self.sendAutoCheckIn(heartRate: hr) }
+                break
+            }
+        }
+    }
+
+    /// 自动心跳签到：WCSession 不可达时排队 transferUserInfo（后台也能投递）
+    func sendAutoCheckIn(heartRate: Double) {
+        print("[Watch] 💓 检测到有效心率 \(Int(heartRate)) bpm，触发自动签到")
+        let today = Calendar.current.component(.day, from: Date())
+        let lastDay = UserDefaults.standard.integer(forKey: "watch_last_auto_checkin_day")
+        if lastDay == today {
+            print("[Watch] 今天已自动签到过，跳过")
+            return
+        }
+
+        guard WCSession.default.activationState == .activated else {
+            print("[Watch] ⚠️ WCSession 未激活，自动签到推迟到下次心率检测")
+            return
+        }
+
+        // 标记今日已自动签（防重复），WCSession 未激活不标记
+        UserDefaults.standard.set(today, forKey: "watch_last_auto_checkin_day")
+
+        let clientId = UUID().uuidString
+        pendingClientId = clientId
+        let message: [String: Any] = [
+            "action": "auto_checkin",
+            "client_id": clientId,
+            "heart_rate": heartRate,
+            "timestamp": Date().timeIntervalSince1970,
+        ]
+        WCSession.default.transferUserInfo(message)
+        print("[Watch] 📤 auto_checkin 已排队 (心率=\(Int(heartRate)), clientId=\(clientId))")
+
+        DispatchQueue.main.async {
+            self.lastAction = "心跳签到 💓"
+            self.autoCheckInSuccess = true
+        }
+
+        // 触觉反馈：轻触提示（不打断用户）
+        WKInterfaceDevice.current().play(.success)
     }
 
     // MARK: - WCSessionDelegate
@@ -179,6 +287,21 @@ class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
     func session(_ session: WCSession, didReceiveUserInfo userInfo: [String : Any]) {
         DispatchQueue.main.async {
             print("[Watch] 📥 收到来自 iPhone 的数据: \(userInfo)")
+
+            // 【v1.94.0】签到成功回包 — 显示庆祝态
+            if let action = userInfo["action"] as? String, action == "checkin_ack" {
+                self.checkInSuccess = true
+                self.checkInFailed = false
+                self.checkInStreak = userInfo["streak"] as? Int ?? 0
+                self.checkInTotal = userInfo["total"] as? Int ?? 0
+                self.checkInAlreadyDone = userInfo["already_done"] as? Bool ?? false
+                self.lastAction = self.checkInAlreadyDone ? "今日已签到 ✅" : "签到成功 ✅"
+                self.lastCheckIn = self.formatNow()
+                self.pendingClientId = nil
+                WKInterfaceDevice.current().play(.success)
+                return
+            }
+
             if let health = userInfo["health_data"] as? [String: Any] {
                 self.healthData = health
             }
@@ -186,6 +309,13 @@ class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
                 self.lastCheckIn = checkIn
             }
         }
+    }
+
+    /// 格式化为「HH:mm」用于本地显示签到时间
+    private func formatNow() -> String {
+        let fmt = DateFormatter()
+        fmt.dateFormat = "HH:mm"
+        return fmt.string(from: Date())
     }
     
     // iOS 端回调用

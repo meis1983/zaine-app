@@ -3,6 +3,7 @@
 // v1.8: 添加设计Token（圆角/间距/字体/阴影/语义化颜色）
 
 import 'package:flutter/material.dart';
+// 需要访问 main.dart 中的 themeNotifier（忽略循环依赖警告）
 import '../main.dart';
 
 /// 统一的主题颜色辅助方法
@@ -13,6 +14,24 @@ class ZaiNeColors {
   // 品牌色（橙色系）
   static const Color brandOrange = Color(0xFFFF7F50);
   static const Color brandOrangeLight = Color(0xFFFFF5F0);
+  
+  /// 品牌橙色色板（MaterialColor，支持 50-900 色阶）
+  /// 基于 brandOrange (0xFFFF7F50) 生成
+  static const MaterialColor brandOrangeSwatch = MaterialColor(
+    0xFFFF7F50,
+    <int, Color>{
+      50:  Color(0xFFFFF8F0),  // 最浅
+      100: Color(0xFFFFE8D9),
+      200: Color(0xFFFFCDB3),
+      300: Color(0xFFFFB28C),
+      400: Color(0xFFFF9B6B),
+      500: Color(0xFFFF7F50),  // 主色
+      600: Color(0xFFE67047),
+      700: Color(0xFFCC5E3C),
+      800: Color(0xFFB34F33),
+      900: Color(0xFF8C3D26),  // 最深
+    },
+  );
 
   // ===== 背景色 =====
 
@@ -89,10 +108,16 @@ class ZaiNeColors {
 /// 使用方式：ZaiNeRadius.card
 class ZaiNeRadius {
   ZaiNeRadius._();
-  static const double card   = 16; // 卡片/大容器
+  static const double tiny  = 2;  // 极小圆角（分割线、小指示器）
+  static const double tag   = 4;  // 极小标签
+  static const double button = 8;  // 按钮
+  static const double input  = 10; // 输入框/小容器
   static const double small  = 12; // 小元素/标签
-  static const double button = 8;  // 按钮/输入框
-  static const double tag    = 4;  // 极小标签
+  static const double cardSm = 14; // 小卡片
+  static const double card   = 16; // 卡片/大容器
+  static const double lg     = 24; // 大圆角
+  static const double xl     = 28; // 超大圆角（FAB、大按钮）
+  static const double pill   = 20; // 药丸形按钮
   static const double circle = 90; // 圆形头像
 }
 
@@ -100,12 +125,17 @@ class ZaiNeRadius {
 /// 使用方式：ZaiNeSpacing.md
 class ZaiNeSpacing {
   ZaiNeSpacing._();
-  static const double xs  = 4;  // 极小（图标与文字）
-  static const double sm  = 8;  // 小（同一组元素内）
-  static const double md  = 12; // 中（卡片内部padding）
-  static const double lg  = 16; // 大（页面边距/卡片间）
-  static const double xl  = 24; // 超大（页面标题与内容）
-  static const double xxl = 32; // 特大（页面区块间距）
+  static const double xxs  = 2;  // 极小（图标对齐微调）
+  static const double xs   = 4;  // 极小（图标与文字）
+  static const double tight = 6;  // 紧凑（图标与文字间距）
+  static const double sm   = 8;  // 小（同一组元素内）
+  static const double cardXs = 10; // 极小卡片内边距
+  static const double md   = 12; // 中（卡片内部padding）
+  static const double cardSm = 14; // 小卡片内边距
+  static const double lg   = 16; // 大（页面边距/卡片间）
+  static const double section = 20; // 区块内边距（如统计页、健康页）
+  static const double xl   = 24; // 超大（页面标题与内容）
+  static const double xxl  = 32; // 特大（页面区块间距）
 }
 
 /// 字体规范（ZaiNeFontSize）

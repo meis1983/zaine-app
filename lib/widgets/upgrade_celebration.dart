@@ -119,7 +119,7 @@ class _UpgradeCelebrationState extends State<UpgradeCelebration>
                         height: p.size * 1.5,
                         decoration: BoxDecoration(
                           color: p.color,
-                          borderRadius: BorderRadius.circular(2),
+                          borderRadius: BorderRadius.circular(ZaiNeRadius.tiny),
                         
                           boxShadow: ZaiNeShadows.card,),
                       ),
@@ -151,7 +151,7 @@ class _UpgradeCelebrationState extends State<UpgradeCelebration>
       padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 28),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(ZaiNeRadius.lg),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.12),
@@ -185,25 +185,25 @@ class _UpgradeCelebrationState extends State<UpgradeCelebration>
               child: Icon(Icons.auto_awesome, color: Colors.white, size: 32),
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: ZaiNeSpacing.xl),
           const Text(
             '🎉',
             style: TextStyle(fontSize: 28),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: ZaiNeSpacing.md),
           const Text(
             '智能版已激活！',
             style: TextStyle(
-              fontSize: 22,
+              fontSize: ZaiNeFontSize.title,
               fontWeight: FontWeight.bold,
               color: Color(0xFF1A1A2E),
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: ZaiNeSpacing.md),
           Text(
             '现在可同时通知3位守护人',
             style: TextStyle(
-              fontSize: 14,
+              fontSize: ZaiNeFontSize.body,
               color: Colors.grey[500],
             ),
           ),

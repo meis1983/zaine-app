@@ -25,10 +25,10 @@ class LocationCardWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(ZaiNeSpacing.cardSm),
       decoration: BoxDecoration(
         color: ZaiNeColors.cardBg(),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(ZaiNeRadius.cardSm),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(
@@ -104,7 +104,7 @@ class LocationCardWidget extends StatelessWidget {
         if (address != null && address!.isNotEmpty)
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(ZaiNeSpacing.md),
             decoration: BoxDecoration(
               color: Colors.red.shade50,
               borderRadius: BorderRadius.circular(10),

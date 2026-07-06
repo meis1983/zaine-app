@@ -22,11 +22,11 @@ class CheckInReminderCard extends StatelessWidget {
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(ZaiNeRadius.card),
         side: BorderSide(color: ZaiNeColors.borderColor()),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(ZaiNeSpacing.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -34,10 +34,10 @@ class CheckInReminderCard extends StatelessWidget {
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(10),
+                  padding: const EdgeInsets.all(ZaiNeSpacing.cardXs),
                   decoration: BoxDecoration(
                     color: Colors.green.shade50,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(ZaiNeRadius.small),
                   
                     boxShadow: ZaiNeShadows.card,),
                   child: Icon(
@@ -99,24 +99,64 @@ class CheckInReminderCard extends StatelessWidget {
               _buildFrequencySelector(context),
               const SizedBox(height: 16),
 
-              // 提醒时间选择
+              // 【P3】触发方式选择
               const Text(
-                '提醒时间',
+                '触发方式',
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                 ),
               ),
               const SizedBox(height: 8),
-              _buildTimeChips(context),
+              _buildTriggerModeSelector(context),
+              const SizedBox(height: 16),
+
+              // 提醒时间选择（仅「时间定时」模式显示；其他模式展示场景说明）
+              if (config.triggerMode == CheckInTriggerMode.time) ...[
+                const Text(
+                  '提醒时间',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                _buildTimeChips(context),
+              ] else ...[
+                Container(
+                  padding: const EdgeInsets.all(ZaiNeSpacing.md),
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade50,
+                    borderRadius: BorderRadius.circular(ZaiNeRadius.small),
+                    boxShadow: ZaiNeShadows.card,
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.auto_awesome, color: Colors.green.shade400, size: 18),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          config.triggerMode == CheckInTriggerMode.location
+                              ? '离开安全区时自动确认，无需固定时间'
+                              : '手表检测到你时自动确认，零操作守护',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.green.shade700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
 
               if (config.lastCheckIn != null) ...[
                 const SizedBox(height: 16),
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(ZaiNeSpacing.md),
                   decoration: BoxDecoration(
                     color: Colors.green.shade50,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(ZaiNeRadius.small),
                   
                     boxShadow: ZaiNeShadows.card,),
                   child: Row(
@@ -138,10 +178,10 @@ class CheckInReminderCard extends StatelessWidget {
               if (config.missedCount > 0) ...[
                 const SizedBox(height: 12),
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(ZaiNeSpacing.md),
                   decoration: BoxDecoration(
                     color: Colors.orange.shade50,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(ZaiNeRadius.small),
                   
                     boxShadow: ZaiNeShadows.card,),
                   child: Row(
@@ -172,7 +212,7 @@ class CheckInReminderCard extends StatelessWidget {
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(ZaiNeRadius.small),
                     ),
                   ),
                 ),
@@ -186,15 +226,20 @@ class CheckInReminderCard extends StatelessWidget {
 
   String _getStatusText() {
     if (!config.enabled) return '未开启';
+    final modeText = switch (config.triggerMode) {
+      CheckInTriggerMode.time => '时间定时',
+      CheckInTriggerMode.location => '离开安全区自动确认',
+      CheckInTriggerMode.heartbeat => '手表心跳自动确认',
+    };
     switch (config.status) {
       case CheckInReminderStatus.daily:
-        return '每天提醒';
+        return '每天提醒 · $modeText';
       case CheckInReminderStatus.weekly:
-        return '每周提醒';
+        return '每周提醒 · $modeText';
       case CheckInReminderStatus.custom:
-        return '自定义时间';
+        return '自定义时间 · $modeText';
       default:
-        return '已开启';
+        return modeText;
     }
   }
 
@@ -218,6 +263,49 @@ class CheckInReminderCard extends StatelessWidget {
           CheckInReminderStatus.custom,
         ),
       ],
+    );
+  }
+
+  /// 【P3】触发方式选择（时间定时 / 离开安全区 / 手表心跳）
+  Widget _buildTriggerModeSelector(BuildContext context) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        _buildTriggerModeChip(context, '时间定时', CheckInTriggerMode.time, Icons.schedule),
+        _buildTriggerModeChip(context, '离开安全区', CheckInTriggerMode.location, Icons.location_off),
+        _buildTriggerModeChip(context, '手表心跳', CheckInTriggerMode.heartbeat, Icons.favorite),
+      ],
+    );
+  }
+
+  Widget _buildTriggerModeChip(
+    BuildContext context,
+    String label,
+    CheckInTriggerMode mode,
+    IconData icon,
+  ) {
+    final isSelected = config.triggerMode == mode;
+    return ChoiceChip(
+      label: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: isSelected ? Colors.green.shade700 : Colors.grey.shade600),
+          const SizedBox(width: 4),
+          Text(label),
+        ],
+      ),
+      selected: isSelected,
+      onSelected: (selected) {
+        if (selected) {
+          onConfigChanged(config.copyWith(triggerMode: mode));
+        }
+      },
+      selectedColor: Colors.green.shade100,
+      labelStyle: TextStyle(
+        color: isSelected ? Colors.green.shade700 : Colors.grey.shade600,
+        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+      ),
     );
   }
 
@@ -326,11 +414,11 @@ class _LocationTrackCardState extends State<LocationTrackCard> {
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(ZaiNeRadius.card),
         side: BorderSide(color: ZaiNeColors.borderColor()),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(ZaiNeSpacing.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -338,10 +426,10 @@ class _LocationTrackCardState extends State<LocationTrackCard> {
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(10),
+                  padding: const EdgeInsets.all(ZaiNeSpacing.cardXs),
                   decoration: BoxDecoration(
                     color: Colors.blue.shade50,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(ZaiNeRadius.small),
                     boxShadow: ZaiNeShadows.card,
                   ),
                   child: Icon(
@@ -376,7 +464,7 @@ class _LocationTrackCardState extends State<LocationTrackCard> {
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: widget.isTracking ? Colors.green.shade100 : Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(ZaiNeRadius.small),
                     boxShadow: ZaiNeShadows.card,
                   ),
                   child: Row(
@@ -412,7 +500,7 @@ class _LocationTrackCardState extends State<LocationTrackCard> {
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
                   color: Colors.blue.shade50,
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(ZaiNeRadius.button),
                 ),
                 child: Row(
                   children: [
@@ -442,7 +530,7 @@ class _LocationTrackCardState extends State<LocationTrackCard> {
                 height: 80,
                 decoration: BoxDecoration(
                   color: Colors.grey.shade50,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(ZaiNeRadius.small),
                 ),
                 child: Center(
                   child: Column(
@@ -461,24 +549,34 @@ class _LocationTrackCardState extends State<LocationTrackCard> {
 
             if (widget.isTracking && widget.todayTrack.length >= 2) const SizedBox(height: 12),
 
-            // 【v1.93.0】追踪模式选择
-            if (widget.isTracking) ...[
-              const Text(
-                '追踪模式',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 8),
-              _buildModeSelector(),
-              const SizedBox(height: 12),
-            ],
+            // 【v1.93.0】追踪模式选择（v1.94.0 修复：未追踪时也可选择）
+            Row(
+              children: [
+                const Text(
+                  '追踪模式',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(width: ZaiNeSpacing.sm),
+                Text(
+                  widget.isTracking ? '运行中' : '开始追踪前可选',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: widget.isTracking ? Colors.green.shade600 : Colors.grey.shade500,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            _buildModeSelector(),
+            const SizedBox(height: 12),
 
             // 今日轨迹摘要
             if (widget.todayTrack.isNotEmpty) ...[
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(ZaiNeSpacing.md),
                 decoration: BoxDecoration(
                   color: Colors.blue.shade50,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(ZaiNeRadius.small),
                   boxShadow: ZaiNeShadows.card,
                 ),
                 child: Row(
@@ -515,10 +613,10 @@ class _LocationTrackCardState extends State<LocationTrackCard> {
               ),
             ] else ...[
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(ZaiNeSpacing.md),
                 decoration: BoxDecoration(
                   color: Colors.grey.shade50,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(ZaiNeRadius.small),
                   boxShadow: ZaiNeShadows.card,
                 ),
                 child: Row(
@@ -542,10 +640,10 @@ class _LocationTrackCardState extends State<LocationTrackCard> {
             if (widget.lastRecordTime != null && widget.isTracking) ...[
               const SizedBox(height: 12),
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(ZaiNeSpacing.md),
                 decoration: BoxDecoration(
                   color: Colors.green.shade50,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(ZaiNeRadius.small),
                   boxShadow: ZaiNeShadows.card,
                 ),
                 child: Row(
@@ -595,7 +693,7 @@ class _LocationTrackCardState extends State<LocationTrackCard> {
                       ),
                       padding: const EdgeInsets.symmetric(vertical: 10),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(ZaiNeRadius.input),
                       ),
                     ),
                   ),
@@ -698,11 +796,11 @@ class _LocationTrackCardState extends State<LocationTrackCard> {
         height: 120,
         decoration: BoxDecoration(
           color: const Color(0xFFE8F0FE),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(ZaiNeRadius.small),
           border: Border.all(color: Colors.blue.shade100),
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(ZaiNeRadius.small),
           child: Stack(
             children: [
               // 地图网格背景
@@ -724,7 +822,7 @@ class _LocationTrackCardState extends State<LocationTrackCard> {
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
                     color: Colors.black54,
-                    borderRadius: BorderRadius.circular(4),
+                    borderRadius: BorderRadius.circular(ZaiNeRadius.tag),
                   ),
                   child: Text(
                     '${widget.todayTrack.length}个定位点 · 点击查看详情',
@@ -860,11 +958,11 @@ class FallDetectionCard extends StatelessWidget {
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(ZaiNeRadius.card),
         side: BorderSide(color: ZaiNeColors.borderColor()),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(ZaiNeSpacing.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -872,10 +970,10 @@ class FallDetectionCard extends StatelessWidget {
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(10),
+                  padding: const EdgeInsets.all(ZaiNeSpacing.cardXs),
                   decoration: BoxDecoration(
                     color: anyDetectionActive ? Colors.orange.shade100 : Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(ZaiNeRadius.small),
                     boxShadow: ZaiNeShadows.card,
                   ),
                   child: Icon(
@@ -927,7 +1025,7 @@ class FallDetectionCard extends StatelessWidget {
                     color: anyDetectionActive
                         ? Colors.green.shade50
                         : Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(ZaiNeRadius.small),
                     boxShadow: ZaiNeShadows.card,
                   ),
                   child: Text(
@@ -946,21 +1044,23 @@ class FallDetectionCard extends StatelessWidget {
 
             // 检测状态说明
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(ZaiNeSpacing.md),
               decoration: BoxDecoration(
                 color: anyDetectionActive ? Colors.green.shade50 : Colors.grey.shade50,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(ZaiNeRadius.small),
               ),
               child: Column(
                 children: [
                   // Apple Watch 状态
+                  // 【v1.94.0】修复：配对即视为可用（WCSession 后台也能接收跌倒数据），
+                  // isReachable 仅表示 Watch App 是否在前台，不作为检测能力判定
                   _buildDetectionStatusRow(
                     icon: Icons.watch,
                     label: 'Apple Watch 跌倒检测',
                     status: hasWatch
-                        ? (watchReachable ? '已连接 · 精准检测' : '已配对')
+                        ? (watchReachable ? '已连接 · 精准检测' : '已配对 · 后台守护中')
                         : '未连接',
-                    active: hasWatch && watchReachable,
+                    active: hasWatch,
                   ),
                   const SizedBox(height: 8),
                   const Divider(height: 1),
@@ -981,10 +1081,10 @@ class FallDetectionCard extends StatelessWidget {
             // 跌倒事件 / 功能说明
             if (hasEvents) ...[
               Container(
-                padding: const EdgeInsets.all(14),
+                padding: const EdgeInsets.all(ZaiNeSpacing.cardSm),
                 decoration: BoxDecoration(
                   color: Colors.orange.shade50,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(ZaiNeRadius.small),
                   boxShadow: ZaiNeShadows.card,
                 ),
                 child: Column(
@@ -1013,10 +1113,10 @@ class FallDetectionCard extends StatelessWidget {
               ),
             ] else ...[
               Container(
-                padding: const EdgeInsets.all(14),
+                padding: const EdgeInsets.all(ZaiNeSpacing.cardSm),
                 decoration: BoxDecoration(
                   color: Colors.grey.shade50,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(ZaiNeRadius.small),
                   boxShadow: ZaiNeShadows.card,
                 ),
                 child: const Row(
@@ -1039,7 +1139,7 @@ class FallDetectionCard extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
                 color: Colors.grey.shade50,
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(ZaiNeRadius.button),
               ),
               child: Row(
                 children: [
@@ -1067,7 +1167,7 @@ class FallDetectionCard extends StatelessWidget {
                       foregroundColor: Colors.orange.shade700,
                       side: BorderSide(color: Colors.orange.shade200),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(ZaiNeRadius.input),
                       ),
                     ),
                   ),
@@ -1092,7 +1192,7 @@ class FallDetectionCard extends StatelessWidget {
                             : Colors.blue.shade200,
                       ),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(ZaiNeRadius.input),
                       ),
                     ),
                   ),
@@ -1107,7 +1207,7 @@ class FallDetectionCard extends StatelessWidget {
 
   String _getStatusText(bool hasWatch, bool phoneEnabled) {
     if (hasWatch && watchReachable) return 'Apple Watch 精准检测中';
-    if (hasWatch) return 'Apple Watch 已配对';
+    if (hasWatch) return 'Apple Watch 已配对 · 后台守护中';
     if (phoneEnabled) return '手机端检测中 · 简化版';
     return '需要 Apple Watch 或开启手机端检测';
   }
@@ -1161,10 +1261,10 @@ class FallDetectionCard extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(top: 8),
       child: Container(
-        padding: const EdgeInsets.all(10),
+        padding: const EdgeInsets.all(ZaiNeSpacing.cardXs),
         decoration: BoxDecoration(
           color: event.acknowledged ? Colors.green.shade50 : Colors.white,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(ZaiNeRadius.button),
           border: Border.all(
             color: event.acknowledged ? Colors.green.shade100 : Colors.orange.shade100,
           ),
@@ -1189,7 +1289,7 @@ class FallDetectionCard extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
                     color: isPhoneEvent ? Colors.blue.shade50 : Colors.purple.shade50,
-                    borderRadius: BorderRadius.circular(4),
+                    borderRadius: BorderRadius.circular(ZaiNeRadius.tag),
                   ),
                   child: Text(
                     isPhoneEvent ? '手机端' : 'Watch',
@@ -1238,7 +1338,7 @@ class FallDetectionCard extends StatelessWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.card)),
         title: const Row(
           children: [
             Icon(Icons.health_and_safety, color: Colors.orange, size: 24),
@@ -1367,11 +1467,11 @@ class _GeoFenceCardState extends State<GeoFenceCard> {
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(ZaiNeRadius.card),
         side: BorderSide(color: ZaiNeColors.borderColor()),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(ZaiNeSpacing.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -1379,10 +1479,10 @@ class _GeoFenceCardState extends State<GeoFenceCard> {
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(10),
+                  padding: const EdgeInsets.all(ZaiNeSpacing.cardXs),
                   decoration: BoxDecoration(
                     color: _fences.isEmpty ? Colors.grey.shade100 : Colors.purple.shade50,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(ZaiNeRadius.small),
                     boxShadow: ZaiNeShadows.card,
                   ),
                   child: Icon(
@@ -1412,7 +1512,7 @@ class _GeoFenceCardState extends State<GeoFenceCard> {
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
                       color: Colors.orange.shade100,
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(ZaiNeRadius.input),
                     ),
                     child: Text(
                       '$outsideCount 已离开',
@@ -1434,7 +1534,7 @@ class _GeoFenceCardState extends State<GeoFenceCard> {
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
                   color: Colors.purple.shade50,
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(ZaiNeRadius.button),
                 ),
                 child: Row(
                   children: [
@@ -1478,7 +1578,7 @@ class _GeoFenceCardState extends State<GeoFenceCard> {
                     color: _fences.isEmpty ? Colors.blue.shade300 : Colors.purple.shade200,
                   ),
                   padding: const EdgeInsets.symmetric(vertical: 10),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.input)),
                 ),
               ),
             ),
@@ -1496,7 +1596,7 @@ class _GeoFenceCardState extends State<GeoFenceCard> {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           color: isInside ? Colors.green.shade50 : Colors.orange.shade50,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(ZaiNeRadius.input),
         ),
         child: Row(
           children: [

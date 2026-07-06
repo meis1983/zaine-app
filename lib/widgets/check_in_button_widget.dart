@@ -104,7 +104,7 @@ class CheckInButtonWidget extends StatelessWidget {
                       height: 10,
                       decoration: BoxDecoration(
                         color: Colors.white.withValues(alpha: 0.3),
-                        borderRadius: BorderRadius.circular(4),
+                        borderRadius: BorderRadius.circular(ZaiNeRadius.tag),
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -113,7 +113,7 @@ class CheckInButtonWidget extends StatelessWidget {
                       height: 10,
                       decoration: BoxDecoration(
                         color: Colors.white.withValues(alpha: 0.4),
-                        borderRadius: BorderRadius.circular(4),
+                        borderRadius: BorderRadius.circular(ZaiNeRadius.tag),
                       ),
                     ),
                   ] else if (continuousDays >= 1) ...[

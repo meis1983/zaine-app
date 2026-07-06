@@ -61,8 +61,20 @@ class DeepLinkService {
   ///   - https://zaine.love/landing/abc123xyz → 保存 card_code（守护卡邀请）
   ///   - https://zaine.love/i/c13126917574 → 保存 invite_phone（紧急联系人邀请）[v1.76.0]
   ///   - zaine://download?token=xxx&phone=xxx → 保存静默登录凭证
+  ///   - zaine://redeem?code=XXX → 保存 card_code（守护卡邀请，App Scheme）[v1.93.5 新增]
   static Future<void> _handleLink(Uri uri) async {
     final path = uri.path;
+
+    // 【v1.93.5 新增】处理 zaine://redeem?code=XXX（守护卡 App Scheme）
+    if (uri.scheme == 'zaine' && uri.host == 'redeem') {
+      final code = uri.queryParameters['code'];
+      if (code != null && code.isNotEmpty) {
+        if (kDebugMode) debugPrint('[DeepLink] 发现守护卡 Scheme 链接: code=$code');
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(_pendingCardKey, code.trim());
+        return;
+      }
+    }
 
     // [v1.76.0] 紧急联系人邀请链接：/i/c{phone}
     if (path.startsWith('/i/c') && path.length > 4) {

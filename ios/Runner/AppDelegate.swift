@@ -34,6 +34,7 @@ import HealthKit
     // 注册 MethodChannel 需要在 Flutter 引擎可用后执行
     DispatchQueue.main.async {
         self.setupHealthKitMethodChannel()
+        self.setupWatchMethodChannel()
     }
     
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
@@ -67,6 +68,49 @@ import HealthKit
     }
   }
   
+  // MARK: - Watch Method Channel（v1.94.0）
+  /// 接收 Flutter 回包的 Watch 签到结果，转发给 Apple Watch
+  private func setupWatchMethodChannel() {
+    guard let controller = window?.rootViewController as? FlutterViewController else {
+      print("[AppDelegate] 无法获取 FlutterViewController，Watch MethodChannel 注册失败")
+      return
+    }
+    let channel = FlutterMethodChannel(name: "zaine/watch", binaryMessenger: controller.binaryMessenger)
+    channel.setMethodCallHandler { [weak self] call, result in
+      guard let self = self else {
+        result(FlutterError(code: "UNAVAILABLE", message: "AppDelegate released", details: nil))
+        return
+      }
+      switch call.method {
+      case "ackWatchCheckin":
+        if let args = call.arguments as? [String: Any] {
+          self.sendWatchAck(args: args)
+        }
+        result(nil)
+      default:
+        result(FlutterMethodNotImplemented)
+      }
+    }
+    print("[AppDelegate] ✅ Watch MethodChannel (zaine/watch) 已注册，可接收 ackWatchCheckin")
+  }
+
+  /// 把签到成功结果(streak/total)通过 transferUserInfo 回包给 Apple Watch
+  private func sendWatchAck(args: [String: Any]) {
+    guard WCSession.default.activationState == .activated else {
+      print("[AppDelegate] ⚠️ WCSession 未激活，无法回包 Watch")
+      return
+    }
+    WCSession.default.transferUserInfo([
+      "action": "checkin_ack",
+      "client_id": args["client_id"] ?? "",
+      "success": args["success"] ?? true,
+      "already_done": args["already_done"] ?? false,
+      "streak": args["streak"] ?? 0,
+      "total": args["total"] ?? 0,
+    ])
+    print("[AppDelegate] 📤 已回包 Watch 签到结果: client_id=\(args["client_id"] ?? ""), streak=\(args["streak"] ?? 0)")
+  }
+
   private func requestFallDetectionAuthorization(result: @escaping FlutterResult) {
     guard let healthStore = healthStore else {
         result(false)
@@ -149,6 +193,7 @@ import HealthKit
       case "checkin", "auto_checkin":
           // 【感应签到】Watch 自动检测到心率后触发的签到
           let isAutoCheckin = action == "auto_checkin"
+          let clientId = message["client_id"] as? String
           if isAutoCheckin {
               print("[AppDelegate] 💓 收到 Watch 感应签到请求（心率: \(message["heart_rate"] ?? "unknown")）")
           }
@@ -161,7 +206,8 @@ import HealthKit
           }
           
           // 【修复 v1.91.0】立即通知 Flutter 执行签到（不再只设 flag 等待被动触发）
-          self.notifyFlutterWatchCheckin()
+          // 【P0】手动签到 fromWatch=true；自动心率签到 fromHeartbeat=true（手机端区别展示，不打断用户）
+          self.notifyFlutterWatchCheckin(clientId: clientId, heartRate: message["heart_rate"], fromHeartbeat: isAutoCheckin)
           replyHandler(["success": true])
 
       case "sos":
@@ -183,7 +229,9 @@ import HealthKit
   }
 
   /// 【v1.91.0】通知 Flutter 端执行 Watch 签到
-  private func notifyFlutterWatchCheckin() {
+  /// [clientId] 本次签到的唯一 ID，用于把成功回包精准送回对应的 Watch
+  /// [fromHeartbeat] true=Watch 自动心率签到（手机端区别展示，不打断用户）；false=手动点击签到
+  private func notifyFlutterWatchCheckin(clientId: String?, heartRate: Any? = nil, fromHeartbeat: Bool = false) {
       // 确保在主线程调用
       DispatchQueue.main.async {
           guard let controller = self.window?.rootViewController as? FlutterViewController else {
@@ -191,12 +239,22 @@ import HealthKit
               return
           }
           let channel = FlutterMethodChannel(name: "zaine/watch", binaryMessenger: controller.binaryMessenger)
-          channel.invokeMethod("watchCheckin", arguments: nil) { result in
+          var arguments: [String: Any] = [:]
+          arguments["fromWatch"] = !fromHeartbeat
+          arguments["fromHeartbeat"] = fromHeartbeat
+          if let clientId = clientId {
+              arguments["client_id"] = clientId
+          }
+          if let heartRate = heartRate {
+              arguments["heart_rate"] = heartRate
+          }
+          channel.invokeMethod("watchCheckin", arguments: arguments) { result in
               DispatchQueue.main.async {
                   if let error = result as? FlutterError {
                       print("[AppDelegate] Watch 签到 Flutter 回调失败: \(error.message ?? "unknown")")
                   } else {
-                      print("[AppDelegate] ✅ Watch 签到已通知 Flutter 侧")
+                      let tag = fromHeartbeat ? "心跳自动" : "手动"
+                      print("[AppDelegate] ✅ Watch \(tag)签到已通知 Flutter 侧 (clientId=\(clientId ?? ""))")
                   }
               }
           }
@@ -270,6 +328,7 @@ import HealthKit
       switch action {
       case "checkin", "auto_checkin":
           let isAutoCheckin = action == "auto_checkin"
+          let clientId = userInfo["client_id"] as? String
           UserDefaults.standard.set(true, forKey: "pending_watch_checkin")
           UserDefaults.standard.set(action, forKey: "watch_last_action")
           UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: "watch_last_action_ts")
@@ -278,7 +337,7 @@ import HealthKit
                   UserDefaults.standard.set(hr, forKey: "watch_auto_checkin_hr")
               }
           }
-          self.notifyFlutterWatchCheckin()
+          self.notifyFlutterWatchCheckin(clientId: clientId, heartRate: userInfo["heart_rate"], fromHeartbeat: isAutoCheckin)
 
       case "sos":
           UserDefaults.standard.set(true, forKey: "pending_watch_sos")

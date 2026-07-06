@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../theme/theme_helper.dart';
 import '../pages/promotional_showcase_page.dart'; // 新增
 import 'checkin_milestone_dialog.dart';
 import '../services/api_service.dart';
@@ -76,7 +77,7 @@ mixin DeveloperMode<T extends StatefulWidget> on State<T> {
                     width: 40, height: 4,
                     decoration: BoxDecoration(
                       color: Colors.grey[300],
-                      borderRadius: BorderRadius.circular(2),
+                      borderRadius: BorderRadius.circular(ZaiNeRadius.tiny),
                     ),
                   ),
                 ),
@@ -97,7 +98,7 @@ mixin DeveloperMode<T extends StatefulWidget> on State<T> {
                 ListTile(
                   leading: Container(
                     width: 40, height: 40,
-                    decoration: BoxDecoration(color: Colors.purple.shade50, borderRadius: BorderRadius.circular(10)),
+                    decoration: BoxDecoration(color: Colors.purple.shade50, borderRadius: BorderRadius.circular(ZaiNeRadius.input)),
                     child: Icon(Icons.videocam_rounded, color: Colors.purple.shade700, size: 20),
                   ),
                   title: const Text('3D 宣传录制模式', style: TextStyle(fontWeight: FontWeight.w600)),

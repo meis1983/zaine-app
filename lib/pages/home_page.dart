@@ -81,6 +81,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     );
     // 【v1.93.1 修复】监听 Watch 签到完成信号，刷新签到 UI
     HealthService.watchCheckinCompleteSignal.addListener(_onWatchCheckinComplete);
+    // 【v1.94.0 新增】监听 Watch 签到酷炫确认横幅
+    HealthService.watchCheckinCelebration.addListener(_onWatchCheckinCelebration);
     _initialize();
   }
 
@@ -89,6 +91,71 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     if (!mounted) return;
     if (kDebugMode) debugPrint('[HomePage] 🔔 收到 Watch 签到完成信号，刷新签到 UI');
     _loadCheckInStatus();
+  }
+
+  /// 【v1.94.0 新增】Watch / 心跳签到成功时弹出酷炫确认横幅
+  void _onWatchCheckinCelebration() {
+    if (!mounted) return;
+    final data = HealthService.watchCheckinCelebration.value;
+    if (data.isEmpty || data['success'] != true) return;
+    final streak = data['streak'] as int? ?? 0;
+    final total = data['total'] as int? ?? 0;
+    final source = data['source'] as String? ?? 'watch';
+    if (kDebugMode) debugPrint('[HomePage] 🔔 签到酷炫确认: source=$source, streak=$streak, total=$total');
+    final isWatch = source == 'watch';
+    final isHeartbeat = source == 'heartbeat';
+    final title = isHeartbeat
+        ? '💓 手表检测到你，已自动打卡'
+        : (isWatch ? '⌚ Apple Watch 签到成功' : '签到成功');
+    final subtitle = isHeartbeat
+        ? '零操作守护 · 连续 $streak 天'
+        : '🔥 连续 $streak 天 · 累计 $total 天';
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        duration: const Duration(seconds: 3),
+        content: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: isHeartbeat
+                  ? [const Color(0xFFF857A6), const Color(0xFFFF5858)]
+                  : [const Color(0xFF11998E), const Color(0xFF38EF7D)],
+            ),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            children: [
+              Text(isHeartbeat ? '💓' : (isWatch ? '⌚' : '✅'), style: const TextStyle(fontSize: 22)),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(color: Colors.white70, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   /// 【修复 v1.9.77】串行初始化，避免 _loadCheckInStatus 执行时 _isLoggedIn 仍为 false
@@ -107,6 +174,19 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       }
       // 拉取完成后重新加载本地缓存数据到 UI
       await _loadCheckInStatus();
+
+      // 【P0 修复 v1.93.9】同步离线签到队列（断网时签到会保存到离线队列）
+      try {
+        if (kDebugMode) debugPrint('[HomePage] 开始同步离线签到队列...');
+        final syncedCount = await CheckinService.syncOfflineQueue();
+        if (syncedCount > 0) {
+          if (kDebugMode) debugPrint('[HomePage] ✅ 离线队列同步完成，成功=$syncedCount');
+          // 同步成功后，重新加载签到状态（获取最新的连续天数）
+          await _loadCheckInStatus();
+        }
+      } catch (e) {
+        if (kDebugMode) debugPrint('[HomePage] ⚠️ 同步离线队列失败: $e');
+      }
     }
     
     await _loadPendingPeaceRequests();
@@ -225,6 +305,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     WidgetsBinding.instance.removeObserver(this);
     _animationController.dispose();
     HealthService.watchCheckinCompleteSignal.removeListener(_onWatchCheckinComplete);
+    HealthService.watchCheckinCelebration.removeListener(_onWatchCheckinCelebration);
     super.dispose();
   }
 
@@ -296,18 +377,18 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       if (lastDate != null) {
         try { lastCheckIn = DateTime.parse(lastDate); } catch (_) {}
       }
-      // 读取守护人数量（与 contacts_page.dart 保持一致的 key 规则）
-      int guardianCount = 0;
-      String? phone;
-      final contactsKey = (userId != null && userId.isNotEmpty)
-          ? 'emergency_contacts_$userId'
-          : 'emergency_contacts';
-      final contactsJson = prefs.getString(contactsKey);
-      if (contactsJson != null && contactsJson.isNotEmpty) {
-        final contacts = jsonDecode(contactsJson) as List<dynamic>?;
-        guardianCount = contacts?.length ?? 0;
-      }
-      phone = await AuthService.getUserPhone();
+      // TODO: 后续可用于显示守护人数量
+      // int guardianCount = 0;
+      // String? phone;
+      // final contactsKey = (userId != null && userId.isNotEmpty)
+      //     ? 'emergency_contacts_$userId'
+      //     : 'emergency_contacts';
+      // final contactsJson = prefs.getString(contactsKey);
+      // if (contactsJson != null && contactsJson.isNotEmpty) {
+      //   final contacts = jsonDecode(contactsJson) as List<dynamic>?;
+      //   guardianCount = contacts?.length ?? 0;
+      // }
+      // phone = await AuthService.getUserPhone();
     } catch (_) {}
 
     setState(() {
@@ -390,23 +471,77 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       if (hasLocalCache) _isCheckinDataReady = true;
     });
 
-    // 同步服务器获取断签天数和签到状态（覆盖本地状态，确保准确性）
+        // 同步服务器获取断签天数和签到状态（覆盖本地状态，确保准确性）
     if (_isLoggedIn) {
       try {
         final res = await CheckinService.getTodayStatus();
         if (res['success'] == true && mounted) {
-          // 【修复 v1.93.2】先计算本地兜底值（异步不能在 setState 里执行）
+          // 【P0 修复 v1.93.10】后端 streak 不可信时，强制从服务器拉取完整签到历史，再计算连续天数
           final serverStreak = res['streak'];
           int? localStreak;
-          if (serverStreak == null || (serverStreak as int) <= 0) {
+          // 重新获取 uid 并构建 key（因为 streakKey 在 setState 内部定义，这里需要重新构建）
+          final currentUid = (await AuthService.getUserId()) ?? '';
+          final streakKey2 = currentUid.isNotEmpty ? 'continuous_days_$currentUid' : 'continuous_days';
+          final localStreakCache = prefs.getInt(streakKey2) ?? 0;
+
+          // 【关键修复】只要后端 streak 为 0 或本地缓存为 0，都从服务器重新计算
+          if (serverStreak == null || (serverStreak as int) <= 0 || localStreakCache <= 0) {
+            if (kDebugMode) {
+              debugPrint('=' * 60);
+              debugPrint('[HomePage] 🔍 开始重新计算连续签到天数');
+              debugPrint('  [后端返回] streak=$serverStreak');
+              debugPrint('  [本地缓存] streak=$localStreakCache');
+              debugPrint('  [原因] 后端或本地 streak 为 0，需要从服务器拉取签到历史重新计算');
+            }
+
+            // 从服务器拉取完整签到历史（最多 365 天）
+            try {
+              if (kDebugMode) debugPrint('[HomePage] 📡 调用 getHistory(page=1, pageSize=365)...');
+              final historyRes = await CheckinService.getHistory(page: 1, pageSize: 365);
+              if (kDebugMode) {
+                debugPrint('[HomePage] 📥 getHistory 响应:');
+                debugPrint('  [success] ${historyRes['success']}');
+                debugPrint('  [history] 类型=${historyRes['history']?.runtimeType}, 长度=${historyRes['history'] is List ? (historyRes['history'] as List).length : 'N/A'}');
+                if (historyRes['history'] is List && (historyRes['history'] as List).isNotEmpty) {
+                  debugPrint('  [history 前3条] ${(historyRes['history'] as List).take(3).toList()}');
+                }
+              }
+              if (historyRes['success'] == true && historyRes['history'] != null) {
+                final history = historyRes['history'] as List<dynamic>;
+                if (kDebugMode) debugPrint('[HomePage] ✅ 已拉取服务器签到历史 ${history.length} 条');
+
+                // 解析日期并保存到本地
+                final dateStrings = <String>[];
+                for (final item in history) {
+                  if (item is Map && item['date'] != null) {
+                    dateStrings.add(item['date'].toString());
+                  }
+                }
+
+                // 保存到本地（用户隔离 key）
+                final uid = (await AuthService.getUserId()) ?? '';
+                final historyKey = uid.isNotEmpty ? 'checkin_history_$uid' : 'checkin_history';
+                await prefs.setStringList(historyKey, dateStrings);
+
+                if (kDebugMode) debugPrint('[HomePage] ✅ 已保存签到历史到本地: ${dateStrings.length} 条');
+              } else {
+                if (kDebugMode) debugPrint('[HomePage] ⚠️ 服务器签到历史返回失败: $historyRes');
+              }
+            } catch (e) {
+              if (kDebugMode) debugPrint('[HomePage] ⚠️ 拉取签到历史失败: $e');
+            }
+
+            // 现在本地有了完整的签到历史，重新计算
             localStreak = await _calculateStreakFromHistory();
             if (localStreak > 0) {
-              // 修正本地缓存中被错误写入的 0
-              await prefs.setInt(
-                uid.isNotEmpty ? 'continuous_days_$uid' : 'continuous_days',
-                localStreak,
-              );
+              // 修正本地缓存
+              await prefs.setInt(streakKey2, localStreak);
+              if (kDebugMode) debugPrint('[HomePage] ✅ 重新计算出连续天数=$localStreak，已修正本地缓存');
+            } else {
+              if (kDebugMode) debugPrint('[HomePage] ⚠️ 重新计算后 streak 仍为 0，可能确实没有连续签到');
             }
+
+            if (kDebugMode) debugPrint('=' * 60);
           }
 
           if (mounted) {
@@ -414,8 +549,14 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
               _totalDays = res['total_days'] ?? _totalDays;
               // 【P0】优先使用服务端 streak，确保签到圆圈正确显示
               // 【修复 v1.93.2】服务器 streak 不可信时，从本地签到历史重新计算
+              if (kDebugMode) {
+                debugPrint('[HomePage] 📊 签到状态处理结果：');
+                debugPrint('  [服务器 streak] $serverStreak');
+                debugPrint('  [本地重新计算 streak] $localStreak');
+                debugPrint('  [最终使用 streak] ${((serverStreak != null && (serverStreak as int) > 0) ? serverStreak : (localStreak ?? 0))}');
+              }
               if (serverStreak != null && (serverStreak as int) > 0) {
-                _continuousDays = serverStreak as int;
+                _continuousDays = serverStreak;
               } else if (localStreak != null && localStreak > 0) {
                 _continuousDays = localStreak;
               }
@@ -697,10 +838,19 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         }
       } catch (e) {
         if (kDebugMode) debugPrint('[HomePage] 签到同步异常（已本地保存）: $e');
+        
+        // 【P0 修复 v1.93.9】签到失败时保存到离线队列
+        try {
+          await CheckinService.saveToOfflineQueue(date: today, mood: -1);
+          if (kDebugMode) debugPrint('[HomePage] ✅ 签到请求已保存到离线队列');
+        } catch (queueError) {
+          if (kDebugMode) debugPrint('[HomePage] ⚠️ 保存离线队列失败: $queueError');
+        }
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('签到已记录，网络异常暂未同步到云端'),
+              content: Text('签到已记录，已保存到离线队列，联网后自动同步 ☁️'),
               backgroundColor: Colors.orange,
               duration: Duration(seconds: 3),
               behavior: SnackBarBehavior.floating,
@@ -778,10 +928,10 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.pill)),
         title: const Row(
           children: [
-            Icon(Icons.login, color: Color(0xFFFF7F50)),
+            Icon(Icons.login, color: ZaiNeColors.brandOrange),
             SizedBox(width: ZaiNeSpacing.sm),
             Text('请先完善信息'),
           ],
@@ -800,7 +950,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
               _openProfile();
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFFF7F50),
+              backgroundColor: ZaiNeColors.brandOrange,
             ),
             child: const Text('去填写'),
           ),
@@ -959,7 +1109,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                         begin: Alignment.centerLeft,
                         end: Alignment.centerRight,
                       ),
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(ZaiNeRadius.card),
                       boxShadow: [
                         BoxShadow(
                           color: const Color(0xFFFF6B35).withValues(alpha: 0.3),
@@ -990,7 +1140,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                           padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.sm, vertical: ZaiNeSpacing.xs),
                           decoration: BoxDecoration(
                             color: Colors.white.withValues(alpha: 0.25),
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: BorderRadius.circular(ZaiNeRadius.input),
                           ),
                           child: const Text(
                             '解锁全部功能',
@@ -1031,7 +1181,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     // 【P2修复 v1.9.83】使用缓存的 SharedPreferences 实例，避免重复IO
     if (_prefs == null) {
       return const Center(child: Padding(
-        padding: EdgeInsets.all(20),
+        padding: EdgeInsets.all(ZaiNeSpacing.section),
         child: CircularProgressIndicator(strokeWidth: 2),
       ));
     }
@@ -1061,10 +1211,10 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         }
 
         return Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(ZaiNeSpacing.lg),
           decoration: BoxDecoration(
             color: ZaiNeColors.cardBg(),
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(ZaiNeRadius.card),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.03),
@@ -1093,26 +1243,30 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                             : null,
                       ),
                       const SizedBox(width: ZaiNeSpacing.xs),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '${targetDate.year}年${targetDate.month}月',
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
-                              color: ZaiNeColors.textPrimary(),
+                      // 月份标题（可点击，弹出月份选择器）
+                      GestureDetector(
+                        onTap: _showMonthPicker,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '${targetDate.year}年${targetDate.month}月',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                color: ZaiNeColors.textPrimary(),
+                              ),
                             ),
-                          ),
-                          Text(
-                            '$monthCheckInCount/$daysInMonth 天已签',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: Colors.teal.shade700,
-                              fontWeight: FontWeight.w500,
+                            Text(
+                              '$monthCheckInCount/$daysInMonth 天已签',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.teal.shade700,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                       const SizedBox(width: ZaiNeSpacing.xs),
                       // 下个月按钮
@@ -1127,25 +1281,54 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                       ),
                     ],
                   ),
-                  // 回到今天按钮
-                  if (_calendarMonthOffset != 0)
-                    GestureDetector(
-                      onTap: () => setState(() => _calendarMonthOffset = 0),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.md, vertical: ZaiNeSpacing.xs),
-                        decoration: BoxDecoration(
-                          color: Colors.teal.shade50,
-                          borderRadius: BorderRadius.circular(10),
+                  // 右侧按钮组
+                  Row(
+                    children: [
+                      // 今天按钮（快速跳转到今天）
+                      if (!_isTodayInCurrentMonth())
+                        GestureDetector(
+                          onTap: _jumpToToday,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.sm, vertical: ZaiNeSpacing.xs),
+                            decoration: BoxDecoration(
+                              color: ZaiNeColors.brandOrange.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(ZaiNeRadius.input),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.today, size: 14, color: ZaiNeColors.brandOrange),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '今天',
+                                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600,
+                                      color: ZaiNeColors.brandOrange),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
-                        child: Text(
-                          '今月',
-                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600,
-                              color: Colors.teal.shade700),
+                      // 今月按钮（回到当月）
+                      if (_calendarMonthOffset != 0) ...[
+                        if (!_isTodayInCurrentMonth()) const SizedBox(width: ZaiNeSpacing.xs),
+                        GestureDetector(
+                          onTap: () => setState(() => _calendarMonthOffset = 0),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.md, vertical: ZaiNeSpacing.xs),
+                            decoration: BoxDecoration(
+                              color: Colors.teal.shade50,
+                              borderRadius: BorderRadius.circular(ZaiNeRadius.input),
+                            ),
+                            child: Text(
+                              '今月',
+                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600,
+                                  color: Colors.teal.shade700),
+                            ),
+                          ),
                         ),
-                      ),
-                    )
-                  else
-                    const SizedBox.shrink(),
+                      ],
+                    ],
+                  ),
                 ],
               ),
               const SizedBox(height: ZaiNeSpacing.lg),
@@ -1239,9 +1422,9 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                   child: Container(
                     decoration: BoxDecoration(
                       color: _getHeatmapColor(isCheckedIn),
-                      borderRadius: BorderRadius.circular(5),
+                      borderRadius: BorderRadius.circular(ZaiNeRadius.button),
                       border: isToday
-                          ? Border.all(color: const Color(0xFFFF7F50), width: 1.5)
+                          ? Border.all(color: ZaiNeColors.brandOrange, width: 1.5)
                           : null,
                     ),
                     child: Center(
@@ -1281,6 +1464,117 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     return rows;
   }
 
+  /// 检查今天是否在当前显示的月份中
+  bool _isTodayInCurrentMonth() {
+    final now = DateTime.now();
+    final targetDate = DateTime(now.year, now.month + _calendarMonthOffset);
+    return targetDate.year == now.year && targetDate.month == now.month;
+  }
+
+  /// 跳转到今天所在的月份
+  void _jumpToToday() {
+    setState(() {
+      _calendarMonthOffset = 0;
+    });
+  }
+
+  /// 显示月份选择器
+  Future<void> _showMonthPicker() async {
+    final now = DateTime.now();
+    int selectedYear = now.year + (_calendarMonthOffset > 0 ? 1 : 0);
+    int selectedMonth = now.month + _calendarMonthOffset;
+    
+    // 修正年份和月份
+    while (selectedMonth > 12) {
+      selectedMonth -= 12;
+      selectedYear++;
+    }
+    while (selectedMonth < 1) {
+      selectedMonth += 12;
+      selectedYear--;
+    }
+
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('选择月份', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 年份选择
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.remove),
+                    onPressed: selectedYear > now.year - 2
+                        ? () => setDialogState(() => selectedYear--)
+                        : null,
+                  ),
+                  Text('$selectedYear年', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                  IconButton(
+                    icon: const Icon(Icons.add),
+                    onPressed: selectedYear < now.year + 1
+                        ? () => setDialogState(() => selectedYear++)
+                        : null,
+                  ),
+                ],
+              ),
+              const SizedBox(height: ZaiNeSpacing.md),
+              // 月份选择网格
+              GridView.count(
+                shrinkWrap: true,
+                crossAxisCount: 3,
+                childAspectRatio: 1.5,
+                children: List.generate(12, (index) {
+                  final month = index + 1;
+                  final isSelected = month == selectedMonth && selectedYear == now.year + (_calendarMonthOffset > 0 ? 1 : 0)
+                      ? (now.month + _calendarMonthOffset == month)
+                      : false;
+                  final isCurrentMonth = month == now.month && selectedYear == now.year;
+                  
+                  return GestureDetector(
+                    onTap: () {
+                      Navigator.pop(context);
+                      final newOffset = (selectedYear - now.year) * 12 + month - now.month;
+                      setState(() => _calendarMonthOffset = newOffset);
+                    },
+                    child: Container(
+                      margin: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? ZaiNeColors.brandOrange
+                            : (isCurrentMonth ? ZaiNeColors.brandOrange.withValues(alpha: 0.1) : Colors.transparent),
+                        borderRadius: BorderRadius.circular(ZaiNeRadius.button),
+                      ),
+                      child: Center(
+                        child: Text(
+                          '$month月',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: isSelected || isCurrentMonth ? FontWeight.w600 : FontWeight.normal,
+                            color: isSelected ? Colors.white : ZaiNeColors.textPrimary(),
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                }),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('取消'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Color? _getHeatmapColor(bool isCheckedIn) {
     if (!isCheckedIn) return null; // 透明/无背景
     // 简单的绿色深浅——后续可按连续天数做渐变
@@ -1290,7 +1584,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   Widget _buildLegendItem(String text, Color color) {
     return Row(mainAxisSize: MainAxisSize.min, children: [
       Container(width: 10, height: 10, decoration: BoxDecoration(
-        color: color, borderRadius: BorderRadius.circular(2))),
+        color: color, borderRadius: BorderRadius.circular(ZaiNeRadius.tiny))),
       const SizedBox(width: ZaiNeSpacing.xs),
       Text(text, style: TextStyle(fontSize: 10, color: themeNotifier.mode == ZaiNeThemeMode.dark ? Colors.grey[400] : Colors.grey[500])),
       const SizedBox(width: ZaiNeSpacing.sm),
@@ -1301,7 +1595,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     return Container(
       width: 10, height: 10,
       margin: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.xs),
-      decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2)),
+      decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(ZaiNeRadius.tiny)),
     );
   }
 

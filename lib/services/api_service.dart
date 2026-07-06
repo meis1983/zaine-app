@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../data/app_constants.dart';
+import 'security/cert_pinner.dart' as security;
 
 /// 安全存储实例（用于 Token）
 const _secureStorage = FlutterSecureStorage(
@@ -18,11 +19,23 @@ const _secureStorage = FlutterSecureStorage(
 
 class ApiService {
   static final String _baseUrl = AppConstants.backendBaseUrl;
+
+  /// 带证书锁定的 HTTP Client（单例）
+  /// 【P1 安全加固 v1.93.8】所有请求经过证书锁定验证
+  static final http.Client _pinnedClient = security.createPinnedClient();
   // 阿里云FC冷启动约3-4秒，弱网环境下需预留更多缓冲
-  static const Duration _timeout = Duration(seconds: 8);
+  // 【优化 v1.93.8】超时从 8s 增加到 15s，适配弱网和冷启动场景
+  static const Duration _timeout = Duration(seconds: 15);
   // 冷启动最多额外重试 2 次（间隔 2s、4s），总计最多 3 次尝试
   static const int _maxRetries = 2;
-  static const Duration _retryDelay = Duration(seconds: 2);
+  // 【优化 v1.93.8】指数退避：2s, 4s → 改为 1.5s, 3s（减少总等待时间）
+  static const Duration _retryBaseDelay = Duration(milliseconds: 1500);
+
+  /// 计算第 N 次重试的延迟（指数退避）
+  /// attempt=0 → 1.5s, attempt=1 → 3s
+  static Duration _retryDelayFor(int attempt) {
+    return _retryBaseDelay * (attempt + 1);
+  }
 
   /// 带冷启动自动重试的请求执行器
   /// 仅在超时/网络类错误时重试，HTTP 4xx/5xx 业务错误不重试
@@ -34,10 +47,8 @@ class ApiService {
     Exception? lastException;
     for (int attempt = 0; attempt <= _maxRetries; attempt++) {
       try {
-        if (attempt > 0) {
-          if (kDebugMode) {
-            if (kDebugMode) debugPrint('[ApiService] 🔄 $method $path 第${attempt + 1}次尝试（冷启动重试）...');
-          }
+        if (attempt > 0 && kDebugMode) {
+          debugPrint('[ApiService] 🔄 $method $path 第${attempt + 1}次尝试（冷启动重试）...');
         }
         final result = await request();
         // HTTP 业务错误不重试（4xx/5xx）
@@ -48,20 +59,18 @@ class ApiService {
       } on TimeoutException catch (e) {
         lastException = e;
         if (attempt < _maxRetries) {
-          if (kDebugMode) {
-            if (kDebugMode) debugPrint('[ApiService] ⏳ $method $path 超时，${_retryDelay.inMilliseconds * (attempt + 1)}ms 后重试');
-          }
-          await Future.delayed(_retryDelay * (attempt + 1));
+          final delay = _retryDelayFor(attempt);
+          if (kDebugMode) debugPrint('[ApiService] ⏳ $method $path 超时，${delay.inMilliseconds}ms 后重试');
+          await Future.delayed(delay);
           continue;
         }
         break;
       } on SocketException catch (e) {
         lastException = e;
         if (attempt < _maxRetries) {
-          if (kDebugMode) {
-            if (kDebugMode) debugPrint('[ApiService] 🌐 $method $path 网络连接失败，重试中...');
-          }
-          await Future.delayed(_retryDelay * (attempt + 1));
+          final delay = _retryDelayFor(attempt);
+          if (kDebugMode) debugPrint('[ApiService] 🌐 $method $path 网络连接失败，重试中...');
+          await Future.delayed(delay);
           continue;
         }
         break;
@@ -72,18 +81,15 @@ class ApiService {
             errorStr.contains('deadline exceeded') ||
             errorStr.contains('connection');
         if (isTimeout && attempt < _maxRetries) {
-          if (kDebugMode) {
-            if (kDebugMode) debugPrint('[ApiService] ⏳ $method $path 超时，${_retryDelay.inMilliseconds * (attempt + 1)}ms 后重试');
-          }
-          await Future.delayed(_retryDelay * (attempt + 1));
+          final delay = _retryDelayFor(attempt);
+          if (kDebugMode) debugPrint('[ApiService] ⏳ $method $path 超时，${delay.inMilliseconds}ms 后重试');
+          await Future.delayed(delay);
           continue;
         }
         break;
       }
     }
-    if (kDebugMode) {
-      if (kDebugMode) debugPrint('ApiService $method $path error: $lastException');
-    }
+    if (kDebugMode) debugPrint('[ApiService] $method $path error: $lastException');
     return {'success': false, 'error': lastException.toString(), 'offline': true};
   }
 
@@ -109,7 +115,7 @@ class ApiService {
   static Future<Map<String, dynamic>> get(String path,
       {bool auth = true}) async {
     return _withRetry(() async {
-      final response = await http
+      final response = await _pinnedClient
           .get(
             Uri.parse('$_baseUrl$path'),
             headers: await _headers(auth: auth),
@@ -123,7 +129,7 @@ class ApiService {
   static Future<Map<String, dynamic>> post(String path,
       {Map<String, dynamic>? body, bool auth = true}) async {
     return _withRetry(() async {
-      final response = await http
+      final response = await _pinnedClient
           .post(
             Uri.parse('$_baseUrl$path'),
             headers: await _headers(auth: auth),
@@ -138,7 +144,7 @@ class ApiService {
   static Future<Map<String, dynamic>> put(String path,
       {Map<String, dynamic>? body, bool auth = true}) async {
     return _withRetry(() async {
-      final response = await http
+      final response = await _pinnedClient
           .put(
             Uri.parse('$_baseUrl$path'),
             headers: await _headers(auth: auth),
@@ -183,7 +189,7 @@ class ApiService {
   static Future<Map<String, dynamic>> delete(String path,
       {bool auth = true}) async {
     return _withRetry(() async {
-      final response = await http
+      final response = await _pinnedClient
           .delete(
             Uri.parse('$_baseUrl$path'),
             headers: await _headers(auth: auth),

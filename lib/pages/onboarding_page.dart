@@ -122,7 +122,7 @@ class _LoginPageState extends State<_LoginPage>
                 widget.onBack();
               },
               child: Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(ZaiNeSpacing.sm),
                 decoration: BoxDecoration(
                   color: Colors.grey.shade200.withValues(alpha: 0.6),
                   shape: BoxShape.circle,
@@ -332,11 +332,11 @@ class _LoginPageState extends State<_LoginPage>
                     const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.lg, vertical: ZaiNeSpacing.lg),
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
-                    colors: [Color(0xFFFFF5F0), Color(0xFFFFF0E8)],
+                    colors: [ZaiNeColors.brandOrangeLight, Color(0xFFFFF0E8)],
                   ),
                   borderRadius: BorderRadius.circular(ZaiNeRadius.card),
                   border: Border.all(
-                      color: const Color(0xFFFF7F50).withValues(alpha: 0.2)),
+                      color: ZaiNeColors.brandOrange.withValues(alpha: 0.2)),
                 
                   boxShadow: ZaiNeShadows.card,),
                 child: Row(
@@ -345,12 +345,12 @@ class _LoginPageState extends State<_LoginPage>
                       width: 36,
                       height: 36,
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFF7F50).withValues(alpha: 0.1),
+                        color: ZaiNeColors.brandOrange.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(ZaiNeRadius.small),
                       
                         boxShadow: ZaiNeShadows.card,),
                       child: const Icon(Icons.card_giftcard,
-                          color: Color(0xFFFF7F50), size: 18),
+                          color: ZaiNeColors.brandOrange, size: 18),
                     ),
                     const SizedBox(width: ZaiNeSpacing.md),
                     Expanded(
@@ -368,13 +368,13 @@ class _LoginPageState extends State<_LoginPage>
                           const Text(
                             '输入安全码，一键完成绑定 →',
                             style: TextStyle(
-                                fontSize: ZaiNeFontSize.caption, color: Color(0xFFFF7F50)),
+                                fontSize: ZaiNeFontSize.caption, color: ZaiNeColors.brandOrange),
                           ),
                         ],
                       ),
                     ),
                     const Icon(Icons.chevron_right,
-                        color: Color(0xFFFF7F50), size: 18),
+                        color: ZaiNeColors.brandOrange, size: 18),
                   ],
                 ),
               ),
@@ -447,11 +447,11 @@ class _LoginPageState extends State<_LoginPage>
                           width: 40,
                           height: 40,
                           decoration: BoxDecoration(
-                              color: const Color(0xFFFFF5F0),
+                              color: ZaiNeColors.brandOrangeLight,
                               borderRadius: BorderRadius.circular(ZaiNeRadius.small)
                           ),
                           child: const Icon(Icons.vpn_key,
-                              color: Color(0xFFFF7F50), size: 20),
+                              color: ZaiNeColors.brandOrange, size: 20),
                         ),
                         const SizedBox(width: ZaiNeSpacing.md),
                         const Expanded(
@@ -499,7 +499,7 @@ class _LoginPageState extends State<_LoginPage>
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(ZaiNeRadius.small),
                           borderSide:
-                              const BorderSide(color: Color(0xFFFF7F50)),
+                              const BorderSide(color: ZaiNeColors.brandOrange),
                         ),
                         contentPadding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.lg, vertical: ZaiNeSpacing.lg),
                       ),
@@ -548,14 +548,14 @@ class _LoginPageState extends State<_LoginPage>
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                 content: Text('✅ 安全码已保存，登录后将自动绑定'),
-                                backgroundColor: Color(0xFFFF7F50),
+                                backgroundColor: ZaiNeColors.brandOrange,
                                 behavior: SnackBarBehavior.floating,
                               ),
                             );
                           }
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFFF7F50),
+                          backgroundColor: ZaiNeColors.brandOrange,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: ZaiNeSpacing.lg),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.card)),
@@ -587,8 +587,17 @@ class _LoginPageState extends State<_LoginPage>
         ],
       );
       if (kDebugMode) {
-        debugPrint('[Apple Sign In] identityToken: ${credential.identityToken}');
-        debugPrint('[Apple Sign In] authorizationCode: ${credential.authorizationCode}');
+        // 【v1.93.7 安全修复】避免敏感 token 完整输出到日志
+        final idToken = credential.identityToken;
+        final authCode = credential.authorizationCode;
+        final maskedId = (idToken != null && idToken.isNotEmpty)
+            ? '${idToken.substring(0, idToken.length > 10 ? 10 : idToken.length)}...'
+            : '(empty)';
+        final maskedAuth = (authCode?.isNotEmpty == true)
+            ? '${authCode!.substring(0, authCode.length > 10 ? 10 : authCode.length)}...'
+            : '(empty)';
+        debugPrint('[Apple Sign In] identityToken: $maskedId');
+        debugPrint('[Apple Sign In] authorizationCode: $maskedAuth');
       }
 
       // 【v1.9.78】调用后端接口，用 Apple credential 登录
@@ -685,9 +694,9 @@ class _OnboardingPageState extends State<OnboardingPage> {
           'icon': Icons.people_alt_rounded,
           'iconBg': Colors.orange,
           'gradient': [
-            const Color(0xFFFF7F50),
+            ZaiNeColors.brandOrange,
             const Color(0xFFFFB347),
-            const Color(0xFFFF7F50)
+            ZaiNeColors.brandOrange
           ],
           'title': '添加你的守护者',
           'subtitle': '紧急联系人 = 你的安全网',
@@ -822,7 +831,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
             ),
             const SizedBox(height: ZaiNeSpacing.lg),
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(ZaiNeSpacing.md),
               decoration: BoxDecoration(
                 color: const Color(0xFF11998E).withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(ZaiNeRadius.small),
@@ -919,7 +928,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                               margin: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.xs),
                               decoration: BoxDecoration(
                                 color: isActive
-                                    ? const Color(0xFFFF7F50)
+                                    ? ZaiNeColors.brandOrange
                                     : Colors.grey.shade300,
                                 borderRadius: BorderRadius.circular(ZaiNeRadius.small),
                               
@@ -968,13 +977,13 @@ class _OnboardingPageState extends State<OnboardingPage> {
                                       height: 52,
                                       decoration: BoxDecoration(
                                         gradient: const LinearGradient(colors: [
-                                          Color(0xFFFF7F50),
+                                          ZaiNeColors.brandOrange,
                                           Color(0xFFFFB347)
                                         ]),
                                         shape: BoxShape.circle,
                                         boxShadow: [
                                           BoxShadow(
-                                              color: const Color(0xFFFF7F50)
+                                              color: ZaiNeColors.brandOrange
                                                   .withValues(alpha: 0.35),
                                               blurRadius: 12,
                                               offset: const Offset(0, 4)),
@@ -1088,10 +1097,10 @@ class _OnboardingPageState extends State<OnboardingPage> {
           ],
           const SizedBox(height: ZaiNeSpacing.xl),
           ...((page['desc'] as List).map((item) => Padding(
-                padding: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.only(bottom: ZaiNeSpacing.cardXs),
                 child: Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(ZaiNeSpacing.md),
                   decoration: BoxDecoration(
                     color: ZaiNeColors.cardBg(),
                     borderRadius: BorderRadius.circular(ZaiNeRadius.card),
@@ -1144,7 +1153,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
       onPressed: canLogin ? _quickLogin : null,
       style: ElevatedButton.styleFrom(
         backgroundColor:
-            canLogin ? const Color(0xFFFF7F50) : Colors.grey.shade400,
+            canLogin ? ZaiNeColors.brandOrange : Colors.grey.shade400,
         disabledBackgroundColor: Colors.grey.shade400,
         foregroundColor: Colors.white,
         disabledForegroundColor: Colors.white70,
@@ -1463,10 +1472,10 @@ class _OnboardingPageState extends State<OnboardingPage> {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: const Color(0xFFFF7F50).withValues(alpha: 0.1),
+                color: ZaiNeColors.brandOrange.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.shield_outlined, color: Color(0xFFFF7F50), size: 24),
+              child: const Icon(Icons.shield_outlined, color: ZaiNeColors.brandOrange, size: 24),
             ),
             const SizedBox(width: ZaiNeSpacing.md),
             const Expanded(
@@ -1489,7 +1498,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
             ),
             const SizedBox(height: ZaiNeSpacing.sm),
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(ZaiNeSpacing.md),
               decoration: BoxDecoration(
                 color: ZaiNeColors.cardBg(),
                 borderRadius: BorderRadius.circular(ZaiNeRadius.small),
@@ -1531,7 +1540,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFFF7F50),
+              backgroundColor: ZaiNeColors.brandOrange,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.small)),
               padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.xl, vertical: ZaiNeSpacing.md),

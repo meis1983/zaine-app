@@ -17,6 +17,7 @@ import '../widgets/contact_card_widget.dart';
 
 /// 预设关系选项
 /// 【v1.93.2 修复】增加"自定义..."选项，允许用户自由输入任意关系
+/// 【v1.93.5 修复】增加"守护人"，兼容通过守护卡绑定的联系人默认关系
 const List<String> kRelationOptions = [
   '家人',
   '朋友',
@@ -24,6 +25,7 @@ const List<String> kRelationOptions = [
   '父母',
   '配偶',
   '子女',
+  '守护人',
   '其他',
   '自定义...',
 ];
@@ -356,10 +358,10 @@ class _ContactsPageState extends State<ContactsPage> {
                   ),
                   const SizedBox(height: ZaiNeSpacing.md),
                   Container(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(ZaiNeSpacing.md),
                     decoration: BoxDecoration(
                       color: const Color(0xFFFFF8F0),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(ZaiNeRadius.small),
                       border: Border.all(color: const Color(0xFFFFE0B2)),
                     
                       boxShadow: ZaiNeShadows.card,),
@@ -591,7 +593,7 @@ class _ContactsPageState extends State<ContactsPage> {
                     width: 36, height: 36,
                     decoration: BoxDecoration(
                       color: Colors.green.shade50,
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(ZaiNeRadius.input),
                     
                       boxShadow: ZaiNeShadows.card,),
                     child: Icon(Icons.sms_rounded, color: Colors.green.shade600, size: 20),
@@ -621,7 +623,7 @@ class _ContactsPageState extends State<ContactsPage> {
                           labelText: '你的昵称',
                           hintText: '发短信时显示你是谁',
                           prefixIcon: const Icon(Icons.person_outline, color: Color(0xFF4CAF50)),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.small)),
                           contentPadding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.md, vertical: ZaiNeSpacing.md),
                         ),
                         style: const TextStyle(fontSize: ZaiNeFontSize.bodySm),
@@ -635,8 +637,8 @@ class _ContactsPageState extends State<ContactsPage> {
                         decoration: InputDecoration(
                           labelText: '对方称呼',
                           hintText: '你想怎么称呼对方',
-                          prefixIcon: const Icon(Icons.favorite_outline, color: Color(0xFFFF7F50)),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          prefixIcon: const Icon(Icons.favorite_outline, color: ZaiNeColors.brandOrange),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.small)),
                           contentPadding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.md, vertical: ZaiNeSpacing.md),
                         ),
                         style: const TextStyle(fontSize: ZaiNeFontSize.bodySm),
@@ -646,10 +648,10 @@ class _ContactsPageState extends State<ContactsPage> {
                       // 短信预览
                       Container(
                         width: double.infinity,
-                        padding: const EdgeInsets.all(12),
+                        padding: const EdgeInsets.all(ZaiNeSpacing.md),
                         decoration: BoxDecoration(
                           color: Colors.grey.shade100,
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(ZaiNeRadius.small),
                           border: Border.all(color: ZaiNeColors.borderColor()),
                         
                           boxShadow: ZaiNeShadows.card,),
@@ -828,14 +830,24 @@ class _ContactsPageState extends State<ContactsPage> {
       await _saveContacts();
 
       // 异步同步到后端
-      if (contactId != null) {
-        // 保存后不主动重拉服务端数据，避免时序问题
-        // _syncEditToBackend 成功后已用服务端返回数据更新本地
+      // 【修复 v1.93.9】增强临时 ID 检测逻辑
+      final isTempId = contactId == null || 
+          (contactId is String && (contactId.contains('临时') || contactId.contains('temp')));
+      
+      if (!isTempId) {
+        // 有有效的后端 ID，直接编辑
+        if (kDebugMode) debugPrint('[ContactsPage] 联系人有明确 id=$contactId，调用编辑 API');
         _syncEditToBackend(contactId, result);
       } else {
-        // 【修复 v1.17.3-Bug2】本地有但后端无 id → 改为新增而非跳过
-        if (kDebugMode) debugPrint('[ContactsPage] 编辑的联系人无后端 id，改为调用新增 API');
-        _syncAddToBackend(result);
+        // 【修复 v1.93.9】临时 ID 或 null → 先同步到后端获取真实 ID，再编辑
+        if (kDebugMode) {
+          debugPrint('[ContactsPage] ⚠️ 联系人 id=$contactId 是临时 ID，改为调用新增 API');
+          debugPrint('[ContactsPage] 临时 ID 详情: contactId=$contactId, isTempId=$isTempId');
+        }
+        _syncAddToBackend(result).then((_) {
+          // 新增成功后，后端会返回真实 ID，下次编辑就能正常工作了
+          if (kDebugMode) debugPrint('[ContactsPage] ✅ 临时联系人已同步到后端，下次编辑将使用真实 ID');
+        });
       }
     }
   }
@@ -844,35 +856,75 @@ class _ContactsPageState extends State<ContactsPage> {
   Future<void> _syncEditToBackend(dynamic contactId, Map<String, dynamic> contact) async {
     try {
       final relation = (contact['relation'] ?? '').toString();
+      
+      // 【调试 v1.93.9】增强日志 - 打印所有关键信息
       if (kDebugMode) {
-        debugPrint('[ContactsPage] 开始编辑联系人 id=$contactId, '
-            'name=${contact['name']}, relation=$relation');
+        debugPrint('=' * 60);
+        debugPrint('[ContactsPage] 🔧 开始编辑联系人');
+        debugPrint('  [联系人 ID] $contactId (类型: ${contactId.runtimeType})');
+        debugPrint('  [请求参数]');
+        debugPrint('    - name: ${contact['name']}');
+        debugPrint('    - phone: ${contact['phone']}');
+        debugPrint('    - relation: $relation');
+        debugPrint('  [完整 contact 数据] $contact');
+        debugPrint('=' * 60);
       }
 
-      final res = await ContactService.updateContact(
-        contactId.toString(),
-        {
-          'name': (contact['name'] ?? '').toString(),
-          'phone': (contact['phone'] ?? '').toString(),
-          'relation': relation,
-        },
-      );
-
-      if (res['success'] == true) {
-        if (kDebugMode) debugPrint('[ContactsPage] ✅ 后端编辑成功 id=$contactId, relation=$relation');
-        // 用服务端返回的数据更新本地（如果有返回）
-        final serverContacts = res['contacts'] as List<dynamic>? ?? [];
-        if (serverContacts.isNotEmpty && mounted) {
+      // 【调试】检查 contactId 是否有效
+      if (contactId == null || contactId.toString().isEmpty || contactId == 'null') {
+        if (kDebugMode) debugPrint('[ContactsPage] ⚠️ 警告: contactId 无效！这可能是守护卡联系人未同步到后端');
+        // 对于未同步的联系人，只更新本地，不同步到后端
+        if (mounted) {
           setState(() {
             for (int i = 0; i < _contacts.length; i++) {
-              if (_contacts[i]['id'] == contactId) {
-                _contacts[i] = Map<String, dynamic>.from(serverContacts[0]);
+              if (_contacts[i]['id'] == contactId || _contacts[i] == contact) {
+                _contacts[i]['relation'] = relation;
                 break;
               }
             }
           });
           await _saveContacts();
+          if (kDebugMode) debugPrint('[ContactsPage] ✅ 已更新本地联系人关系（未同步到后端）');
         }
+        return;
+      }
+
+      if (kDebugMode) debugPrint('[ContactsPage] 📡 发送请求到后端...');
+
+      // 【调试 v1.93.10】打印完整的请求体
+      final requestBody = {
+        'name': (contact['name'] ?? '').toString(),
+        'phone': (contact['phone'] ?? '').toString(),
+        'relation': relation,
+      };
+      if (kDebugMode) {
+        debugPrint('[ContactsPage] 📡 发送 PUT /api/contacts/$contactId');
+        debugPrint('  [请求体] $requestBody');
+      }
+
+      final res = await ContactService.updateContact(
+        contactId.toString(),
+        requestBody,
+      );
+
+      // 【调试】打印完整响应
+      if (kDebugMode) {
+        debugPrint('=' * 60);
+        debugPrint('[ContactsPage] 📥 后端编辑响应:');
+        debugPrint('  [完整响应] $res');
+        if (res != null && res is Map) {
+          debugPrint('  [success] ${res['success']}');
+          debugPrint('  [error] ${res['error']}');
+          debugPrint('  [contacts] ${res['contacts']}');
+        }
+        debugPrint('=' * 60);
+      }
+
+      if (res['success'] == true) {
+        if (kDebugMode) debugPrint('[ContactsPage] ✅ 后端编辑成功 id=$contactId, relation=$relation');
+        // 【修复 v1.93.10】不再强制刷新列表，避免后端未保存 relation 时被覆盖
+        // 乐观更新已经生效，后端成功只做日志确认
+        if (kDebugMode) debugPrint('[ContactsPage] ℹ️ 跳过 _loadContacts()，保留本地乐观更新');
       } else {
         if (kDebugMode) debugPrint('[ContactsPage] ❌ 后端编辑失败: ${res['error'] ?? res}');
         // 【修复 v1.17.3-Bug2】编辑失败时提示用户
@@ -883,12 +935,21 @@ class _ContactsPageState extends State<ContactsPage> {
               backgroundColor: Colors.orange.shade700,
               behavior: SnackBarBehavior.floating,
               shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+              action: SnackBarAction(
+                label: '查看日志',
+                onPressed: () {
+                  if (kDebugMode) debugPrint('[ContactsPage] 查看 Xcode 控制台获取详细错误信息');
+                },
+              ),
             ),
           );
         }
       }
-    } catch (e) {
-      if (kDebugMode) debugPrint('[ContactsPage] _syncEditToBackend 异常: $e');
+    } catch (e, stackTrace) {
+      if (kDebugMode) {
+        debugPrint('[ContactsPage] ❌ _syncEditToBackend 异常: $e');
+        debugPrint('[ContactsPage] 堆栈跟踪: $stackTrace');
+      }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -1045,7 +1106,7 @@ class _ContactsPageState extends State<ContactsPage> {
         centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.add_circle_outline, color: Color(0xFFFF7F50)),
+            icon: const Icon(Icons.add_circle_outline, color: ZaiNeColors.brandOrange),
             onPressed: _addContact,
           ),
         ],
@@ -1055,7 +1116,7 @@ class _ContactsPageState extends State<ContactsPage> {
         top: false,  // AppBar 已处理顶部安全区
         bottom: true,
       child: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: Color(0xFFFF7F50)))
+          ? const Center(child: CircularProgressIndicator(color: ZaiNeColors.brandOrange))
           : _contacts.isEmpty
               ? const EmptyStateWidget()
               : _buildContactsList(),
@@ -1063,7 +1124,7 @@ class _ContactsPageState extends State<ContactsPage> {
       floatingActionButton: _contacts.isEmpty && !_isLoading
           ? FloatingActionButton.extended(
               onPressed: _addContact,
-              backgroundColor: const Color(0xFFFF7F50),
+              backgroundColor: ZaiNeColors.brandOrange,
               icon: const Icon(Icons.person_add),
               label: const Text('添加联系人'),
             )
@@ -1081,11 +1142,11 @@ class _ContactsPageState extends State<ContactsPage> {
         // 第一个位置放说明框（不可拖拽）
         Container(
           key: const ValueKey('info_header'),
-          padding: const EdgeInsets.all(12),
-          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.all(ZaiNeSpacing.md),
+          margin: const EdgeInsets.only(bottom: ZaiNeSpacing.md),
           decoration: BoxDecoration(
             color: Colors.blue.shade50,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(ZaiNeRadius.small),
           
             boxShadow: ZaiNeShadows.card,),
           child: Row(
@@ -1126,7 +1187,7 @@ class _ContactsPageState extends State<ContactsPage> {
             dragHandle: ReorderableDragStartListener(
               index: i + 1, // +1 因为header在index 0
               child: Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(ZaiNeSpacing.sm),
                 child: Icon(
                   Icons.drag_handle,
                   color: ZaiNeColors.textSecondary(),
@@ -1240,7 +1301,7 @@ class _AddContactDialogState extends State<AddContactDialog> {
         constraints: BoxConstraints(maxHeight: maxContentHeight),
         decoration: BoxDecoration(
           color: ZaiNeColors.cardBg(),
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(ZaiNeRadius.lg),
         
           boxShadow: ZaiNeShadows.card,),
         child: SingleChildScrollView(
@@ -1257,12 +1318,12 @@ class _AddContactDialogState extends State<AddContactDialog> {
                   gradient: const LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [Color(0xFFFF7F50), Color(0xFFFFB347)],
+                    colors: [ZaiNeColors.brandOrange, Color(0xFFFFB347)],
                   ),
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFFFF7F50).withValues(alpha: 0.25),
+                      color: ZaiNeColors.brandOrange.withValues(alpha: 0.25),
                       blurRadius: 12,
                       offset: const Offset(0, 4),
                     ),
@@ -1344,8 +1405,16 @@ class _AddContactDialogState extends State<AddContactDialog> {
                         ),
                         validator: (v) {
                           if (v == null || v.isEmpty) return '请输入手机号码';
-                          if (!RegExp(r'^1[3-9]\d{9}$').hasMatch(v)) return '请输入正确的手机号';
-                          return null;
+                          // 【v1.93.5 修复】放宽手机号验证：清洗后验证，兼容国际号和前缀
+                          final cleaned = v.trim().replaceAll(RegExp(r'^(\+86|86|\s|-|\(|\))'), '');
+                          if (cleaned.isEmpty) return '请输入手机号码';
+                          // 中国手机号严格验证
+                          if (RegExp(r'^1[3-9]\d{9}$').hasMatch(cleaned)) return null;
+                          // 编辑模式：手机号未修改时，允许非标准格式（如国际号）
+                          if (widget.existingContact != null && v == widget.existingContact!['phone']) return null;
+                          // 新增模式：允许6-15位数字（国际号兼容）
+                          if (RegExp(r'^\d{6,15}$').hasMatch(cleaned)) return null;
+                          return '请输入正确的手机号';
                         },
                       ),
 
@@ -1368,19 +1437,19 @@ class _AddContactDialogState extends State<AddContactDialog> {
                             filled: true,
                             fillColor: Colors.orange.shade50.withValues(alpha: 0.4),
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(14),
+                              borderRadius: BorderRadius.circular(ZaiNeRadius.cardSm),
                               borderSide: BorderSide(color: Colors.orange.shade200),
                             ),
                             enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(14),
+                              borderRadius: BorderRadius.circular(ZaiNeRadius.cardSm),
                               borderSide: BorderSide(color: Colors.orange.shade200),
                             ),
                             focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(14),
-                              borderSide: const BorderSide(color: Color(0xFFFF7F50), width: 1.5),
+                              borderRadius: BorderRadius.circular(ZaiNeRadius.cardSm),
+                              borderSide: const BorderSide(color: ZaiNeColors.brandOrange, width: 1.5),
                             ),
                             errorBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(14),
+                              borderRadius: BorderRadius.circular(ZaiNeRadius.cardSm),
                               borderSide: BorderSide(color: Colors.red.shade300),
                             ),
                             contentPadding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.lg, vertical: ZaiNeSpacing.lg),
@@ -1421,7 +1490,7 @@ class _AddContactDialogState extends State<AddContactDialog> {
                           padding: const EdgeInsets.all(ZaiNeSpacing.md),
                           decoration: BoxDecoration(
                             color: Colors.orange.shade50.withValues(alpha: 0.3),
-                            borderRadius: BorderRadius.circular(14),
+                            borderRadius: BorderRadius.circular(ZaiNeRadius.cardSm),
                             border: Border.all(color: Colors.orange.shade200),
                           ),
                           child: Column(
@@ -1438,7 +1507,7 @@ class _AddContactDialogState extends State<AddContactDialog> {
                                   filled: true,
                                   fillColor: Colors.white,
                                   border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(10),
+                                    borderRadius: BorderRadius.circular(ZaiNeRadius.input),
                                     borderSide: BorderSide.none,
                                   ),
                                   contentPadding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.md, vertical: ZaiNeSpacing.sm),
@@ -1489,7 +1558,7 @@ class _AddContactDialogState extends State<AddContactDialog> {
                             final relation = _isCustomRelation
                                 ? _customRelationController.text.trim()
                                 : _selectedRelation;
-                            Navigator.of(context).pop({
+                            Navigator.of(context).pop(<String, dynamic>{
                               'name': _nameController.text.trim(),
                               'phone': _phoneController.text.trim(),
                               'relation': relation,
@@ -1497,12 +1566,12 @@ class _AddContactDialogState extends State<AddContactDialog> {
                           }
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFFF7F50),
+                          backgroundColor: ZaiNeColors.brandOrange,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: ZaiNeSpacing.lg),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.card)),
                           elevation: 0,
-                          shadowColor: const Color(0xFFFF7F50).withValues(alpha: 0.3),
+                          shadowColor: ZaiNeColors.brandOrange.withValues(alpha: 0.3),
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -1545,26 +1614,26 @@ class _AddContactDialogState extends State<AddContactDialog> {
         hintText: hint,
         labelStyle: TextStyle(color: Colors.grey[600], fontSize: ZaiNeFontSize.caption),
         hintStyle: TextStyle(color: Colors.grey[400], fontSize: ZaiNeFontSize.bodySm),
-        prefixIcon: Icon(prefixIcon, color: const Color(0xFFFF7F50), size: 21),
+        prefixIcon: Icon(prefixIcon, color: ZaiNeColors.brandOrange, size: 21),
         suffixIcon: suffixIcon,
         filled: true,
         fillColor: ZaiNeColors.scaffoldBg() == const Color(0xFF121212)
             ? const Color(0xFF1E1E1E)
             : Colors.grey.shade50,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(ZaiNeRadius.cardSm),
           borderSide: BorderSide(color: ZaiNeColors.borderColor()),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(ZaiNeRadius.cardSm),
           borderSide: BorderSide(color: ZaiNeColors.borderColor()),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: Color(0xFFFF7F50), width: 1.5),
+          borderRadius: BorderRadius.circular(ZaiNeRadius.cardSm),
+          borderSide: const BorderSide(color: ZaiNeColors.brandOrange, width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(ZaiNeRadius.cardSm),
           borderSide: BorderSide(color: Colors.red.shade300),
         ),
         contentPadding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.lg, vertical: ZaiNeSpacing.lg),

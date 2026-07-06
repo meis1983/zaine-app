@@ -227,11 +227,11 @@ class _NewbieTaskCardState extends State<NewbieTaskCard>
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: ZaiNeColors.cardBg(),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(ZaiNeRadius.card),
         border: Border.all(
           color: _allCompleted
               ? Colors.green.withValues(alpha: 0.3)
-              : const Color(0xFFFF7F50).withValues(alpha: 0.2),
+              : ZaiNeColors.brandOrange.withValues(alpha: 0.2),
         ),
         boxShadow: [
           BoxShadow(
@@ -282,14 +282,14 @@ class _NewbieTaskCardState extends State<NewbieTaskCard>
               decoration: BoxDecoration(
                 color: allDone
                     ? Colors.green.withValues(alpha: 0.1)
-                    : const Color(0xFFFF7F50).withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(10),
+                    : ZaiNeColors.brandOrange.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(ZaiNeRadius.input),
               
                 boxShadow: ZaiNeShadows.card,),
               child: Icon(
                 allDone ? Icons.emoji_events : Icons.shield_outlined,
                 size: 20,
-                color: allDone ? Colors.green : const Color(0xFFFF7F50),
+                color: allDone ? Colors.green : ZaiNeColors.brandOrange,
               ),
             ),
             const SizedBox(width: ZaiNeSpacing.md),
@@ -312,12 +312,12 @@ class _NewbieTaskCardState extends State<NewbieTaskCard>
                     children: [
                       Expanded(
                         child: ClipRRect(
-                          borderRadius: BorderRadius.circular(4),
+                          borderRadius: BorderRadius.circular(ZaiNeRadius.tag),
                           child: LinearProgressIndicator(
                             value: _progress,
                             backgroundColor: Colors.grey[200],
                             valueColor: AlwaysStoppedAnimation<Color>(
-                              allDone ? Colors.green : const Color(0xFFFF7F50),
+                              allDone ? Colors.green : ZaiNeColors.brandOrange,
                             ),
                             minHeight: 6,
                           ),
@@ -437,7 +437,7 @@ class _NewbieTaskCardState extends State<NewbieTaskCard>
               padding: const EdgeInsets.symmetric(vertical: ZaiNeSpacing.md),
               decoration: BoxDecoration(
                 color: Colors.green.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(ZaiNeRadius.small),
                 border: Border.all(color: Colors.green.withValues(alpha: 0.2)),
               
                 boxShadow: ZaiNeShadows.card,),
@@ -540,7 +540,7 @@ class _NewbieTaskCardState extends State<NewbieTaskCard>
                         padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.xs, vertical: ZaiNeSpacing.xs),
                         decoration: BoxDecoration(
                           color: Colors.orange.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(4),
+                          borderRadius: BorderRadius.circular(ZaiNeRadius.tag),
                         
                           boxShadow: ZaiNeShadows.card,),
                         child: Text(
@@ -575,10 +575,10 @@ class _NewbieTaskCardState extends State<NewbieTaskCard>
                 padding:
                     const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.md, vertical: ZaiNeSpacing.xs),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFF7F50).withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
+                  color: ZaiNeColors.brandOrange.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(ZaiNeRadius.button),
                   border:
-                      Border.all(color: const Color(0xFFFF7F50).withValues(alpha: 0.3)),
+                      Border.all(color: ZaiNeColors.brandOrange.withValues(alpha: 0.3)),
                 
                   boxShadow: ZaiNeShadows.card,),
                 child: Text(
@@ -586,7 +586,7 @@ class _NewbieTaskCardState extends State<NewbieTaskCard>
                   style: const TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFFFF7F50),
+                    color: ZaiNeColors.brandOrange,
                   ),
                 ),
               ),
@@ -625,7 +625,7 @@ class _NewbieTaskCardState extends State<NewbieTaskCard>
         padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.lg, vertical: ZaiNeSpacing.md),
         decoration: BoxDecoration(
           color: Colors.green.withValues(alpha: 0.06),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(ZaiNeRadius.small),
           border: Border.all(color: Colors.green.withValues(alpha: 0.15)),
         
           boxShadow: ZaiNeShadows.card,),

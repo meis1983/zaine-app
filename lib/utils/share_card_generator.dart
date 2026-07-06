@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/theme_helper.dart';
 
 /// 分享卡片颜色工具
 /// 根据连续签到天数返回对应的渐变色（7级徽章系统匹配）
@@ -10,7 +11,7 @@ class ShareCardGenerator {
     final dayIndex = (days - 1) % 7;
     const gradients = [
       [Color(0xFFFF4757), Color(0xFFFF6B81)], // Day 1,8,15... 红
-      [Color(0xFFFF7F50), Color(0xFFFFB347)], // Day 2,9,16... 橙
+      [ZaiNeColors.brandOrange, Color(0xFFFFB347)], // Day 2,9,16... 橙
       [Color(0xFFFFD700), Color(0xFFFF8C00)], // Day 3,10,17.. 金
       [Color(0xFF11998E), Color(0xFF38EF7D)], // Day 4,11,18.. 绿
       [Color(0xFF00D2D3), Color(0xFF0ABDE3)], // Day 5,12,19.. 青

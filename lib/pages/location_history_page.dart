@@ -113,7 +113,7 @@ class _LocationHistoryPageState extends State<LocationHistoryPage> {
                 : _records.isEmpty
                     ? _buildEmptyState()
                     : ListView.builder(
-                        padding: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.all(ZaiNeSpacing.lg),
                         itemCount: _records.length,
                         itemBuilder: (context, index) {
                           final record = _records[index];
@@ -183,8 +183,8 @@ class _LocationHistoryPageState extends State<LocationHistoryPage> {
           // 记录卡片
           Expanded(
             child: Container(
-              margin: const EdgeInsets.only(bottom: 12),
-              padding: const EdgeInsets.all(12),
+              margin: const EdgeInsets.only(bottom: ZaiNeSpacing.md),
+              padding: const EdgeInsets.all(ZaiNeSpacing.md),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(ZaiNeRadius.small),

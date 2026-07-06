@@ -14,6 +14,7 @@ import '../api_service.dart';
 import '../api/notify_service.dart';
 import '../api/checkin_service.dart';
 import '../../services/platform/health_service.dart';
+import 'geofence_service.dart';
 import 'package:intl/intl.dart';
 
 /// 定时确认状态
@@ -24,11 +25,19 @@ enum CheckInReminderStatus {
   custom,
 }
 
+/// 定时确认触发方式（【P3】智能场景触发）
+enum CheckInTriggerMode {
+  time, // 时间定时（默认）：在设定时间点提醒确认
+  location, // 离开安全区时自动确认平安
+  heartbeat, // Apple Watch 检测到你（心率）时自动确认平安
+}
+
 /// 定时确认提醒配置
 class CheckInReminder {
   final bool enabled;
   final CheckInReminderStatus status;
   final List<int> reminderHours; // 提醒小时列表，如 [9, 14, 21] 表示早中晚
+  final CheckInTriggerMode triggerMode; // 【P3】触发方式
   final DateTime? lastCheckIn;
   final DateTime? nextReminder;
   final int missedCount; // 连续未确认次数
@@ -37,6 +46,7 @@ class CheckInReminder {
     this.enabled = false,
     this.status = CheckInReminderStatus.disabled,
     this.reminderHours = const [9, 21],
+    this.triggerMode = CheckInTriggerMode.time,
     this.lastCheckIn,
     this.nextReminder,
     this.missedCount = 0,
@@ -46,6 +56,7 @@ class CheckInReminder {
     bool? enabled,
     CheckInReminderStatus? status,
     List<int>? reminderHours,
+    CheckInTriggerMode? triggerMode,
     DateTime? lastCheckIn,
     DateTime? nextReminder,
     int? missedCount,
@@ -54,6 +65,7 @@ class CheckInReminder {
       enabled: enabled ?? this.enabled,
       status: status ?? this.status,
       reminderHours: reminderHours ?? this.reminderHours,
+      triggerMode: triggerMode ?? this.triggerMode,
       lastCheckIn: lastCheckIn ?? this.lastCheckIn,
       nextReminder: nextReminder ?? this.nextReminder,
       missedCount: missedCount ?? this.missedCount,
@@ -64,6 +76,7 @@ class CheckInReminder {
         'enabled': enabled,
         'status': status.name,
         'reminder_hours': reminderHours,
+        'trigger_mode': triggerMode.name,
         'last_check_in': lastCheckIn?.toIso8601String(),
         'next_reminder': nextReminder?.toIso8601String(),
         'missed_count': missedCount,
@@ -80,6 +93,10 @@ class CheckInReminder {
               ?.map((e) => e as int)
               .toList() ??
           [9, 21],
+      triggerMode: CheckInTriggerMode.values.firstWhere(
+        (e) => e.name == json['trigger_mode'],
+        orElse: () => CheckInTriggerMode.time,
+      ),
       lastCheckIn: json['last_check_in'] != null
           ? DateTime.parse(json['last_check_in'] as String)
           : null,
@@ -258,6 +275,10 @@ class SafetyService {
   Function(FallEvent)? onFallDetected;
   Function(LocationRecord)? onLocationUpdate;
 
+  /// 【P3】场景化确认桥接：由 health_service（Watch 心跳签到）调用
+  /// 签名为 Future 以便内部做异步持久化
+  static Future<void> Function(String source, {String? fenceName})? onSceneCheckIn;
+
   Future<void> initialize() async {
     if (_isInitialized) return;
 
@@ -280,6 +301,14 @@ class SafetyService {
           badge: true,
           sound: true,
         );
+
+    // 【P3】注册场景化确认桥接
+    // 1) Watch 心跳签到 → 由 health_service 在 _executeCheckIn(source:'heartbeat') 触发
+    onSceneCheckIn = _applySceneCheckIn;
+    // 2) 离开安全围栏 → 由 geofence_service.checkAllFences 触发（全局回调，避免实例差异）
+    GeoFenceService.onFenceExitedGlobal = (fence) {
+      onSceneCheckIn?.call('location', fenceName: fence.name);
+    };
 
     _isInitialized = true;
     if (kDebugMode) debugPrint('[SafetyService] 初始化完成');
@@ -357,11 +386,16 @@ class SafetyService {
   }
 
   /// 启用定时确认
-  Future<void> enableReminder(CheckInReminderStatus status, {List<int>? hours}) async {
+  Future<void> enableReminder(
+    CheckInReminderStatus status, {
+    List<int>? hours,
+    CheckInTriggerMode triggerMode = CheckInTriggerMode.time,
+  }) async {
     final config = CheckInReminder(
       enabled: true,
       status: status,
       reminderHours: hours ?? [9, 21],
+      triggerMode: triggerMode,
       missedCount: 0,
     );
     await saveReminderConfig(config);
@@ -494,6 +528,76 @@ class SafetyService {
     );
   }
 
+  // ==================== 【P3】智能场景触发 ====================
+
+  /// 场景化确认：当发生真实签到事件（如离开安全区 / Watch 心跳检测到你）时调用
+  ///
+  /// [source] 'location'（离开安全区）或 'heartbeat'（Watch 检测到你）
+  /// [fenceName] 离开的围栏名称（location 场景用）
+  ///
+  /// 逻辑：
+  /// 1. 任何真实签到都视为「已确认平安」，更新 lastCheckIn / 重置 missedCount / 重算 nextReminder
+  /// 2. 仅当用户在「对应触发方式」时，才弹场景化主动通知（time 模式保持原有时间提醒流）
+  Future<void> _applySceneCheckIn(String source, {String? fenceName}) async {
+    final current = await getReminderConfig();
+    if (!current.enabled) return;
+
+    final now = DateTime.now();
+    final updated = current.copyWith(
+      lastCheckIn: now,
+      nextReminder: _calculateNextReminder(now, current.reminderHours),
+      missedCount: 0, // 任何真实签到都清零未确认计数
+    );
+    await saveReminderConfig(updated);
+
+    // 场景化主动通知：仅当用户明确选择该触发方式时
+    final matchesMode = (source == 'location' &&
+            current.triggerMode == CheckInTriggerMode.location) ||
+        (source == 'heartbeat' &&
+            current.triggerMode == CheckInTriggerMode.heartbeat);
+    if (matchesMode) {
+      await _showSceneCheckInNotification(source, fenceName: fenceName);
+    }
+
+    if (kDebugMode) {
+      debugPrint('[SafetyService] 场景化确认已应用: source=$source, '
+          'triggerMode=${current.triggerMode.name}, matchesMode=$matchesMode');
+    }
+  }
+
+  /// 场景化确认本地通知
+  Future<void> _showSceneCheckInNotification(String source, {String? fenceName}) async {
+    const androidDetails = AndroidNotificationDetails(
+      'checkin_reminder',
+      '定时确认提醒',
+      channelDescription: '提醒您进行平安确认',
+      importance: Importance.high,
+      priority: Priority.high,
+    );
+    const iosDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+    );
+    const details = NotificationDetails(android: androidDetails, iOS: iosDetails);
+
+    if (source == 'location') {
+      await _notifications.show(
+        1002,
+        '已离开安全区，自动确认平安 🛡️',
+        '离开「${fenceName ?? '安全区'}」，已自动为你签到平安',
+        details,
+      );
+    } else {
+      await _notifications.show(
+        1002,
+        '手表检测到你，自动确认平安 💓',
+        '检测到你的心跳，已自动为你签到平安',
+        details,
+      );
+    }
+  }
+
   // TODO(v1.20.0+): 守护人通知功能（需营业执照申请短信模板或接入微信订阅消息）
   // Future<void> _notifyGuardiansAboutMissedCheckIn(int missedCount) async {
   //   if (kDebugMode) debugPrint('[SafetyService] 连续$missedCount次未确认，通知守护人');
@@ -543,6 +647,9 @@ class SafetyService {
 
   /// 获取当前追踪模式
   LocationTrackingMode get trackingMode => _trackingMode;
+
+  /// 当前是否正在追踪位置
+  bool get isLocationTracking => _locationTimer != null && _locationTimer!.isActive;
 
   /// 开始位置跟踪
   /// [mode] 追踪模式，默认为普通模式
@@ -942,6 +1049,8 @@ class _CheckInReminderImpl implements CheckInReminder {
   @override
   List<int> get reminderHours => [];
   @override
+  CheckInTriggerMode get triggerMode => CheckInTriggerMode.time;
+  @override
   DateTime? get lastCheckIn => null;
   @override
   DateTime? get nextReminder => null;
@@ -953,6 +1062,7 @@ class _CheckInReminderImpl implements CheckInReminder {
     bool? enabled,
     CheckInReminderStatus? status,
     List<int>? reminderHours,
+    CheckInTriggerMode? triggerMode,
     DateTime? lastCheckIn,
     DateTime? nextReminder,
     int? missedCount,
@@ -961,6 +1071,7 @@ class _CheckInReminderImpl implements CheckInReminder {
       enabled: enabled ?? this.enabled,
       status: status ?? this.status,
       reminderHours: reminderHours ?? this.reminderHours,
+      triggerMode: triggerMode ?? this.triggerMode,
       lastCheckIn: lastCheckIn ?? this.lastCheckIn,
       nextReminder: nextReminder ?? this.nextReminder,
       missedCount: missedCount ?? this.missedCount,
@@ -972,6 +1083,7 @@ class _CheckInReminderImpl implements CheckInReminder {
         'enabled': enabled,
         'status': status.name,
         'reminder_hours': reminderHours,
+        'trigger_mode': triggerMode.name,
         'last_check_in': lastCheckIn?.toIso8601String(),
         'next_reminder': nextReminder?.toIso8601String(),
         'missed_count': missedCount,

@@ -79,7 +79,7 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
           : RefreshIndicator(
               onRefresh: _loadHealthData,
               child: ListView(
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.all(ZaiNeSpacing.section),
                 children: [
                   _buildHeader(),
                   if (_alerts.isNotEmpty) ...[
@@ -121,7 +121,7 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
 
   Widget _buildAlertBanner() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(ZaiNeSpacing.lg),
       decoration: BoxDecoration(
         color: const Color(0xFFFFF1F0),
         borderRadius: BorderRadius.circular(ZaiNeRadius.card),
@@ -190,7 +190,7 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
           value: _metrics['respiratory_rate'] != null ? '${_metrics['respiratory_rate']} 次/分' : '--',
           icon: Icons.air,
           color: Colors.teal,
-          subtitle: '睡眠静息呼吸',
+          subtitle: '静息状态参考值',
         ),
         _buildMetricCard(
           title: '静息心率',
@@ -211,7 +211,7 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
           value: _metrics['body_temperature'] != null ? '${_parseValue(_metrics['body_temperature']).toStringAsFixed(1)}°C' : '--',
           icon: Icons.thermostat,
           color: Colors.cyan,
-          subtitle: '夜晚体温偏移',
+          subtitle: _metrics['body_temperature'] != null ? '夜间基础体温' : '需佩戴手表过夜',
         ),
         _buildMetricCard(
           title: '步数',
@@ -256,7 +256,7 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
     bool isAlert = false,
   }) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(ZaiNeSpacing.lg),
       decoration: BoxDecoration(
         color: isAlert ? const Color(0xFFFFF1F0) : Colors.white,
         borderRadius: BorderRadius.circular(ZaiNeRadius.card),
@@ -304,7 +304,7 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
     final String minutes = (totalMinutes % 60).toString();
 
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(ZaiNeSpacing.section),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [Colors.indigo.shade400, Colors.indigo.shade700],
@@ -384,10 +384,10 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
 
     // 经期状态颜色
     final Color statusColor = isInPeriod ? Colors.pink : Colors.grey.shade400;
-    final String statusText = isInPeriod ? '经期中' : '非经期';
+    final String statusText = isInPeriod ? '经期中' : (hasData ? '非经期' : '未开启跟踪');
 
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(ZaiNeSpacing.section),
       decoration: BoxDecoration(
         gradient: isInPeriod
             ? LinearGradient(
@@ -411,7 +411,7 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.all(ZaiNeSpacing.cardXs),
                 decoration: BoxDecoration(
                   color: isInPeriod ? Colors.pink.shade100 : Colors.grey.shade100,
                   shape: BoxShape.circle,
@@ -431,7 +431,7 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
                         style: TextStyle(fontWeight: FontWeight.bold, fontSize: ZaiNeFontSize.body)),
                     const SizedBox(height: ZaiNeSpacing.xs),
                     Text(
-                      hasData ? statusText : '暂未同步到经期记录',
+                      statusText,
                       style: TextStyle(
                         color: statusColor,
                         fontSize: ZaiNeFontSize.caption,
@@ -441,31 +441,32 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
                   ],
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.md, vertical: ZaiNeSpacing.xs),
-                decoration: BoxDecoration(
-                  color: isInPeriod
-                      ? Colors.pink.shade100
-                      : Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(ZaiNeRadius.small),
+              if (hasData)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.md, vertical: ZaiNeSpacing.xs),
+                  decoration: BoxDecoration(
+                    color: isInPeriod
+                        ? Colors.pink.shade100
+                        : Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(ZaiNeRadius.small),
                 
-                  boxShadow: ZaiNeShadows.card,),
-                child: Text(
-                  hasData ? '第$cycleDay天' : '--',
-                  style: TextStyle(
-                    color: statusColor,
-                    fontSize: ZaiNeFontSize.caption,
-                    fontWeight: FontWeight.bold,
+                    boxShadow: ZaiNeShadows.card,),
+                  child: Text(
+                    '第$cycleDay天',
+                    style: TextStyle(
+                      color: statusColor,
+                      fontSize: ZaiNeFontSize.caption,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
-              ),
             ],
           ),
           // 详情行（有数据时显示）
           if (hasData) ...[
             const SizedBox(height: ZaiNeSpacing.lg),
             Container(
-              padding: const EdgeInsets.all(14),
+              padding: const EdgeInsets.all(ZaiNeSpacing.cardSm),
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: 0.7),
                 borderRadius: BorderRadius.circular(ZaiNeRadius.small),
@@ -492,53 +493,74 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
               ),
             ),
           ],
-          // ✅ 第二步：添加按钮（记录经期 + 设置）
-          if (hasData) ...[
+          // 【v1.93.9 优化】无数据时显示引导提示
+          if (!hasData) ...[
             const SizedBox(height: ZaiNeSpacing.lg),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const MenstrualPage()),
-                      ).then((_) => _loadHealthData());
-                    },
-                    icon: const Icon(Icons.edit_calendar, size: 16),
-                    label: const Text('记录经期'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.pink,
-                      side: BorderSide(color: Colors.pink.shade200),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(ZaiNeRadius.small),
-                      ),
+            Container(
+              padding: const EdgeInsets.all(ZaiNeSpacing.cardSm),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(ZaiNeRadius.small),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, color: Colors.grey.shade500, size: 18),
+                  const SizedBox(width: ZaiNeSpacing.sm),
+                  Expanded(
+                    child: Text(
+                      '可手动记录经期日期，系统将自动计算周期并预测下次经期时间',
+                      style: TextStyle(color: Colors.grey.shade600, fontSize: ZaiNeFontSize.micro),
                     ),
                   ),
-                ),
-                const SizedBox(width: ZaiNeSpacing.md),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const MenstrualSettingsPage()),
-                      );
-                    },
-                    icon: const Icon(Icons.settings, size: 16),
-                    label: const Text('设置'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.grey.shade700,
-                      side: BorderSide(color: Colors.grey.shade300),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(ZaiNeRadius.small),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ],
+          // ✅ 按钮（记录经期 + 设置）
+          const SizedBox(height: ZaiNeSpacing.lg),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const MenstrualPage()),
+                    ).then((_) => _loadHealthData());
+                  },
+                  icon: const Icon(Icons.edit_calendar, size: 16),
+                  label: Text(hasData ? '记录经期' : '开始记录'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: hasData ? Colors.pink : ZaiNeColors.brandOrange,
+                    side: BorderSide(color: hasData ? Colors.pink.shade200 : ZaiNeColors.brandOrange.withValues(alpha: 0.5)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(ZaiNeRadius.small),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: ZaiNeSpacing.md),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const MenstrualSettingsPage()),
+                    );
+                  },
+                  icon: const Icon(Icons.settings, size: 16),
+                  label: const Text('设置'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.grey.shade700,
+                    side: BorderSide(color: Colors.grey.shade300),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(ZaiNeRadius.small),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -586,7 +608,7 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
 
   Widget _buildQuickActionCard() {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(ZaiNeSpacing.section),
       decoration: BoxDecoration(
         color: ZaiNeColors.cardBg(),
         borderRadius: BorderRadius.circular(ZaiNeRadius.card),
@@ -615,7 +637,7 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
               icon: const Icon(Icons.favorite),
               label: const Text('立即同步并报平安'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFFF7F50),
+                backgroundColor: ZaiNeColors.brandOrange,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: ZaiNeSpacing.lg),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.small)),

@@ -392,7 +392,7 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
               ),
               body: Center(
                 child: Padding(
-                  padding: const EdgeInsets.all(24),
+                  padding: const EdgeInsets.all(ZaiNeSpacing.xl),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -502,7 +502,7 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
                 labelText: '手机号',
                 hintText: '请输入11位手机号',
                 prefixIcon: const Icon(Icons.phone),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.input)),
                 counterText: '',
               ),
             ),
@@ -530,7 +530,7 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
                 );
               }
             },
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF7F50)),
+            style: ElevatedButton.styleFrom(backgroundColor: ZaiNeColors.brandOrange),
             child: const Text('保存', style: TextStyle(color: Colors.white)),
           ),
         ],
@@ -703,11 +703,11 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
         sb.writeln('');
         sb.writeln(appleMapShortUrl);
       } else {
-        // 【修复 v1.76.0】苹果地图链接使用 ll= 参数传坐标（q= 传坐标会解析异常）
-        // ll=lat,lng 指定地图中心坐标，q=%1 防止 Apple Maps 搜索空关键词
+        // 降级：苹果地图长链接（短链生成失败时）
+        // ll= 设置地图中心坐标，q= 设置 Pin 标签（需 URL 编码支持中文）
         sb.writeln('🍎 点击跳转苹果地图导航');
         sb.writeln('');
-        final appleMapUrl = 'https://maps.apple.com/?ll=$coordPart&q=%1';
+        final appleMapUrl = 'https://maps.apple.com/?ll=$coordPart&q=${Uri.encodeComponent(_address ?? '求助位置')}';
         sb.writeln(appleMapUrl);
       }
       sb.writeln('');

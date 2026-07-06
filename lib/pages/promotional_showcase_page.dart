@@ -200,7 +200,7 @@ class _PromotionalShowcasePageState extends State<PromotionalShowcasePage> with 
           child: Opacity(
             opacity: val,
             child: Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(ZaiNeSpacing.lg),
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(ZaiNeRadius.card),

@@ -84,7 +84,7 @@ class HomeHeaderWidget extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFFFF7F50),
+                        color: ZaiNeColors.brandOrange,
                       ),
                     ),
                     const SizedBox(width: ZaiNeSpacing.sm),  // 8
@@ -201,7 +201,7 @@ class HomeHeaderWidget extends StatelessWidget {
         gradient: avatarPath == null
             ? LinearGradient(
                 colors: [
-                  const Color(0xFFFF7F50).withValues(alpha: 0.2),
+                  ZaiNeColors.brandOrange.withValues(alpha: 0.2),
                   const Color(0xFFFFB347).withValues(alpha: 0.2),
                 ],
               )
@@ -216,14 +216,14 @@ class HomeHeaderWidget extends StatelessWidget {
               )
             : null,
         border: Border.all(
-          color: const Color(0xFFFF7F50).withValues(alpha: 0.3),
+          color: ZaiNeColors.brandOrange.withValues(alpha: 0.3),
           width: 2,
         ),
       ),
       child: avatarPath == null
           ? Icon(
               isLoggedIn ? Icons.person : Icons.person_add,
-              color: const Color(0xFFFF7F50),
+              color: ZaiNeColors.brandOrange,
               size: 24,
             )
           : null,

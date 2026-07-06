@@ -6,6 +6,7 @@ library;
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:geolocator/geolocator.dart';
 import '../api/notify_service.dart';
@@ -140,13 +141,38 @@ class GeoFenceService {
   Timer? _checkTimer;
   bool _isInitialized = false;
 
+  // 【P2】本地通知（用户离开围栏时手机弹提醒）
+  final FlutterLocalNotificationsPlugin _notifications = FlutterLocalNotificationsPlugin();
+
   // 回调
   void Function(GeoFence fence)? onFenceExited; // 离开围栏时触发
+
+  /// 【P3】全局围栏退出回调（与实例无关，供 SafetyService 场景触发注册）
+  static void Function(GeoFence fence)? onFenceExitedGlobal;
 
   Future<void> init() async {
     if (_isInitialized) return;
     _prefs = await SharedPreferences.getInstance();
+    await _initNotifications();
     _isInitialized = true;
+  }
+
+  /// 【P2】初始化本地通知
+  Future<void> _initNotifications() async {
+    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const iosSettings = DarwinInitializationSettings(
+      requestAlertPermission: true,
+      requestBadgePermission: true,
+      requestSoundPermission: true,
+    );
+    const initSettings = InitializationSettings(
+      android: androidSettings,
+      iOS: iosSettings,
+    );
+    await _notifications.initialize(initSettings);
+    await _notifications
+        .resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>()
+        ?.requestPermissions(alert: true, badge: true, sound: true);
   }
 
   /// 获取所有围栏
@@ -269,6 +295,7 @@ class GeoFenceService {
     for (final exited in exitedFences) {
       await _notifyFenceExited(exited);
       onFenceExited?.call(exited);
+      onFenceExitedGlobal?.call(exited); // 【P3】场景化确认（离开安全区自动签到）
     }
 
     if (kDebugMode && exitedFences.isNotEmpty) {
@@ -280,6 +307,33 @@ class GeoFenceService {
 
   /// 通知守护者：用户离开安全围栏
   Future<void> _notifyFenceExited(GeoFence fence) async {
+    // 1. 本地通知（提醒用户本人"你离开了XX安全区"）
+    try {
+      const androidDetails = AndroidNotificationDetails(
+        'geofence_exit',
+        '安全围栏提醒',
+        channelDescription: '离开安全区域时提醒',
+        importance: Importance.high,
+        priority: Priority.high,
+      );
+      const iosDetails = DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      );
+      const details = NotificationDetails(android: androidDetails, iOS: iosDetails);
+      await _notifications.show(
+        fence.id.hashCode,
+        '已离开${fence.name}安全区',
+        '你已离开「${fence.name}」安全区域，已自动通知你的守护者',
+        details,
+      );
+      if (kDebugMode) debugPrint('[GeoFence] 本地通知: 离开 ${fence.name}');
+    } catch (e) {
+      if (kDebugMode) debugPrint('[GeoFence] 本地通知失败: $e');
+    }
+
+    // 2. 通知守护者（App 内 + 后端推送）
     try {
       await NotifyService.notifyGuardiansAboutFenceExit(
         fence: fence.toJson(),

@@ -44,7 +44,7 @@ class LightweightGuideWidget extends StatelessWidget {
             _buildTopBar(),
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(28, 0, 28, 24),
+                padding: const EdgeInsets.fromLTRB(ZaiNeSpacing.xl, 0, ZaiNeSpacing.xl, ZaiNeSpacing.xl),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [

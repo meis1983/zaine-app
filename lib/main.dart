@@ -162,7 +162,7 @@ class _ZaiNeAppState extends State<ZaiNeApp> {
     return ThemeData(
       useMaterial3: true,
       colorScheme: ColorScheme.fromSeed(
-        seedColor: const Color(0xFFFF7F50),
+        seedColor: ZaiNeColors.brandOrange,
         brightness: isDark ? Brightness.dark : Brightness.light,
       ),
       scaffoldBackgroundColor: bgColor,
@@ -199,7 +199,7 @@ class _ZaiNeAppState extends State<ZaiNeApp> {
       // ===== 统一按钮主题 =====
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFFFF7F50),
+          backgroundColor: ZaiNeColors.brandOrange,
           foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.button)),  // 8
           textStyle: const TextStyle(fontSize: ZaiNeFontSize.bodySm, fontWeight: FontWeight.w600),  // 14
@@ -232,7 +232,7 @@ class _ZaiNeAppState extends State<ZaiNeApp> {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(ZaiNeRadius.small),
-          borderSide: const BorderSide(color: Color(0xFFFF7F50)),
+          borderSide: const BorderSide(color: ZaiNeColors.brandOrange),
         ),
         contentPadding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.lg, vertical: ZaiNeSpacing.sm),  // 16, 8
       ),

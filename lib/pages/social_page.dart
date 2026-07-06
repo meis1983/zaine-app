@@ -199,7 +199,7 @@ class _MessagesTabState extends State<_MessagesTab> {
         onTap: () => _openMessageBoard(message.senderId, message.senderName),
         borderRadius: BorderRadius.circular(ZaiNeRadius.card),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(ZaiNeSpacing.lg),
           child: Row(
             children: [
               // 头像
@@ -419,7 +419,7 @@ class _EmojisTabState extends State<_EmojisTab> {
     return RefreshIndicator(
       onRefresh: _loadEmojis,
       child: ListView.builder(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(ZaiNeSpacing.lg),
         itemCount: grouped.length,
         itemBuilder: (context, index) {
           final entry = grouped.entries.elementAt(index);
@@ -429,7 +429,7 @@ class _EmojisTabState extends State<_EmojisTab> {
               if (index > 0) const SizedBox(height: ZaiNeSpacing.lg),
               // 日期标题
               Padding(
-                padding: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.only(bottom: ZaiNeSpacing.md),
                 child: Text(
                   entry.key,
                   style: TextStyle(
@@ -489,7 +489,7 @@ class _EmojisTabState extends State<_EmojisTab> {
   Widget _buildEmojiCard(EmojiInteraction emoji) {
     return Container(
       width: 100,
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(ZaiNeSpacing.md),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(ZaiNeRadius.card),

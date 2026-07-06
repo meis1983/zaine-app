@@ -88,3 +88,18 @@ GoogleService-Info.plist
 
 # Test results
 test-results/
+
+# ===== 机器相关 / 生成文件（2026-07-06 补充）=====
+# Xcode 用户状态（机器特定，不应提交）
+ios/**/xcuserdata/
+ios/**/xcshareddata/
+*.xccheckout
+*.xcscmblueprint
+
+# Flutter 生成的 iOS 配置文件（构建时自动重新生成）
+ios/Flutter/Generated.xcconfig
+ios/Flutter/flutter_export_environment.sh
+ios/Flutter/ephemeral/
+
+# 禁用文件
+*.disabled

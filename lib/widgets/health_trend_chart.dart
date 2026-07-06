@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
+import '../theme/theme_helper.dart';
 
 /// 健康数据趋势图表组件
 /// 
@@ -44,7 +45,7 @@ class HealthTrendChart extends StatelessWidget {
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(ZaiNeRadius.card),
         side: BorderSide(color: Colors.grey.shade200),
       ),
       child: Padding(
@@ -84,7 +85,7 @@ class HealthTrendChart extends StatelessWidget {
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(ZaiNeRadius.card),
         side: BorderSide(color: Colors.grey.shade200),
       ),
       child: Container(

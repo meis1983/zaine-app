@@ -37,10 +37,10 @@ class ContactCardWidget extends StatelessWidget {
 
     return Container(
       key: ValueKey('contact_${name}_$itemIndex'),
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: ZaiNeSpacing.md),
       decoration: BoxDecoration(
         color: ZaiNeColors.cardBg(),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(ZaiNeRadius.card),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.03),
@@ -63,7 +63,7 @@ class ContactCardWidget extends StatelessWidget {
               height: 46,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: const Color(0xFFFF7F50).withValues(alpha: 0.1),
+                color: ZaiNeColors.brandOrange.withValues(alpha: 0.1),
               ),
               child: Center(
                 child: Text(
@@ -71,7 +71,7 @@ class ContactCardWidget extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFFFF7F50),
+                    color: ZaiNeColors.brandOrange,
                   ),
                 ),
               ),

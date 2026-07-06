@@ -216,7 +216,7 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(ZaiNeSpacing.md),
       decoration: BoxDecoration(
         color: Colors.orange.shade50,
         borderRadius: BorderRadius.circular(14),
@@ -511,7 +511,7 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
             Container(
               width: double.infinity,
               margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(ZaiNeSpacing.md),
               decoration: BoxDecoration(
                 color: Colors.blue.shade50,
                 borderRadius: BorderRadius.circular(10),

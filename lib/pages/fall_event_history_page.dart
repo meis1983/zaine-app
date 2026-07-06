@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import '../theme/theme_helper.dart';
 import 'package:intl/intl.dart';
 import '../services/safety/safety_service.dart';
@@ -21,11 +22,30 @@ class _FallEventHistoryPageState extends State<FallEventHistoryPage> {
   bool _isLoading = true;
   bool _watchPaired = false;
   bool _watchReachable = false;
+  Timer? _watchTimer;
 
   @override
   void initState() {
     super.initState();
     _loadData();
+    // 【v1.94.0】轻量轮询，确保 Watch 连接状态及时刷新（与 safety_settings_page 一致）
+    _watchTimer = Timer.periodic(const Duration(seconds: 5), (_) async {
+      try {
+        final state = await _watchService.refreshWatchState();
+        if (mounted) {
+          setState(() {
+            _watchPaired = state['paired'] ?? false;
+            _watchReachable = state['reachable'] ?? false;
+          });
+        }
+      } catch (_) {}
+    });
+  }
+
+  @override
+  void dispose() {
+    _watchTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadData() async {
@@ -79,7 +99,7 @@ class _FallEventHistoryPageState extends State<FallEventHistoryPage> {
                 : _events.isEmpty
                     ? _buildEmptyState()
                     : ListView.builder(
-                        padding: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.all(ZaiNeSpacing.lg),
                         itemCount: _events.length,
                         itemBuilder: (context, index) => _buildEventCard(_events[index]),
                       ),
@@ -90,14 +110,19 @@ class _FallEventHistoryPageState extends State<FallEventHistoryPage> {
   }
 
   /// 状态横幅：同时展示 Watch 和手机端检测状态
+  ///
+  /// 【v1.94.0】修复：iOS 的 `isReachable` 仅在 Watch App 处于前台时为 true，
+  /// 但 WCSession 配对后即可在后台接收跌倒数据。故"配对即视为检测可用"，
+  /// `isReachable` 仅用于区分"实时推送/后台守护"，避免误判为"未连接"。
   Widget _buildStatusBanner() {
-    final bool hasWatch = _watchPaired && _watchReachable;
+    final bool watchActive = _watchPaired; // 配对成功即启用 Watch 精准检测
+    final bool watchLive = _watchPaired && _watchReachable;
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(ZaiNeSpacing.cardSm),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: hasWatch
+          colors: watchActive
               ? [Colors.green.shade50, Colors.teal.shade50]
               : [Colors.indigo.shade50, Colors.blue.shade50],
         ),
@@ -110,13 +135,13 @@ class _FallEventHistoryPageState extends State<FallEventHistoryPage> {
           _buildStatusIndicator(
             icon: Icons.watch_outlined,
             label: 'Apple Watch',
-            active: hasWatch,
-            activeText: '精准检测已启用',
-            inactiveText: '未连接',
+            active: watchActive,
+            activeText: watchLive ? '精准检测已启用' : '已配对 · 后台守护中',
+            inactiveText: '未配对',
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: ZaiNeSpacing.sm),
           Container(width: 1, height: 36, color: Colors.grey.shade300),
-          const SizedBox(width: 8),
+          const SizedBox(width: ZaiNeSpacing.sm),
           // 手机端状态
           _buildStatusIndicator(
             icon: Icons.phone_android_outlined,
@@ -132,7 +157,7 @@ class _FallEventHistoryPageState extends State<FallEventHistoryPage> {
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: 0.7),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(ZaiNeRadius.small),
               ),
               child: Text(
                 '${_events.length} 条记录',
@@ -159,7 +184,7 @@ class _FallEventHistoryPageState extends State<FallEventHistoryPage> {
       children: [
         Container(
           width: 10, height: 10,
-          margin: const EdgeInsets.only(right: 6),
+          margin: const EdgeInsets.only(right: ZaiNeSpacing.tight),
           decoration: BoxDecoration(
             color: active ? Colors.green : Colors.grey.shade400,
             shape: BoxShape.circle,
@@ -174,7 +199,7 @@ class _FallEventHistoryPageState extends State<FallEventHistoryPage> {
             Row(
               children: [
                 Icon(icon, size: 14, color: active ? Colors.green.shade700 : Colors.grey),
-                const SizedBox(width: 4),
+                const SizedBox(width: ZaiNeSpacing.xs),
                 Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600,
                     color: active ? Colors.green.shade800 : Colors.grey)),
               ],
@@ -195,7 +220,7 @@ class _FallEventHistoryPageState extends State<FallEventHistoryPage> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(ZaiNeSpacing.section),
               decoration: BoxDecoration(
                 color: Colors.indigo.shade50,
                 shape: BoxShape.circle,
@@ -234,10 +259,10 @@ class _FallEventHistoryPageState extends State<FallEventHistoryPage> {
         : '--';
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: ZaiNeSpacing.md),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(ZaiNeRadius.cardSm),
         border: Border.all(
           color: event.acknowledged ? Colors.grey.shade200 : Colors.orange.shade200,
         ),
@@ -275,7 +300,7 @@ class _FallEventHistoryPageState extends State<FallEventHistoryPage> {
                   label: '位置',
                   value: _formatLocation(event.latitude, event.longitude),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: ZaiNeSpacing.sm),
 
                 // ── 置信度 + 检测来源 ──
                 Row(
@@ -288,12 +313,12 @@ class _FallEventHistoryPageState extends State<FallEventHistoryPage> {
                         value: confidencePercent,
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: ZaiNeSpacing.md),
                     // ── 守护者通知状态 ──
                     _buildGuardianNotifiedBadge(event),
                   ],
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: ZaiNeSpacing.tight),
 
                 // ── 确认时间 ──
                 if (event.acknowledgedAt != null)
@@ -306,18 +331,18 @@ class _FallEventHistoryPageState extends State<FallEventHistoryPage> {
 
                 // ── 备注 ──
                 if (event.notes != null && event.notes!.isNotEmpty) ...[
-                  const SizedBox(height: 8),
+                  const SizedBox(height: ZaiNeSpacing.sm),
                   Container(
-                    padding: const EdgeInsets.all(10),
+                    padding: const EdgeInsets.all(ZaiNeSpacing.cardXs),
                     decoration: BoxDecoration(
                       color: Colors.grey.shade50,
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(ZaiNeRadius.button),
                     ),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Icon(Icons.note_alt_outlined, size: 14, color: Colors.grey.shade500),
-                        const SizedBox(width: 6),
+                        const SizedBox(width: ZaiNeSpacing.tight),
                         Expanded(
                           child: Text(event.notes!, style: TextStyle(fontSize: 12, color: Colors.grey.shade600, height: 1.4)),
                         ),
@@ -370,7 +395,7 @@ class _FallEventHistoryPageState extends State<FallEventHistoryPage> {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: isWatch ? Colors.purple.shade50 : Colors.indigo.shade50,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(ZaiNeRadius.button),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -380,7 +405,7 @@ class _FallEventHistoryPageState extends State<FallEventHistoryPage> {
             size: 14,
             color: isWatch ? Colors.purple.shade600 : Colors.indigo.shade600,
           ),
-          const SizedBox(width: 4),
+          const SizedBox(width: ZaiNeSpacing.xs),
           Text(
             isWatch ? 'Apple Watch' : '手机端',
             style: TextStyle(
@@ -400,7 +425,7 @@ class _FallEventHistoryPageState extends State<FallEventHistoryPage> {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: event.guardianNotified ? Colors.green.shade50 : Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(ZaiNeRadius.button),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -410,7 +435,7 @@ class _FallEventHistoryPageState extends State<FallEventHistoryPage> {
             size: 13,
             color: event.guardianNotified ? Colors.green.shade600 : Colors.grey.shade500,
           ),
-          const SizedBox(width: 4),
+          const SizedBox(width: ZaiNeSpacing.xs),
           Text(
             event.guardianNotified ? '已通知守护者' : '未通知',
             style: TextStyle(
@@ -434,7 +459,7 @@ class _FallEventHistoryPageState extends State<FallEventHistoryPage> {
     return Row(
       children: [
         Icon(icon, size: 15, color: iconColor),
-        const SizedBox(width: 6),
+        const SizedBox(width: ZaiNeSpacing.tight),
         Text('$label  ', style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
         Expanded(
           child: Text(value,
@@ -450,11 +475,11 @@ class _FallEventHistoryPageState extends State<FallEventHistoryPage> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.card)),
         title: const Row(
           children: [
             Icon(Icons.info_outline, color: Colors.indigo, size: 24),
-            SizedBox(width: 8),
+            SizedBox(width: ZaiNeSpacing.sm),
             Text('跌倒检测说明', style: TextStyle(fontSize: 16)),
           ],
         ),
@@ -467,19 +492,19 @@ class _FallEventHistoryPageState extends State<FallEventHistoryPage> {
               title: 'Apple Watch 精准检测',
               desc: '利用 Watch 高精度加速度传感器，可精准识别跌倒动作。\n需 Apple Watch Series 4 及以上机型。',
             ),
-            SizedBox(height: 14),
+            SizedBox(height: ZaiNeSpacing.cardSm),
             _HelpItem(
               icon: Icons.phone_android,
               title: '手机端辅助检测',
               desc: '使用 iPhone 加速度传感器进行简化版跌倒判断。\n精度不如 Watch，但作为备用方案依然可提供基础保护。',
             ),
-            SizedBox(height: 14),
+            SizedBox(height: ZaiNeSpacing.cardSm),
             _HelpItem(
               icon: Icons.people,
               title: '通知守护者',
               desc: '当检测到跌倒且60秒内无响应时，系统将自动通知您设置的紧急联系人。',
             ),
-            SizedBox(height: 14),
+            SizedBox(height: ZaiNeSpacing.cardSm),
             _HelpItem(
               icon: Icons.warning_amber,
               title: '免责声明',
@@ -524,20 +549,20 @@ class _HelpItem extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
-          padding: const EdgeInsets.all(8),
+          padding: const EdgeInsets.all(ZaiNeSpacing.sm),
           decoration: BoxDecoration(
             color: Colors.indigo.shade50,
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(ZaiNeRadius.button),
           ),
           child: Icon(icon, size: 18, color: Colors.indigo.shade600),
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: ZaiNeSpacing.md),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-              const SizedBox(height: 4),
+              const SizedBox(height: ZaiNeSpacing.xxs),
               Text(desc, style: TextStyle(fontSize: 12, color: Colors.grey.shade600, height: 1.5)),
             ],
           ),

@@ -43,7 +43,7 @@ class HealthTipWidget extends StatelessWidget {
               (tip['color'] as Color).withValues(alpha: 0.04),
             ],
           ),
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(ZaiNeRadius.cardSm),
           border: Border.all(color: (tip['color'] as Color).withValues(alpha: 0.15)),
         ),
         child: Row(
@@ -53,7 +53,7 @@ class HealthTipWidget extends StatelessWidget {
               height: 38,
               decoration: BoxDecoration(
                 color: (tip['color'] as Color).withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(ZaiNeRadius.input),
               ),
               child: Icon(tip['icon'] as IconData,
                   size: 20, color: tip['color'] as Color),
@@ -66,7 +66,7 @@ class HealthTipWidget extends StatelessWidget {
                   Text(
                     tip['title'] as String,
                     style: TextStyle(
-                      fontSize: 14,
+                      fontSize: ZaiNeFontSize.body,
                       fontWeight: FontWeight.w600,
                       color: ZaiNeColors.textPrimary(),
                     ),
@@ -74,7 +74,7 @@ class HealthTipWidget extends StatelessWidget {
                   const SizedBox(height: ZaiNeSpacing.xs),
                   Text(
                     tip['desc'] as String,
-                    style: TextStyle(fontSize: 12, color: ZaiNeColors.textSecondary()),
+                    style: TextStyle(fontSize: ZaiNeFontSize.micro, color: ZaiNeColors.textSecondary()),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),

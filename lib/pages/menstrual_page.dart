@@ -16,7 +16,7 @@ class _MenstrualPageState extends State<MenstrualPage> {
   DateTime _startDate = DateTime.now();
   DateTime? _endDate;
   int _flowLevel = 3;
-  List<String> _selectedSymptoms = [];
+  final List<String> _selectedSymptoms = [];
   final TextEditingController _notesController = TextEditingController();
 
   @override
@@ -107,57 +107,57 @@ class _MenstrualPageState extends State<MenstrualPage> {
         elevation: 0,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(ZaiNeSpacing.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // 开始日期
             _buildSectionTitle('开始日期'),
-            const SizedBox(height: 8),
+            const SizedBox(height: ZaiNeSpacing.sm),
             _buildDateSelector(
               date: _startDate,
               onTap: _selectStartDate,
               label: '选择开始日期',
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: ZaiNeSpacing.lg),
 
             // 结束日期
             _buildSectionTitle('结束日期（可选）'),
-            const SizedBox(height: 8),
+            const SizedBox(height: ZaiNeSpacing.sm),
             _buildDateSelector(
               date: _endDate,
               onTap: _selectEndDate,
               label: '选择结束日期',
               isOptional: true,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: ZaiNeSpacing.lg),
 
             // 流量级别
             _buildSectionTitle('流量级别'),
-            const SizedBox(height: 8),
+            const SizedBox(height: ZaiNeSpacing.sm),
             _buildFlowLevelSelector(),
-            const SizedBox(height: 16),
+            const SizedBox(height: ZaiNeSpacing.lg),
 
             // 症状
             _buildSectionTitle('症状（可选）'),
-            const SizedBox(height: 8),
+            const SizedBox(height: ZaiNeSpacing.sm),
             _buildSymptomsSelector(),
-            const SizedBox(height: 16),
+            const SizedBox(height: ZaiNeSpacing.lg),
 
             // 备注
             _buildSectionTitle('备注（可选）'),
-            const SizedBox(height: 8),
+            const SizedBox(height: ZaiNeSpacing.sm),
             TextField(
               controller: _notesController,
               maxLines: 3,
               decoration: InputDecoration(
                 hintText: '记录你的感受...',
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(ZaiNeRadius.small),
                 ),
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: ZaiNeSpacing.xl),
 
             // 保存按钮
             SizedBox(
@@ -169,7 +169,7 @@ class _MenstrualPageState extends State<MenstrualPage> {
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(ZaiNeRadius.small),
                   ),
                 ),
                 child: const Text('保存记录'),
@@ -202,10 +202,10 @@ class _MenstrualPageState extends State<MenstrualPage> {
     return InkWell(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(ZaiNeSpacing.md),
         decoration: BoxDecoration(
           border: Border.all(color: ZaiNeColors.borderColor()),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(ZaiNeRadius.small),
         ),
         child: Row(
           children: [
@@ -214,7 +214,7 @@ class _MenstrualPageState extends State<MenstrualPage> {
               size: 20,
               color: Colors.pink.shade400,
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: ZaiNeSpacing.md),
             Text(
               date != null
                   ? DateFormat('yyyy年MM月dd日').format(date)
@@ -262,7 +262,7 @@ class _MenstrualPageState extends State<MenstrualPage> {
             height: 50,
             decoration: BoxDecoration(
               color: isSelected ? Colors.pink.shade100 : Colors.grey.shade100,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(ZaiNeRadius.small),
               border: isSelected
                   ? Border.all(color: Colors.pink.shade400, width: 2)
                   : null,

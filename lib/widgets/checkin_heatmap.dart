@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/theme_helper.dart';
 
 /// 签到热力图组件
 ///
@@ -45,20 +46,20 @@ class CheckinHeatmap extends StatelessWidget {
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(ZaiNeRadius.card),
         side: BorderSide(color: Colors.grey.shade200),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(ZaiNeSpacing.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // 标题和统计
             _buildHeader(stats),
-            const SizedBox(height: 16),
+            const SizedBox(height: ZaiNeSpacing.lg),
             // 热力图
             _buildHeatmapGrid(startDate, now),
-            const SizedBox(height: 12),
+            const SizedBox(height: ZaiNeSpacing.md),
             // 图例
             _buildLegend(),
           ],
@@ -81,7 +82,7 @@ class CheckinHeatmap extends StatelessWidget {
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: ZaiNeSpacing.xxs),
               Text(
                 '过去一年的签到记录',
                 style: TextStyle(
@@ -94,9 +95,9 @@ class CheckinHeatmap extends StatelessWidget {
         ),
         // 统计数据
         _buildStatItem('总签到', '${stats['totalCheckins']}', '天'),
-        const SizedBox(width: 16),
+        const SizedBox(width: ZaiNeSpacing.lg),
         _buildStatItem('连续', '${stats['currentStreak']}', '天'),
-        const SizedBox(width: 16),
+        const SizedBox(width: ZaiNeSpacing.lg),
         _buildStatItem('最长', '${stats['maxStreak']}', '天'),
       ],
     );
@@ -113,7 +114,7 @@ class CheckinHeatmap extends StatelessWidget {
             color: Colors.grey.shade400,
           ),
         ),
-        const SizedBox(height: 2),
+        const SizedBox(height: ZaiNeSpacing.xxs),
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -125,7 +126,7 @@ class CheckinHeatmap extends StatelessWidget {
                 color: baseColor,
               ),
             ),
-            const SizedBox(width: 2),
+            const SizedBox(width: ZaiNeSpacing.xxs),
             Text(
               unit,
               style: TextStyle(
@@ -157,13 +158,13 @@ class CheckinHeatmap extends StatelessWidget {
         children: [
           // 星期标签
           if (showWeekdayLabels) _buildWeekdayLabels(),
-          const SizedBox(width: 8),
+          const SizedBox(width: ZaiNeSpacing.sm),
           // 月份标签 + 热力图网格
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (showMonthLabels) _buildMonthLabels(firstSunday, totalWeeks),
-              const SizedBox(height: 4),
+              const SizedBox(height: ZaiNeSpacing.xxs),
               Row(
                 children: List.generate(totalWeeks, (weekIndex) {
                   return _buildWeekColumn(firstSunday, weekIndex);
@@ -257,7 +258,7 @@ class CheckinHeatmap extends StatelessWidget {
           ),
           decoration: BoxDecoration(
             color: _getCellColor(isCheckedIn, isInRange),
-            borderRadius: BorderRadius.circular(2),
+            borderRadius: BorderRadius.circular(ZaiNeRadius.tiny),
           ),
           child: isCheckedIn
               ? Center(
@@ -284,7 +285,7 @@ class CheckinHeatmap extends StatelessWidget {
             color: Colors.grey.shade400,
           ),
         ),
-        const SizedBox(width: 4),
+        const SizedBox(width: ZaiNeSpacing.xxs),
         ...List.generate(4, (index) {
           return Container(
             width: 12,
@@ -292,11 +293,11 @@ class CheckinHeatmap extends StatelessWidget {
             margin: const EdgeInsets.only(right: 3),
             decoration: BoxDecoration(
               color: baseColor.withValues(alpha: 0.2 + (index * 0.25)),
-              borderRadius: BorderRadius.circular(2),
+              borderRadius: BorderRadius.circular(ZaiNeRadius.tiny),
             ),
           );
         }),
-        const SizedBox(width: 4),
+        const SizedBox(width: ZaiNeSpacing.xxs),
         Text(
           '多',
           style: TextStyle(
@@ -403,11 +404,11 @@ class CheckinStatsCard extends StatelessWidget {
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(ZaiNeRadius.card),
         side: BorderSide(color: Colors.grey.shade200),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(ZaiNeSpacing.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -418,7 +419,7 @@ class CheckinStatsCard extends StatelessWidget {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: ZaiNeSpacing.lg),
             Row(
               children: [
                 Expanded(
@@ -490,7 +491,7 @@ class CheckinStatsCard extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: ZaiNeSpacing.sm),
         Text(
           label,
           style: TextStyle(

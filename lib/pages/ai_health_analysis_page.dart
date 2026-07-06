@@ -97,7 +97,7 @@ class _AIHealthAnalysisPageState extends State<AIHealthAnalysisPage> {
           if (_isAnalyzing)
             const Center(
               child: Padding(
-                padding: EdgeInsets.only(right: 16),
+                padding: EdgeInsets.only(right: ZaiNeSpacing.lg),
                 child: SizedBox(
                   width: 20,
                   height: 20,
@@ -157,7 +157,7 @@ class _AIHealthAnalysisPageState extends State<AIHealthAnalysisPage> {
       onRefresh: _performAnalysis,
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(ZaiNeSpacing.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -225,7 +225,7 @@ class _AIHealthAnalysisPageState extends State<AIHealthAnalysisPage> {
     }
 
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(ZaiNeSpacing.xl),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
@@ -344,14 +344,14 @@ class _AIHealthAnalysisPageState extends State<AIHealthAnalysisPage> {
 
   Widget _buildAnomalyCard(HealthAnomaly anomaly) {
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: ZaiNeSpacing.md),
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(ZaiNeRadius.card),
         side: BorderSide(color: Colors.orange.shade200),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(ZaiNeSpacing.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -397,7 +397,7 @@ class _AIHealthAnalysisPageState extends State<AIHealthAnalysisPage> {
             if (anomaly.relatedValue != null && anomaly.threshold != null) ...[
               const SizedBox(height: ZaiNeSpacing.sm),
               Container(
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.all(ZaiNeSpacing.cardXs),
                 decoration: BoxDecoration(
                   color: Colors.grey.shade50,
                   borderRadius: BorderRadius.circular(ZaiNeRadius.small),
@@ -432,18 +432,18 @@ class _AIHealthAnalysisPageState extends State<AIHealthAnalysisPage> {
 
   Widget _buildInsightCard(HealthInsight insight) {
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: ZaiNeSpacing.md),
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(ZaiNeRadius.card),
         side: BorderSide(color: Colors.blue.shade200),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(ZaiNeSpacing.lg),
         child: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.all(ZaiNeSpacing.cardXs),
               decoration: BoxDecoration(
                 color: Colors.blue.shade50,
                 borderRadius: BorderRadius.circular(ZaiNeRadius.small),
@@ -482,21 +482,21 @@ class _AIHealthAnalysisPageState extends State<AIHealthAnalysisPage> {
 
   Widget _buildRecommendationCard(HealthRecommendation recommendation) {
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: ZaiNeSpacing.md),
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(ZaiNeRadius.card),
         side: BorderSide(color: Colors.green.shade200),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(ZaiNeSpacing.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(ZaiNeSpacing.sm),
                   decoration: BoxDecoration(
                     color: Colors.green.shade50,
                     borderRadius: BorderRadius.circular(ZaiNeRadius.small),

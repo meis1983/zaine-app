@@ -9,6 +9,7 @@ import 'dart:async';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'watch_data_service.dart';
+import '../safety/safety_service.dart';
 
 /// 健康数据服务 (Apple Watch / HealthKit 集成)
 /// 实现「多维度生命体征监测」的核心逻辑
@@ -218,15 +219,29 @@ class HealthService {
           final todayDate = DateTime(today.year, today.month, today.day);
           final pointDate = DateTime(point.dateFrom.year, point.dateFrom.month, point.dateFrom.day);
           if (pointDate == todayDate) {
-            summary['steps'] = (summary['steps'] ?? 0) + (numVal?.round() ?? 0);
+            summary['steps'] = (summary['steps'] ?? 0) + (numVal?.round() ?? 0); // numVal 可能为 null，保留 ?.
           }
         } else if (type == HealthDataType.DISTANCE_WALKING_RUNNING) {
-          // 行走+跑步距离：累加今天的所有数据点（单位：米）
+          // 【修复 v1.93.9】行走+跑步距离：HealthKit 返回单位为 km，转换为米存储
+          // 注意：Apple HealthKit DISTANCE_WALKING_RUNNING 的单位是 km
+          // 但部分设备可能返回米，这里需要根据实际值判断
           final today = DateTime.now();
           final todayDate = DateTime(today.year, today.month, today.day);
           final pointDate = DateTime(point.dateFrom.year, point.dateFrom.month, point.dateFrom.day);
           if (pointDate == todayDate) {
-            summary['distance_m'] = (summary['distance_m'] ?? 0) + (numVal != null ? (numVal * 1000).round() : 0);
+            // 如果值 > 1000，说明可能是米（正常人一天不会走超过1000km）
+            // 如果值 < 100，说明应该是 km（需要转换为米）
+            double distanceInMeters;
+            if (numVal != null && numVal > 1000) {
+              // 已经是米，直接使用
+              distanceInMeters = numVal;
+            } else if (numVal != null && numVal > 0) {
+              // 是 km，转换为米
+              distanceInMeters = numVal * 1000;
+            } else {
+              distanceInMeters = 0;
+            }
+            summary['distance_m'] = (summary['distance_m'] ?? 0) + distanceInMeters.round();
           }
         } else if (type == HealthDataType.ACTIVE_ENERGY_BURNED) {
           // 活跃能量：累加今天的所有数据点（单位：千卡）
@@ -234,7 +249,7 @@ class HealthService {
           final todayDate = DateTime(today.year, today.month, today.day);
           final pointDate = DateTime(point.dateFrom.year, point.dateFrom.month, point.dateFrom.day);
           if (pointDate == todayDate) {
-            summary['active_energy'] = (summary['active_energy'] ?? 0) + (numVal?.round() ?? 0);
+            summary['active_energy'] = (summary['active_energy'] ?? 0) + ((numVal ?? 0).round());
           }
         }
         // 注意: MENSTRUATION_FLOW 在当前 health 包版本中不支持
@@ -255,11 +270,25 @@ class HealthService {
         */
       }
       
-      // 计算总睡眠
+      // 【修复 v1.93.9】计算总睡眠（避免重复计算）
+      // sleep_asleep 是总睡眠时长，已包含深度和 REM 睡眠
+      // 所以总睡眠 = sleep_asleep（不重复加 deep 和 rem）
       if (summary.containsKey('sleep_asleep')) {
-        summary['sleep_total'] = (summary['sleep_asleep'] ?? 0) + 
-                                (summary['sleep_deep'] ?? 0) + 
-                                (summary['sleep_rem'] ?? 0);
+        summary['sleep_total'] = summary['sleep_asleep'] ?? 0;
+        
+        // 验证数据合理性：如果总睡眠超过 12 小时（720分钟），标记为异常
+        final totalSleep = summary['sleep_total'] ?? 0;
+        if (totalSleep > 720) { // 12 小时
+          if (kDebugMode) debugPrint('[HealthService] ⚠️ 睡眠时间异常: ${totalSleep} 分钟');
+          // 尝试使用 sleep_deep + sleep_rem 的总和作为参考值
+          final estimatedTotal = ((summary['sleep_deep'] ?? 0) as int) + 
+                                ((summary['sleep_rem'] ?? 0) as int) +
+                                ((summary['sleep_awake'] ?? 0) as int);
+          if (estimatedTotal > 0 && estimatedTotal < 720) {
+            summary['sleep_total'] = estimatedTotal;
+            if (kDebugMode) debugPrint('[HealthService] 使用修正后的睡眠时间: $estimatedTotal 分钟');
+          }
+        }
       }
 
       // 计算经期状态
@@ -567,59 +596,134 @@ class HealthService {
   }
 
   /// 执行基于心跳的「静默签到」
-  static Future<void> performSilentHeartbeatCheckin() async {
+  /// [fromWatch] = true 时表示来自 Apple Watch 的**明确用户签到动作**（手动点击），
+  ///   此时跳过 HealthKit 权限 / 心跳门禁，直接执行签到，手机端弹 🔥 横幅 + 回包 Watch 庆祝
+  /// [fromHeartbeat] = true 时表示来自 Apple Watch 的**自动心率检测签到**（零操作），
+  ///   此时跳过门禁直接执行，手机端弹 💓 横幅（不回包 Watch，不打断用户）
+  /// [clientId] 来自 Watch 的本次签到唯一 ID，用于把成功回包(streak/total)精准送回对应的 Watch
+  static Future<void> performSilentHeartbeatCheckin({bool fromWatch = false, bool fromHeartbeat = false, String? clientId}) async {
     // ====== 新增：检查来自 Watch App 的主动签到信号 ======
     final prefs = await SharedPreferences.getInstance();
     bool hasWatchSignal = prefs.getBool('pending_watch_checkin') ?? false;
-    
+
+    // 【P0】来自 Watch 的自动心率签到：直接执行，source='heartbeat'（弹💓横幅，不回包Watch）
+    if (fromHeartbeat) {
+      if (kDebugMode) debugPrint('[HealthService] 💓 来自 Watch 的心跳自动签到，跳过门禁直接执行 (clientId=$clientId)');
+      await _executeCheckIn(prefs, source: 'heartbeat', clientId: clientId);
+      return;
+    }
+
+    // 【v1.94.0 修复】来自 Watch 的明确签到：直接执行，不依赖健康权限/心跳
+    if (fromWatch) {
+      if (kDebugMode) debugPrint('[HealthService] 📱 来自 Watch 的明确签到，跳过门禁直接执行 (clientId=$clientId)');
+      await _executeCheckIn(prefs, source: 'watch', clientId: clientId);
+      return;
+    }
+
     // 1. 检查权限
     bool hasPermission = await requestPermissions();
     if (!hasPermission && !hasWatchSignal) return;
 
     // 2. 检查最近心跳 或 检查是否有 Watch 信号
     bool isAlive = hasWatchSignal || await checkRecentHeartbeat();
-    
+
     if (isAlive) {
       if (kDebugMode) debugPrint('[HealthService] 触发静默签到 (Watch信号: $hasWatchSignal)...');
-      
-      // 执行同步健康数据（顺便带上去）
+      await _executeCheckIn(prefs, source: hasWatchSignal ? 'watch' : 'heartbeat', clientId: clientId);
+    }
+  }
+
+  /// 【v1.94.0 抽取】真正执行一次签到并刷新本地/UI
+  static Future<void> _executeCheckIn(SharedPreferences prefs, {required String source, String? clientId}) async {
+    // 执行同步健康数据（顺便带上去）
+    try {
       await syncHealthData();
-      
-      // 获取当前日期
-      final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
-      
-      // 调用现有的签到接口 (心情默认为 0，代表静默自动签到)
-      final res = await CheckinService.checkIn(
-        date: today,
-        mood: 0,
-      );
-      
-      if (res['success'] == true) {
-        if (kDebugMode) debugPrint('[HealthService] 静默签到成功');
-        final uid = prefs.getString('user_id') ?? '';
-        final lastDateKey =
-            uid.isNotEmpty ? 'last_check_in_date_$uid' : 'last_check_in_date';
-        // 【修复 v1.93.1】同时保存连续天数和累计天数到本地
-        final streakKey = uid.isNotEmpty ? 'continuous_days_$uid' : 'continuous_days';
-        final totalKey = uid.isNotEmpty ? 'total_check_in_days_$uid' : 'total_check_in_days';
-        final serverStreak = res['streak'] as int?;
-        final serverTotal = res['total_days'] as int?;
-        if (serverStreak != null && serverStreak > 0) {
-          await prefs.setInt(streakKey, serverStreak);
-        }
-        if (serverTotal != null) {
-          await prefs.setInt(totalKey, serverTotal);
-        }
-        await prefs.setString(lastDateKey, today);
-        await prefs.setString('last_check_in_date', today);
-        // 【v1.93.1 修复】通知 HomePage 刷新签到 UI（Watch 签到后手机端有视觉反馈）
-        watchCheckinCompleteSignal.value++;
-        unawaited(SyncService.pullFromServer());
-        // 清除 Watch 信号
-        if (hasWatchSignal) {
-          await prefs.remove('pending_watch_checkin');
+    } catch (e) {
+      if (kDebugMode) debugPrint('[HealthService] 同步健康数据失败(不影响签到): $e');
+    }
+
+    // 获取当前日期
+    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+
+    // 调用现有的签到接口 (心情默认为 0，代表静默自动签到)
+    final res = await CheckinService.checkIn(
+      date: today,
+      mood: 0,
+    );
+
+    if (res['success'] == true) {
+      if (kDebugMode) debugPrint('[HealthService] ✅ 签到成功 (source=$source)');
+      final uid = prefs.getString('user_id') ?? '';
+      final lastDateKey = uid.isNotEmpty ? 'last_check_in_date_$uid' : 'last_check_in_date';
+      // 【修复 v1.93.1】同时保存连续天数和累计天数到本地
+      final streakKey = uid.isNotEmpty ? 'continuous_days_$uid' : 'continuous_days';
+      final totalKey = uid.isNotEmpty ? 'total_check_in_days_$uid' : 'total_check_in_days';
+      final serverStreak = res['streak'] as int?;
+      final serverTotal = res['total_days'] as int?;
+      if (serverStreak != null && serverStreak > 0) {
+        await prefs.setInt(streakKey, serverStreak);
+      }
+      if (serverTotal != null) {
+        await prefs.setInt(totalKey, serverTotal);
+      }
+      await prefs.setString(lastDateKey, today);
+      await prefs.setString('last_check_in_date', today);
+
+      // 【v1.93.1 修复】通知 HomePage 刷新签到 UI（Watch 签到后手机端有视觉反馈）
+      watchCheckinCompleteSignal.value++;
+
+      // 【v1.94.0 新增】手机端酷炫确认横幅
+      // source == 'watch' → 🔥 手动签到，弹横幅 + 回包 Watch 庆祝
+      // source == 'heartbeat' → 💓 自动心率签到，弹横幅（不回包，不打断用户）
+      if (source == 'watch' || source == 'heartbeat') {
+        watchCheckinCelebration.value = {
+          'success': true,
+          'source': source,
+          'streak': serverStreak ?? 0,
+          'total': serverTotal ?? 0,
+          'clientId': clientId ?? '',
+        };
+
+        // 【P3】场景化确认：真实签到（手表/心跳）视为已确认平安，
+        // 同步更新定时确认状态（重置未确认计数）；若用户选择对应触发方式则弹主动通知
+        try {
+          await SafetyService.onSceneCheckIn?.call(source);
+        } catch (e) {
+          if (kDebugMode) debugPrint('[HealthService] 场景化确认同步失败(不影响签到): $e');
         }
       }
+
+      unawaited(SyncService.pullFromServer());
+
+      // 清除 Watch 信号
+      await prefs.remove('pending_watch_checkin');
+
+      // 【v1.94.0 新增】把成功回包(streak/total)精准送回对应的 Apple Watch（仅手动签到需要庆祝回包）
+      if (source == 'watch' && clientId != null && clientId.isNotEmpty) {
+        _sendWatchAck(clientId: clientId, streak: serverStreak ?? 0, total: serverTotal ?? 0);
+      }
+    } else {
+      if (kDebugMode) debugPrint('[HealthService] ⚠️ 签到返回未成功: ${res['error']}');
+      // 即使服务端返回未成功(例如已签到)，也尝试回包让 Watch 显示已签到状态
+      if (source == 'watch' && clientId != null && clientId.isNotEmpty) {
+        _sendWatchAck(clientId: clientId, streak: prefs.getInt('continuous_days') ?? 0, total: prefs.getInt('total_check_in_days') ?? 0, alreadyDone: true);
+      }
+    }
+  }
+
+  /// 【v1.94.0】把签到成功结果回包给对应的 Apple Watch（streak/total 用于 Watch 端庆祝动画）
+  static void _sendWatchAck({required String clientId, required int streak, required int total, bool alreadyDone = false}) {
+    try {
+      _watchChannel.invokeMethod('ackWatchCheckin', {
+        'client_id': clientId,
+        'success': true,
+        'already_done': alreadyDone,
+        'streak': streak,
+        'total': total,
+      });
+      if (kDebugMode) debugPrint('[HealthService] 📤 已回包 Watch 签到结果 (clientId=$clientId, streak=$streak)');
+    } catch (e) {
+      if (kDebugMode) debugPrint('[HealthService] ⚠️ 回包 Watch 失败: $e');
     }
   }
 
@@ -640,6 +744,11 @@ class HealthService {
   /// 修复：Watch 点击确认签到后，手机端无任何视觉反馈
   static final ValueNotifier<int> watchCheckinCompleteSignal = ValueNotifier<int>(0);
 
+  /// 【v1.94.0 新增】Watch 签到酷炫确认信号 — HomePage 监听后弹出庆祝横幅
+  /// value: {'success': true, 'source': 'watch'|'heartbeat', 'streak': int, 'total': int, 'clientId': String}
+  static final ValueNotifier<Map<String, dynamic>> watchCheckinCelebration =
+      ValueNotifier<Map<String, dynamic>>({});
+
   /// 初始化 Watch MethodChannel 监听（在 App 启动时调用一次）
   static void initWatchChannel() {
     if (_watchChannelInitialized) {
@@ -652,8 +761,13 @@ class HealthService {
       if (kDebugMode) debugPrint('[HealthService] 📨 MethodChannel 收到调用: method=${call.method}, arguments=${call.arguments}');
       if (call.method == 'watchCheckin') {
         if (kDebugMode) debugPrint('[HealthService] 📱 收到 Watch 签到通知，立即执行签到...');
-        await performSilentHeartbeatCheckin();
-        if (kDebugMode) debugPrint('[HealthService] ✅ Watch 签到执行完成');
+        // 【P0】区分手动签到(watch)与自动心率签到(heartbeat)，两者都跳过健康权限/心跳门禁
+        final args = call.arguments as Map<dynamic, dynamic>?;
+        final clientId = args?['client_id'] as String?;
+        final fromWatch = args?['fromWatch'] as bool? ?? false;
+        final fromHeartbeat = args?['fromHeartbeat'] as bool? ?? false;
+        await performSilentHeartbeatCheckin(fromWatch: fromWatch, fromHeartbeat: fromHeartbeat, clientId: clientId);
+        if (kDebugMode) debugPrint('[HealthService] ✅ Watch 签到执行完成 (fromWatch=$fromWatch, fromHeartbeat=$fromHeartbeat)');
       } else if (call.method == 'watchSOS') {
         // 【v1.93.0 修复】Watch SOS — 通知 Flutter 端触发紧急求助流程
         if (kDebugMode) debugPrint('[HealthService] 🚨 收到 Watch SOS 通知，触发紧急求助...');

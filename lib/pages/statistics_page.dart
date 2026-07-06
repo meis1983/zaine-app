@@ -232,7 +232,7 @@ class _StatisticsPageState extends State<StatisticsPage> with SingleTickerProvid
 
   Widget _buildHealthTab() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(ZaiNeSpacing.lg),
       child: Column(
         children: [
           // AI 健康分析入口
@@ -291,7 +291,7 @@ class _StatisticsPageState extends State<StatisticsPage> with SingleTickerProvid
         },
         borderRadius: BorderRadius.circular(ZaiNeRadius.card),
         child: Container(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(ZaiNeSpacing.section),
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
@@ -306,7 +306,7 @@ class _StatisticsPageState extends State<StatisticsPage> with SingleTickerProvid
           child: Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(ZaiNeSpacing.md),
                 decoration: BoxDecoration(
                   color: Colors.purple.shade100,
                   borderRadius: BorderRadius.circular(ZaiNeRadius.card),
@@ -354,7 +354,7 @@ class _StatisticsPageState extends State<StatisticsPage> with SingleTickerProvid
 
   Widget _buildCheckinTab() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(ZaiNeSpacing.lg),
       child: Column(
         children: [
           // 签到统计卡片
@@ -377,7 +377,7 @@ class _StatisticsPageState extends State<StatisticsPage> with SingleTickerProvid
 
   Widget _buildMenstruationTab() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(ZaiNeSpacing.lg),
       child: Column(
         children: [
           // 经期预测卡片
