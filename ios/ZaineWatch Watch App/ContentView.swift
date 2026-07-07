@@ -117,10 +117,8 @@ struct ContentView: View {
                         VStack(spacing: 4) {
                             Image(systemName: "star")
                                 .font(.system(size: 30))
-                                .foregroundStyle(
-                                    LinearGradient(colors: [Color.green, Color.teal],
-                                                   startPoint: .topLeading, endPoint: .bottomTrailing)
-                                )
+                                .foregroundStyle(.white)
+                                .shadow(color: .black.opacity(0.18), radius: 2, x: 0, y: 1)
                                 .scaleEffect(pulse ? 1.08 : 1.0)
                                 .onAppear { startPulse() }
                             Text(watchManager.lastAction == "签到中..." ? "签到中..." : "我很好 · 点亮")
