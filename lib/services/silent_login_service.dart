@@ -102,7 +102,7 @@ class SilentLoginService {
     } catch (_) {}
 
     await _secureStorage.write(key: 'auth_token', value: token);
-    await prefs.setString('user_phone', phone ?? '');
+    await prefs.setString('user_phone', (phone ?? '').replaceAll(RegExp(r'[^\d]'), ''));
     await prefs.setBool('is_logged_in', true);
     await prefs.setBool('onboarding_completed', true); // 跳过引导页
 

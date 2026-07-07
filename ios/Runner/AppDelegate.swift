@@ -9,6 +9,11 @@ import HealthKit
   
   private var healthStore: HKHealthStore?
   private let fallMethodChannel = "zaine/healthkit"
+  /// 【v1.94.0 修复】缓存 Watch MethodChannel，避免每次强转 window?.rootViewController
+  /// （implicit engine 模式下 rootViewController 强转 FlutterViewController 经常为 nil，导致 Watch 签到通知静默失败）
+  private var watchChannel: FlutterMethodChannel?
+  /// 【v1.94.0 修复】去重：Watch 同时发 transferUserInfo + sendMessage，防止重复触发签到
+  private var processedWatchClientIds = Set<String>()
   
   override func application(
     _ application: UIApplication,
@@ -42,8 +47,24 @@ import HealthKit
 
   // MARK: - HealthKit Method Channel
   
+  /// 【v1.94.0 修复】递归查找 FlutterViewController（implicit engine / 自定义 launch 可能包了一层容器 VC）
+  private func findFlutterViewController() -> FlutterViewController? {
+      if let vc = window?.rootViewController as? FlutterViewController {
+          return vc
+      }
+      func find(in vc: UIViewController?) -> FlutterViewController? {
+          guard let vc = vc else { return nil }
+          if let fvc = vc as? FlutterViewController { return fvc }
+          for child in vc.children {
+              if let found = find(in: child) { return found }
+          }
+          return nil
+      }
+      return find(in: window?.rootViewController)
+  }
+
   private func setupHealthKitMethodChannel() {
-    guard let controller = window?.rootViewController as? FlutterViewController else {
+    guard let controller = findFlutterViewController() else {
         print("[AppDelegate] 无法获取 FlutterViewController，MethodChannel 注册失败")
         return
     }
@@ -71,11 +92,13 @@ import HealthKit
   // MARK: - Watch Method Channel（v1.94.0）
   /// 接收 Flutter 回包的 Watch 签到结果，转发给 Apple Watch
   private func setupWatchMethodChannel() {
-    guard let controller = window?.rootViewController as? FlutterViewController else {
+    guard let controller = findFlutterViewController() else {
       print("[AppDelegate] 无法获取 FlutterViewController，Watch MethodChannel 注册失败")
       return
     }
     let channel = FlutterMethodChannel(name: "zaine/watch", binaryMessenger: controller.binaryMessenger)
+    // 缓存引用，供 notifyFlutterWatchCheckin 复用（不再依赖每次强转 rootViewController）
+    self.watchChannel = channel
     channel.setMethodCallHandler { [weak self] call, result in
       guard let self = self else {
         result(FlutterError(code: "UNAVAILABLE", message: "AppDelegate released", details: nil))
@@ -232,13 +255,26 @@ import HealthKit
   /// [clientId] 本次签到的唯一 ID，用于把成功回包精准送回对应的 Watch
   /// [fromHeartbeat] true=Watch 自动心率签到（手机端区别展示，不打断用户）；false=手动点击签到
   private func notifyFlutterWatchCheckin(clientId: String?, heartRate: Any? = nil, fromHeartbeat: Bool = false) {
-      // 确保在主线程调用
-      DispatchQueue.main.async {
-          guard let controller = self.window?.rootViewController as? FlutterViewController else {
-              print("[AppDelegate] FlutterViewController 不可用，Watch 签到通知失败")
+      // 【v1.94.0 修复】去重：Watch 同时发 transferUserInfo + sendMessage，clientId 相同，只处理一次
+      if let cid = clientId {
+          if processedWatchClientIds.contains(cid) {
+              print("[AppDelegate] ⏭️ 跳过重复的 Watch 签到 (clientId=\(cid))")
               return
           }
-          let channel = FlutterMethodChannel(name: "zaine/watch", binaryMessenger: controller.binaryMessenger)
+          processedWatchClientIds.insert(cid)
+          // 防止集合无限增长（保留最近 50 个）
+          if processedWatchClientIds.count > 50 {
+              processedWatchClientIds.removeAll()
+          }
+      }
+
+      // 确保在主线程调用
+      DispatchQueue.main.async {
+          // 【v1.94.0 修复】优先使用启动时缓存的 channel（implicit engine 下 rootViewController 强转不可靠）
+          guard let channel = self.watchChannel else {
+              print("[AppDelegate] ⚠️ watchChannel 未初始化，Watch 签到通知失败（App 可能尚未完成初始化）")
+              return
+          }
           var arguments: [String: Any] = [:]
           arguments["fromWatch"] = !fromHeartbeat
           arguments["fromHeartbeat"] = fromHeartbeat

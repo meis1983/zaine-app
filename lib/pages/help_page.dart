@@ -520,13 +520,14 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
                 return;
               }
               final prefs = await SharedPreferences.getInstance();
-              await prefs.setString('user_phone', phone);
-              setState(() => _myPhone = phone);
+              final normalizedPhone = phone.replaceAll(RegExp(r'[^\d]'), '');
+              await prefs.setString('user_phone', normalizedPhone);
+              setState(() => _myPhone = normalizedPhone);
               if (!ctx.mounted) return;
               Navigator.pop(ctx);
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('手机号已设置为 $phone'), backgroundColor: Colors.green),
+                  SnackBar(content: Text('手机号已设置为 $normalizedPhone'), backgroundColor: Colors.green),
                 );
               }
             },
@@ -599,28 +600,10 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
       lngVal = double.tryParse(lngStr);
     }
 
-    // 【修复 v1.17.4-Bug4+5】生成两个 SOS 短链（苹果地图 + 高德地图）
-    String? appleMapShortUrl;
+    // 【修复 v1.94.x】生成高德地图短链（苹果地图改为 App 端直接拼长链，不再调用后端 /go 短链）
     String? amapShortUrl;
     if (latVal != null && lngVal != null) {
-      // 1. 生成苹果地图短链（使用现有 SOS 专用接口）
-      try {
-        final linkRes = await ApiService.createSosLink(
-          lat: latVal,
-          lng: lngVal,
-          address: _address ?? '',
-          userName: _userName,
-          userPhone: _myPhone ?? '',
-        );
-        if (linkRes['success'] == true) {
-          appleMapShortUrl = linkRes['short_url']?.toString();
-          if (kDebugMode) debugPrint('[Help] 苹果地图短链生成成功: $appleMapShortUrl');
-        }
-      } catch (e) {
-        if (kDebugMode) debugPrint('[Help] 苹果地图短链生成失败: $e');
-      }
-
-      // 2. 生成高德地图短链（使用通用短链接口）
+      // 生成高德地图短链（使用通用短链接口）
       try {
         final amapUrl = 'https://uri.amap.com/marker?position=$lngVal,$latVal&name=${Uri.encodeComponent(_address ?? '求助位置')}';
         final linkRes = await ApiService.createShortLink(
@@ -638,7 +621,7 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
     }
 
     // 生成完整短信内容（用于预览）
-    final helpMessage = _generateHelpMessage(_myPhone ?? '', latStr, lngStr, appleMapShortUrl, amapShortUrl);
+    final helpMessage = _generateHelpMessage(_myPhone ?? '', latStr, lngStr, amapShortUrl);
     if (kDebugMode) debugPrint('[Help] 短信模板:\n$helpMessage');
 
     // 标记位置已获取
@@ -658,8 +641,10 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
     if (await canLaunchUrl(uri)) await launchUrl(uri);
   }
 
-  String _generateHelpMessage(String myPhone, [String? latStr, String? lngStr, String? appleMapShortUrl, String? amapShortUrl]) {
+  String _generateHelpMessage(String myPhone, [String? latStr, String? lngStr, String? amapShortUrl]) {
     final now = DateTime.now();
+    // 【修复 v1.94.x】手机号防御性清洗（兼容历史脏数据），只保留数字
+    final cleanPhone = myPhone.replaceAll(RegExp(r'[^\d]'), '');
     final timeStr = '${now.year}-${now.month.toString().padLeft(2,'0')}-${now.day.toString().padLeft(2,'0')} ${now.hour.toString().padLeft(2,'0')}:${now.minute.toString().padLeft(2,'0')}';
     final addrPart = (_address != null && _address!.isNotEmpty) ? _address! : '未知地址';
     // 坐标格式：无空格，确保 iOS SMS 能正确识别为 URL
@@ -673,7 +658,7 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
     sb.writeln('');
     sb.writeln('求救人：${_userName.isNotEmpty ? _userName : "未知"}');
     // 求救者手机号——始终显示（紧急场景不能缺此信息），未设置时提示
-    sb.writeln('手机号：${myPhone.isNotEmpty ? myPhone : "未设置"}');
+    sb.writeln('手机号：${cleanPhone.isNotEmpty ? cleanPhone : "未设置"}');
     sb.writeln('年龄：${_userAge > 0 ? "$_userAge岁" : "未知"}');
     sb.writeln('血型：$_bloodType');
     if (_disease.isNotEmpty) sb.writeln('病史：$_disease');
@@ -696,20 +681,12 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
     // 【修复 v1.77.0】位置信息降级处理：优先显示地图链接，失败则显示文本坐标
     if (coordPart.isNotEmpty) {
       sb.writeln('');
-      // 【修复 v1.17.4-Bug4+5】始终同时显示苹果地图和高德地图（优先使用短链，降级使用长链接）
-      if (appleMapShortUrl != null && appleMapShortUrl.isNotEmpty) {
-        // 苹果地图短链
-        sb.writeln('🍎 点击跳转苹果地图导航');
-        sb.writeln('');
-        sb.writeln(appleMapShortUrl);
-      } else {
-        // 降级：苹果地图长链接（短链生成失败时）
-        // ll= 设置地图中心坐标，q= 设置 Pin 标签（需 URL 编码支持中文）
-        sb.writeln('🍎 点击跳转苹果地图导航');
-        sb.writeln('');
-        final appleMapUrl = 'https://maps.apple.com/?ll=$coordPart&q=${Uri.encodeComponent(_address ?? '求助位置')}';
-        sb.writeln(appleMapUrl);
-      }
+      // 【修复 v1.94.x】苹果地图始终使用直接长链接（不走后端 /go 短链，避免中文 q 参数 302 乱码）
+      // ll= 设置地图中心坐标，q= 设置 Pin 标签（需 URL 编码支持中文）
+      sb.writeln('🍎 点击跳转苹果地图导航');
+      sb.writeln('');
+      final appleMapUrl = 'https://maps.apple.com/?ll=$coordPart&q=${Uri.encodeComponent(_address ?? '求助位置')}';
+      sb.writeln(appleMapUrl);
       sb.writeln('');
       if (amapShortUrl != null && amapShortUrl.isNotEmpty) {
         // 高德地图短链

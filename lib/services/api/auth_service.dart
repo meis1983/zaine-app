@@ -135,11 +135,13 @@ class AuthService {
         if (kDebugMode) debugPrint('[AuthService] ${isSameUser ? "同一用户重新登录，保留本地数据" : "切换账号，已清除旧数据"}');
 
         await _saveToken(res['token']);
+        // 【修复 v1.94.x】手机号归一化为纯数字（去除 +、空格、横线），避免 SOS 短信出现 ++
+        final normalizedPhone = phone.replaceAll(RegExp(r'[^\d]'), '');
         // 【修复 v1.77.0】敏感信息存储到 Keychain（安全，主存储）
-        await _secureStorage.write(key: 'user_phone', value: phone);
+        await _secureStorage.write(key: 'user_phone', value: normalizedPhone);
         await _secureStorage.write(key: 'user_id', value: res['userId'] ?? '');
         // 【v1.90.0】保留 SP 双写以兼容现有 40+ 处读取（逐步迁移到 Keychain）
-        await prefs.setString('user_phone', phone);
+        await prefs.setString('user_phone', normalizedPhone);
         await prefs.setString('user_id', res['userId'] ?? '');
         await prefs.setBool('is_logged_in', true); // 非敏感，保留在 SP
         // 注意：user_name 和 avatar 仍然存储在 SP（非敏感，且需要频繁读取）

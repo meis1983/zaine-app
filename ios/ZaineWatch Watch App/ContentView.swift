@@ -11,6 +11,7 @@ struct ContentView: View {
     @EnvironmentObject private var watchManager: WatchConnectivityManager
     @State private var showSOSConfirmation = false
     @State private var pulse = false
+    @State private var celebrate = false
 
     var body: some View {
         ScrollView {
@@ -34,14 +35,43 @@ struct ContentView: View {
 
                 // ===== 签到主区域 =====
                 if watchManager.checkInSuccess {
-                    // ✅ 成功庆祝态
+                    // ✅ 成功庆祝态：星芒填充 + 小爱心 + 星火
                     VStack(spacing: 6) {
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 46))
-                            .foregroundColor(.green)
-                            .scaleEffect(pulse ? 1.12 : 1.0)
-                            .onAppear { startPulse() }
-                        Text(watchManager.checkInAlreadyDone ? "今日已签到" : "签到成功")
+                        ZStack {
+                            Image(systemName: "star.fill")
+                                .font(.system(size: 46))
+                                .foregroundStyle(
+                                    LinearGradient(colors: [Color.green, Color.teal],
+                                                   startPoint: .topLeading, endPoint: .bottomTrailing)
+                                )
+                                .scaleEffect(pulse ? 1.12 : 1.0)
+                                .onAppear { startPulse() }
+                            // 角落冒出的小爱心，呼应 Logo 的「心」
+                            Image(systemName: "heart.fill")
+                                .font(.system(size: 15))
+                                .foregroundColor(.pink)
+                                .offset(x: 24, y: -24)
+                                .scaleEffect(celebrate ? 1.0 : 0.0)
+                                .opacity(celebrate ? 1 : 0)
+                                .animation(.spring(response: 0.45, dampingFraction: 0.6).delay(0.12), value: celebrate)
+                            // 星火点缀
+                            ForEach(0..<3) { i in
+                                Image(systemName: "sparkle")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.cyan)
+                                    .offset(sparkleOffset(i))
+                                    .scaleEffect(celebrate ? 1.0 : 0.2)
+                                    .opacity(celebrate ? 0.9 : 0)
+                                    .animation(.spring(response: 0.4, dampingFraction: 0.7).delay(0.1 + Double(i) * 0.06), value: celebrate)
+                            }
+                        }
+                        .onAppear {
+                            celebrate = false
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                                celebrate = true
+                            }
+                        }
+                        Text(watchManager.checkInAlreadyDone ? "今日已签到" : "已点亮 ✨")
                             .font(.system(size: 16, weight: .bold))
                             .foregroundColor(.white)
                         HStack(spacing: 14) {
@@ -78,19 +108,22 @@ struct ContentView: View {
                     )
                     .cornerRadius(16)
                 } else {
-                    // 大号动画签到按钮
+                    // 大号动画签到按钮：星芒图标
                     Button(action: {
                         withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
                             watchManager.sendCheckIn()
                         }
                     }) {
                         VStack(spacing: 4) {
-                            Image(systemName: "hand.wave.fill")
+                            Image(systemName: "star")
                                 .font(.system(size: 30))
-                                .foregroundColor(.white)
+                                .foregroundStyle(
+                                    LinearGradient(colors: [Color.green, Color.teal],
+                                                   startPoint: .topLeading, endPoint: .bottomTrailing)
+                                )
                                 .scaleEffect(pulse ? 1.08 : 1.0)
                                 .onAppear { startPulse() }
-                            Text(watchManager.lastAction == "签到中..." ? "签到中..." : "我很好 · 签到")
+                            Text(watchManager.lastAction == "签到中..." ? "签到中..." : "我很好 · 点亮")
                                 .font(.system(size: 15, weight: .semibold))
                                 .foregroundColor(.white)
                         }
@@ -105,8 +138,8 @@ struct ContentView: View {
                         .cornerRadius(18)
                         .shadow(color: .green.opacity(0.5), radius: pulse ? 12 : 4, x: 0, y: 0)
                     }
-                .buttonStyle(PlainButtonStyle())
-                .opacity(watchManager.lastAction == "签到中..." ? 0.7 : 1.0)
+                    .buttonStyle(PlainButtonStyle())
+                    .opacity(watchManager.lastAction == "签到中..." ? 0.7 : 1.0)
                 }
 
                 // ===== 【P0】智能心跳守护状态条 =====
@@ -206,6 +239,16 @@ struct ContentView: View {
         withAnimation(.easeInOut(duration: 1.4).repeatForever(autoreverses: true)) {
             pulse = true
         }
+    }
+
+    /// 星火迸发的位置偏移（围绕星芒分布）
+    private func sparkleOffset(_ i: Int) -> CGSize {
+        let offsets: [CGSize] = [
+            CGSize(width: -34, height: -18),
+            CGSize(width: 30, height: -26),
+            CGSize(width: 0, height: -38)
+        ]
+        return offsets[i % offsets.count]
     }
 }
 
