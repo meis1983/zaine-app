@@ -787,15 +787,13 @@ class _OnboardingPageState extends State<OnboardingPage> {
 
     if (kDebugMode) debugPrint('[Onboarding] 显示位置权限引导弹窗...');
 
-    final confirmed = await _showLocationPermissionGuide();
-    if (confirmed != true) {
-      if (kDebugMode) debugPrint('[Onboarding] 用户选择稍后再说');
-      return;
-    }
+    // Apple Guideline 5.1.1(iv): 自定义权限说明弹窗不得提供退出/跳过路径，
+    // 按钮须用中性文案（Continue/Next），用户看完说明后必须直接进入系统权限弹窗。
+    await _showLocationPermissionGuide();
 
     if (!mounted) return;
 
-    if (kDebugMode) debugPrint('[Onboarding] 用户确认，开始请求系统位置权限...');
+    if (kDebugMode) debugPrint('[Onboarding] 用户已查看说明，开始请求系统位置权限...');
     final status = await LocationService.requestPermission();
     if (kDebugMode) debugPrint('[Onboarding] 权限请求结果: $status');
 
@@ -808,8 +806,10 @@ class _OnboardingPageState extends State<OnboardingPage> {
     }
   }
 
-  Future<bool?> _showLocationPermissionGuide() async {
-    return showDialog<bool>(
+  Future<void> _showLocationPermissionGuide() async {
+    // Apple Guideline 5.1.1(iv): 自定义说明弹窗只做告知，不提供退出/跳过路径，
+    // 按钮须用中性文案（Continue/Next），点按后直接进入系统权限弹窗。
+    await showDialog<void>(
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
@@ -835,7 +835,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
               decoration: BoxDecoration(
                 color: const Color(0xFF11998E).withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(ZaiNeRadius.small),
-              
+
                 boxShadow: ZaiNeShadows.card,),
               child: const Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -861,14 +861,10 @@ class _OnboardingPageState extends State<OnboardingPage> {
           ],
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text('稍后再说', style: TextStyle(color: Colors.grey[500])),
-          ),
           ElevatedButton.icon(
-            onPressed: () => Navigator.pop(context, true),
+            onPressed: () => Navigator.pop(context),
             icon: const Icon(Icons.location_on, size: 18),
-            label: const Text('确认开启'),
+            label: const Text('继续'),
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF11998E),
               foregroundColor: Colors.white,
