@@ -638,8 +638,13 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
       }
     }
 
-    // 生成完整短信内容（用于预览）
-    final helpMessage = _generateHelpMessage(_myPhone ?? '', latStr, lngStr, appleMapShortUrl, amapShortUrl);
+    final helpMessage = _generateHelpMessage(
+      _myPhone ?? '',
+      latStr,
+      lngStr,
+      appleMapShortUrl,  // 已传 null 时模板内降级为直链
+      amapShortUrl,
+    );
     if (kDebugMode) debugPrint('[Help] 短信模板:\n$helpMessage');
 
     // 标记位置已获取
@@ -686,7 +691,7 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
     if (_allergy.isNotEmpty) sb.writeln('过敏：$_allergy');
     if (_emergencyNote.isNotEmpty) sb.writeln('备注：$_emergencyNote');
     sb.writeln('');
-    sb.writeln('─── 求助者位置信息 ───');
+    sb.writeln('=== 求助者位置信息 ===');
     // 【修复 v1.76.0】删除零宽空格 \u200B（它会污染 iOS Data Detector，导致后续链接无法识别）
     // 改用普通空格破坏地址连续性，防止 iOS 短信将地址识别为可点击链接
     final addrBroken = addrPart.contains('区')
@@ -701,17 +706,18 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
     // 【修复 v1.77.0】位置信息降级处理：优先显示地图链接，失败则显示文本坐标
     if (coordPart.isNotEmpty) {
       sb.writeln('');
-      // 【修复 v1.94.x】苹果地图使用后端短链（视觉清爽，避免直链中文 q 参数一长串像乱码）
+      // 【修复 v1.94.x】苹果地图走后端短链（main.py /go 返回 200 中转页，自动按设备拉起苹果/高德地图，
+      // 绕过 FC 3.0 禁止 fcapp.run 302 跳外链的限制）；短链生成失败时降级为 maps.apple.com 直链。
       if (appleMapShortUrl != null && appleMapShortUrl.isNotEmpty) {
         sb.writeln('🍎 点击跳转苹果地图导航');
         sb.writeln('');
         sb.writeln(appleMapShortUrl);
         sb.writeln('');
-      } else {
-        // 降级：苹果地图长链接（短链生成失败时）
+      } else if (coordPart.isNotEmpty) {
+        // 降级：苹果地图长链（后端短链生成失败时）
         sb.writeln('🍎 点击跳转苹果地图导航');
         sb.writeln('');
-        final appleMapUrl = 'https://maps.apple.com/?ll=$coordPart&q=${Uri.encodeComponent(_address ?? '求助位置')}';
+        final appleMapUrl = 'https://maps.apple.com/?ll=$coordPart&q=${Uri.encodeComponent(addrPart)}';
         sb.writeln(appleMapUrl);
         sb.writeln('');
       }
