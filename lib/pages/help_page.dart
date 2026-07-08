@@ -357,7 +357,10 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
     setState(() {
       _locationLoading = false;
       if (result.isSuccess && result.latitude != null) {
-        _address = result.address;
+        // 【修复 v1.94.x】高德反向地理编码 POI 地址自带 '+'（如"朝阳区+崔各庄乡"），
+        // 源头即清洗，避免污染短信地址行与苹果地图 q 参数。
+        // 进入此分支说明定位成功（latitude != null），address 必有值
+        _address = result.address!.replaceAll('+', '').trim();
         _coordLat = '北纬 ${result.latitude!.toStringAsFixed(6)}°';
         _coordLng = '东经 ${result.longitude!.toStringAsFixed(6)}°';
       } else {
@@ -673,7 +676,11 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
     if (coordPart.isNotEmpty) {
       sb.writeln('');
       sb.writeln('🍎 苹果地图导航');
-      sb.writeln('https://maps.apple.com/?ll=$coordPart');
+      // 【修复 v1.94.x】用 daddr= 而非 ll= ：ll 仅居中地图视图、不进入导航模式，
+      // 接收端打开后停在坐标点、无出发点、无法一键导航；
+      // daddr= 让苹果地图直接进入导航模式，起点默认取接收端当前位置（"我的位置"），
+      // 接收端点"出发"即可导航到求救者位置。q= 为终点名称标签（中文需 URL 编码）。
+      sb.writeln('https://maps.apple.com/?daddr=$coordPart&q=${Uri.encodeComponent(addrPart)}');
       sb.writeln('📍 高德地图导航');
       sb.writeln('https://uri.amap.com/marker?position=$lngStr,$latStr');
     } else {
