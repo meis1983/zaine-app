@@ -29,6 +29,7 @@ import '../widgets/guard_status_widget.dart';
 import '../widgets/check_in_button_widget.dart';
 import '../services/api/auth_service.dart';
 import '../services/api/sync_service.dart';
+import '../utils/streak_util.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -39,7 +40,6 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   bool _checkedInToday = false;
-  DateTime? _lastCheckIn;
   late AnimationController _animationController;
   late Animation<double> _scaleAnimation;
   int _continuousDays = 0;
@@ -359,7 +359,6 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     String? phone;
     // 【修复 v1.90.1】提前读取签到状态，避免首次渲染显示"未签到"
     bool checkedInToday = false;
-    DateTime? lastCheckIn;
     try {
       userId = await AuthService.getUserId();
       final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
@@ -373,9 +372,6 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         if (userSpecificDate == today) {
           checkedInToday = true;
         }
-      }
-      if (lastDate != null) {
-        try { lastCheckIn = DateTime.parse(lastDate); } catch (_) {}
       }
       // TODO: 后续可用于显示守护人数量
       // int guardianCount = 0;
@@ -395,7 +391,6 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       _isLoggedIn = prefs.getBool('is_logged_in') ?? false;
       // 【修复 v1.90.1】立即设置签到状态，避免首次渲染闪现"未签到"
       _checkedInToday = checkedInToday;
-      if (lastCheckIn != null) _lastCheckIn = lastCheckIn;
       // 【修复 v1.9.73】从 per‑user 档案读姓名，避免切账号串名
       String? userName;
       final uid = userId ?? '';
@@ -453,11 +448,6 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     setState(() {
       // 【修复 v1.91.0】先设置本地读取的状态，避免闪烁
       _checkedInToday = lastDate == today;
-      if (lastDate != null) {
-        try {
-          _lastCheckIn = DateTime.parse(lastDate);
-        } catch (_) {}
-      }
       // 使用用户隔离的键值（如果已读取到）
       final streakKey = uid.isNotEmpty ? 'continuous_days_$uid' : 'continuous_days';
       final totalKey = uid.isNotEmpty ? 'total_check_in_days_$uid' : 'total_check_in_days';
@@ -648,8 +638,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     return count;
   }
 
-  /// 【v1.93.2 修复】从本地签到历史重新计算连续天数（兜底服务端 streak=0）
-  /// 场景：静默签到（mood=0）后服务器可能返回 streak=0，但本地历史记录能准确计算
+  /// 【v1.95.0 彻底同步】委托 StreakUtil 统一计算，确保全 App 连续天数算法一致
   Future<int> _calculateStreakFromHistory() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -657,32 +646,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       final historyKey = uid.isNotEmpty ? 'checkin_history_$uid' : 'checkin_history';
       final history = prefs.getStringList(historyKey);
       if (history == null || history.isEmpty) return 0;
-
-      final dates = history
-          .map((s) {
-            try { return DateTime.tryParse(s); } catch (_) { return null; }
-          })
-          .where((d) => d != null)
-          .map((d) => DateTime(d!.year, d.month, d.day))
-          .toSet()
-          .toList()
-        ..sort((a, b) => b.compareTo(a)); // 降序：最新在前
-
-      if (dates.isEmpty) return 0;
-
-      final today = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
-      var streak = 0;
-
-      for (int i = 0; i < 365; i++) {
-        final checkDate = today.subtract(Duration(days: i));
-        if (dates.any((d) => d == checkDate)) {
-          streak++;
-        } else if (i > 0) {
-          break; // 中间有断签
-        }
-        // i == 0（今天）即使没签到，继续往前检查，断签判在昨天之后
-      }
-      return streak;
+      return StreakUtil.calculateStreak(history);
     } catch (e) {
       if (kDebugMode) debugPrint('[HomePage] 本地计算连续天数失败: $e');
       return 0;
@@ -742,31 +706,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     final now = DateTime.now();
     final today = DateFormat('yyyy-MM-dd').format(now);
 
-    // 先计算新的天数
-    int newDays = 1;
-    int newTotal = _totalDays + 1;
-    if (_lastCheckIn != null) {
-      final yesterday = DateTime(now.year, now.month, now.day - 1);
-      final lastDate = DateTime(
-          _lastCheckIn!.year, _lastCheckIn!.month, _lastCheckIn!.day);
-      if (lastDate == yesterday) {
-        newDays = (_continuousDays + 1).clamp(0, 999);
-      } else if (lastDate != DateTime(now.year, now.month, now.day)) {
-        newDays = 1;
-      }
-    }
-
-    // 立即刷新 UI（不等待任何 IO）
-    setState(() {
-      _checkedInToday = true;
-      _lastCheckIn = now;
-      _continuousDays = newDays;
-      _totalDays = newTotal;
-      _weeklyDays++;
-    });
-
-    // 后台异步持久化（不阻塞 UI）
-    // 【修复】签到数据按用户隔离存储
+    // 【v1.95.0 彻底同步】提前读取本地存储，连续天数从签到历史整体重算（单一真相源）
     final prefs = await SharedPreferences.getInstance();
     final uid = (await AuthService.getUserId()) ?? '';
     final streakKey = uid.isNotEmpty ? 'continuous_days_$uid' : 'continuous_days';
@@ -774,17 +714,27 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     final historyKey = uid.isNotEmpty ? 'checkin_history_$uid' : 'checkin_history';
     final lastDateKey = uid.isNotEmpty ? 'last_check_in_date_$uid' : 'last_check_in_date';
 
+    int newTotal = _totalDays + 1;
+    // 把今天加入历史后用 StreakUtil 统一重算（不再依赖内存增量，根除天数偶发归零）
+    final historyList = List<String>.from(prefs.getStringList(historyKey) ?? []);
+    if (!historyList.contains(today)) historyList.add(today);
+    final newDays = StreakUtil.calculateStreak(historyList);
+
+    // 立即刷新 UI（不等待任何 IO）
+    setState(() {
+      _checkedInToday = true;
+      _continuousDays = newDays;
+      _totalDays = newTotal;
+      _weeklyDays++;
+    });
+
+    // 后台异步持久化（不阻塞 UI）
     await prefs.setString(lastDateKey, today);
     // 兼容：同时保存全局 key（供未登录场景使用）
     await prefs.setString('last_check_in_date', today);
     await prefs.setInt(streakKey, newDays);
     await prefs.setInt(totalKey, newTotal);
-    // 保存签到历史
-    final history = prefs.getStringList(historyKey) ?? [];
-    if (!history.contains(today)) {
-      history.add(today);
-      await prefs.setStringList(historyKey, history);
-    }
+    await prefs.setStringList(historyKey, historyList);
 
     // 后台同步到服务器（如果已登录）
     if (_isLoggedIn) {

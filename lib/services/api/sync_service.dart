@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider/path_provider.dart';
 import '../api_service.dart';
+import '../../utils/streak_util.dart';
 
 class SyncService {
   static String _formatYyyyMmDd(DateTime dt) {
@@ -225,7 +226,7 @@ class SyncService {
           if (kDebugMode) debugPrint('[SyncService] ✅ 拉取签到历史 ${dateStrings.length} 条');
           
           // 【P0 修复 v1.93.9】重新计算连续天数，防止服务端 streak=0 导致数据丢失
-          final calculatedStreak = calculateStreakFromHistory(dateStrings);
+          final calculatedStreak = StreakUtil.calculateStreak(dateStrings);
           final serverStreak = prefs.getInt(streakKey) ?? 0;
           
           if (calculatedStreak > serverStreak) {
@@ -241,37 +242,4 @@ class SyncService {
     }
   }
   
-  /// 从签到历史重新计算连续天数
-  static int calculateStreakFromHistory(List<String> dateStrings) {
-    if (dateStrings.isEmpty) return 0;
-    
-    // 解析日期并归一化（去掉时间部分）
-    final dates = dateStrings
-        .map((s) => DateTime.tryParse(s))
-        .where((d) => d != null)
-        .map((d) => DateTime(d!.year, d.month, d.day))
-        .toSet()  // 去重
-        .toList();
-    
-    if (dates.isEmpty) return 0;
-    
-    // 降序排序（最新在前）
-    dates.sort((a, b) => b.compareTo(a));
-    
-    final today = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
-    int streak = 0;
-    
-    // 从今天或昨天开始往前检查
-    for (int i = 0; i < 365; i++) {
-      final checkDate = today.subtract(Duration(days: i));
-      if (dates.any((d) => d == checkDate)) {
-        streak++;
-      } else if (i > 0) {
-        // 中间有断签（i=0 是今天，允许今天还没签到）
-        break;
-      }
-    }
-    
-    return streak;
-  }
 }

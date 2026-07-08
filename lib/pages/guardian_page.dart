@@ -37,8 +37,8 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _loadGuardians();
-    // 【优化 v1.19.1】定期刷新改为 5 分钟（原 60 秒太频繁，耗电且浪费服务器资源）
-    _refreshTimer = Timer.periodic(const Duration(minutes: 5), (timer) {
+    // 【v1.95.0】定期刷新缩短为 30 秒，确保守护圈状态以服务端为准、及时纠正偶发错乱
+    _refreshTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
       if (mounted) _loadGuardians(isSilent: true);
     });
   }
@@ -88,6 +88,9 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
         // 【修复 v1.76.0】从缓存读取注册状态，不再硬编码 false
         final cachedIsRegistered =
             prefs.getBool('contact_is_registered_phone_$phone') ?? false;
+        // 【v1.95.0】进入页面以服务端为准：缓存为 false 时不要秒显成"未注册"，
+        // 改为"同步中"占位，避免误导用户（服务端返回前不把未注册当终态）
+        final initialStatusError = cachedIsRegistered ? null : '同步中';
         final cachedUserId = prefs.getInt('contact_user_id_phone_$phone');
 
         return <String, dynamic>{
@@ -97,7 +100,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
           'isRegistered': cachedIsRegistered,
           'userId': cachedUserId,
           'checkedInToday': cachedCheckedIn,
-          'statusError': null,
+          'statusError': initialStatusError,
           'avatarBase64': cachedAvatar,
           'lastSigninAt': cachedLastSigninAt,
           'isActive': isActive,
@@ -163,58 +166,75 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
           final name = (c['name'] ?? '未命名').toString();
           final relation = (c['relation'] == null || c['relation'].toString().isEmpty) ? '守护者' : c['relation'].toString();
 
-          final status = resultsMap[phone];
-          if (status == null || status['found'] == false) {
-            // 【修复 v1.76.0】写入缓存：该联系人未注册，避免旧缓存残留"已注册"
-            await prefs.setBool('contact_is_registered_phone_$phone', false);
-            await prefs.remove('contact_user_id_phone_$phone');
-            updatedGuardians.add(<String, dynamic>{
-              'name': name,
-              'phone': phone,
-              'relation': relation,
-              'isRegistered': false,
-              'userId': null,
-              'checkedInToday': prefs.getBool('contact_checked_in_today_phone_$phone') ?? false,
-              'statusError': null,
-              'avatarBase64': prefs.getString('contact_avatar_phone_$phone') ?? '',
-              'lastSigninAt': prefs.getString('contact_last_signin_at_phone_$phone'),
-              'isActive': (prefs.getString('contact_last_signin_at_phone_$phone') ?? '').isNotEmpty,
-            });
-            continue;
-          }
+      final status = resultsMap[phone];
+      if (status != null && status['found'] == true) {
+        // 【已注册】原逻辑保持不变
+        final foundUserId = status['user_id'] as int?;
+        final avatarBase64 = status['avatar_base64']?.toString() ?? '';
+        final lastSigninAt = status['last_signin_at']?.toString() ?? '';
+        final checkedInToday = status['checked_in_today'] == true;
+        final todayMood = status['today_mood'] as int?;  // 1-5，null 表示未签到
 
-          final foundUserId = status['user_id'] as int?;
-          final avatarBase64 = status['avatar_base64']?.toString() ?? '';
-          final lastSigninAt = status['last_signin_at']?.toString() ?? '';
-          final checkedInToday = status['checked_in_today'] == true;
-          final todayMood = status['today_mood'] as int?;  // 1-5，null 表示未签到
+        if (avatarBase64.isNotEmpty && foundUserId != null) {
+          await prefs.setString('contact_avatar_$foundUserId', avatarBase64);
+          await prefs.setString('contact_avatar_phone_$phone', avatarBase64);
+        }
+        await prefs.setBool('contact_checked_in_today_phone_$phone', checkedInToday);
+        await prefs.setInt('contact_today_mood_phone_$phone', todayMood ?? 0);  // 0 表示未签到
+        await prefs.setString('contact_last_signin_at_phone_$phone', lastSigninAt);
+        // 【修复 v1.76.0】将注册状态写入缓存，避免下次加载时显示错误
+        await prefs.setBool('contact_is_registered_phone_$phone', true);
+        await prefs.setInt('contact_user_id_phone_$phone', foundUserId!);
 
-          if (avatarBase64.isNotEmpty && foundUserId != null) {
-            await prefs.setString('contact_avatar_$foundUserId', avatarBase64);
-            await prefs.setString('contact_avatar_phone_$phone', avatarBase64);
-          }
-          await prefs.setBool('contact_checked_in_today_phone_$phone', checkedInToday);
-          await prefs.setInt('contact_today_mood_phone_$phone', todayMood ?? 0);  // 0 表示未签到
-          await prefs.setString('contact_last_signin_at_phone_$phone', lastSigninAt);
-          // 【修复 v1.76.0】将注册状态写入缓存，避免下次加载时显示错误
-          await prefs.setBool('contact_is_registered_phone_$phone', true);
-          await prefs.setInt('contact_user_id_phone_$phone', foundUserId!);
-
-          updatedGuardians.add(<String, dynamic>{
-            'name': name,
-            'phone': phone,
-            'relation': relation,
-            'isRegistered': true,
-            'userId': foundUserId,
-            'checkedInToday': checkedInToday,
-            'todayMood': todayMood,  // 今日心情（1-5，null 或 0 表示未签到）
-            'statusError': null,
-            'avatarBase64': avatarBase64.isNotEmpty
-                ? avatarBase64
-                : (prefs.getString('contact_avatar_phone_$phone') ?? ''),
-            'lastSigninAt': lastSigninAt,
-            'isActive': lastSigninAt.isNotEmpty,
-          });
+        updatedGuardians.add(<String, dynamic>{
+          'name': name,
+          'phone': phone,
+          'relation': relation,
+          'isRegistered': true,
+          'userId': foundUserId,
+          'checkedInToday': checkedInToday,
+          'todayMood': todayMood,  // 今日心情（1-5，null 或 0 表示未签到）
+          'statusError': null,
+          'avatarBase64': avatarBase64.isNotEmpty
+              ? avatarBase64
+              : (prefs.getString('contact_avatar_phone_$phone') ?? ''),
+          'lastSigninAt': lastSigninAt,
+          'isActive': lastSigninAt.isNotEmpty,
+        });
+      } else if (status != null && status['found'] == false) {
+        // 【明确未注册】服务端确认未注册，写缓存 + 显示未注册
+        await prefs.setBool('contact_is_registered_phone_$phone', false);
+        await prefs.remove('contact_user_id_phone_$phone');
+        updatedGuardians.add(<String, dynamic>{
+          'name': name,
+          'phone': phone,
+          'relation': relation,
+          'isRegistered': false,
+          'userId': null,
+          'checkedInToday': prefs.getBool('contact_checked_in_today_phone_$phone') ?? false,
+          'statusError': null,
+          'avatarBase64': prefs.getString('contact_avatar_phone_$phone') ?? '',
+          'lastSigninAt': prefs.getString('contact_last_signin_at_phone_$phone'),
+          'isActive': (prefs.getString('contact_last_signin_at_phone_$phone') ?? '').isNotEmpty,
+        });
+      } else {
+        // 【v1.95.0 修复】batchLookup 结果缺失（网络抖动/该联系人未在返回中）：
+        // 不武断标记为未注册，降级使用缓存值并保留原状态，避免污染缓存导致偶发错乱
+        final cachedIsReg = prefs.getBool('contact_is_registered_phone_$phone') ?? false;
+        final cachedUid = prefs.getInt('contact_user_id_phone_$phone');
+        updatedGuardians.add(<String, dynamic>{
+          'name': name,
+          'phone': phone,
+          'relation': relation,
+          'isRegistered': cachedIsReg,
+          'userId': cachedUid,
+          'checkedInToday': prefs.getBool('contact_checked_in_today_phone_$phone') ?? false,
+          'statusError': null,
+          'avatarBase64': prefs.getString('contact_avatar_phone_$phone') ?? '',
+          'lastSigninAt': prefs.getString('contact_last_signin_at_phone_$phone'),
+          'isActive': (prefs.getString('contact_last_signin_at_phone_$phone') ?? '').isNotEmpty,
+        });
+      }
         }
 
         if (mounted) {
