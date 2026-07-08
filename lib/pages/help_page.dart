@@ -679,8 +679,8 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
       // 【修复 v1.94.x】用 daddr= 而非 ll= ：ll 仅居中地图视图、不进入导航模式，
       // 接收端打开后停在坐标点、无出发点、无法一键导航；
       // daddr= 让苹果地图直接进入导航模式，起点默认取接收端当前位置（"我的位置"），
-      // 接收端点"出发"即可导航到求救者位置。q= 为终点名称标签（中文需 URL 编码）。
-      sb.writeln('https://maps.apple.com/?daddr=$coordPart&q=${Uri.encodeComponent(addrPart)}');
+      // 接收端点"出发"即可导航到求救者位置。终点名称无需在 URL 携带（短信正文已有纯文本地址）。
+      sb.writeln('https://maps.apple.com/?daddr=$coordPart');
       sb.writeln('📍 高德地图导航');
       sb.writeln('https://uri.amap.com/marker?position=$lngStr,$latStr');
     } else {

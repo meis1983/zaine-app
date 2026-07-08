@@ -33,6 +33,7 @@ class _SafetySettingsPageState extends State<SafetySettingsPage> {
   bool _isLocationTracking = false;
   LocationTrackingMode _trackingMode = LocationTrackingMode.normal; // 【v1.93.0】
   bool _isLoading = true;
+  int _geoFenceRefreshToken = 0; // 【v1.95.0】围栏刷新令牌：_loadData 时自增，强制 GeoFenceCard 重建以重新加载
   bool _watchPaired = false;
   bool _watchReachable = false;
   bool _phoneDetectionEnabled = false;
@@ -152,6 +153,7 @@ class _SafetySettingsPageState extends State<SafetySettingsPage> {
         _trackingMode = savedMode;
         _isLocationTracking = _safetyService.isLocationTracking;
         _isLoading = false;
+        _geoFenceRefreshToken++; // 【v1.95.0】触发 GeoFenceCard 重建并重新加载围栏
       });
     }
   }
@@ -295,6 +297,7 @@ class _SafetySettingsPageState extends State<SafetySettingsPage> {
 
                     // 【v1.93.0】安全围栏
                     GeoFenceCard(
+                      key: ValueKey(_geoFenceRefreshToken),
                       onManageFences: () {
                         Navigator.push(
                           context,

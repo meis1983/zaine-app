@@ -88,9 +88,9 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
         // 【修复 v1.76.0】从缓存读取注册状态，不再硬编码 false
         final cachedIsRegistered =
             prefs.getBool('contact_is_registered_phone_$phone') ?? false;
-        // 【v1.95.0】进入页面以服务端为准：缓存为 false 时不要秒显成"未注册"，
-        // 改为"同步中"占位，避免误导用户（服务端返回前不把未注册当终态）
-        final initialStatusError = cachedIsRegistered ? null : '同步中';
+        // 【v1.95.0 B方案】本地缓存秒显：进页面立即显示缓存的已注册/未注册，
+        // 后台静默 batchLookup 校正；仅当真实查询失败才显示错误提示
+        const initialStatusError = null;
         final cachedUserId = prefs.getInt('contact_user_id_phone_$phone');
 
         return <String, dynamic>{

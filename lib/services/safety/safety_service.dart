@@ -630,6 +630,7 @@ class SafetyService {
   
   static const String _lastLocationKey = 'last_location_record';
   static const String _trackingModeKey = 'location_tracking_mode'; // 【v1.93.0】
+  static const String _locationTrackingEnabledKey = 'location_tracking_enabled'; // 【v1.95.0】持久化开关状态
   Timer? _locationTimer; // 位置记录定时器
   LocationTrackingMode _trackingMode = LocationTrackingMode.normal; // 【v1.93.0】
 
@@ -649,7 +650,12 @@ class SafetyService {
   LocationTrackingMode get trackingMode => _trackingMode;
 
   /// 当前是否正在追踪位置
-  bool get isLocationTracking => _locationTimer != null && _locationTimer!.isActive;
+  /// 当前是否正在追踪位置（以持久化状态为准，避免 App 回后台/重进后定时器销毁导致误显示关闭）
+  bool get isLocationTracking {
+    final persisted = _prefs?.getBool(_locationTrackingEnabledKey);
+    if (persisted != null) return persisted;
+    return _locationTimer != null && _locationTimer!.isActive;
+  }
 
   /// 开始位置跟踪
   /// [mode] 追踪模式，默认为普通模式
@@ -685,6 +691,8 @@ class SafetyService {
       await _recordLocation();
     });
 
+    await _ensureInitialized();
+    await _prefs!.setBool(_locationTrackingEnabledKey, true);
     if (kDebugMode) debugPrint('[SafetyService] 位置跟踪已启动（模式: ${mode.name}, 间隔: ${interval.inSeconds}s）');
     return true;
   }
@@ -718,8 +726,11 @@ class SafetyService {
   }
 
   /// 停止位置跟踪
-  void stopLocationTracking() {
+  Future<void> stopLocationTracking() async {
     _stopLocationTimer();
+    // 【v1.95.0】持久化关闭状态，避免返回页面后误显示"已开启"
+    await _ensureInitialized();
+    await _prefs!.setBool(_locationTrackingEnabledKey, false);
     if (kDebugMode) debugPrint('[SafetyService] 位置跟踪已停止');
   }
 

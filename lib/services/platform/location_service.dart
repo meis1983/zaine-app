@@ -168,19 +168,30 @@ class LocationService {
   /// 逆地理编码：经纬度 → 可读地址
   /// 使用高德 Web 服务 API (REST)
   /// 返回格式化地址，失败时返回 null
+  /// 清洗地址中的特殊字符（高德 formatted_address 自带 '+' 或全角'＋'，
+  /// 会污染 SOS 短信模板与地图链接；同时归一化空白）
+  static String? _cleanAddress(String? addr) {
+    if (addr == null) return null;
+    return addr
+        .replaceAll('+', '')
+        .replaceAll('＋', '') // 全角加号
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+  }
+
   static Future<String?> reverseGeocode(double latitude, double longitude) async {
     try {
       final String? amapAddr = await _reverseGeocodeAmap(latitude, longitude);
       if (amapAddr != null && amapAddr.trim().isNotEmpty) {
         await _storeGeocodeDiag(provider: 'amap', address: amapAddr.trim());
-        return amapAddr.trim();
+        return _cleanAddress(amapAddr);
       }
       final nativeAddr = await _reverseGeocodeNative(latitude, longitude);
       await _storeGeocodeDiag(
         provider: (nativeAddr != null && nativeAddr.trim().isNotEmpty) ? 'native' : 'none',
         address: nativeAddr?.trim(),
       );
-      return nativeAddr;
+      return _cleanAddress(nativeAddr);
     } catch (e, st) {
       if (kDebugMode) debugPrint('[LocationService] 💥 逆地理编码未捕获异常: $e\n$st');
       await _storeGeocodeDiag(provider: 'none', address: null);
