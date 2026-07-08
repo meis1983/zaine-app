@@ -332,7 +332,7 @@ class CheckInReminderCard extends StatelessWidget {
   }
 
   Widget _buildTimeChips(BuildContext context) {
-    final defaultHours = {
+    const defaultHours = {
       7: '早7点',
       9: '上午9点',
       12: '中午12点',
@@ -341,32 +341,90 @@ class CheckInReminderCard extends StatelessWidget {
       22: '晚10点',
     };
 
+    // 用户自定义的时间（不在预设 6 个时段中的小时）
+    final customHours = config.reminderHours
+        .where((h) => !defaultHours.containsKey(h))
+        .toList()
+      ..sort();
+
     return Wrap(
       spacing: 8,
       runSpacing: 8,
-      children: defaultHours.entries.map((entry) {
-        final isSelected = config.reminderHours.contains(entry.key);
-        return FilterChip(
-          label: Text(entry.value),
-          selected: isSelected,
-          onSelected: (selected) {
-            final hours = List<int>.from(config.reminderHours);
-            if (selected) {
-              hours.add(entry.key);
-            } else {
-              hours.remove(entry.key);
-            }
-            hours.sort();
-            onConfigChanged(config.copyWith(reminderHours: hours));
-          },
-          selectedColor: Colors.green.shade100,
-          checkmarkColor: Colors.green.shade700,
-          labelStyle: TextStyle(
-            color: isSelected ? Colors.green.shade700 : Colors.grey.shade600,
-          ),
-        );
-      }).toList(),
+      children: [
+        ...defaultHours.entries.map((entry) {
+          final isSelected = config.reminderHours.contains(entry.key);
+          return FilterChip(
+            label: Text(entry.value),
+            selected: isSelected,
+            onSelected: (selected) {
+              final hours = List<int>.from(config.reminderHours);
+              if (selected) {
+                hours.add(entry.key);
+              } else {
+                hours.remove(entry.key);
+              }
+              hours.sort();
+              onConfigChanged(config.copyWith(reminderHours: hours));
+            },
+            selectedColor: Colors.green.shade100,
+            checkmarkColor: Colors.green.shade700,
+            labelStyle: TextStyle(
+              color: isSelected ? Colors.green.shade700 : Colors.grey.shade600,
+            ),
+          );
+        }),
+        // 【v1.95.0+115 新功能】自定义时间 Chip：点 × 删除
+        ...customHours.map((hour) {
+          return FilterChip(
+            label: Text(_formatHourLabel(hour)),
+            selected: true,
+            onSelected: (_) {}, // 选中态不切换，用删除图标移除
+            onDeleted: () {
+              final hours = List<int>.from(config.reminderHours)..remove(hour);
+              onConfigChanged(config.copyWith(reminderHours: hours));
+            },
+            selectedColor: Colors.green.shade100,
+            checkmarkColor: Colors.green.shade700,
+            deleteIconColor: Colors.green.shade700,
+            labelStyle: TextStyle(color: Colors.green.shade700),
+          );
+        }),
+        // 【v1.95.0+115 新功能】添加自定义时间：原生时间选择器
+        ActionChip(
+          avatar: Icon(Icons.add, size: 16, color: Colors.green.shade700),
+          label: Text('添加时间',
+              style: TextStyle(color: Colors.green.shade700, fontSize: 13)),
+          backgroundColor: Colors.green.shade50,
+          onPressed: () => _pickCustomTime(context),
+        ),
+      ],
     );
+  }
+
+  /// 【v1.95.0+115】打开系统时间选择器，允许用户设定任意整点提醒时间
+  Future<void> _pickCustomTime(BuildContext context) async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.now(),
+      helpText: '选择提醒时间',
+    );
+    if (picked == null) return;
+    final hours = List<int>.from(config.reminderHours);
+    if (!hours.contains(picked.hour)) {
+      hours.add(picked.hour);
+      hours.sort();
+      onConfigChanged(config.copyWith(reminderHours: hours));
+    }
+  }
+
+  /// 将整点小时格式化为中文标签（自定义时间专用）
+  String _formatHourLabel(int hour) {
+    if (hour == 0) return '凌晨0点';
+    if (hour < 6) return '凌晨$hour点';
+    if (hour < 12) return '上午$hour点';
+    if (hour == 12) return '中午12点';
+    if (hour < 18) return '下午$hour点';
+    return '晚上$hour点';
   }
 
   String _formatLastCheckIn(DateTime time) {

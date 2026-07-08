@@ -172,9 +172,12 @@ class LocationService {
   /// 会污染 SOS 短信模板与地图链接；同时归一化空白）
   static String? _cleanAddress(String? addr) {
     if (addr == null) return null;
+    // 【v1.95.0+115 修复】用正则一网打尽所有"加号类"Unicode 字符：
+    // \u002B ASCII +  / \uFF0B 全角＋ / \u207A 上标⁺
+    // \u208B 下标₊    / \u2795 粗体➕ / \uFB29 希伯来字母 alef+footnote
+    // 根除高德地址中未被半角/全角替换覆盖的"伪加号"，彻底杜绝 SOS 短信地址带 +
     return addr
-        .replaceAll('+', '')
-        .replaceAll('＋', '') // 全角加号
+        .replaceAll(RegExp(r'[\u002B\uFF0B\u207A\u208B\u2795\uFB29]'), '')
         .replaceAll(RegExp(r'\s+'), ' ')
         .trim();
   }

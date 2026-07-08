@@ -360,7 +360,7 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
         // 【修复 v1.94.x】高德反向地理编码 POI 地址自带 '+'（如"朝阳区+崔各庄乡"），
         // 源头即清洗，避免污染短信地址行与苹果地图 q 参数。
         // 进入此分支说明定位成功（latitude != null），address 必有值
-        _address = result.address!.replaceAll('+', '').trim();
+        _address = result.address!.replaceAll(RegExp(r'[\u002B\uFF0B\u207A\u208B\u2795\uFB29]'), '').trim();
         _coordLat = '北纬 ${result.latitude!.toStringAsFixed(6)}°';
         _coordLng = '东经 ${result.longitude!.toStringAsFixed(6)}°';
       } else {
@@ -635,10 +635,15 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
     final now = DateTime.now();
     // 【修复 v1.94.x】手机号防御性清洗（兼容历史脏数据），只保留数字
     final cleanPhone = myPhone.replaceAll(RegExp(r'[^\d]'), '');
-    final timeStr = '${now.year}-${now.month.toString().padLeft(2,'0')}-${now.day.toString().padLeft(2,'0')} ${now.hour.toString().padLeft(2,'0')}:${now.minute.toString().padLeft(2,'0')}';
+    // 【v1.95.0+115 修复】日期与时间之间插入零宽空格(\u200B)：
+    // 视觉不变，但打断 iOS SMS Data Detector 对"日期时间"模式的识别 → 时间戳不再显示无意义下划线
+    // （手机号保持数字连续格式，Data Detector 仍识别为可拨打电话，予以保留）
+    final timeStr = '${now.year}-${now.month.toString().padLeft(2,'0')}-'
+        '${now.day.toString().padLeft(2,'0')}\u200B${now.hour.toString().padLeft(2,'0')}:'
+        '${now.minute.toString().padLeft(2,'0')}';
     final rawAddr = (_address != null && _address!.isNotEmpty) ? _address! : '未知地址';
-    // 【修复 v1.94.x】清洗地址中的 '+'（高德反向地理编码 POI 地址自带 '+'，如"朝阳区+崔各庄乡"）
-    final addrPart = rawAddr.replaceAll('+', '');
+    // 【v1.95.0+115 修复】正则清洗所有"加号类"Unicode 字符（覆盖全角/上标/下标等伪加号变体）
+    final addrPart = rawAddr.replaceAll(RegExp(r'[\u002B\uFF0B\u207A\u208B\u2795\uFB29]'), '');
     // 坐标格式：无空格，确保 iOS SMS 能正确识别为 URL
     final coordPart = (latStr != null && lngStr != null)
         ? '$latStr,$lngStr'
