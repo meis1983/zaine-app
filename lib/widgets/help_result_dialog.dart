@@ -48,9 +48,6 @@ class HelpResultDialog extends StatefulWidget {
   final String firstContactName;
   final String firstContactPhone;
   final String smsContent;
-  /// 【修复 SOS 链接可点】独立的极短导航短信（仅含两个地图短链），
-  /// 作为第二条短信发送给守护人，保证 iPhone→安卓 跨平台接收方（含安卓）必能点击跳转导航。
-  final String? navSms;
   final VoidCallback onSendSMS;
   final VoidCallback onCallContact;
   final VoidCallback onCall120;
@@ -70,7 +67,6 @@ class HelpResultDialog extends StatefulWidget {
       required this.firstContactName,
       required this.firstContactPhone,
       required this.smsContent,
-      this.navSms,
       required this.onSendSMS,
       required this.onCallContact,
       required this.onCall120,
@@ -427,10 +423,9 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
       //   → 自动编码 ? & = + % 空格 换行
       //   → https:// 中的 : / 保持原样（query value 内的 / 不需要编码）
       //   → iOS 收到后自动解码，Data Detector 能识别完整 URL → 可点击！
-      // 【修复 SOS 链接可点】优先发送极短导航短信（仅含地图短链），
-      // 保证 iPhone→安卓 跨平台接收方（含安卓）数据检测器必能识别为可点链接、可一键跳转导航。
-      // 完整医疗/位置信息保留在首条短信草稿 + App 内预览/复制，不丢失关键求助内容。
-      final safeBody = _safeSmsBody(widget.navSms?.isNotEmpty == true ? widget.navSms! : widget.smsContent);
+      // 【一条短信】发送完整求助短信（健康信息 + 苹果/高德两条短链），
+      // 短链为纯 ASCII 且独占末尾行，iPhone→安卓 跨平台接收方数据检测器必能识别为可点链接。
+      final safeBody = _safeSmsBody(widget.smsContent);
       final uri = Uri(
         scheme: 'sms',
         path: phone,

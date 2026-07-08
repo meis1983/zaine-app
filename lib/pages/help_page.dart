@@ -647,22 +647,13 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
     );
     if (kDebugMode) debugPrint('[Help] 短信模板:\n$helpMessage');
 
-    // 【修复 SOS 链接可点】单独生成一条「极短导航短信」，仅含两个地图短链，
-    // 保证 iPhone→安卓 跨平台短信不被分段、接收方（含安卓）数据检测器必能识别为可点链接。
-    // 完整医疗/位置信息仍走第一条长短信 + App 内预览/复制。
-    final sbNav = StringBuffer();
-    sbNav.writeln('🆘 ${_userName.isNotEmpty ? _userName : "我"}的实时位置（点此一键导航）：');
-    sbNav.writeln('');
-    if (appleMapShortUrl != null && appleMapShortUrl.isNotEmpty) sbNav.writeln(appleMapShortUrl);
-    if (amapShortUrl != null && amapShortUrl.isNotEmpty) sbNav.writeln(amapShortUrl);
-    final navSms = sbNav.toString().trim();
-    if (kDebugMode) debugPrint('[Help] 导航短短信:\n$navSms');
-
     // 标记位置已获取
     _locationObtained = true;
 
     // ⭐ 弹出求助已触发结果对话框
-    if (mounted) _showHelpResultDialog(contacts, helpMessage, navSms: navSms);
+    // 一条短信含完整健康/位置信息 + 苹果/高德两条短链（短链在短信末尾各自独占一行，
+    // 保证 iPhone→安卓 跨平台接收方数据检测器必能识别为可点链接）
+    if (mounted) _showHelpResultDialog(contacts, helpMessage);
   }
 
   void _cancelHelp() {
@@ -713,49 +704,42 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
                 ? addrPart.replaceFirst('市', '市 ')
                 : addrPart;
     sb.writeln('地址：$addrBroken');
-    
-    // 【修复 v1.77.0】位置信息降级处理：优先显示地图链接，失败则显示文本坐标
+
+    // 【修复 v1.77.0】位置信息降级处理
     if (coordPart.isNotEmpty) {
-      sb.writeln('');
-      // 【修复 v1.94.x】苹果地图走后端短链（main.py /go 返回 200 中转页，自动按设备拉起苹果/高德地图，
-      // 绕过 FC 3.0 禁止 fcapp.run 302 跳外链的限制）；短链生成失败时降级为 maps.apple.com 直链。
-      if (appleMapShortUrl != null && appleMapShortUrl.isNotEmpty) {
-        sb.writeln('🍎 点击跳转苹果地图导航');
-        sb.writeln('');
-        sb.writeln(appleMapShortUrl);
-        sb.writeln('');
-      } else if (coordPart.isNotEmpty) {
-        // 降级：苹果地图长链（后端短链生成失败时）
-        sb.writeln('🍎 点击跳转苹果地图导航');
-        sb.writeln('');
-        final appleMapUrl = 'https://maps.apple.com/?ll=$coordPart&q=${Uri.encodeComponent(addrPart)}';
-        sb.writeln(appleMapUrl);
-        sb.writeln('');
-      }
-      if (amapShortUrl != null && amapShortUrl.isNotEmpty) {
-        // 高德地图短链
-        sb.writeln('📍 点击跳转高德地图导航');
-        sb.writeln('');
-        sb.writeln(amapShortUrl);
-      } else {
-        // 降级：高德地图长链接
-        sb.writeln('📍 点击跳转高德地图导航');
-        sb.writeln('');
-        sb.writeln('https://uri.amap.com/marker?position=$lngStr,$latStr');
-      }
-      // 【修复 v1.77.0】同时显示文本坐标（防止链接失效时仍能获取位置）
-      sb.writeln('');
+      // 文本坐标（防止链接失效时仍能获取位置）
       sb.writeln('坐标（$coordPart）');
     } else {
-      // 【修复 v1.77.0】位置获取失败时的降级处理
-      sb.writeln('');
       sb.writeln('⚠️ 位置获取失败，请立即回拨确认位置！');
       sb.writeln('如果方便，请描述您当前的位置（如：XX路口、XX小区、XX商场附近）');
     }
-    
+
     sb.writeln('');
     sb.writeln('请立即联系我或拨打120！');
     sb.writeln('在呢 - 独居守护App');
+
+    // 【双导航短链】苹果+高德两条短链放在短信最末尾，各自独占一行。
+    // 理由：①短链为纯 ASCII、长度约 50 字符，远短于单条 SMS 段（UCS-2 67 字符），
+    //       可完整落进一条段内，避免跨段导致安卓数据检测器失效（链接不可点）；
+    //      ②放在末尾使链接占据最后 1~2 个 SMS 段，接收方短信 App 必能识别为可点链接。
+    // 苹果链接供 iPhone 接收方使用（拉起苹果地图 App）；高德链接供安卓接收方使用（拉起高德 App）。
+    if (coordPart.isNotEmpty) {
+      sb.writeln('');
+      // 苹果地图（后端短链 /go/{code} → 200 中转页 → maps.apple.com；短链失败降级为直链）
+      sb.writeln('🍎 苹果地图导航');
+      if (appleMapShortUrl != null && appleMapShortUrl.isNotEmpty) {
+        sb.writeln(appleMapShortUrl);
+      } else {
+        sb.writeln('https://maps.apple.com/?ll=$coordPart&q=${Uri.encodeComponent(addrPart)}');
+      }
+      // 高德地图（后端短链 /s/{code} → 200 中转页 → uri.amap.com；短链失败降级为直链）
+      sb.writeln('📍 高德地图导航');
+      if (amapShortUrl != null && amapShortUrl.isNotEmpty) {
+        sb.writeln(amapShortUrl);
+      } else {
+        sb.writeln('https://uri.amap.com/marker?position=$lngStr,$latStr');
+      }
+    }
     return sb.toString().trim();
   }
 
@@ -767,7 +751,7 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
   /// 4. 📊 正在采取以下行动（状态追踪）
   /// 5. 🚑 拨打120急救大按钮
   /// 6. 底部「我没事了」取消
-  void _showHelpResultDialog(List<Map<String, dynamic>> contacts, String smsContent, {String? navSms}) {
+  void _showHelpResultDialog(List<Map<String, dynamic>> contacts, String smsContent) {
     // 取第一位联系人的信息用于"拨打联系人电话"
     final firstContact = contacts.isNotEmpty ? contacts.first : null;
     final firstContactName = firstContact?['name']?.toString() ?? '紧急联系人';
@@ -782,7 +766,6 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
         firstContactName: firstContactName,
         firstContactPhone: firstContactPhone,
         smsContent: smsContent,
-        navSms: navSms,
         autoCallLimit: MembershipService.getAutoCallLimit(),
         onSendSMS: () async { /* 已迁移到 HelpResultDialog 内部处理 */ },
         onCallContact: () async {
