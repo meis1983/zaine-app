@@ -8,7 +8,6 @@ import 'dart:convert';
 import '../services/platform/location_service.dart';
 import '../services/platform/health_service.dart'; // 【v1.93.0】Watch SOS 信号
 import '../services/membership_service.dart';
-import '../services/api_service.dart';
 import '../services/safety/safety_service.dart';
 import '../theme/theme_helper.dart';
 import '../widgets/help_result_dialog.dart';
@@ -592,58 +591,21 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
 
     // 解析坐标（用于短信模板中的导航链接）
     String? latStr, lngStr;
-    double? latVal, lngVal;
     if (_coordLat != null && _coordLng != null) {
       latStr = _coordLat!.replaceAll('北纬 ', '').replaceAll('°', '').replaceAll(' ', '');
       lngStr = _coordLng!.replaceAll('东经 ', '').replaceAll('°', '').replaceAll(' ', '');
-      latVal = double.tryParse(latStr);
-      lngVal = double.tryParse(lngStr);
     }
 
-    // 【修复 v1.94.x】同时生成苹果地图短链 + 高德地图短链（均走后端短链，短信内视觉清爽）
-    String? appleMapShortUrl;
-    String? amapShortUrl;
-    if (latVal != null && lngVal != null) {
-      // 1. 生成苹果地图短链（后端 /go/{code} -> maps.apple.com，兼顾海外与未装高德用户）
-      try {
-        final linkRes = await ApiService.createSosLink(
-          lat: latVal,
-          lng: lngVal,
-          address: _address ?? '',
-          userName: _userName,
-          userPhone: _myPhone ?? '',
-        );
-        if (linkRes['success'] == true) {
-          appleMapShortUrl = linkRes['short_url']?.toString();
-          if (kDebugMode) debugPrint('[Help] 苹果地图短链生成成功: $appleMapShortUrl');
-        }
-      } catch (e) {
-        if (kDebugMode) debugPrint('[Help] 苹果地图短链生成失败: $e');
-      }
-
-      // 2. 生成高德地图短链（使用通用短链接口）
-      try {
-        final amapUrl = 'https://uri.amap.com/marker?position=$lngVal,$latVal&name=${Uri.encodeComponent(_address ?? '求助位置')}';
-        final linkRes = await ApiService.createShortLink(
-          targetUrl: amapUrl,
-          linkType: 'amap_sos',
-          meta: '${_userName.isNotEmpty ? _userName : "未知"}的紧急位置',
-        );
-        if (linkRes['success'] == true) {
-          amapShortUrl = linkRes['short_url']?.toString();
-          if (kDebugMode) debugPrint('[Help] 高德地图短链生成成功: $amapShortUrl');
-        }
-      } catch (e) {
-        if (kDebugMode) debugPrint('[Help] 高德地图短链生成失败: $e');
-      }
-    }
-
+    // 【最终方案 v1.94.x】SOS 短信直接使用 maps.apple.com / uri.amap.com 直链，
+    // 不再走后端 FC 短链。原因：
+    // ① fcapp.run 域名被运营商 SMS 分段后，iOS Data Detector 无法识别跨段 URL → 接收方无下划线不可点
+    // ② FC 3.0 禁止 302 跳外链 → 中转页 HTML 被当附件下载 → "下载 xxx.html"
+    // ③ 中转页 UA 分流逻辑导致苹果链误跳高德
+    // 直链使用苹果/高德官方域名，iOS Data Detector 100% 识别，且无需后端部署。
     final helpMessage = _generateHelpMessage(
       _myPhone ?? '',
       latStr,
       lngStr,
-      appleMapShortUrl,  // 已传 null 时模板内降级为直链
-      amapShortUrl,
     );
     if (kDebugMode) debugPrint('[Help] 短信模板:\n$helpMessage');
 
@@ -666,7 +628,7 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
     if (await canLaunchUrl(uri)) await launchUrl(uri);
   }
 
-  String _generateHelpMessage(String myPhone, [String? latStr, String? lngStr, String? appleMapShortUrl, String? amapShortUrl]) {
+  String _generateHelpMessage(String myPhone, [String? latStr, String? lngStr]) {
     final now = DateTime.now();
     // 【修复 v1.94.x】手机号防御性清洗（兼容历史脏数据），只保留数字
     final cleanPhone = myPhone.replaceAll(RegExp(r'[^\d]'), '');
@@ -693,9 +655,7 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
     if (_allergy.isNotEmpty) sb.writeln('过敏：$_allergy');
     if (_emergencyNote.isNotEmpty) sb.writeln('备注：$_emergencyNote');
     sb.writeln('');
-    sb.writeln('=== 求助者位置信息 ===');
-    // 【修复 v1.76.0】删除零宽空格 \u200B（它会污染 iOS Data Detector，导致后续链接无法识别）
-    // 改用普通空格破坏地址连续性，防止 iOS 短信将地址识别为可点击链接
+    // 改用普通空格破坏地址连续性，防止 iOS 短信将地址识别为可点击链接（占用 Data Detector 配额）
     final addrBroken = addrPart.contains('区')
         ? addrPart.replaceFirst('区', '区 ')
         : addrPart.contains('县')
@@ -705,41 +665,27 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
                 : addrPart;
     sb.writeln('地址：$addrBroken');
 
-    // 【修复 v1.77.0】位置信息降级处理
+    // 【最终方案】直接使用 maps.apple.com / uri.amap.com 官方域名直链。
+    // ① maps.apple.com 是苹果自有域名，iOS Data Detector 100% 识别为可点链接；
+    // ② uri.amap.com 是高德官方域名，Android/iOS 均可识别；
+    // ③ 不经过 FC 后端 → 无 302 跳转 → 无中转页 HTML → 无"下载提示" → 无"苹果链跳高德"；
+    // ④ 每条 URL 独占一行，前后空行隔离，最大化跨平台 SMS Data Detector 识别率。
     if (coordPart.isNotEmpty) {
-      // 文本坐标（防止链接失效时仍能获取位置）
-      sb.writeln('坐标（$coordPart）');
+      sb.writeln('');
+      sb.writeln('🍎 苹果地图导航');
+      sb.writeln('https://maps.apple.com/?ll=$coordPart');
+      sb.writeln('📍 高德地图导航');
+      sb.writeln('https://uri.amap.com/marker?position=$lngStr,$latStr');
     } else {
+      sb.writeln('');
       sb.writeln('⚠️ 位置获取失败，请立即回拨确认位置！');
       sb.writeln('如果方便，请描述您当前的位置（如：XX路口、XX小区、XX商场附近）');
     }
 
+    // 页脚放在导航链接之后（用户要求：链接在上方，求助提示在最末尾）
     sb.writeln('');
     sb.writeln('请立即联系我或拨打120！');
     sb.writeln('在呢 - 独居守护App');
-
-    // 【双导航短链】苹果+高德两条短链放在短信最末尾，各自独占一行。
-    // 理由：①短链为纯 ASCII、长度约 50 字符，远短于单条 SMS 段（UCS-2 67 字符），
-    //       可完整落进一条段内，避免跨段导致安卓数据检测器失效（链接不可点）；
-    //      ②放在末尾使链接占据最后 1~2 个 SMS 段，接收方短信 App 必能识别为可点链接。
-    // 苹果链接供 iPhone 接收方使用（拉起苹果地图 App）；高德链接供安卓接收方使用（拉起高德 App）。
-    if (coordPart.isNotEmpty) {
-      sb.writeln('');
-      // 苹果地图（后端短链 /go/{code} → 200 中转页 → maps.apple.com；短链失败降级为直链）
-      sb.writeln('🍎 苹果地图导航');
-      if (appleMapShortUrl != null && appleMapShortUrl.isNotEmpty) {
-        sb.writeln(appleMapShortUrl);
-      } else {
-        sb.writeln('https://maps.apple.com/?ll=$coordPart&q=${Uri.encodeComponent(addrPart)}');
-      }
-      // 高德地图（后端短链 /s/{code} → 200 中转页 → uri.amap.com；短链失败降级为直链）
-      sb.writeln('📍 高德地图导航');
-      if (amapShortUrl != null && amapShortUrl.isNotEmpty) {
-        sb.writeln(amapShortUrl);
-      } else {
-        sb.writeln('https://uri.amap.com/marker?position=$lngStr,$latStr');
-      }
-    }
     return sb.toString().trim();
   }
 
