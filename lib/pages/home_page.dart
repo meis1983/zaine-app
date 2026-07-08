@@ -482,16 +482,14 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           // 重新获取 uid 并构建 key（因为 streakKey 在 setState 内部定义，这里需要重新构建）
           final currentUid = (await AuthService.getUserId()) ?? '';
           final streakKey2 = currentUid.isNotEmpty ? 'continuous_days_$currentUid' : 'continuous_days';
-          final localStreakCache = prefs.getInt(streakKey2) ?? 0;
 
-          // 【关键修复】只要后端 streak 为 0 或本地缓存为 0，都从服务器重新计算
-          if (serverStreak == null || (serverStreak as int) <= 0 || localStreakCache <= 0) {
+          // 【稳健修复 v1.94.1】后端 streak（signin_streak）在数据层可能为 0，不可作为唯一真相。
+          // 仅当后端 streak 不可信(为 null/0)时才从服务器签到历史重算；后端可信时直接使用，避免脆弱的网络兜底。
+          if (serverStreak == null || (serverStreak as int) <= 0) {
             if (kDebugMode) {
               debugPrint('=' * 60);
-              debugPrint('[HomePage] 🔍 开始重新计算连续签到天数');
+              debugPrint('[HomePage] 🔍 重新计算连续签到天数（后端 streak 不可信）');
               debugPrint('  [后端返回] streak=$serverStreak');
-              debugPrint('  [本地缓存] streak=$localStreakCache');
-              debugPrint('  [原因] 后端或本地 streak 为 0，需要从服务器拉取签到历史重新计算');
             }
 
             // 从服务器拉取完整签到历史（最多 365 天）
@@ -533,12 +531,10 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
 
             // 现在本地有了完整的签到历史，重新计算
             localStreak = await _calculateStreakFromHistory();
+            // 【稳健修复 v1.94.1】以历史计算值写回本地缓存（仅在 >0 时，避免把真实的 0 误写为缓存），保持本地与服务端历史一致
             if (localStreak > 0) {
-              // 修正本地缓存
               await prefs.setInt(streakKey2, localStreak);
-              if (kDebugMode) debugPrint('[HomePage] ✅ 重新计算出连续天数=$localStreak，已修正本地缓存');
-            } else {
-              if (kDebugMode) debugPrint('[HomePage] ⚠️ 重新计算后 streak 仍为 0，可能确实没有连续签到');
+              if (kDebugMode) debugPrint('[HomePage] ✅ 连续天数(历史重算)=$localStreak，已写回本地缓存');
             }
 
             if (kDebugMode) debugPrint('=' * 60);
@@ -547,18 +543,18 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           if (mounted) {
             setState(() {
               _totalDays = res['total_days'] ?? _totalDays;
-              // 【P0】优先使用服务端 streak，确保签到圆圈正确显示
-              // 【修复 v1.93.2】服务器 streak 不可信时，从本地签到历史重新计算
               if (kDebugMode) {
                 debugPrint('[HomePage] 📊 签到状态处理结果：');
                 debugPrint('  [服务器 streak] $serverStreak');
                 debugPrint('  [本地重新计算 streak] $localStreak');
                 debugPrint('  [最终使用 streak] ${((serverStreak != null && (serverStreak as int) > 0) ? serverStreak : (localStreak ?? 0))}');
               }
+              // 【稳健修复 v1.94.1】后端 signin_streak 不可信(为0/损坏)时，以本地签到历史重算值为准（含真实 0），
+              // 不再因 localStreak<=0 而静默保留错误的初始 0 值
               if (serverStreak != null && (serverStreak as int) > 0) {
                 _continuousDays = serverStreak;
-              } else if (localStreak != null && localStreak > 0) {
-                _continuousDays = localStreak;
+              } else {
+                _continuousDays = localStreak ?? 0;
               }
               _daysSinceLastCheckin = res['days_since_last_checkin'] ?? 0;
               // 【彻底修复 v1.90.1】如果本地已经是 true，不要覆盖为 false（防止服务器时区问题）
