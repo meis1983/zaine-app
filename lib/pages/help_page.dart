@@ -647,11 +647,22 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
     );
     if (kDebugMode) debugPrint('[Help] 短信模板:\n$helpMessage');
 
+    // 【修复 SOS 链接可点】单独生成一条「极短导航短信」，仅含两个地图短链，
+    // 保证 iPhone→安卓 跨平台短信不被分段、接收方（含安卓）数据检测器必能识别为可点链接。
+    // 完整医疗/位置信息仍走第一条长短信 + App 内预览/复制。
+    final sbNav = StringBuffer();
+    sbNav.writeln('🆘 ${_userName.isNotEmpty ? _userName : "我"}的实时位置（点此一键导航）：');
+    sbNav.writeln('');
+    if (appleMapShortUrl != null && appleMapShortUrl.isNotEmpty) sbNav.writeln(appleMapShortUrl);
+    if (amapShortUrl != null && amapShortUrl.isNotEmpty) sbNav.writeln(amapShortUrl);
+    final navSms = sbNav.toString().trim();
+    if (kDebugMode) debugPrint('[Help] 导航短短信:\n$navSms');
+
     // 标记位置已获取
     _locationObtained = true;
 
     // ⭐ 弹出求助已触发结果对话框
-    if (mounted) _showHelpResultDialog(contacts, helpMessage);
+    if (mounted) _showHelpResultDialog(contacts, helpMessage, navSms: navSms);
   }
 
   void _cancelHelp() {
@@ -756,7 +767,7 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
   /// 4. 📊 正在采取以下行动（状态追踪）
   /// 5. 🚑 拨打120急救大按钮
   /// 6. 底部「我没事了」取消
-  void _showHelpResultDialog(List<Map<String, dynamic>> contacts, String smsContent) {
+  void _showHelpResultDialog(List<Map<String, dynamic>> contacts, String smsContent, {String? navSms}) {
     // 取第一位联系人的信息用于"拨打联系人电话"
     final firstContact = contacts.isNotEmpty ? contacts.first : null;
     final firstContactName = firstContact?['name']?.toString() ?? '紧急联系人';
@@ -771,6 +782,7 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
         firstContactName: firstContactName,
         firstContactPhone: firstContactPhone,
         smsContent: smsContent,
+        navSms: navSms,
         autoCallLimit: MembershipService.getAutoCallLimit(),
         onSendSMS: () async { /* 已迁移到 HelpResultDialog 内部处理 */ },
         onCallContact: () async {
