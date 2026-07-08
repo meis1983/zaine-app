@@ -2,6 +2,11 @@
 # ============================================================
 # 在呢+ IPA 构建脚本
 # 请在本机 Terminal（非 WorkBuddy 终端）中运行
+#
+# 可选环境变量（用于同一功能版重传 TestFlight / 重提审核）：
+#   ZAI_VERSION_NAME  覆写 CFBundleShortVersionString（如 1.94.0）
+#   ZAI_BUILD_NUMBER  覆写 CFBundleVersion（如 111，须大于已上传的号）
+#   例: ZAI_BUILD_NUMBER=111 bash build_ipa.sh
 # ============================================================
 set -e
 
@@ -16,7 +21,19 @@ flutter pub get
 
 echo ""
 echo "===== Step 2: Flutter Release 构建（无签名） ====="
-flutter build ios --release --no-codesign
+# 支持版本覆写（用于同一功能版重新上传 TestFlight / 重提审核）
+VERSION_ARGS=""
+if [ -n "$ZAI_VERSION_NAME" ]; then
+    VERSION_ARGS="$VERSION_ARGS --build-name=$ZAI_VERSION_NAME"
+fi
+if [ -n "$ZAI_BUILD_NUMBER" ]; then
+    VERSION_ARGS="$VERSION_ARGS --build-number=$ZAI_BUILD_NUMBER"
+fi
+if [ -n "$VERSION_ARGS" ]; then
+    echo "ℹ️  覆写版本: name=${ZAI_VERSION_NAME:-未指定} build=${ZAI_BUILD_NUMBER:-未指定}"
+fi
+# 用 eval 让 $VERSION_ARGS 正确展开为多个参数
+eval "flutter build ios --release --no-codesign $VERSION_ARGS"
 
 echo ""
 echo "===== Step 3: Xcode Archive ====="
