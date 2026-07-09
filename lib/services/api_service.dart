@@ -155,20 +155,34 @@ class ApiService {
     }, 'PUT', path);
   }
 
-  // 生成 SOS 短链（无需认证，紧急场景必须可用）
+  // 生成 SOS 短链（方案 C：存储健康快照，返回 zaine.love/sos/{token}）
   static Future<Map<String, dynamic>> createSosLink({
     required double lat,
     required double lng,
     String address = '',
     String userName = '',
     String userPhone = '',
+    int? age,
+    String gender = '',
+    String bloodType = '',
+    String disease = '',
+    String medicine = '',
+    String allergy = '',
+    String message = '',
   }) async {
-    return post('/api/sos/link', body: {
+    return post('/api/sos/create', body: {
       'lat': lat,
       'lng': lng,
       'address': address,
       'user_name': userName,
       'user_phone': userPhone,
+      'age': age,
+      'gender': gender,
+      'blood_type': bloodType,
+      'disease': disease,
+      'medicine': medicine,
+      'allergy': allergy,
+      'message': message,
     }, auth: true);
   }
 

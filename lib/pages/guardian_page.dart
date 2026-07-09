@@ -17,6 +17,7 @@ import '../services/api/peace_service.dart';
 import '../services/api/user_service.dart';
 import '../services/api/contact_service.dart';
 import '../services/api/card_service.dart';
+import '../services/api_service.dart';
 import '../services/api/notify_service.dart';
 import '../data/app_constants.dart';
 
@@ -550,7 +551,20 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
     // 【修复 v1.16.0】统一使用 landing 页链接
     // ICP 备案已完成，引导接收者先看 H5 落地页，再决定是否下载
     // 注意：此函数没有 userId 变量，使用通用守护圈落地页
-    final landingUrl = AppConstants.guardianInviteUrl;
+    // 【方案 C v1.95】邀请短信改用后端短链：长落地页 URL 在 iOS→安卓 MMS 跨段后会被吞掉，
+    // 缩短为 zaine.love/s/{code} 后单条 SMS 必能识别为可点链接（邀请链接丢失问题根治）。
+    String inviteUrl = AppConstants.guardianInviteUrl;
+    try {
+      final res = await ApiService.createShortLink(
+        targetUrl: AppConstants.guardianInviteUrl,
+        linkType: 'invite',
+      );
+      final su = res['short_url']?.toString();
+      if (su != null && su.trim().isNotEmpty) inviteUrl = su;
+    } catch (e) {
+      if (kDebugMode) debugPrint('[GuardianPage] 生成邀请短链失败，使用原长链: $e');
+    }
+    final landingUrl = inviteUrl;
 
     // 【文案 v1.9.7】守护圈再次邀请：强调对方的重要性，简短有温度
     // 【修复 v1.77.0】URL 单独一行，避免 iOS Data Detector 无法识别链接

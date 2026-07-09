@@ -3,7 +3,7 @@ description: 在呢 - 独居守护App
 
 publish_to: 'none'
 
-version: 1.95.0+116
+version: 1.95.0+117
 
 environment:
   sdk: '>=3.0.0 <4.0.0'

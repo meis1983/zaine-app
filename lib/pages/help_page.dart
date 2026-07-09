@@ -8,6 +8,7 @@ import 'dart:convert';
 import '../services/platform/location_service.dart';
 import '../services/platform/health_service.dart'; // 【v1.93.0】Watch SOS 信号
 import '../services/membership_service.dart';
+import '../services/api_service.dart';
 import '../services/safety/safety_service.dart';
 import '../theme/theme_helper.dart';
 import '../widgets/help_result_dialog.dart';
@@ -599,17 +600,37 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
       lngStr = _coordLng!.replaceAll('东经 ', '').replaceAll('°', '').replaceAll(' ', '');
     }
 
-    // 【最终方案 v1.94.x】SOS 短信直接使用 maps.apple.com / uri.amap.com 直链，
-    // 不再走后端 FC 短链。原因：
-    // ① fcapp.run 域名被运营商 SMS 分段后，iOS Data Detector 无法识别跨段 URL → 接收方无下划线不可点
-    // ② FC 3.0 禁止 302 跳外链 → 中转页 HTML 被当附件下载 → "下载 xxx.html"
-    // ③ 中转页 UA 分流逻辑导致苹果链误跳高德
-    // 直链使用苹果/高德官方域名，iOS Data Detector 100% 识别，且无需后端部署。
-    final helpMessage = _generateHelpMessage(
-      _myPhone ?? '',
-      latStr,
-      lngStr,
-    );
+    // 【方案 C v1.95】SOS 短信改为"超短文本 + 后端短链(H5 求助页)"：
+    // 短信仅一句求助 + zaine.love/sos/{token} 短链（约 80 字，单条 SMS 不触发 MMS），
+    // 完整健康信息 / 内嵌地图 / 一键拨打120 由 H5 页承载 → 根治 iOS→安卓 MMS 丢链/失败。
+    String sosShortUrl = '';
+    if (latStr != null && lngStr != null) {
+      try {
+        final lat = double.parse(latStr);
+        final lng = double.parse(lngStr);
+        final res = await ApiService.createSosLink(
+          lat: lat,
+          lng: lng,
+          address: _address ?? '',
+          userName: _userName,
+          userPhone: _myPhone ?? '',
+          age: _userAge > 0 ? _userAge : null,
+          gender: '',
+          bloodType: _bloodType,
+          disease: _disease,
+          medicine: _medicine,
+          allergy: _allergy,
+          message: _emergencyNote,
+        );
+        sosShortUrl = (res['short_url']?.toString() ?? '').trim();
+      } catch (e) {
+        if (kDebugMode) debugPrint('[Help] 生成 SOS 短链失败，回退直链长短信: $e');
+      }
+    }
+
+    final helpMessage = sosShortUrl.isNotEmpty
+        ? _buildShortSosMessage(sosShortUrl)
+        : _generateHelpMessage(_myPhone ?? '', latStr, lngStr); // 兜底：短链失败则用直链长短信
     if (kDebugMode) debugPrint('[Help] 短信模板:\n$helpMessage');
 
     // 标记位置已获取
@@ -698,6 +719,19 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
     sb.writeln('');
     sb.writeln('请立即联系我或拨打120！');
     sb.writeln('在呢 - 独居守护App');
+    return sb.toString().trim();
+  }
+
+  /// 【方案 C v1.95】SOS 超短短信：一句求助 + 后端短链。约 80 字，单条 SMS 不触发 MMS，跨平台可点。
+  String _buildShortSosMessage(String shortUrl) {
+    final rawAddr = (_address != null && _address!.isNotEmpty) ? _address! : '未知地址';
+    // 与 _generateHelpMessage 一致的"加号类"Unicode 清洗，确保地址无 + 等伪加号变体
+    final addrPart = rawAddr.replaceAll(RegExp(r'[\u002B\uFF0B\u207A\u208B\u2795\uFB29]'), '');
+    final sb = StringBuffer();
+    sb.writeln('在呢·紧急求助🆘：$addrPart，需要帮助！');
+    sb.writeln('点此查看实时位置与求助信息：');
+    sb.writeln(shortUrl);
+    sb.writeln('请立即联系我或拨打120！在呢');
     return sb.toString().trim();
   }
 
