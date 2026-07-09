@@ -557,7 +557,12 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
     // 让接收人第一眼认出是谁、明白干嘛、敢点链接。单条 SMS 段 ≤70 字（含短链）。
     // 短链 target 带 ?from=邀请人（URL 编码），供落地页顶部大字个性化显示"谁邀的你"。
     final safeName = name.length > 6 ? name.substring(0, 6) : name;
+    // 短链 target 带 ?from=邀请人（落地页顶部大字个性化显示"谁邀的你"）。
+    // 【v1.95.4 加固】短链接口异常时的兜底用「无 ?from= 的短落地页」，
+    // 保证即使短链失败，短信仍是单段 SMS（≤70字）且带可点链接，
+    // 避免回退长 URL → iOS→安卓转 MMS → 安卓网关把链接丢弃。
     final inviteTarget = '${AppConstants.guardianInviteUrl}?from=${Uri.encodeComponent(safeName)}';
+    final inviteFallback = AppConstants.guardianInviteUrl;
     String inviteUrl = inviteTarget;
     try {
       final res = await ApiService.createShortLink(
@@ -567,7 +572,8 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
       final su = res['short_url']?.toString();
       if (su != null && su.trim().isNotEmpty) inviteUrl = su;
     } catch (e) {
-      if (kDebugMode) debugPrint('[GuardianPage] 生成邀请短链失败，使用原长链: $e');
+      if (kDebugMode) debugPrint('[GuardianPage] 生成邀请短链失败，使用短落地页兜底: $e');
+      inviteUrl = inviteFallback;
     }
     final landingUrl = inviteUrl;
 
@@ -575,6 +581,19 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
     final uri = Uri(scheme: 'sms', path: phone, queryParameters: {'body': message});
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri);
+      // 【v1.95.4 加固】短信打开后把带链接的完整文案复制到剪贴板，
+      // 若对方（安卓）收不到可点链接，可手动粘贴补发，确保链接永不真正丢失。
+      try {
+        await Clipboard.setData(ClipboardData(text: message));
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('短信已打开，完整链接已复制。若对方收不到链接可长按粘贴补发'),
+              duration: Duration(seconds: 4),
+            ),
+          );
+        }
+      } catch (_) {}
     }
   }
 

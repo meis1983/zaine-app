@@ -440,6 +440,19 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
         _launchedType = 'sms';
         await launchUrl(uri);
         HapticFeedback.mediumImpact();
+        // 【v1.95.4 加固】把带链接的完整短信复制到剪贴板，若对方（安卓）收不到可点链接可手动补发，
+        // 确保求助链接永不真正丢失（iOS→安卓 MMS 偶发丢链的安全网）。
+        try {
+          await Clipboard.setData(ClipboardData(text: safeBody));
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('短信已打开，完整链接已复制。若对方收不到链接可长按粘贴补发'),
+                duration: Duration(seconds: 4),
+              ),
+            );
+          }
+        } catch (_) {}
       }
     } catch (e) {
       if (kDebugMode) debugPrint('[Help] 发送短信失败: $e');
