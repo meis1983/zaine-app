@@ -566,9 +566,11 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
     }
     final landingUrl = inviteUrl;
 
-    // 【文案 v1.9.7】守护圈再次邀请：强调对方的重要性，简短有温度
-    // 【修复 v1.77.0】URL 单独一行，避免 iOS Data Detector 无法识别链接
-    final message = '$name，一直想跟你说件事。\n\n我在「在呢」建了个守护圈，你是我第一个想到要加进来的人。每天报个平安，有事也能第一时间找到彼此。就差你了，来吗？\n\n点击链接加入：\n$landingUrl';
+    // 【文案 v1.9.7】守护圈邀请：有温度但极简
+    // 【修复 v1.95】正文压到单条 SMS 长度：iOS 给安卓发长短信会自动转 MMS，
+    // 安卓网关会丢链接；短文本+短链(zaine.love/s/{code}) 单条 SMS 必带可点链接（与方案C同源）。
+    // URL 独占一行，避免 iOS Data Detector 误判。
+    final message = '【在呢】$name，我建了个守护圈，想加你进来每天互报平安：\n$landingUrl';
     final uri = Uri(scheme: 'sms', path: phone, queryParameters: {'body': message});
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri);
