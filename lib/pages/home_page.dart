@@ -473,9 +473,10 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           final currentUid = (await AuthService.getUserId()) ?? '';
           final streakKey2 = currentUid.isNotEmpty ? 'continuous_days_$currentUid' : 'continuous_days';
 
-          // 【稳健修复 v1.94.1】后端 streak（signin_streak）在数据层可能为 0，不可作为唯一真相。
-          // 仅当后端 streak 不可信(为 null/0)时才从服务器签到历史重算；后端可信时直接使用，避免脆弱的网络兜底。
-          if (serverStreak == null || (serverStreak as int) <= 0) {
+          // 【v1.95.x 彻底修复】后端 streak 字段历史上多次返回 0（易错），不再作为可信来源。
+          // 改为：无论后端 streak 是否可信，都先拉取并合并服务器签到历史到本地，
+          // 再以"本地历史(已合并服务器)"为单一真相源重算连续天数。
+          {
             if (kDebugMode) {
               debugPrint('=' * 60);
               debugPrint('[HomePage] 🔍 重新计算连续签到天数（后端 streak 不可信）');
@@ -539,13 +540,9 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                 debugPrint('  [本地重新计算 streak] $localStreak');
                 debugPrint('  [最终使用 streak] ${((serverStreak != null && (serverStreak as int) > 0) ? serverStreak : (localStreak ?? 0))}');
               }
-              // 【稳健修复 v1.94.1】后端 signin_streak 不可信(为0/损坏)时，以本地签到历史重算值为准（含真实 0），
-              // 不再因 localStreak<=0 而静默保留错误的初始 0 值
-              if (serverStreak != null && (serverStreak as int) > 0) {
-                _continuousDays = serverStreak;
-              } else {
-                _continuousDays = localStreak ?? 0;
-              }
+              // 【v1.95.x 彻底修复】不再信任后端易错的 streak 字段，
+              // 一律以本地签到历史(已合并服务器)重算值为准，根除天数偶发归零/显示 0
+              _continuousDays = localStreak ?? 0;
               _daysSinceLastCheckin = res['days_since_last_checkin'] ?? 0;
               // 【彻底修复 v1.90.1】如果本地已经是 true，不要覆盖为 false（防止服务器时区问题）
               if (res.containsKey('checked_in_today')) {
@@ -566,7 +563,11 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           final streakKey = uid.isNotEmpty ? 'continuous_days_$uid' : 'continuous_days';
           final totalKey = uid.isNotEmpty ? 'total_check_in_days_$uid' : 'total_check_in_days';
           final lastDateKey = uid.isNotEmpty ? 'last_check_in_date_$uid' : 'last_check_in_date';
-          await prefs.setInt(streakKey, _continuousDays);
+          // 【v1.95.x 修复】仅当确有本地签到历史时才以重算值写回缓存，
+          // 避免网络失败时 localStreak=0 把缓存毒化为 0（否则每次启动都从 0 起、且永远修不正）
+          final histKey = uid.isNotEmpty ? 'checkin_history_$uid' : 'checkin_history';
+          final hasRealHistory = (prefs.getStringList(histKey) ?? []).isNotEmpty;
+          await prefs.setInt(streakKey, hasRealHistory ? _continuousDays : (prefs.getInt(streakKey) ?? _continuousDays));
           await prefs.setInt(totalKey, _totalDays);
           if (_checkedInToday) {
             await prefs.setString(lastDateKey, today);
