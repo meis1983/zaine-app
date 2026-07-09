@@ -553,10 +553,15 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
     // 注意：此函数没有 userId 变量，使用通用守护圈落地页
     // 【方案 C v1.95】邀请短信改用后端短链：长落地页 URL 在 iOS→安卓 MMS 跨段后会被吞掉，
     // 缩短为 zaine.love/s/{code} 后单条 SMS 必能识别为可点链接（邀请链接丢失问题根治）。
-    String inviteUrl = AppConstants.guardianInviteUrl;
+    // 【信任增强 v1.95.3】邀请短信带邀请人姓名 + 一句话说清是什么（独居安全App），
+    // 让接收人第一眼认出是谁、明白干嘛、敢点链接。单条 SMS 段 ≤70 字（含短链）。
+    // 短链 target 带 ?from=邀请人（URL 编码），供落地页顶部大字个性化显示"谁邀的你"。
+    final safeName = name.length > 6 ? name.substring(0, 6) : name;
+    final inviteTarget = '${AppConstants.guardianInviteUrl}?from=${Uri.encodeComponent(safeName)}';
+    String inviteUrl = inviteTarget;
     try {
       final res = await ApiService.createShortLink(
-        targetUrl: AppConstants.guardianInviteUrl,
+        targetUrl: inviteTarget,
         linkType: 'invite',
       );
       final su = res['short_url']?.toString();
@@ -566,12 +571,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
     }
     final landingUrl = inviteUrl;
 
-    // 【文案 v1.9.7】守护圈邀请：有温度但极简
-    // 【修复 v1.95.2】压成单条 SMS 段（≤70 字、单行、无 emoji）：
-    // iOS 给安卓发"带换行/偏长"的短信会自动转 MMS，安卓网关常整条丢弃 → 收不到。
-    // 单行短文本 + 短链(https://zaine.love/s/{code}) 单条 SMS 必带可点链接（与方案C同源）。
-    final safeName = name.length > 6 ? name.substring(0, 6) : name;
-    final message = '【在呢】$safeName 邀你加入守护圈互报平安: $landingUrl';
+    final message = '「在呢」$safeName邀你加入守护圈，每天互报平安（独居安全App）。注册: $landingUrl';
     final uri = Uri(scheme: 'sms', path: phone, queryParameters: {'body': message});
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri);

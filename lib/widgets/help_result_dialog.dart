@@ -47,7 +47,7 @@ class HelpResultDialog extends StatefulWidget {
   final int contactCount;
   final String firstContactName;
   final String firstContactPhone;
-  final String smsContent;
+  final String Function(Map<String, dynamic>) smsContentBuilder;
   final VoidCallback onSendSMS;
   final VoidCallback onCallContact;
   final VoidCallback onCall120;
@@ -66,7 +66,7 @@ class HelpResultDialog extends StatefulWidget {
       required this.contactCount,
       required this.firstContactName,
       required this.firstContactPhone,
-      required this.smsContent,
+      required this.smsContentBuilder,
       required this.onSendSMS,
       required this.onCallContact,
       required this.onCall120,
@@ -425,7 +425,8 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
       //   → iOS 收到后自动解码，Data Detector 能识别完整 URL → 可点击！
       // 【一条短信】发送完整求助短信（健康信息 + 苹果/高德两条短链），
       // 短链为纯 ASCII 且独占末尾行，iPhone→安卓 跨平台接收方数据检测器必能识别为可点链接。
-      final safeBody = _safeSmsBody(widget.smsContent);
+      final body = widget.smsContentBuilder(contact);
+      final safeBody = _safeSmsBody(body);
       final uri = Uri(
         scheme: 'sms',
         path: phone,
@@ -527,7 +528,11 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
                   const Spacer(),
                   GestureDetector(
                     onTap: () {
-                      Clipboard.setData(ClipboardData(text: widget.smsContent));
+                      final auto = _getAutoNotifyContacts();
+                      final cur = (_currentSmsIndex < auto.length)
+                          ? auto[_currentSmsIndex]
+                          : (auto.isNotEmpty ? auto.first : const <String, dynamic>{});
+                      Clipboard.setData(ClipboardData(text: widget.smsContentBuilder(cur)));
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('已复制到剪贴板'), duration: Duration(seconds: 1)));
                     },

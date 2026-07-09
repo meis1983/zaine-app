@@ -644,10 +644,22 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
       _startSosLocationTracking(_sosToken);
     }
 
-    final helpMessage = sosShortUrl.isNotEmpty
-        ? _buildShortSosMessage(sosShortUrl)
-        : _generateHelpMessage(_myPhone ?? '', latStr, lngStr); // 兜底：短链失败则用直链长短信
-    if (kDebugMode) debugPrint('[Help] 短信模板:\n$helpMessage');
+    // 【v1.95.3】SOS 短信按接收人个性化（收发双方姓名，强化信任）。
+    // 短链可用时逐人生成带姓名的单段短信；短链失败则回退超长直链兜底短信。
+    String buildSosBody(Map<String, dynamic> c) {
+      if (sosShortUrl.isNotEmpty) {
+        return _buildShortSosMessage(
+          _userName,
+          (c['name']?.toString() ?? '').trim(),
+          sosShortUrl,
+        );
+      }
+      return _generateHelpMessage(_myPhone ?? '', latStr, lngStr);
+    }
+    if (kDebugMode) {
+      final previewContact = contacts.isNotEmpty ? contacts.first : const <String, dynamic>{};
+      debugPrint('[Help] 短信模板(首联系人):\n${buildSosBody(previewContact)}');
+    }
 
     // 标记位置已获取
     _locationObtained = true;
@@ -655,7 +667,7 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
     // ⭐ 弹出求助已触发结果对话框
     // 一条短信含完整健康/位置信息 + 苹果/高德两条短链（短链在短信末尾各自独占一行，
     // 保证 iPhone→安卓 跨平台接收方数据检测器必能识别为可点链接）
-    if (mounted) _showHelpResultDialog(contacts, helpMessage);
+    if (mounted) _showHelpResultDialog(contacts, buildSosBody);
   }
 
   void _cancelHelp() {
@@ -800,10 +812,17 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
   /// 而安卓 MMS 网关常整条丢弃 → 安卓"压根收不到"。压成单行纯文本段后，
   /// iOS 以"绿气泡纯短信"发送，安卓 100% 收到并自动识别短链。
   /// 完整健康信息 / 实时位置 / 内嵌地图由 H5 求助页承载。
-  String _buildShortSosMessage(String shortUrl) {
-    final sb = StringBuffer();
-    sb.write('【在呢】紧急求助！请立即联系我或拨打120。实时位置: $shortUrl');
-    return sb.toString().trim();
+  /// 【信任增强 v1.95.3】SOS 超短短信（单条 SMS 段 ≤70 字）：
+  /// 带「发送人 + 接收人」双姓名，让紧急联系人第一眼认出是谁、真遇险、敢点链接。
+  /// 姓名过长导致超段时，自动降级为仅发送人姓名（保留信任锚点 + 链接，避免转 MMS 被安卓丢弃）。
+  String _buildShortSosMessage(String senderName, String receiverName, String shortUrl) {
+    final s = senderName.isNotEmpty ? senderName : '我';
+    final r = receiverName.isNotEmpty ? receiverName : '你';
+    final full = '「在呢」致$r：$s紧急求助！我可能遇险，请立刻联系我。点链接看位置并报120。 $shortUrl';
+    if (full.length <= 70) return full;
+    // 超长降级：去掉接收人姓名前缀，保留发送人姓名（信任锚点）+ 链接
+    final fallback = '「在呢」$s紧急求助！我可能遇险，请立刻联系我。点链接看位置并报120。 $shortUrl';
+    return fallback;
   }
 
   /// 求助已触发结果弹窗
@@ -814,7 +833,7 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
   /// 4. 📊 正在采取以下行动（状态追踪）
   /// 5. 🚑 拨打120急救大按钮
   /// 6. 底部「我没事了」取消
-  void _showHelpResultDialog(List<Map<String, dynamic>> contacts, String smsContent) {
+  void _showHelpResultDialog(List<Map<String, dynamic>> contacts, String Function(Map<String, dynamic>) smsContentBuilder) {
     // 取第一位联系人的信息用于"拨打联系人电话"
     final firstContact = contacts.isNotEmpty ? contacts.first : null;
     final firstContactName = firstContact?['name']?.toString() ?? '紧急联系人';
@@ -828,7 +847,7 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
         contactCount: contacts.length,
         firstContactName: firstContactName,
         firstContactPhone: firstContactPhone,
-        smsContent: smsContent,
+        smsContentBuilder: smsContentBuilder,
         autoCallLimit: MembershipService.getAutoCallLimit(),
         onSendSMS: () async { /* 已迁移到 HelpResultDialog 内部处理 */ },
         onCallContact: () async {
