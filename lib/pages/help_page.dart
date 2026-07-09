@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'dart:async';
 import 'dart:convert';
 import '../services/platform/location_service.dart';
 import '../services/platform/health_service.dart'; // 【v1.93.0】Watch SOS 信号
@@ -62,6 +63,12 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
   bool _calledContact = false;
   bool _locationObtained = false;
 
+  // ========== SOS 实时位置推送（方案 B） ==========
+  /// SOS 触发后启动的定时器，每 30s 把最新 GPS 推到后端
+  Timer? _sosLocationTimer;
+  /// 当前 SOS 短链 token（用于 PATCH /api/sos/{token}/location）
+  String _sosToken = '';
+
   // ========== 动画控制器 ==========
   late AnimationController _pulseController;
 
@@ -98,6 +105,7 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
 
   @override
   void dispose() {
+    _stopSosLocationTracking();
     HealthService.watchSOSSignal.removeListener(_onWatchSOS);
     _pulseController.dispose();
     super.dispose();
@@ -569,6 +577,7 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
 
   Future<void> _executeHelp() async {
     HapticFeedback.heavyImpact();
+    _sosToken = ''; // 每次求助重新生成短链，避免沿用上一次残留的 token
     final prefs = await SharedPreferences.getInstance();
     // 与 contacts_page.dart 保持一致的 key 规则
     final userId = prefs.getString('user_id');
@@ -623,9 +632,16 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
           message: _emergencyNote,
         );
         sosShortUrl = (res['short_url']?.toString() ?? '').trim();
+        _sosToken = (res['token']?.toString() ?? '').trim();
       } catch (e) {
         if (kDebugMode) debugPrint('[Help] 生成 SOS 短链失败，回退直链长短信: $e');
       }
+    }
+
+    // 【方案 B v1.95】SOS 触发后启动实时位置推送（每 30s），
+    // 让 H5 求助页真正"实时跟随"，同时同步 App 内守护圈位置
+    if (_sosToken.isNotEmpty) {
+      _startSosLocationTracking(_sosToken);
     }
 
     final helpMessage = sosShortUrl.isNotEmpty
@@ -644,7 +660,64 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
 
   void _cancelHelp() {
     HapticFeedback.lightImpact();
+    _stopSosLocationTracking();
     setState(() => _isTriggering = false);
+  }
+
+  // ========== 方案 B：SOS 实时位置推送 ==========
+  /// SOS 触发后启动定时器，每 30s 把最新 GPS 推到后端，
+  /// 使 H5 求助页（接收端 30s 轮询）真正"实时跟随"求助方移动。
+  void _startSosLocationTracking(String token) {
+    _stopSosLocationTracking(); // 防重复启动
+    _sosLocationTimer = Timer.periodic(const Duration(seconds: 30), (_) async {
+      if (!mounted || !_isTriggering || token.isEmpty) return;
+      try {
+        final result = await LocationService.getCurrentLocation();
+        if (!mounted || !result.isSuccess || result.latitude == null) return;
+        final lat = result.latitude!;
+        final lng = result.longitude!;
+        final addr = (result.address ?? '')
+            .replaceAll(RegExp(r'[\u002B\uFF0B\u207A\u208B\u2795\uFB29]'), '')
+            .trim();
+
+        // 1) 推送到 H5 求助页（接收端 30s 轮询跟随）
+        try {
+          await ApiService.updateSosLocation(token, lat, lng, address: addr);
+          if (kDebugMode) debugPrint('[Help] SOS 实时位置已推送至 H5');
+        } catch (e) {
+          if (kDebugMode) debugPrint('[Help] SOS 实时位置推送 H5 失败: $e');
+        }
+
+        // 2) 同步 App 内守护圈实时位置（与 recordLocationOnSOS 同源）
+        try {
+          await ApiService.post('/api/safety/sos-location', body: {
+            'latitude': lat,
+            'longitude': lng,
+            'accuracy': 0.0,
+            'timestamp': DateTime.now().toIso8601String(),
+          }, auth: true);
+        } catch (e) {
+          if (kDebugMode) debugPrint('[Help] SOS 实时位置同步守护圈失败: $e');
+        }
+
+        // 3) 刷新本页位置预览
+        if (mounted) {
+          setState(() {
+            _coordLat = '北纬 ${lat.toStringAsFixed(6)}°';
+            _coordLng = '东经 ${lng.toStringAsFixed(6)}°';
+            if (addr.isNotEmpty) _address = addr;
+          });
+        }
+      } catch (e) {
+        if (kDebugMode) debugPrint('[Help] SOS 实时定位获取失败: $e');
+      }
+    });
+  }
+
+  /// 停止 SOS 实时位置推送定时器（取消求助 / 页面销毁时调用）
+  void _stopSosLocationTracking() {
+    _sosLocationTimer?.cancel();
+    _sosLocationTimer = null;
   }
 
   Future<void> _call120Directly() async {
@@ -729,8 +802,10 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
     final addrPart = rawAddr.replaceAll(RegExp(r'[\u002B\uFF0B\u207A\u208B\u2795\uFB29]'), '');
     final sb = StringBuffer();
     sb.writeln('在呢·紧急求助🆘：$addrPart，需要帮助！');
-    sb.writeln('点此查看实时位置与求助信息：');
+    sb.writeln('');
+    sb.writeln('👇 点击链接查看实时位置与求助信息：');
     sb.writeln(shortUrl);
+    sb.writeln('');
     sb.writeln('请立即联系我或拨打120！在呢');
     return sb.toString().trim();
   }
@@ -772,6 +847,7 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
         },
         onCancel: () {
           Navigator.pop(ctx);
+          _stopSosLocationTracking();
           setState(() => _isTriggering = false);
         },
         onStatusChanged: (String status) {

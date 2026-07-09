@@ -155,6 +155,21 @@ class ApiService {
     }, 'PUT', path);
   }
 
+  // PATCH 请求（含冷启动重试）
+  static Future<Map<String, dynamic>> patch(String path,
+      {Map<String, dynamic>? body, bool auth = true}) async {
+    return _withRetry(() async {
+      final response = await _pinnedClient
+          .patch(
+            Uri.parse('$_baseUrl$path'),
+            headers: await _headers(auth: auth),
+            body: body != null ? jsonEncode(body) : null,
+          )
+          .timeout(_timeout);
+      return _parse(response);
+    }, 'PATCH', path);
+  }
+
   // 生成 SOS 短链（方案 C：存储健康快照，返回 zaine.love/sos/{token}）
   static Future<Map<String, dynamic>> createSosLink({
     required double lat,
@@ -183,6 +198,20 @@ class ApiService {
       'medicine': medicine,
       'allergy': allergy,
       'message': message,
+    }, auth: true);
+  }
+
+  // 更新 SOS 实时位置（方案 B：SOS 持续期间每30s推送，H5 求助页轮询跟随）
+  static Future<Map<String, dynamic>> updateSosLocation(
+    String token,
+    double lat,
+    double lng, {
+    String address = '',
+  }) {
+    return patch('/api/sos/$token/location', body: {
+      'lat': lat,
+      'lng': lng,
+      'address': address,
     }, auth: true);
   }
 
