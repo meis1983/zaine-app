@@ -567,10 +567,11 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
     final landingUrl = inviteUrl;
 
     // 【文案 v1.9.7】守护圈邀请：有温度但极简
-    // 【修复 v1.95】正文压到单条 SMS 长度：iOS 给安卓发长短信会自动转 MMS，
-    // 安卓网关会丢链接；短文本+短链(zaine.love/s/{code}) 单条 SMS 必带可点链接（与方案C同源）。
-    // URL 独占一行，避免 iOS Data Detector 误判。
-    final message = '【在呢】$name，我建了个守护圈，想加你进来每天互报平安：\n$landingUrl';
+    // 【修复 v1.95.2】压成单条 SMS 段（≤70 字、单行、无 emoji）：
+    // iOS 给安卓发"带换行/偏长"的短信会自动转 MMS，安卓网关常整条丢弃 → 收不到。
+    // 单行短文本 + 短链(https://zaine.love/s/{code}) 单条 SMS 必带可点链接（与方案C同源）。
+    final safeName = name.length > 6 ? name.substring(0, 6) : name;
+    final message = '【在呢】$safeName 邀你加入守护圈互报平安: $landingUrl';
     final uri = Uri(scheme: 'sms', path: phone, queryParameters: {'body': message});
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri);

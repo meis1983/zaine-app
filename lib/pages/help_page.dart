@@ -795,18 +795,14 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
     return sb.toString().trim();
   }
 
-  /// 【方案 C v1.95】SOS 超短短信：一句求助 + 后端短链。约 80 字，单条 SMS 不触发 MMS，跨平台可点。
+  /// 【方案 C v1.95 修正】SOS 超短短信：单条 SMS 段（≤70 字、无 emoji、单行）。
+  /// 关键：emoji + 多行 + 长文本会让 iOS 把发给安卓的短信转成 MMS，
+  /// 而安卓 MMS 网关常整条丢弃 → 安卓"压根收不到"。压成单行纯文本段后，
+  /// iOS 以"绿气泡纯短信"发送，安卓 100% 收到并自动识别短链。
+  /// 完整健康信息 / 实时位置 / 内嵌地图由 H5 求助页承载。
   String _buildShortSosMessage(String shortUrl) {
-    final rawAddr = (_address != null && _address!.isNotEmpty) ? _address! : '未知地址';
-    // 与 _generateHelpMessage 一致的"加号类"Unicode 清洗，确保地址无 + 等伪加号变体
-    final addrPart = rawAddr.replaceAll(RegExp(r'[\u002B\uFF0B\u207A\u208B\u2795\uFB29]'), '');
     final sb = StringBuffer();
-    sb.writeln('在呢·紧急求助🆘：$addrPart，需要帮助！');
-    sb.writeln('');
-    sb.writeln('👇 点击链接查看实时位置与求助信息：');
-    sb.writeln(shortUrl);
-    sb.writeln('');
-    sb.writeln('请立即联系我或拨打120！在呢');
+    sb.write('【在呢】紧急求助！请立即联系我或拨打120。实时位置: $shortUrl');
     return sb.toString().trim();
   }
 
