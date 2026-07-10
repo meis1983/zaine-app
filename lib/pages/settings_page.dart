@@ -19,6 +19,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import '../services/api/user_service.dart';
 import 'package:timezone/timezone.dart' as tz;
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -463,11 +464,15 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
       final prefs = await SharedPreferences.getInstance();
       final userId = prefs.getString('user_id') ?? '';
 
-      // 1. 清除登录态
+      // 1. 清除登录态（SharedPreferences + iOS Keychain 两端都要清，F2 修复）
       await prefs.setBool('is_logged_in', false);
       await prefs.remove('auth_token');
       await prefs.remove('user_id');
       await prefs.remove('user_phone');
+      const secureStorage = FlutterSecureStorage();
+      await secureStorage.delete(key: 'auth_token');
+      await secureStorage.delete(key: 'user_id');
+      await secureStorage.delete(key: 'user_phone');
 
       // 2. 清除引导完成标记，确保下次回到引导页登录
       await prefs.remove('onboarding_completed');
@@ -766,6 +771,11 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
         for (final key in prefs.getKeys()) {
           await prefs.remove(key);
         }
+        // F2 修复：同时清除 iOS Keychain 中的登录凭证，避免旧 token 残留被自动登录恢复
+        const secureStorage = FlutterSecureStorage();
+        await secureStorage.delete(key: 'auth_token');
+        await secureStorage.delete(key: 'user_id');
+        await secureStorage.delete(key: 'user_phone');
         if (mounted) {
           if (mounted) {
             await showDialog(
