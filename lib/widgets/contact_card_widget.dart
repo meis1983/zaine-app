@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import '../theme/theme_helper.dart';
 
 /// 联系人卡片 Widget（完整版）
-/// 
+///
 /// 从 ContactsPage 的 _buildContactCard() 方法提取
 /// 显示单个联系人信息，支持拖动排序、编辑、删除
-class ContactCardWidget extends StatelessWidget {
+/// 【隐私】手机号默认脱敏显示(138****5678)，点击眼睛图标或号码才显示明文
+class ContactCardWidget extends StatefulWidget {
   final int itemIndex;
   final int contactIndex;
   final Map<String, dynamic> contact;
@@ -30,13 +31,34 @@ class ContactCardWidget extends StatelessWidget {
   });
 
   @override
+  State<ContactCardWidget> createState() => _ContactCardWidgetState();
+}
+
+class _ContactCardWidgetState extends State<ContactCardWidget> {
+  bool _revealed = false;
+
+  /// 手机号脱敏：保留前3后4，中间以 **** 代替
+  String _maskPhone(String phone) {
+    final digits = phone.replaceAll(RegExp(r'\D'), '');
+    if (digits.length >= 7) {
+      return digits.replaceRange(3, digits.length - 4, '****');
+    }
+    if (digits.length > 1) {
+      return '${digits[0]}****${digits[digits.length - 1]}';
+    }
+    return phone;
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final name = (contact['name'] ?? '').toString();
-    final phone = (contact['phone'] ?? '').toString();
-    final relation = (contact['relation'] ?? '亲友').toString();
+    final name = (widget.contact['name'] ?? '').toString();
+    final phone = (widget.contact['phone'] ?? '').toString();
+    final relation = (widget.contact['relation'] ?? '亲友').toString();
+    final displayPhone =
+        phone.isEmpty ? '' : (_revealed ? phone : _maskPhone(phone));
 
     return Container(
-      key: ValueKey('contact_${name}_$itemIndex'),
+      key: ValueKey('contact_${name}_${widget.itemIndex}'),
       margin: const EdgeInsets.only(bottom: ZaiNeSpacing.md),
       decoration: BoxDecoration(
         color: ZaiNeColors.cardBg(),
@@ -50,11 +72,12 @@ class ContactCardWidget extends StatelessWidget {
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.lg, vertical: ZaiNeSpacing.md),
+        padding: const EdgeInsets.symmetric(
+            horizontal: ZaiNeSpacing.lg, vertical: ZaiNeSpacing.md),
         child: Row(
           children: [
             // 拖动手柄
-            if (dragHandle != null) dragHandle!,
+            if (widget.dragHandle != null) widget.dragHandle!,
             const SizedBox(width: ZaiNeSpacing.sm),
 
             // 头像
@@ -97,26 +120,25 @@ class ContactCardWidget extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: ZaiNeSpacing.sm),
-                      // 【v1.86.0】隐藏锁定图标 — 原意是提示非会员功能限制，
-                      // 但每个联系人都显示🔒会让用户困惑（误以为联系人被锁了）
-                      // 改为在超出免费额度时统一提示升级
                       // 优先级标签
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.sm, vertical: ZaiNeSpacing.xs),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: ZaiNeSpacing.sm,
+                            vertical: ZaiNeSpacing.xs),
                         decoration: BoxDecoration(
-                          color: priorityColor.withValues(alpha: 0.1),
+                          color: widget.priorityColor.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(6),
                           border: Border.all(
-                            color: priorityColor.withValues(alpha: 0.3),
+                            color: widget.priorityColor.withValues(alpha: 0.3),
                             width: 0.5,
                           ),
-                        
-                          boxShadow: ZaiNeShadows.card,),
+                          boxShadow: ZaiNeShadows.card,
+                        ),
                         child: Text(
-                          priorityLabel,
+                          widget.priorityLabel,
                           style: TextStyle(
                             fontSize: 9.5,
-                            color: priorityColor,
+                            color: widget.priorityColor,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -124,19 +146,40 @@ class ContactCardWidget extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: ZaiNeSpacing.xs),
-                  Text(
-                    phone,
-                    style: TextStyle(fontSize: 13, color: Colors.grey[600]),
-                  ),
+                  // 【隐私】手机号默认脱敏，点击眼睛/号码切换明文
+                  if (phone.isNotEmpty)
+                    InkWell(
+                      onTap: () => setState(() => _revealed = !_revealed),
+                      borderRadius: BorderRadius.circular(6),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            _revealed
+                                ? Icons.visibility_off
+                                : Icons.visibility,
+                            size: 14,
+                            color: Colors.grey[500],
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            displayPhone,
+                            style: TextStyle(
+                                fontSize: 13, color: Colors.grey[600]),
+                          ),
+                        ],
+                      ),
+                    ),
                   const SizedBox(height: ZaiNeSpacing.xs),
                   // 关系标签
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.sm, vertical: ZaiNeSpacing.xs),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: ZaiNeSpacing.sm, vertical: ZaiNeSpacing.xs),
                     decoration: BoxDecoration(
                       color: Colors.orange.shade50,
                       borderRadius: BorderRadius.circular(8),
-                    
-                      boxShadow: ZaiNeShadows.card,),
+                      boxShadow: ZaiNeShadows.card,
+                    ),
                     child: Text(
                       relation,
                       style: TextStyle(
@@ -155,13 +198,14 @@ class ContactCardWidget extends StatelessWidget {
               children: [
                 IconButton(
                   icon: Icon(Icons.edit, color: Colors.grey[500], size: 18),
-                  onPressed: onEdit,
+                  onPressed: widget.onEdit,
                   visualDensity: VisualDensity.compact,
                   tooltip: '编辑',
                 ),
                 IconButton(
-                  icon: const Icon(Icons.delete_outline, color: Colors.red, size: 18),
-                  onPressed: onDelete,
+                  icon: const Icon(Icons.delete_outline,
+                      color: Colors.red, size: 18),
+                  onPressed: widget.onDelete,
                   visualDensity: VisualDensity.compact,
                   tooltip: '删除',
                 ),
