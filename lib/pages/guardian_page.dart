@@ -577,7 +577,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
     }
     final landingUrl = inviteUrl;
 
-    final message = '「在呢」$safeName邀你加入守护圈，每天互报平安（独居安全App）。注册: $landingUrl';
+    final message = '【在呢】$safeName 邀请你加入我们的互助守护圈 🛡️ 我们都是独居青年，每天在 App 里互相报个平安。点下方链接下载，一起守护彼此的安全： $landingUrl';
     final uri = Uri(scheme: 'sms', path: phone, queryParameters: {'body': message});
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri);

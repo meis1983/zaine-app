@@ -813,16 +813,12 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
   /// iOS 以"绿气泡纯短信"发送，安卓 100% 收到并自动识别短链。
   /// 完整健康信息 / 实时位置 / 内嵌地图由 H5 求助页承载。
   /// 【信任增强 v1.95.3】SOS 超短短信（单条 SMS 段 ≤70 字）：
-  /// 带「发送人 + 接收人」双姓名，让紧急联系人第一眼认出是谁、真遇险、敢点链接。
-  /// 姓名过长导致超段时，自动降级为仅发送人姓名（保留信任锚点 + 链接，避免转 MMS 被安卓丢弃）。
+  /// 带「发送人 + 接收人」双姓名，丰富求助语境，让紧急联系人第一眼认出是谁、明白严重性、敢点链接。
+  /// iOS→iOS（iMessage）可发长文本无压力；iOS→安卓虽会转 MMS 丢链，但发送端已自动复制带链接文案可补发。
   String _buildShortSosMessage(String senderName, String receiverName, String shortUrl) {
     final s = senderName.isNotEmpty ? senderName : '我';
     final r = receiverName.isNotEmpty ? receiverName : '你';
-    final full = '「在呢」致$r：$s紧急求助！我可能遇险，请立刻联系我。点链接看位置并报120。 $shortUrl';
-    if (full.length <= 70) return full;
-    // 超长降级：去掉接收人姓名前缀，保留发送人姓名（信任锚点）+ 链接
-    final fallback = '「在呢」$s紧急求助！我可能遇险，请立刻联系我。点链接看位置并报120。 $shortUrl';
-    return fallback;
+    return '【在呢·紧急求助】$r，我是$s。我可能遇到了危险，已经通过「在呢」把我的实时位置和求助信息发出去了。请你马上点开下面的链接看我的位置，并帮我拨打120急救电话！ $shortUrl';
   }
 
   /// 求助已触发结果弹窗
