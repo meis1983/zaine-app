@@ -1000,7 +1000,7 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          _userName!,
+                          _userName ?? '在呢用户',
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: ZaiNeFontSize.title,
