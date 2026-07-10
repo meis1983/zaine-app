@@ -452,17 +452,10 @@ class _ContactsPageState extends State<ContactsPage> {
         _showInviteDialog(contactName, contactPhone);
       }
 
-      // 异步同步到后端（非阻塞）
+      // 异步同步到后端（非阻塞），由 _syncAddToBackend 回填真实 id 到本地乐观记录
+      // 【修复 v1.95】移除延迟 1s 的强制 _loadContacts()：
+      // 后端写入慢时强刷会覆盖乐观记录造成联系人「闪现/消失」，现依赖回填即可
       _syncAddToBackend(result);
-
-      // 【修复 v1.84.0】同步完成后立即刷新列表（防止需要手动返回再进入）
-      // 延迟1秒等待后端写入，然后刷新
-      Future.delayed(const Duration(seconds: 1), () {
-        if (mounted) {
-          if (kDebugMode) debugPrint('[ContactsPage] 添加联系人后自动刷新列表');
-          _loadContacts();
-        }
-      });
     }
   }
 

@@ -545,7 +545,8 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
                       final cur = (_currentSmsIndex < auto.length)
                           ? auto[_currentSmsIndex]
                           : (auto.isNotEmpty ? auto.first : const <String, dynamic>{});
-                      Clipboard.setData(ClipboardData(text: widget.smsContentBuilder(cur)));
+                      // 【修复 v1.95-F6】复制按钮与发送路径一致，走 _safeSmsBody 清理特殊字符
+                      Clipboard.setData(ClipboardData(text: _safeSmsBody(widget.smsContentBuilder(cur))));
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('已复制到剪贴板'), duration: Duration(seconds: 1)));
                     },
@@ -630,14 +631,16 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
     if (latStr == null || lngStr == null) return '（坐标未知）';
     final lat = latStr.replaceAll('北纬 ', '').replaceAll('°', '');
     final lng = lngStr.replaceAll('东经 ', '').replaceAll('°', '');
-    return 'https://maps.apple.com/?ll=$lat,$lng';
+    // 【修复 v1.95-F5】预览与真实 SMS 一致：直接进入导航（从当前位置到求助位置）
+    return 'https://maps.apple.com/?daddr=$lat,$lng&q=${Uri.encodeComponent('求助位置')}';
   }
 
   String _buildAmapUrl(String? latStr, String? lngStr) {
     if (latStr == null || lngStr == null) return '（坐标未知）';
     final lat = latStr.replaceAll('北纬 ', '').replaceAll('°', '');
     final lng = lngStr.replaceAll('东经 ', '').replaceAll('°', '');
-    return 'https://uri.amap.com/marker?position=$lat,$lng';
+    // 【修复 v1.95-F5】预览与真实 SMS 一致：直接进入导航
+    return 'https://uri.amap.com/navigation?to=$lng,$lat&mode=car&src=zaine&coordinate=gaode&callnative=1';
   }
 
   Widget _mapLinkRowOld(String emoji, String label, String url, {bool isBlue = false}) => Padding(

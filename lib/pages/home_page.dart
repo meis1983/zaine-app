@@ -199,20 +199,30 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     _syncHealthData();
   }
 
+  /// 健康数据同步并发锁（防止前后台切换/初始化并发触发重复签到）
+  bool _healthSyncInFlight = false;
+
   /// 同步健康数据（Apple Watch 心跳检测）
   Future<void> _syncHealthData() async {
     if (!_isLoggedIn) return;
-    
-    // 延迟几秒执行，避免抢占首页初始化资源
-    await Future.delayed(const Duration(seconds: 3));
-    
+    // 【修复 v1.95】防并发重复签到：初始化与 App 前后台切换均可能调用本方法
+    if (_healthSyncInFlight) {
+      if (kDebugMode) debugPrint('[HomePage] 健康同步进行中，跳过重复调用');
+      return;
+    }
+    _healthSyncInFlight = true;
     try {
+      // 延迟几秒执行，避免抢占首页初始化资源
+      await Future.delayed(const Duration(seconds: 3));
+
       if (kDebugMode) debugPrint('[HomePage] 开始静默同步 HealthKit 数据...');
       await HealthService.performSilentHeartbeatCheckin();
       // 如果签到成功，刷新一下首页状态
       _loadCheckInStatus();
     } catch (e) {
       if (kDebugMode) debugPrint('[HomePage] 健康数据同步失败: $e');
+    } finally {
+      _healthSyncInFlight = false;
     }
   }
 
