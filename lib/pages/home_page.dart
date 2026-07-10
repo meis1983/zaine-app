@@ -486,7 +486,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
             // 从服务器拉取完整签到历史（最多 365 天）
             try {
               if (kDebugMode) debugPrint('[HomePage] 📡 调用 getHistory(page=1, pageSize=365)...');
-              final historyRes = await CheckinService.getHistory(page: 1, pageSize: 365);
+              final historyRes = await CheckinService.getHistory(page: 1, pageSize: 100);
               if (kDebugMode) {
                 debugPrint('[HomePage] 📥 getHistory 响应:');
                 debugPrint('  [success] ${historyRes['success']}');
@@ -497,24 +497,33 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
               }
               if (historyRes['success'] == true && historyRes['history'] != null) {
                 final history = historyRes['history'] as List<dynamic>;
-                if (kDebugMode) debugPrint('[HomePage] ✅ 已拉取服务器签到历史 ${history.length} 条');
+                if (kDebugMode) debugPrint('[HomePage] 📥 已拉取服务器签到历史 ${history.length} 条');
 
-                // 解析日期并保存到本地
-                final dateStrings = <String>[];
+                // 归一化为 yyyy-MM-dd（兼容 '2026-07-10' 与 '2026-07-10T00:00:00' 两种格式，避免时区/格式差异导致解析失败）
+                final serverDates = <String>{};
                 for (final item in history) {
                   if (item is Map && item['date'] != null) {
-                    dateStrings.add(item['date'].toString());
+                    final parsed = DateTime.tryParse(item['date'].toString());
+                    if (parsed != null) {
+                      serverDates.add(DateFormat('yyyy-MM-dd').format(parsed));
+                    }
                   }
                 }
 
-                // 保存到本地（用户隔离 key）
+                // 【稳健修复 v1.95.x】MERGE 而非覆盖：保留本地已有签到日期，
+                // 仅当服务器非空时合并，避免"服务器空/缺历史"把本地记录清空→连续天数归零（历史反复回归根因）
                 final uid = (await AuthService.getUserId()) ?? '';
                 final historyKey = uid.isNotEmpty ? 'checkin_history_$uid' : 'checkin_history';
-                await prefs.setStringList(historyKey, dateStrings);
-
-                if (kDebugMode) debugPrint('[HomePage] ✅ 已保存签到历史到本地: ${dateStrings.length} 条');
+                final localDates = (prefs.getStringList(historyKey) ?? []).toSet();
+                if (serverDates.isNotEmpty) {
+                  localDates.addAll(serverDates);
+                  await prefs.setStringList(historyKey, localDates.toList());
+                  if (kDebugMode) debugPrint('[HomePage] ✅ 合并签到历史(本地+服务器) 共 ${localDates.length} 条');
+                } else {
+                  if (kDebugMode) debugPrint('[HomePage] ⚠️ 服务器历史为空，保留本地 ${localDates.length} 条，不清空');
+                }
               } else {
-                if (kDebugMode) debugPrint('[HomePage] ⚠️ 服务器签到历史返回失败: $historyRes');
+                if (kDebugMode) debugPrint('[HomePage] ⚠️ 服务器签到历史返回失败: $historyRes（保留本地历史）');
               }
             } catch (e) {
               if (kDebugMode) debugPrint('[HomePage] ⚠️ 拉取签到历史失败: $e');

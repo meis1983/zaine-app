@@ -215,23 +215,36 @@ class SyncService {
 
       // 【v1.9.72】拉取签到历史列表（供日历视图 + 周统计使用）
       try {
-        final historyRes = await ApiService.get('/api/checkin/history?page=1&page_size=365');
+        final historyRes = await ApiService.get('/api/checkin/history?page=1&page_size=100');
         if (historyRes['success'] == true && historyRes['history'] != null) {
           final history = historyRes['history'] as List<dynamic>;
-          final dateStrings = history
-              .map((e) => e is Map ? (e['date']?.toString() ?? '') : e.toString())
-              .where((s) => s.isNotEmpty)
-              .toList();
-          await prefs.setStringList(historyKey, dateStrings);
-          if (kDebugMode) debugPrint('[SyncService] ✅ 拉取签到历史 ${dateStrings.length} 条');
-          
-          // 【P0 修复 v1.93.9】重新计算连续天数，防止服务端 streak=0 导致数据丢失
-          final calculatedStreak = StreakUtil.calculateStreak(dateStrings);
-          final serverStreak = prefs.getInt(streakKey) ?? 0;
-          
-          if (calculatedStreak > serverStreak) {
-            await prefs.setInt(streakKey, calculatedStreak);
-            if (kDebugMode) debugPrint('[SyncService] ✅ 重新计算连续天数=$calculatedStreak（服务端=$serverStreak），已修正本地缓存');
+          // 归一化为 yyyy-MM-dd（兼容 '2026-07-10' 与 '2026-07-10T00:00:00'）
+          final serverDates = history
+              .map((e) {
+                final raw = e is Map ? (e['date']?.toString() ?? '') : e.toString();
+                if (raw.isEmpty) return null;
+                final parsed = DateTime.tryParse(raw);
+                return parsed != null ? _formatYyyyMmDd(parsed.toLocal()) : null;
+              })
+              .where((s) => s != null)
+              .cast<String>()
+              .toSet();
+          if (serverDates.isNotEmpty) {
+            // 【稳健修复 v1.95.x】MERGE 而非覆盖：保留本地已有日期，避免服务器空/缺数据清空本地→连续天数归零
+            final localDates = (prefs.getStringList(historyKey) ?? []).toSet();
+            localDates.addAll(serverDates);
+            await prefs.setStringList(historyKey, localDates.toList());
+            if (kDebugMode) debugPrint('[SyncService] ✅ 合并签到历史(本地+服务器) 共 ${localDates.length} 条');
+
+            // 用合并后的完整历史重算连续天数（单一真相源）
+            final calculatedStreak = StreakUtil.calculateStreak(localDates.toList());
+            final cachedStreak = prefs.getInt(streakKey) ?? 0;
+            if (calculatedStreak > cachedStreak) {
+              await prefs.setInt(streakKey, calculatedStreak);
+              if (kDebugMode) debugPrint('[SyncService] ✅ 重算连续天数=$calculatedStreak（本地缓存=$cachedStreak），已修正');
+            }
+          } else {
+            if (kDebugMode) debugPrint('[SyncService] ⚠️ 服务器历史为空，保留本地，不清空');
           }
         }
       } catch (e) {
