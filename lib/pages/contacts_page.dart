@@ -1545,9 +1545,15 @@ class _AddContactDialogState extends State<AddContactDialog> {
                             final relation = _isCustomRelation
                                 ? _customRelationController.text.trim()
                                 : _selectedRelation;
+                            // 【修复 2026-07-12 议题A】存储前归一化手机号：去 +86/空格/横杠/括号，只留数字，
+                            // 保证与注册端 User.phone（纯 11 位数字）格式一致，避免「已注册却显示未注册」
+                            final normalizedPhone = _phoneController.text
+                                .trim()
+                                .replaceAll(RegExp(r'[^\d]'), '')
+                                .replaceFirst(RegExp(r'^86'), '');
                             Navigator.of(context).pop(<String, dynamic>{
                               'name': _nameController.text.trim(),
-                              'phone': _phoneController.text.trim(),
+                              'phone': normalizedPhone,
                               'relation': relation,
                             });
                           }

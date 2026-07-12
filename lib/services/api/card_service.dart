@@ -152,4 +152,14 @@ class CardService {
       'role': role,
     });
   }
+
+  /// 【2026-07-12 议题B】我守护的人：我发出的已绑定普通守护卡（无人数上限），含收卡人每日签到状态
+  static Future<Map<String, dynamic>> getGuardedByMe() async {
+    try {
+      final res = await ApiService.get('/api/card/guarded-by-me');
+      return res;
+    } catch (e) {
+      return {'success': false, 'guarded': <dynamic>[], 'count': 0};
+    }
+  }
 }

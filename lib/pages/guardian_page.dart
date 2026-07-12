@@ -30,6 +30,8 @@ class GuardianPage extends StatefulWidget {
 class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver {
   List<Map<String, dynamic>> _guardians = [];
   int _totalRegistered = 0; // 新增：已注册的守护成员数
+  // 【2026-07-12 议题B】我守护的人：我发出的已绑定普通守护卡（无人数上限），与「守护我的人」严格分区
+  List<Map<String, dynamic>> _guardedByMe = [];
   Timer? _refreshTimer; // 定期刷新定时器
 
   @override
@@ -113,14 +115,16 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
 
     // 第2步：后台异步从后端拉取最新联系人列表
     try {
-      // 并行加载联系人列表和邀请统计
+      // 并行加载联系人列表、邀请统计、以及「我守护的人」列表（议题B，无上限）
       final results = await Future.wait([
         ContactService.getContacts(),
         CardService.getInviteStats(),
+        CardService.getGuardedByMe(),
       ]);
 
       final res = results[0];
       final statsRes = results[1];
+      final guardedRes = results[2];
 
       if (res['success'] == true && res['contacts'] != null) {
         final serverContacts = <Map<String, dynamic>>[];
@@ -144,6 +148,19 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
           });
         }
         if (kDebugMode) debugPrint('[GuardianPage] ✅ 获取邀请统计: total_registered=$_totalRegistered');
+      }
+
+      // 【2026-07-12 议题B】我守护的人（我发出的已绑定普通守护卡）
+      if (guardedRes['success'] == true && guardedRes['guarded'] is List) {
+        final list = (guardedRes['guarded'] as List)
+            .whereType<Map<String, dynamic>>()
+            .toList();
+        if (mounted) {
+          setState(() {
+            _guardedByMe = list;
+          });
+        }
+        if (kDebugMode) debugPrint('[GuardianPage] ✅ 我守护的人: ${list.length} 位');
       }
     } catch (e) {
       if (kDebugMode) debugPrint('[GuardianPage] ⚠️ 后端拉取失败: $e');
@@ -1023,6 +1040,9 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                   ),
                 ),
 
+              // ====== 我守护的人（议题B：与「守护我的人」严格分区，无人数上限） ======
+              _buildGuardedByMeSection(),
+
               // ====== 功能入口 ======
               SliverToBoxAdapter(
                 child: Padding(
@@ -1143,6 +1163,208 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
   }
 
   /// 守护者卡片
+  /// 【2026-07-12 议题B】「我守护的人」专区
+  /// 与上方橙色「守护我的人」（紧急联系人，5/10 上限）严格区分：
+  /// - 蓝色调（indigo/蓝）视觉独立，避免用户混淆两类方向相反的守护关系
+  /// - 无人数上限，展示我发出的已绑定普通守护卡，并显示对方每日签到状态
+  Widget _buildGuardedByMeSection() {
+    final guardedColor = const Color(0xFF3F7CFF); // 蓝：我守护的人
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 分区标题（带说明，强调与守护我的人不同）
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: guardedColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(Icons.volunteer_activism_rounded,
+                      size: 18, color: guardedColor),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '我守护的人',
+                        style: TextStyle(
+                          fontSize: ZaiNeFontSize.body,
+                          fontWeight: FontWeight.w700,
+                          color: ZaiNeColors.textPrimary(),
+                        ),
+                      ),
+                      Text(
+                        '我发出的守护卡 · 已与你互相守护（人数不限）',
+                        style: TextStyle(
+                          fontSize: ZaiNeFontSize.micro,
+                          color: Colors.grey[500],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: guardedColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    '${_guardedByMe.length}',
+                    style: TextStyle(
+                      fontSize: ZaiNeFontSize.caption,
+                      fontWeight: FontWeight.w700,
+                      color: guardedColor,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            // 列表
+            if (_guardedByMe.isEmpty)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: ZaiNeColors.cardBg(),
+                  borderRadius: BorderRadius.circular(ZaiNeRadius.card),
+                ),
+                child: Column(
+                  children: [
+                    Icon(Icons.favorite_outline, size: 32, color: Colors.grey[300]),
+                    const SizedBox(height: 8),
+                    Text(
+                      '还没有守护的人',
+                      style: TextStyle(
+                        fontSize: ZaiNeFontSize.caption,
+                        color: Colors.grey[500],
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '发出守护卡，对方注册后就会出现在列表里',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: ZaiNeFontSize.micro,
+                        color: Colors.grey[400],
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else
+              ..._guardedByMe.map((person) {
+                final name = (person['nickname']?.toString().isNotEmpty == true
+                        ? person['nickname']
+                        : person['receiver_name']) ??
+                    '未命名';
+                final checkedIn = person['checked_in_today'] == true;
+                final boundAt = person['bound_at']?.toString() ?? '';
+                return Container(
+                  margin: const EdgeInsets.only(bottom: ZaiNeSpacing.cardXs),
+                  padding: const EdgeInsets.all(ZaiNeSpacing.lg),
+                  decoration: BoxDecoration(
+                    color: ZaiNeColors.cardBg(),
+                    borderRadius: BorderRadius.circular(ZaiNeRadius.card),
+                    border: Border.all(
+                      color: guardedColor.withValues(alpha: 0.18),
+                      width: 1,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.03),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      // 头像（取首字）
+                      Container(
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [guardedColor, guardedColor.withValues(alpha: 0.7)],
+                          ),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Center(
+                          child: Text(
+                            name.isNotEmpty ? name[0] : '?',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: ZaiNeSpacing.lg),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              name,
+                              style: const TextStyle(
+                                fontSize: ZaiNeFontSize.body,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                Icon(
+                                  checkedIn
+                                      ? Icons.check_circle_rounded
+                                      : Icons.radio_button_unchecked_rounded,
+                                  size: 14,
+                                  color: checkedIn ? Colors.green : Colors.grey[400],
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  checkedIn ? '今日已签到' : '今日未签到',
+                                  style: TextStyle(
+                                    fontSize: ZaiNeFontSize.micro,
+                                    color: checkedIn ? Colors.green : Colors.grey[500],
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                if (boundAt.isNotEmpty) ...[
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    '· $boundAt 绑定',
+                                    style: TextStyle(
+                                      fontSize: ZaiNeFontSize.micro,
+                                      color: Colors.grey[400],
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildGuardianCard(Map<String, dynamic> guardian, int index) {
     final colors = [
       ZaiNeColors.brandOrange,
