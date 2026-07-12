@@ -742,7 +742,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                               fontWeight: FontWeight.w500,
                             ),
                           ),
-                          if (_totalRegistered > 0) ...[
+                          if (_guardedByMe.isNotEmpty) ...[
                             Container(
                               margin: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.sm),
                               width: 1,
@@ -1267,6 +1267,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                         : person['receiver_name']) ??
                     '未命名';
                 final checkedIn = person['checked_in_today'] == true;
+                final isPending = person['last_signin_at'] == null; // 待激活：已注册但未登录 App
                 final boundAt = person['bound_at']?.toString() ?? '';
                 return Container(
                   margin: const EdgeInsets.only(bottom: ZaiNeSpacing.cardXs),
@@ -1288,26 +1289,15 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                   ),
                   child: Row(
                     children: [
-                      // 头像（取首字）
-                      Container(
-                        width: 42,
-                        height: 42,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [guardedColor, guardedColor.withValues(alpha: 0.7)],
-                          ),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Center(
-                          child: Text(
-                            name.isNotEmpty ? name[0] : '?',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
+                      // 头像（优先真实头像，否则首字；待激活加蒙版，复用 _buildContactAvatar）
+                      _buildContactAvatar(
+                        {
+                          'avatarBase64': person['avatar_base64']?.toString() ?? '',
+                          'isActive': person['last_signin_at'] != null,
+                          'isRegistered': true,
+                          'name': name,
+                        },
+                        guardedColor,
                       ),
                       const SizedBox(width: ZaiNeSpacing.lg),
                       Expanded(
@@ -1325,18 +1315,26 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                             Row(
                               children: [
                                 Icon(
-                                  checkedIn
-                                      ? Icons.check_circle_rounded
-                                      : Icons.radio_button_unchecked_rounded,
+                                  isPending
+                                      ? Icons.bedtime_outlined
+                                      : (checkedIn
+                                          ? Icons.check_circle_rounded
+                                          : Icons.radio_button_unchecked_rounded),
                                   size: 14,
-                                  color: checkedIn ? Colors.green : Colors.grey[400],
+                                  color: isPending
+                                      ? Colors.orange[500]
+                                      : (checkedIn ? Colors.green : Colors.grey[400]),
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
-                                  checkedIn ? '今日已签到' : '今日未签到',
+                                  isPending
+                                      ? '待激活'
+                                      : (checkedIn ? '今日已签到' : '今日未签到'),
                                   style: TextStyle(
                                     fontSize: ZaiNeFontSize.micro,
-                                    color: checkedIn ? Colors.green : Colors.grey[500],
+                                    color: isPending
+                                        ? Colors.orange[700]
+                                        : (checkedIn ? Colors.green : Colors.grey[500]),
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
