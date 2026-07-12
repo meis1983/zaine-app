@@ -19,6 +19,165 @@ import '../services/api/contact_service.dart';
 import '../services/api/card_service.dart';
 import '../services/api_service.dart';
 import '../services/api/notify_service.dart';
+import '../data/app_constants.dart';
+
+/// 蓝色调：用于「我守护的人」专区，与橙色「守护我的人」严格区分
+const Color _kGuardedBlue = Color(0xFF3F7CFF);
+
+/// 「我守护的人」管理面板（备注名 + 重新邀请，无解除）
+class _GuardedByMeManagerSheet extends StatefulWidget {
+  final List<Map<String, dynamic>> people;
+  final Map<int, String> remarks;
+  final String Function(Map<String, dynamic>) displayName;
+  final Widget Function(Map<String, dynamic>) avatarBuilder;
+  final Future<void> Function(int, String) onEditRemark;
+  final Future<void> Function(Map<String, dynamic>) onReinvite;
+
+  const _GuardedByMeManagerSheet({
+    required this.people,
+    required this.remarks,
+    required this.displayName,
+    required this.avatarBuilder,
+    required this.onEditRemark,
+    required this.onReinvite,
+  });
+
+  @override
+  State<_GuardedByMeManagerSheet> createState() =>
+      _GuardedByMeManagerSheetState();
+}
+
+class _GuardedByMeManagerSheetState extends State<_GuardedByMeManagerSheet> {
+  late Map<int, String> _remarks;
+
+  @override
+  void initState() {
+    super.initState();
+    _remarks = Map<int, String>.from(widget.remarks);
+  }
+
+  Future<void> _edit(int receiverId, String current) async {
+    final controller = TextEditingController(text: current);
+    final result = await showDialog<String>(
+      context: context,
+      builder: (dctx) => AlertDialog(
+        title: const Text('修改备注名'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(hintText: '输入在「我守护的人」中显示的名字'),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.of(dctx).pop(), child: const Text('取消')),
+          TextButton(
+              onPressed: () => Navigator.of(dctx).pop(controller.text.trim()),
+              child: const Text('保存')),
+        ],
+      ),
+    );
+    if (result != null) {
+      await widget.onEditRemark(receiverId, result);
+      setState(() => _remarks[receiverId] = result);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _kGuardedBlue;
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+        top: 16,
+        left: 20,
+        right: 20,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                  color: Colors.grey[300], borderRadius: BorderRadius.circular(2))),
+          const SizedBox(height: 12),
+          Row(children: [
+            Icon(Icons.favorite_rounded, color: color),
+            const SizedBox(width: 8),
+            const Text('我守护的人',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+            const Spacer(),
+            Text('${widget.people.length} 位',
+                style: TextStyle(color: Colors.grey[500])),
+          ]),
+          const SizedBox(height: 12),
+          Flexible(
+            child: ListView.separated(
+              shrinkWrap: true,
+              itemCount: widget.people.length,
+              separatorBuilder: (_, __) => const Divider(height: 1),
+              itemBuilder: (ctx, i) {
+                final p = widget.people[i];
+                final rid = p['receiver_id'];
+                final name = _remarks[rid]?.isNotEmpty == true
+                    ? _remarks[rid]!
+                    : widget.displayName(p);
+                final isPending = p['last_signin_at'] == null;
+                final checkedIn = p['checked_in_today'] == true;
+                return ListTile(
+                  leading: widget.avatarBuilder(p),
+                  title: Text(name),
+                  subtitle: Row(children: [
+                    Icon(
+                      isPending
+                          ? Icons.bedtime_outlined
+                          : (checkedIn
+                              ? Icons.check_circle
+                              : Icons.radio_button_unchecked),
+                      size: 14,
+                      color: isPending
+                          ? Colors.orange
+                          : (checkedIn ? Colors.green : Colors.grey),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      isPending
+                          ? '待激活'
+                          : (checkedIn ? '今日已签到' : '今日未签到'),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isPending
+                            ? Colors.orange
+                            : (checkedIn ? Colors.green : Colors.grey),
+                      ),
+                    ),
+                  ]),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (isPending)
+                        TextButton(
+                            onPressed: () => widget.onReinvite(p),
+                            child: const Text('重新邀请')),
+                      IconButton(
+                        icon: const Icon(Icons.edit_outlined, size: 18),
+                        onPressed: () => _edit(rid is int ? rid : 0, name),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 class GuardianPage extends StatefulWidget {
   const GuardianPage({super.key});
@@ -32,6 +191,8 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
   int _totalRegistered = 0; // 新增：已注册的守护成员数
   // 【2026-07-12 议题B】我守护的人：我发出的已绑定普通守护卡（无人数上限），与「守护我的人」严格分区
   List<Map<String, dynamic>> _guardedByMe = [];
+  // 「我守护的人」备注名（本地存储，key=guarded_by_me_remark_<receiver_id>）
+  Map<int, String> _guardedRemarks = {};
   Timer? _refreshTimer; // 定期刷新定时器
 
   @override
@@ -161,6 +322,17 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
           });
         }
         if (kDebugMode) debugPrint('[GuardianPage] ✅ 我守护的人: ${list.length} 位');
+
+        // 加载「我守护的人」备注名（本地存储，key=guarded_by_me_remark_<receiver_id>）
+        final remarks = <int, String>{};
+        for (final p in list) {
+          final rid = p['receiver_id'];
+          if (rid is int) {
+            final r = prefs.getString('guarded_by_me_remark_$rid');
+            if (r != null && r.isNotEmpty) remarks[rid] = r;
+          }
+        }
+        _guardedRemarks = remarks;
       }
     } catch (e) {
       if (kDebugMode) debugPrint('[GuardianPage] ⚠️ 后端拉取失败: $e');
@@ -1076,6 +1248,16 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                       ),
                       const SizedBox(height: ZaiNeSpacing.md),
                       _buildFunctionEntry(
+                        icon: Icons.favorite_rounded,
+                        title: '我守护的人',
+                        subtitle: _guardedByMe.isEmpty
+                            ? '查看与编辑你发出的守护卡'
+                            : '管理 ${_guardedByMe.length} 位你守护的人',
+                        color: _kGuardedBlue,
+                        onTap: () => _showGuardedByMeManager(),
+                      ),
+                      const SizedBox(height: ZaiNeSpacing.md),
+                      _buildFunctionEntry(
                         icon: Icons.check_circle_outline,
                         title: '平安确认',
                         subtitle: '让守护者知道你一切平安',
@@ -1167,8 +1349,74 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
   /// 与上方橙色「守护我的人」（紧急联系人，5/10 上限）严格区分：
   /// - 蓝色调（indigo/蓝）视觉独立，避免用户混淆两类方向相反的守护关系
   /// - 无人数上限，展示我发出的已绑定普通守护卡，并显示对方每日签到状态
+  // ===== 「我守护的人」管理：备注名 + 重新邀请（无解除） =====
+  String _guardedDisplayName(Map<String, dynamic> person) {
+    final rid = person['receiver_id'];
+    if (rid is int && _guardedRemarks[rid]?.isNotEmpty == true) {
+      return _guardedRemarks[rid]!;
+    }
+    final nick = (person['nickname']?.toString() ?? '').trim();
+    final recv = (person['receiver_name']?.toString() ?? '').trim();
+    return nick.isNotEmpty ? nick : (recv.isNotEmpty ? recv : '未命名');
+  }
+
+  Future<void> _editGuardedRemark(int receiverId, String remark) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (remark.isEmpty) {
+      await prefs.remove('guarded_by_me_remark_$receiverId');
+      _guardedRemarks.remove(receiverId);
+    } else {
+      await prefs.setString('guarded_by_me_remark_$receiverId', remark);
+      _guardedRemarks[receiverId] = remark;
+    }
+    if (mounted) setState(() {});
+  }
+
+  // 【复用现有提醒逻辑】待激活用户：复制走心文案 + 唤起微信，不新增独立机制
+  Future<void> _reinviteGuarded(Map<String, dynamic> person) async {
+    final name = _guardedDisplayName(person);
+    final url = AppConstants.guardianInviteUrl;
+    final message =
+        '$name，你在「在呢」有张守护卡还没激活哦～\n下载 App 登录，我们就能互相报平安、有事第一时间找到彼此啦：\n$url';
+    await Clipboard.setData(ClipboardData(text: message));
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('已复制邀请文案，去微信粘贴发送给$name吧 ✅'),
+        behavior: SnackBarBehavior.floating,
+      ));
+    }
+    final wechat = Uri.parse('weixin://');
+    if (await canLaunchUrl(wechat)) {
+      await launchUrl(wechat);
+    }
+  }
+
+  void _showGuardedByMeManager() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _GuardedByMeManagerSheet(
+        people: _guardedByMe,
+        remarks: _guardedRemarks,
+        displayName: _guardedDisplayName,
+        avatarBuilder: (p) => _buildContactAvatar(
+          {
+            'avatarBase64': p['avatar_base64']?.toString() ?? '',
+            'isActive': p['last_signin_at'] != null,
+            'isRegistered': true,
+            'name': _guardedDisplayName(p),
+          },
+          _kGuardedBlue,
+        ),
+        onEditRemark: _editGuardedRemark,
+        onReinvite: _reinviteGuarded,
+      ),
+    ).then((_) => _loadGuardians());
+  }
+
   Widget _buildGuardedByMeSection() {
-    final guardedColor = const Color(0xFF3F7CFF); // 蓝：我守护的人
+    final guardedColor = _kGuardedBlue; // 蓝：我守护的人
     return SliverToBoxAdapter(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
@@ -1262,10 +1510,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
               )
             else
               ..._guardedByMe.map((person) {
-                final name = (person['nickname']?.toString().isNotEmpty == true
-                        ? person['nickname']
-                        : person['receiver_name']) ??
-                    '未命名';
+                final name = _guardedDisplayName(person);
                 final checkedIn = person['checked_in_today'] == true;
                 final isPending = person['last_signin_at'] == null; // 待激活：已注册但未登录 App
                 final boundAt = person['bound_at']?.toString() ?? '';
