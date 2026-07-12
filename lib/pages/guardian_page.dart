@@ -19,7 +19,6 @@ import '../services/api/contact_service.dart';
 import '../services/api/card_service.dart';
 import '../services/api_service.dart';
 import '../services/api/notify_service.dart';
-import '../data/app_constants.dart';
 
 class GuardianPage extends StatefulWidget {
   const GuardianPage({super.key});
@@ -539,7 +538,9 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
     if (phone.isEmpty) return;
 
     // 先创建免费守护卡，并取回卡专属落地页链接（含 card_code）
+    // 方式二（小人头邀请）必须带 card_code，打开后才是注册页；建卡失败则不应退到通用邀请页。
     String? shareUrl;
+    String? failureReason;
     try {
       final freeRes = await CardService.createFreeCard(
         receiverPhone: phone,
@@ -548,9 +549,25 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
       if (freeRes['success'] == true) {
         final su = freeRes['share_url']?.toString();
         if (su != null && su.isNotEmpty) shareUrl = su;
+      } else {
+        failureReason = freeRes['message']?.toString() ?? '创建免费守护卡失败';
       }
     } catch (e) {
       if (kDebugMode) debugPrint('[GuardianPage] 创建免费守护卡失败: $e');
+      failureReason = '网络异常，请稍后重试';
+    }
+
+    if (shareUrl == null || shareUrl.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(failureReason ?? '无法生成专属邀请链接'),
+            backgroundColor: Colors.orange,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      return;
     }
 
     // 【修复 v1.16.0】统一使用 landing 页链接
@@ -567,11 +584,11 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
     // 保证即使短链失败，短信仍是单段 SMS（≤70字）且带可点链接，
     // 避免回退长 URL → iOS→安卓转 MMS → 安卓网关把链接丢弃。
     // 【修复 2026-07-12】优先用卡专属落地页链接（含 card_code），
-    // 对方注册即带卡号自动核销 + 单向绑定（免费卡仅单向；普通守护卡 is_free=0 才双向）；建卡失败再降级通用邀请页。
-    final inviteTarget = (shareUrl != null && shareUrl.isNotEmpty)
-        ? shareUrl
-        : '${AppConstants.guardianInviteUrl}?from=${Uri.encodeComponent(safeName)}';
-    final inviteFallback = AppConstants.guardianInviteUrl;
+    // 对方注册即带卡号自动核销 + 单向绑定（免费卡仅单向；普通守护卡 is_free=0 才双向）。
+    // 短链失败兜底必须退回「卡专属长链」(含注册页 /landing/{card_code})，
+    // 绝不能退回通用邀请页 /landing/guardian_invite（无注册流程，会导致对方打开后看不到注册界面）。
+    final inviteTarget = shareUrl; // shareUrl 已判空 return，此处必非空
+    final inviteFallback = shareUrl; // 兜底 = 卡专属落地页（含注册流程）
     String inviteUrl = inviteTarget;
     try {
       final res = await ApiService.createShortLink(
@@ -581,15 +598,18 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
       final su = res['short_url']?.toString();
       if (su != null && su.trim().isNotEmpty) inviteUrl = su;
     } catch (e) {
-      if (kDebugMode) debugPrint('[GuardianPage] 生成邀请短链失败，使用短落地页兜底: $e');
+      if (kDebugMode) debugPrint('[GuardianPage] 生成邀请短链失败，退回卡专属长链: $e');
       inviteUrl = inviteFallback;
     }
     final landingUrl = inviteUrl;
 
-    final message = '【在呢】$safeName 邀你一起守护 🛡️ 我在用「在呢」每天报平安，独处时也安心。\n点链接，注册就能和我互相守护：\n$landingUrl';
-    final uri = Uri(scheme: 'sms', path: phone, queryParameters: {'body': message});
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri);
+    final message = '【在呢】$safeName 邀你一起守护 🛡️ 我在用「在呢」App每天报平安，独处时也安心。\n点链接，注册就能和我互相守护：\n$landingUrl';
+    // 【修复 2026-07-12】Uri(queryParameters) 会把空格编码成「+」，iOS 短信可能原样显示成「+」号。
+    // 统一把「+」还原为 %20，iOS 必能解码为空格，且不影响链接识别（链接本身无空格/+）。
+    final smsUri = Uri(scheme: 'sms', path: phone, queryParameters: {'body': message});
+    final smsUriFixed = Uri.parse(smsUri.toString().replaceAll('+', '%20'));
+    if (await canLaunchUrl(smsUriFixed)) {
+      await launchUrl(smsUriFixed);
       // 【v1.95.4 加固】短信打开后把带链接的完整文案复制到剪贴板，
       // 若对方（安卓）收不到可点链接，可手动粘贴补发，确保链接永不真正丢失。
       try {
