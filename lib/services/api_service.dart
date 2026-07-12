@@ -51,7 +51,18 @@ class ApiService {
           debugPrint('[ApiService] 🔄 $method $path 第${attempt + 1}次尝试（冷启动重试）...');
         }
         final result = await request();
-        // HTTP 业务错误不重试（4xx/5xx）
+        // 【优化 v1.96.x】429 限流：退避重试，消除并发请求触发 0.5req/s 限流的雪崩
+        if (result['success'] == false &&
+            result['statusCode'] == 429 &&
+            attempt < _maxRetries) {
+          final delay = _retryDelayFor(attempt);
+          if (kDebugMode) {
+            debugPrint('[ApiService] ⏳ $method $path 触发限流(429)，${delay.inMilliseconds}ms 后退避重试');
+          }
+          await Future.delayed(delay);
+          continue;
+        }
+        // 其他 HTTP 业务错误不重试（4xx/5xx）
         if (result['success'] == false && result['offline'] != true) {
           return result;
         }
@@ -93,6 +104,33 @@ class ApiService {
     return {'success': false, 'error': lastException.toString(), 'offline': true};
   }
 
+  /// 全局串行请求队列 + 限速整形
+  /// 【性能优化 v1.96.x】相邻请求间隔 ≥300ms，消除并发请求互相碰撞导致的 429 / 冷启动雪崩
+  /// 所有后端请求均经 ApiService 统一出口，故此处串行化即可覆盖全 App
+  static Future<Map<String, dynamic>> _requestChain =
+      Future<Map<String, dynamic>>.value(<String, dynamic>{});
+  static DateTime _lastRequestStart = DateTime.fromMillisecondsSinceEpoch(0);
+  static const Duration _minRequestInterval = Duration(milliseconds: 300);
+
+  /// 将请求串行化并限速整形后执行
+  static Future<Map<String, dynamic>> _enqueue(
+    Future<Map<String, dynamic>> Function() task,
+  ) async {
+    // 1) 串行：等待队列中前一个请求完成（避免并发打满后端）
+    final prev = _requestChain;
+    _requestChain = Future.sync(() async {
+      await prev;
+      // 2) 限速整形：保证与上一次请求至少间隔 _minRequestInterval
+      final elapsed = DateTime.now().difference(_lastRequestStart);
+      if (elapsed < _minRequestInterval) {
+        await Future.delayed(_minRequestInterval - elapsed);
+      }
+      _lastRequestStart = DateTime.now();
+      return task();
+    });
+    return _requestChain;
+  }
+
   // 获取 token（从安全存储读取）
   static Future<String?> _getToken() async {
     return await _secureStorage.read(key: 'auth_token');
@@ -114,7 +152,7 @@ class ApiService {
   // GET 请求（含冷启动重试）
   static Future<Map<String, dynamic>> get(String path,
       {bool auth = true}) async {
-    return _withRetry(() async {
+    return _enqueue(() => _withRetry(() async {
       final response = await _pinnedClient
           .get(
             Uri.parse('$_baseUrl$path'),
@@ -122,13 +160,13 @@ class ApiService {
           )
           .timeout(_timeout);
       return _parse(response);
-    }, 'GET', path);
+    }, 'GET', path));
   }
 
   // POST 请求（含冷启动重试）
   static Future<Map<String, dynamic>> post(String path,
       {Map<String, dynamic>? body, bool auth = true}) async {
-    return _withRetry(() async {
+    return _enqueue(() => _withRetry(() async {
       final response = await _pinnedClient
           .post(
             Uri.parse('$_baseUrl$path'),
@@ -137,13 +175,13 @@ class ApiService {
           )
           .timeout(_timeout);
       return _parse(response);
-    }, 'POST', path);
+    }, 'POST', path));
   }
 
   // PUT 请求（含冷启动重试）
   static Future<Map<String, dynamic>> put(String path,
       {Map<String, dynamic>? body, bool auth = true}) async {
-    return _withRetry(() async {
+    return _enqueue(() => _withRetry(() async {
       final response = await _pinnedClient
           .put(
             Uri.parse('$_baseUrl$path'),
@@ -152,13 +190,13 @@ class ApiService {
           )
           .timeout(_timeout);
       return _parse(response);
-    }, 'PUT', path);
+    }, 'PUT', path));
   }
 
   // PATCH 请求（含冷启动重试）
   static Future<Map<String, dynamic>> patch(String path,
       {Map<String, dynamic>? body, bool auth = true}) async {
-    return _withRetry(() async {
+    return _enqueue(() => _withRetry(() async {
       final response = await _pinnedClient
           .patch(
             Uri.parse('$_baseUrl$path'),
@@ -167,7 +205,7 @@ class ApiService {
           )
           .timeout(_timeout);
       return _parse(response);
-    }, 'PATCH', path);
+    }, 'PATCH', path));
   }
 
   // 生成 SOS 短链（方案 C：存储健康快照，返回 zaine.love/sos/{token}）
@@ -231,7 +269,7 @@ class ApiService {
   // DELETE 请求（含冷启动重试）【P0修复 v1.9.83】
   static Future<Map<String, dynamic>> delete(String path,
       {bool auth = true}) async {
-    return _withRetry(() async {
+    return _enqueue(() => _withRetry(() async {
       final response = await _pinnedClient
           .delete(
             Uri.parse('$_baseUrl$path'),
@@ -239,7 +277,7 @@ class ApiService {
           )
           .timeout(_timeout);
       return _parse(response);
-    }, 'DELETE', path);
+    }, 'DELETE', path));
   }
 
   // 解析响应
