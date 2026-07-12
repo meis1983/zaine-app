@@ -167,104 +167,91 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
       }
     }
 
-    // 【性能优化】三个网络请求并行执行，避免串行等待（冷启动从9-12秒降到3-4秒）
-    // 【修复 v1.84.0】检查重试队列（发送失败的守护卡）
+    // 【修复 2026-07-12】缓存优先 + 去重请求，根治「加载好几分钟 / 额度显示已用完」
+    // 根因：原逻辑 forceSyncFromBackend() 内部串行调 listMyCards + getInviteStats（各 15s×3 冷启动重试），
+    //       再 Future.wait 并行各调一次 → 同一接口被调两次，冷启动时叠加近 2.5 分钟；
+    //       且同步失败回退到 0 → UI 显示「已用完」。
+    // 新逻辑：进页先用本地缓存额度秒显并立即结束加载态，后台仅发 1 次 listMyCards + 1 次 getInviteStats 校正。
     final failedQueue = await GuardianCardService.getFailedQueue();
     if (kDebugMode) debugPrint('[GuardianCardPage] 重试队列: ${failedQueue.length}条');
     if (mounted) setState(() => _hasFailedCards = failedQueue.isNotEmpty);
 
-    // 【修复 v1.84.0】如果本地缓存为0，强制从后端同步（处理清除缓存后的场景）
     final cachedCards = await GuardianCardService.getGiftRemaining();
-    final shouldForceSync = cachedCards == 0 || failedQueue.isNotEmpty;
-    if (kDebugMode) debugPrint('[GuardianCardPage] 本地缓存额度: $cachedCards 张，强制同步: $shouldForceSync');
+    if (kDebugMode) debugPrint('[GuardianCardPage] 本地缓存额度: $cachedCards 张');
 
-    final syncResult = shouldForceSync
-        ? await GuardianCardService.forceSyncFromBackend()
-        : await GuardianCardService.syncQuotaFromBackend();
-    _availableCards = syncResult;
+    // 缓存优先：立即显示额度，用户永远看不到几分钟的转圈
+    if (mounted) {
+      setState(() {
+        _availableCards = cachedCards;
+        _isLoadingData = false;
+      });
+    }
 
-    // 【修复 v1.84.0】同步失败标记（用于UI提示）
-    _syncFailed = shouldForceSync && _availableCards == 0;
-
-    // P4: 加载邀请统计 + 卡片列表，与上方同步并行
-    await Future.wait([
-      // 加载邀请统计
-      () async {
-        try {
-          final statsRes = await CardService.getInviteStats();
-          if (statsRes['success'] == true) {
-            _invitedCount = (statsRes['total_registered'] as int?) ?? 0;
+    // 后台静默校正（不阻塞 UI，失败则继续使用本地缓存）
+    try {
+      final cardListRes = await CardService.listMyCards(); // 单次调用，同时作为配额 + 待注册卡数据源
+      if (cardListRes['success'] == true) {
+        final cards = cardListRes['cards'] as List<dynamic>? ?? [];
+        if (kDebugMode) debugPrint('[GuardianCardPage] 🔍 listMyCards 原始返回: ${cards.length}张卡片');
+        _pendingCards = cards
+            .where((c) {
+          final status = c['status'];
+          final isFree = c['is_free'] == 1;
+          // 支持整数 0 和字符串 'pending'，兼容不同后端版本
+          final accepted = ((status is int && status == 0) ||
+                  (status is String && status.toLowerCase() == 'pending')) &&
+              !isFree;
+          if (!accepted && kDebugMode) {
+            debugPrint('  ⚠️ 卡片被过滤器丢弃: status=$status is_free=$isFree');
           }
-        } catch (_) {}
-      }(),
-      // 从卡片列表获取完整状态
-      () async {
-        try {
-          final cardListRes = await CardService.listMyCards();
-          if (cardListRes['success'] == true) {
-            final cards = cardListRes['cards'] as List<dynamic>? ?? [];
-            // 【诊断 v1.9.61】打印后端原始数据，排查 A 账号折叠面板不显示问题
-            if (kDebugMode) debugPrint('[GuardianCardPage] 🔍 listMyCards 原始返回: ${cards.length}张卡片');
-            for (int i = 0; i < cards.length; i++) {
-              final c = cards[i] as Map<String, dynamic>;
-              if (kDebugMode) debugPrint('  卡片[$i] id=${c['id']} status=${c['status']} (type:${c['status'].runtimeType}) receiver=${c['receiver_name']} code=${c['card_code']?.toString().substring(0,6)}...');
-            }
-            _pendingCards = cards
-                .where((c) {
-              final status = c['status'];
-              final isFree = c['is_free'] == 1;
-              // 支持整数 0 和字符串 'pending'，兼容不同后端版本
-              final accepted = ((status is int && status == 0) || (status is String && status.toLowerCase() == 'pending')) && !isFree;
-              if (!accepted) {
-                if (kDebugMode) debugPrint('  ⚠️ 卡片被过滤器丢弃: status=$status is_free=$isFree');
-              }
-              return accepted;
-            })
-                .map((c) {
-              final expireAtStr = c['expire_at']?.toString() ?? '';
-              DateTime? expireAt;
-              if (expireAtStr.isNotEmpty) {
-                String parseStr = expireAtStr;
-                if (!parseStr.contains('T')) {
-                  parseStr = parseStr.replaceAll(' ', 'T');
-                }
-                if (!parseStr.endsWith('Z')) {
-                  parseStr = '${parseStr}Z';
-                }
-                expireAt = DateTime.tryParse(parseStr)?.toLocal();
-              }
-              return {
-                'card_code': c['card_code']?.toString() ?? '',
-                'receiver_name': c['receiver_name']?.toString() ?? '',
-                'expire_at': expireAt,
-              };
-            }).toList();
-            if (kDebugMode) debugPrint('[GuardianCardPage] 待注册卡片数: ${_pendingCards.length}');
-
-            final stats = cardListRes['stats'] as Map<String, dynamic>?;
-            if (stats != null) {
-              _totalRegistered = (stats['total_registered'] as int?) ?? 0;
-              _initialCardsExpired = stats['initial_cards_expired'] == true;
-              _initialRemainingDays = stats['initial_remaining_days'] as int?;
-              _checkinProgress = stats['checkin_progress'] as Map<String, dynamic>?;
-
-              // 【修复 v1.84.0】始终使用后端值（forceSyncFromBackend 已处理清除缓存场景）
-              final backendAvailable = (stats['available_cards'] as int?) ?? _availableCards;
-              if (backendAvailable != _availableCards) {
-                _availableCards = backendAvailable;
-                // 【修复 v1.12.0】使用服务层统一方法写入，确保 key 带 syncId
-                await GuardianCardService.updateLocalCache(_availableCards);
-              }
-            }
+          return accepted;
+        })
+            .map((c) {
+          final expireAtStr = c['expire_at']?.toString() ?? '';
+          DateTime? expireAt;
+          if (expireAtStr.isNotEmpty) {
+            String parseStr = expireAtStr;
+            if (!parseStr.contains('T')) parseStr = parseStr.replaceAll(' ', 'T');
+            if (!parseStr.endsWith('Z')) parseStr = '${parseStr}Z';
+            expireAt = DateTime.tryParse(parseStr)?.toLocal();
           }
-        } catch (e) {
-          if (kDebugMode) debugPrint('[GuardianCardPage] 加载卡片列表失败: $e');
+          return {
+            'card_code': c['card_code']?.toString() ?? '',
+            'receiver_name': c['receiver_name']?.toString() ?? '',
+            'expire_at': expireAt,
+          };
+        }).toList();
+        if (kDebugMode) debugPrint('[GuardianCardPage] 待注册卡片数: ${_pendingCards.length}');
+
+        final stats = cardListRes['stats'] as Map<String, dynamic>?;
+        if (stats != null) {
+          _totalRegistered = (stats['total_registered'] as int?) ?? 0;
+          _initialCardsExpired = stats['initial_cards_expired'] == true;
+          _initialRemainingDays = stats['initial_remaining_days'] as int?;
+          _checkinProgress = stats['checkin_progress'] as Map<String, dynamic>?;
+          // 后端权威值覆盖本地缓存（清缓存场景也能纠正）
+          final backendAvailable = (stats['available_cards'] as int?) ?? _availableCards;
+          if (backendAvailable != _availableCards) {
+            _availableCards = backendAvailable;
+            await GuardianCardService.updateLocalCache(_availableCards);
+          }
         }
-      }(),
-    ]);
+      }
+    } catch (e) {
+      if (kDebugMode) debugPrint('[GuardianCardPage] 后台校正卡片列表失败(继续使用缓存): $e');
+    }
 
-    // Future.wait 完成后，结束加载状态
-    if (mounted) setState(() => _isLoadingData = false);
+    try {
+      final statsRes = await CardService.getInviteStats(); // 单次调用
+      if (statsRes['success'] == true) {
+        _invitedCount = (statsRes['total_registered'] as int?) ?? 0;
+      }
+    } catch (_) {}
+
+    // 同步失败标记（仅当本地与后端都为 0 时提示）
+    _syncFailed = cachedCards == 0 && _availableCards == 0;
+
+    if (mounted) setState(() {}); // 用校正后的数据刷新 UI
   }
 
   String get _currentMessage =>
