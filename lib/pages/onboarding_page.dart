@@ -13,7 +13,7 @@ import '../services/platform/location_service.dart';
 import '../services/api/auth_service.dart';
 import '../services/deep_link_service.dart'; // [v1.76.0] 紧急联系人邀请
 import '../services/api/card_service.dart'; // 新增
-import '../widgets/guardian_card_envelope.dart'; // 新增
+import '../widgets/guardian_ritual.dart'; // 【修复 v1.9.95】统一守护仪式封装
 
 /// 开机引导页 — 5页专业引导
 /// 核心定位：这不是签到App，这是危急时刻能救命的应急救援工具
@@ -1247,6 +1247,8 @@ class _OnboardingPageState extends State<OnboardingPage> {
 
       if (res['success'] == true) {
         if (kDebugMode) debugPrint('[Onboarding] quickLogin 成功, userId=${res['userId']}');
+        // 在首个 await 前捕获 context，避免跨异步使用 BuildContext 的 lint / 隐患
+        final ctx = context;
 
         // ====== 增强：仪式感动画展示 ======
       // 【修复 v1.17.1】优先使用 quickLogin 返回的 card_info（首次下载注册场景）
@@ -1263,55 +1265,24 @@ class _OnboardingPageState extends State<OnboardingPage> {
 
           if (!mounted) return;
 
-          // 展示精美 3D 动画
-          await showGeneralDialog(
-            context: context,
-            barrierDismissible: false,
-            barrierColor: Colors.black.withValues(alpha: 0.92),
-            transitionDuration: const Duration(milliseconds: 800),
-            pageBuilder: (ctx, anim1, anim2) {
-              return Scaffold(
-                backgroundColor: Colors.transparent,
-                body: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      FadeTransition(
-                        opacity: anim1,
-                        child: const Text(
-                          '开启你的守护礼',
-                          style: TextStyle(
-                              color: Colors.white,
-                              fontSize: ZaiNeFontSize.subtitle,
-                              letterSpacing: 4,
-                              fontWeight: FontWeight.w300),
-                        ),
-                      ),
-                      const SizedBox(height: ZaiNeSpacing.xxl),
-                      GuardianCardEnvelope(
-                        senderName: cardData['sender_name'] ?? '你的好友',
-                        senderAvatar: cardData['sender_avatar'],
-                        message: cardData['message'] ?? '想和你建立守护关系',
-                        cardCode: cardData['card_code'] ?? '',
-                        appStoreUrl: '',
-                        isWelcomeMode: true, // 【修复 v1.17.1】收卡人登录后展示欢迎卡
-                        onComplete: () {
-                          // 【修复 v1.76.0】清理 pending_card_code 避免重复弹出
-                          Future.delayed(const Duration(milliseconds: 3500), () async {
-                            if (ctx.mounted) {
-                              Navigator.pop(ctx);
-                              // 清理 pending 状态（两种 key 格式都清理）
-                              final prefs = await SharedPreferences.getInstance();
-                              await prefs.remove('pending_card_code');
-                              await prefs.remove('pending-card-code');
-                            }
-                          });
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-              );
+          // 展示精美 3D 动画（统一封装，修复 ②+③）
+          final aCode = cardData['card_code']?.toString() ?? '';
+          await markRitualSeen(aCode); // 标记已见证，home 端不会重复弹
+          await showGuardianWelcomeRitual(
+            ctx,
+            senderName: cardData['sender_name'] ?? '你的好友',
+            senderAvatar: cardData['sender_avatar'],
+            message: cardData['message'] ?? '想和你建立守护关系',
+            cardCode: aCode,
+            onClosed: () async {
+              // 清理 pending 状态（两种 key 格式都清理）
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.remove('pending_card_code');
+              await prefs.remove('pending-card-code');
+              // 【修复 2026-07-12】服务端标记已见证（收卡人视角），防跨设备重弹
+              if (aCode.isNotEmpty) {
+                CardService.welcomeAck(cardCode: aCode, role: 'receiver').catchError((_) {});
+              }
             },
           );
         } catch (e) {
@@ -1328,54 +1299,25 @@ class _OnboardingPageState extends State<OnboardingPage> {
             await SyncService.pullFromServer();
             if (!mounted) return;
 
-            await showGeneralDialog(
-              context: context,
-              barrierDismissible: false,
-              barrierColor: Colors.black.withValues(alpha: 0.92),
-              transitionDuration: const Duration(milliseconds: 800),
-              pageBuilder: (ctx, anim1, anim2) {
-                return Scaffold(
-                  backgroundColor: Colors.transparent,
-                  body: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        FadeTransition(
-                          opacity: anim1,
-                          child: const Text(
-                            '开启你的守护礼',
-                            style: TextStyle(
-                                color: Colors.white,
-                                fontSize: ZaiNeFontSize.subtitle,
-                                letterSpacing: 4,
-                                fontWeight: FontWeight.w300),
-                          ),
-                        ),
-                        const SizedBox(height: ZaiNeSpacing.xxl),
-                        GuardianCardEnvelope(
-                          senderName: cardData['sender_name'] ?? '你的好友',
-                          senderAvatar: cardData['sender_avatar'],
-                          message: cardData['message'] ?? '想和你建立守护关系',
-                          cardCode: _pendingCardCode!,
-                          appStoreUrl: '',
-                          isWelcomeMode: true, // 【修复 v1.17.1】收卡人登录后展示欢迎卡
-                          onComplete: () {
-                            // 【修复 v1.76.0】清理 pending_card_code 避免重复弹出
-                            Future.delayed(const Duration(milliseconds: 3500), () async {
-                              if (ctx.mounted) {
-                                Navigator.pop(ctx);
-                                // 清理 pending 状态（两种 key 格式都清理）
-                                final prefs = await SharedPreferences.getInstance();
-                                await prefs.remove('pending_card_code');
-                                await prefs.remove('pending-card-code');
-                              }
-                            });
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                );
+            // 展示精美 3D 动画（统一封装，修复 ②+③）
+            final bCode = _pendingCardCode ?? '';
+            await markRitualSeen(bCode); // 标记已见证，home 端不会重复弹
+            await showGuardianWelcomeRitual(
+              ctx,
+              senderName: cardData['sender_name'] ?? '你的好友',
+              senderAvatar: cardData['sender_avatar'],
+              message: cardData['message'] ?? '想和你建立守护关系',
+              cardCode: bCode,
+              onClosed: () async {
+                // 清理 pending 状态（两种 key 格式都清理）
+                final prefs = await SharedPreferences.getInstance();
+                await prefs.remove('pending_card_code');
+                await prefs.remove('pending-card-code');
+                // 【修复 2026-07-12】服务端标记已见证（收卡人视角），防跨设备重弹
+                final b = bCode ?? '';
+                if (b.isNotEmpty) {
+                  CardService.welcomeAck(cardCode: b, role: 'receiver').catchError((_) {});
+                }
               },
             );
           }

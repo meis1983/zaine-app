@@ -17,7 +17,7 @@ import '../services/api/peace_service.dart';
 import '../services/api/card_service.dart';
 import '../services/deep_link_service.dart';
 import '../services/platform/health_service.dart'; // 新增
-import '../widgets/guardian_card_envelope.dart'; // 新增
+import '../widgets/guardian_ritual.dart'; // 【修复 v1.9.95】统一守护仪式封装
 import '../main.dart';
 import '../theme/theme_helper.dart';
 import '../utils/avatar_helper.dart';
@@ -62,8 +62,11 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   /// 待确认的平安确认请求列表
   List<Map<String, dynamic>> _pendingPeaceRequests = [];
 
-  /// 【修复 v1.76.0】防止守护卡弹窗重复弹出的标志位
-  bool _hasShownCardRitual = false;
+  /// 【修复 v1.9.95】守护仪式队列（DeepLink 待处理码 + welcome-pending 新绑定）
+  /// 替代原 _hasShownCardRitual bool：按 card_code 去重，新关系才弹，且不会因切后台永久丢失
+  final List<Map<String, dynamic>> _ritualQueue = [];
+  bool _isRitualShowing = false;
+  final Set<String> _seenRitualKeys = {};
 
   /// 【P2修复 v1.9.83】缓存 SharedPreferences 实例，避免日历组件重复IO
   SharedPreferences? _prefs;
@@ -72,6 +75,10 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    // 【修复 ③】前台收到守护卡 Deep Link 即时展示仪式
+    DeepLinkService.onCardCodeReceived = () {
+      if (mounted) _checkAndShowGuardianRituals();
+    };
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 300),
       vsync: this,
@@ -192,8 +199,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     await _loadPendingPeaceRequests();
     await _loadInviteStats();
     
-    // ====== 新增：检查并展示 Deep Link 带来的守护卡仪式感 ======
-    _checkPendingCardRitual();
+    // ====== 新增：检查并展示 DeepLink / welcome-pending 带来的守护卡仪式感 ======
+    _checkAndShowGuardianRituals();
 
     // ====== 新增：执行健康数据静默同步（有心跳即签到） ======
     _syncHealthData();
@@ -226,72 +233,125 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     }
   }
 
-  /// 检查是否有待处理的守护卡（来自 Deep Link），并展示 3D 开封仪式
-  Future<void> _checkPendingCardRitual() async {
-    if (!_isLoggedIn) return;
+  /// 检查并展示守护卡欢迎仪式
+  ///
+  /// 【修复 ②+③】原逻辑仅依赖 App 内 pending_card_code 且用 bool 防重入，导致：
+  ///  - 网页注册用户无待处理码 → 永不弹（②）
+  ///  - App 后台被 DeepLink 唤起时仪式不触发（③）
+  ///  - 先清 pending 再延时 1s、中途退后台 → 永久跳过（③）
+  /// 新逻辑：
+  ///  - 同时检查「DeepLink 待处理码」与「后端 welcome-pending 新绑定」两个来源
+  ///  - 用本地 seen 集合（按 card_code）去重，新关系才弹，已弹过不重复
+  ///  - 仪式排队展示，mounted 不可用时延后到 resume 再弹，不再因切后台永久丢失
+  ///  - 热启动通过 DeepLinkService.onCardCodeReceived 即时触发
+  Future<void> _checkAndShowGuardianRituals() async {
+    if (!_isLoggedIn || !mounted) return;
 
-    // 【修复 v1.76.0】防止重复弹出：单次会话只展示一次
-    if (_hasShownCardRitual) return;
-    final hasPending = await DeepLinkService.hasPendingCardCode();
-    if (!hasPending) return;
+    // 载入已见证集合（本地去重真相源）
+    _seenRitualKeys.clear();
+    _seenRitualKeys.addAll(await loadSeenRitualKeys());
 
-    final code = _prefs?.getString('pending_card_code') ?? '';
-    if (code.isEmpty) return;
-
-    try {
-      final res = await CardService.checkCard(code);
-      if (res['success'] == true && mounted) {
-        final cardData = res;
-
-        // 【修复 v1.76.0】立即清理 pending_card_code，避免延迟期间页面重建导致重复弹出
-        await _prefs?.remove('pending_card_code');
-        await DeepLinkService.clearPendingCardCode();
-
-        // 设置标志位，防止本次会话重复触发
-        _hasShownCardRitual = true;
-
-        // 延迟 1 秒展示，等首页 UI 加载稳定
-        await Future.delayed(const Duration(milliseconds: 1000));
-
-        if (!mounted) return;
-
-        await showGeneralDialog(
-          context: context,
-          barrierDismissible: false,
-          barrierColor: Colors.black.withValues(alpha: 0.9),
-          transitionDuration: const Duration(milliseconds: 300),
-          pageBuilder: (ctx, anim1, anim2) {
-            return Scaffold(
-              backgroundColor: Colors.transparent,
-              body: GuardianCardEnvelope(
-                senderName: cardData['sender_name'] ?? '你的好友',
-                senderAvatar: cardData['sender_avatar'],
-                message: cardData['message'] ?? '想和你建立守护关系',
-                cardCode: code,
-                appStoreUrl: '',
-                isWelcomeMode: true,
-                onComplete: () {
-                  // 【修复】pending_card_code 已在弹窗前清理，这里只需关闭弹窗和刷新统计
-                  Future.delayed(const Duration(milliseconds: 3500), () async {
-                    if (ctx.mounted) {
-                      Navigator.pop(ctx);
-                      _loadInviteStats();
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('守护关系已建立，感谢你的加入')),
-                        );
-                      }
-                    }
-                  });
-                },
-              ),
-            );
-          },
-        );
+    // 1) DeepLink 待处理码（App 内扫码/链接唤起）
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    final code = prefs.getString('pending_card_code') ?? '';
+    if (code.isNotEmpty) {
+      try {
+        final res = await CardService.checkCard(code);
+        if (res['success'] == true) {
+          _enqueueRitual({
+            'cardCode': code,
+            'senderName': res['sender_name']?.toString() ?? '你的好友',
+            'senderAvatar': res['sender_avatar']?.toString(),
+            'message': res['message']?.toString() ?? '想和你建立守护关系',
+            'mode': 'welcome',
+            'role': 'receiver',
+          });
+        }
+      } catch (_) {
+        // 检查失败忽略，等待下次重试
       }
-    } catch (e) {
-      if (kDebugMode) debugPrint('[HomePage] 仪式感加载失败: $e');
     }
+
+    // 2) 后端 welcome-pending（无 App 内码的来源，修复 ②+④）
+    //    - receiver：我是收卡人 → 接收方欢迎仪式
+    //    - sender：我是发卡人 → 守护成功正向激励飞轮
+    for (final role in ['receiver', 'sender']) {
+      try {
+        final res = await CardService.welcomePending(role: role);
+        if (res['success'] == true) {
+          final list = (res['guardians'] as List<dynamic>?) ?? [];
+          for (final g in list) {
+            final gMap = g as Map<String, dynamic>;
+            final gCode = (gMap['card_code']?.toString() ?? '').trim();
+            if (gCode.isEmpty) continue;
+            _enqueueRitual({
+              'cardCode': gCode,
+              'senderName': gMap['peer_name']?.toString() ?? '你的好友',
+              'senderAvatar': gMap['peer_avatar']?.toString(),
+              'message': gMap['message']?.toString() ?? '想和你建立守护关系',
+              'mode': role == 'sender' ? 'success' : 'welcome',
+              'role': role,
+            });
+          }
+        }
+      } catch (_) {
+        // 网络失败忽略，等待下次重试（resume 时会再查）
+      }
+    }
+
+    // 3) 展示队列
+    _showNextRitual();
+  }
+
+  /// 将候选仪式入队（按 card_code 去重，已见证/已入队则跳过）
+  void _enqueueRitual(Map<String, dynamic> cand) {
+    final code = (cand['cardCode'] as String? ?? '').trim().toUpperCase();
+    if (code.isEmpty) return;
+    if (isRitualSeen(_seenRitualKeys, code)) return;
+    if (_ritualQueue.any(
+        (e) => (e['cardCode'] as String).trim().toUpperCase() == code)) {
+      return;
+    }
+    _ritualQueue.add(cand);
+  }
+
+  /// 依次展示队列中的仪式；
+  /// mounted 不可用时直接返回（由 resume 重试，不丢仪式）；
+  /// 正在展示时也被拦截，防止后台/重复调用叠加弹窗。
+  Future<void> _showNextRitual() async {
+    if (!mounted || _isRitualShowing) return;
+    if (_ritualQueue.isEmpty) return;
+    // 在首个 await 前捕获 context，避免跨异步使用 BuildContext 的 lint / 隐患
+    final ctx = context;
+
+    _isRitualShowing = true;
+    final cand = _ritualQueue.removeAt(0);
+    final code = (cand['cardCode'] as String? ?? '').trim();
+    final role = (cand['role'] as String?) ?? 'receiver';
+
+    // 立即标记为已见证（落盘），即使中途被打断也不会重复弹
+    await markRitualSeen(code);
+    _seenRitualKeys.add('code:${code.toUpperCase()}');
+
+    // 消费 DeepLink 待处理码
+    await DeepLinkService.clearPendingCardCode();
+    if (_prefs != null) await _prefs!.remove('pending_card_code');
+
+    await showGuardianWelcomeRitual(
+      ctx,
+      senderName: cand['senderName'] as String,
+      senderAvatar: cand['senderAvatar'] as String?,
+      message: cand['message'] as String,
+      cardCode: code,
+      mode: (cand['mode'] as String?) ?? 'welcome',
+      onClosed: () {
+        _isRitualShowing = false;
+        // 【修复 2026-07-12】服务端标记该关系已见证，防跨设备/重装重复弹
+        CardService.welcomeAck(cardCode: code, role: role).catchError((_) {});
+        _loadInviteStats();
+        _showNextRitual(); // 继续展示队列中的下一个
+      },
+    );
   }
 
   /// 加载邀请统计（我的守护圈人数）
@@ -313,6 +373,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    // 【修复 ③】注销前台 Deep Link 回调
+    DeepLinkService.onCardCodeReceived = null;
     _animationController.dispose();
     HealthService.watchCheckinCompleteSignal.removeListener(_onWatchCheckinComplete);
     HealthService.watchCheckinCelebration.removeListener(_onWatchCheckinCelebration);
@@ -324,6 +386,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     if (state == AppLifecycleState.resumed) {
       if (kDebugMode) debugPrint('[HomePage] App resumed, triggering health sync...');
       _syncHealthData();
+      // 【修复 ③】热启动：App 在后台被 DeepLink 唤起后回到前台，补查守护仪式
+      _checkAndShowGuardianRituals();
     }
   }
 

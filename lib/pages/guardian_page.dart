@@ -538,12 +538,17 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
     final name = guardian['name']?.toString() ?? '朋友';
     if (phone.isEmpty) return;
 
-    // 先创建免费守护卡
+    // 先创建免费守护卡，并取回卡专属落地页链接（含 card_code）
+    String? shareUrl;
     try {
-      await CardService.createFreeCard(
+      final freeRes = await CardService.createFreeCard(
         receiverPhone: phone,
         receiverName: name,
       );
+      if (freeRes['success'] == true) {
+        final su = freeRes['share_url']?.toString();
+        if (su != null && su.isNotEmpty) shareUrl = su;
+      }
     } catch (e) {
       if (kDebugMode) debugPrint('[GuardianPage] 创建免费守护卡失败: $e');
     }
@@ -561,7 +566,11 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
     // 【v1.95.4 加固】短链接口异常时的兜底用「无 ?from= 的短落地页」，
     // 保证即使短链失败，短信仍是单段 SMS（≤70字）且带可点链接，
     // 避免回退长 URL → iOS→安卓转 MMS → 安卓网关把链接丢弃。
-    final inviteTarget = '${AppConstants.guardianInviteUrl}?from=${Uri.encodeComponent(safeName)}';
+    // 【修复 2026-07-12】优先用卡专属落地页链接（含 card_code），
+    // 对方注册即带卡号自动核销 + 单向绑定（免费卡仅单向；普通守护卡 is_free=0 才双向）；建卡失败再降级通用邀请页。
+    final inviteTarget = (shareUrl != null && shareUrl.isNotEmpty)
+        ? shareUrl
+        : '${AppConstants.guardianInviteUrl}?from=${Uri.encodeComponent(safeName)}';
     final inviteFallback = AppConstants.guardianInviteUrl;
     String inviteUrl = inviteTarget;
     try {
@@ -577,7 +586,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
     }
     final landingUrl = inviteUrl;
 
-    final message = '【在呢】$safeName 邀请你加入我们的互助守护圈 🛡️ 我们都是独居青年，每天在 App 里互相报个平安。点下方链接下载，一起守护彼此的安全： $landingUrl';
+    final message = '【在呢】$safeName 邀你一起守护 🛡️ 我在用「在呢」每天报平安，独处时也安心。\n点链接，注册就能和我互相守护：\n$landingUrl';
     final uri = Uri(scheme: 'sms', path: phone, queryParameters: {'body': message});
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri);

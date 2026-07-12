@@ -24,6 +24,10 @@ class DeepLinkService {
   static final AppLinks _appLinks = AppLinks();
   static StreamSubscription<Uri>? _sub;
 
+  /// 【新增 v1.9.95】App 在前台收到守护卡 Deep Link 时立即回调（用于即时展示欢迎仪式）
+  /// home_page 在前台时注册此回调，避免「后台被唤起后仪式永不弹」的问题（修复 ③）
+  static VoidCallback? onCardCodeReceived;
+
   /// 初始化（在 main() 中调用一次）
   ///
   /// 处理冷启动时的初始链接，并监听热启动链接。
@@ -72,6 +76,7 @@ class DeepLinkService {
         if (kDebugMode) debugPrint('[DeepLink] 发现守护卡 Scheme 链接: code=$code');
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString(_pendingCardKey, code.trim());
+        onCardCodeReceived?.call(); // 【新增 v1.9.95】前台即时通知 UI 展示仪式
         return;
       }
     }
@@ -107,6 +112,7 @@ class DeepLinkService {
     if (kDebugMode) debugPrint('[DeepLink] 提取到 card_code: $cardCode');
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_pendingCardKey, cardCode);
+    onCardCodeReceived?.call(); // 【新增 v1.9.95】前台即时通知 UI 展示仪式
   }
 
   /// 从 URI 中提取 card_code

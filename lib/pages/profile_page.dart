@@ -33,6 +33,8 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
   bool _isLoggedIn = false;
   bool _isProfileComplete = false; // 【v1.91.0】档案完整性标记（替代 _isLoggedIn 判断）
   bool _isLoading = true;
+  bool _isSaving = false; // 【修复 v1.9.95】保存中标记，防止重复点击且给出明确反馈
+  bool _isDisposed = false; // 【修复 v1.9.95】widget 销毁后置位，阻断异步回调中的 setState（黑屏根因）
   bool _medicalIDSetupDone = false; // 【v1.93.10】医疗急救卡设置完成标记
   String? _avatarPath;
 
@@ -57,17 +59,9 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
     _loadProfile();
   }
 
-  /// 【修复 v1.9.5】页面重新可见时刷新登录状态
-  /// 根因：从引导页登录后 pushReplacement 到 MainNavigation，ProfilePage 作为 tab 页面
-  /// 在某些情况下状态未同步，导致仍显示"当前未登录"
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _loadProfile();
-  }
-
   @override
   void dispose() {
+    _isDisposed = true; // 【修复 v1.9.95】标记销毁，阻断异步 _loadProfile/_saveProfile 中的 setState
     _nameController.dispose();
     _ageController.dispose();
     _allergyController.dispose();
@@ -94,6 +88,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
 
   Future<void> _loadProfile() async {
     final prefs = await SharedPreferences.getInstance();
+    if (_isDisposed || !mounted) return; // 【修复 v1.9.95】widget 已销毁则放弃后续 setState
 
     // 【修复 v1.9.x】按用户隔离读取健康档案，防止跨账号泄露
     final userId = prefs.getString('user_id');
@@ -161,6 +156,9 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
     if (avatarPath != null && avatarPath.isNotEmpty && !await File(avatarPath).exists()) {
       avatarPath = await _restoreAvatarFromBase64();
     }
+
+    // 【修复 v1.9.95】二次检查：上述 getPath/exists 又是异步，期间可能已返回上一页销毁
+    if (_isDisposed || !mounted) return;
 
     setState(() {
       _isLoggedIn = isReallyLoggedIn;
@@ -330,8 +328,15 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
 
   Future<void> _saveProfile() async {
     if (!_formKey.currentState!.validate()) return;
+    if (_isSaving) return; // 【修复 v1.9.95】防止重复点击
+
+    setState(() => _isSaving = true); // 【修复 v1.9.95】明确 loading 反馈，消除"点了没反应"
 
     final prefs = await SharedPreferences.getInstance();
+    if (_isDisposed || !mounted) {
+      if (mounted) setState(() => _isSaving = false);
+      return;
+    }
     final profile = {
       'name': _nameController.text.trim(),
       'age': int.tryParse(_ageController.text) ?? 0,
@@ -384,7 +389,10 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
       debugPrint('[Profile] ⚠️ 同步到后端失败: $e');
     }
 
-    if (!mounted) return;
+    if (_isDisposed || !mounted) {
+      if (mounted) setState(() => _isSaving = false);
+      return;
+    }
     setState(() => _isLoggedIn = true);
 
     if (mounted) {
@@ -412,6 +420,8 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
         if (mounted) Navigator.of(context).pop();
       }
     }
+    // 【修复 v1.9.95】无论成功/返回都复位保存态，否则下次点击被 _isSaving 拦截
+    if (mounted) setState(() => _isSaving = false);
   }
 
   /// 主题选择

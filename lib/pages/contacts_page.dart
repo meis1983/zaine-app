@@ -683,15 +683,9 @@ class _ContactsPageState extends State<ContactsPage> {
                     final finalRecipient = recipientController.text.trim();
                     final recipientDisplayName = finalRecipient.isNotEmpty ? finalRecipient : name;
 
-                    // 【修复 v1.9.77】先创建免费守护卡，让对方注册后能互为守护人
-                    try {
-                      await CardService.createFreeCard(
-                        receiverPhone: phone,
-                        receiverName: recipientDisplayName,
-                      );
-                    } catch (e) {
-                      if (kDebugMode) debugPrint('[ContactsPage] 创建免费守护卡失败: $e');
-                    }
+                    // 【设计澄清 2026-07-12】方式一(直接添加)=温柔铺垫,不建免费卡、不发强邀请;
+                    // 仅 add_contact 建单向 EC,B 注册后靠 lookupByPhone 点亮状态。
+                    // 专属邀请卡由方式二(小人头 _inviteToRegister)承担,两条入口语义分离。
 
                     // 【修复 v1.17.3-Bug4】生成通用短链替代长链接
                     String inviteShortUrl;
@@ -716,7 +710,7 @@ class _ContactsPageState extends State<ContactsPage> {
 
                     // 【修复 v1.75.0】链接单独一行，避免 iOS 短信换行导致 URL 不可点击
                     // 根因：URL 跨行后 iOS Data Detector 无法识别为可点击链接
-                    final finalBody = '【在呢】嗨 $recipientDisplayName！我是$finalSender，刚把你设为我的紧急联系人 🛡️\n\n我在用「在呢」App 守护自己的安全——每天签到报平安，遇到紧急情况一键求助 会自动通知你我的实时位置。\n\n如果你也下载「在呢」，我们可以互相守护，让彼此都更安心。❤️\n\n点击链接接受邀请：\n$inviteShortUrl';
+                    final finalBody = '【在呢】嗨 $recipientDisplayName！我是$finalSender，刚把你设为我的紧急联系人 🛡️\n\n有你在，我多一份安心。我每天在「在呢」报平安，遇急事会通知你。\n\n想看看我在用的守护App，点这里：\n$inviteShortUrl';
                     _sendInviteSms(phone, recipientDisplayName, finalBody);
                     senderController.dispose();
                     recipientController.dispose();

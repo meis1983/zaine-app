@@ -113,4 +113,43 @@ class CardService {
       'card_code': cardCode,
     });
   }
+
+  /// 【新增 v1.9.95】查询「我作为收卡人、已建立(status=1)的守护关系」
+  /// 用于登录/首启后主动检测是否有未见证的新守护关系，触发接收方欢迎仪式。
+  /// 覆盖网页注册绑定（无 App 内 pending_card_code）等链路断点。
+  ///
+  /// 返回示例（成功）：
+  /// {
+  ///   "success": true,
+  ///   "guardians": [
+  ///     {
+  ///       "guardian_card_id": 123,
+  ///       "card_code": "ABC123",
+  ///       "peer_id": 11,
+  ///       "peer_name": "张三",
+  ///       "peer_avatar": "base64...",
+  ///       "role": "receiver",
+  ///       "message": "想和你建立守护关系",
+  ///       "card_type": 0,
+  ///       "bound_at": "2026-07-11T10:00:00"
+  ///     }
+  ///   ]
+  /// }
+  ///
+  /// [role]：receiver=我是收卡人（返回发卡人信息）；sender=我是发卡人（返回接收人信息，用于「守护成功」飞轮）
+  static Future<Map<String, dynamic>> welcomePending({String role = 'receiver'}) async {
+    return await ApiService.get('/api/card/welcome-pending?role=$role');
+  }
+
+  /// 【2026-07-12】标记某守护关系的欢迎仪式已见证（服务端去重，防跨设备/重装重复弹）
+  /// [role]：receiver=我是收卡人；sender=我是发卡人
+  static Future<Map<String, dynamic>> welcomeAck({
+    required String cardCode,
+    required String role,
+  }) async {
+    return await ApiService.post('/api/card/welcome-ack', body: {
+      'card_code': cardCode,
+      'role': role,
+    });
+  }
 }
