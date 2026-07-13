@@ -98,9 +98,16 @@ class HealthService {
         t == HealthDataType.SLEEP_AWAKE ||
         t == HealthDataType.SLEEP_DEEP ||
         t == HealthDataType.SLEEP_REM;
-  }
+      }
 
-  /// 获取多维度健康摘要
+      /// 判断数据点是否来自 Apple Watch（优先采用 Watch 数据源，使 App 与 Watch 端显示一致）
+      static bool _isFromWatch(HealthDataPoint p) {
+        final name = p.sourceName.toLowerCase();
+        final id = p.sourceId.toLowerCase();
+        return name.contains('watch') || id.contains('watch');
+      }
+
+      /// 获取多维度健康摘要
   static Future<Map<String, dynamic>> getHealthSummary() async {
     final Map<String, dynamic> summary = {};
     try {
@@ -135,6 +142,18 @@ class HealthService {
         }
       }
 
+      // 【修复 v1.96】优先采用 Apple Watch 数据源，使 App 体征与 Watch 端一致；
+      // 某类型无 Watch 数据时回退使用全部数据源（避免丢失 iPhone 独有指标）
+      final preferred = <HealthDataPoint>[];
+      for (final t in _types) {
+        final watchOfType = all.where((p) => p.type == t && _isFromWatch(p)).toList();
+        if (watchOfType.isNotEmpty) {
+          preferred.addAll(watchOfType);
+        } else {
+          preferred.addAll(all.where((p) => p.type == t));
+        }
+      }
+
       await prefs.setInt('health_last_fetch_count', all.length);
       await prefs.setString('health_last_fetch_time', DateTime.now().toIso8601String());
       await prefs.setString('health_last_fetch_type_counts', typeCounts.toString());
@@ -148,7 +167,7 @@ class HealthService {
       await prefs.setString('health_last_fetch_error', '');
 
       final latestAt = <String, DateTime>{};
-      for (var point in all) {
+      for (var point in preferred) {
         final type = point.type;
         final value = point.value;
         final numVal = _extractNumeric(value);
@@ -222,24 +241,24 @@ class HealthService {
             summary['steps'] = (summary['steps'] ?? 0) + (numVal?.round() ?? 0); // numVal 可能为 null，保留 ?.
           }
         } else if (type == HealthDataType.DISTANCE_WALKING_RUNNING) {
-          // 【修复 v1.93.9】行走+跑步距离：HealthKit 返回单位为 km，转换为米存储
-          // 注意：Apple HealthKit DISTANCE_WALKING_RUNNING 的单位是 km
-          // 但部分设备可能返回米，这里需要根据实际值判断
+          // 【修复 v1.96】行走+跑步距离：health 包统一以「米(METER)」返回，直接累加即可；
+          // 旧逻辑用 >1000 猜测单位，导致短距离(米制<1000)被误乘 1000 → 显示几百 km。
+          // 为兼容潜在其它单位，按 point.unit 精确换算。
           final today = DateTime.now();
           final todayDate = DateTime(today.year, today.month, today.day);
           final pointDate = DateTime(point.dateFrom.year, point.dateFrom.month, point.dateFrom.day);
           if (pointDate == todayDate) {
-            // 如果值 > 1000，说明可能是米（正常人一天不会走超过1000km）
-            // 如果值 < 100，说明应该是 km（需要转换为米）
-            double distanceInMeters;
-            if (numVal != null && numVal > 1000) {
-              // 已经是米，直接使用
-              distanceInMeters = numVal;
-            } else if (numVal != null && numVal > 0) {
-              // 是 km，转换为米
-              distanceInMeters = numVal * 1000;
-            } else {
-              distanceInMeters = 0;
+            double distanceInMeters = 0;
+            if (numVal != null && numVal > 0) {
+              final unitStr = point.unit.toString().toLowerCase();
+              if (unitStr.contains('kilometer') || unitStr.contains('km')) {
+                distanceInMeters = numVal * 1000;
+              } else if (unitStr.contains('mile') || unitStr.contains('mi')) {
+                distanceInMeters = numVal * 1609.34;
+              } else {
+                // 默认按米处理（health 包 DISTANCE_WALKING_RUNNING 标准单位为 METER）
+                distanceInMeters = numVal;
+              }
             }
             summary['distance_m'] = (summary['distance_m'] ?? 0) + distanceInMeters.round();
           }
