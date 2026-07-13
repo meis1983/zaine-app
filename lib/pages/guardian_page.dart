@@ -161,12 +161,17 @@ class _GuardedByMeManagerSheetState extends State<_GuardedByMeManagerSheet> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       if (isPending)
-                        IconButton(
-                          tooltip: '重新邀请',
-                          icon: const Icon(Icons.replay_outlined, size: 18),
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
+                        TextButton(
                           onPressed: () => widget.onReinvite(p),
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          child: const Text(
+                            '重新邀请',
+                            style: TextStyle(fontSize: 13, color: Color(0xFF667EEA)),
+                          ),
                         ),
                       IconButton(
                         icon: const Icon(Icons.edit_outlined, size: 18),
@@ -193,7 +198,6 @@ class GuardianPage extends StatefulWidget {
 
 class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver {
   List<Map<String, dynamic>> _guardians = [];
-  int _totalRegistered = 0; // 新增：已注册的守护成员数
   // 【2026-07-12 议题B】我守护的人：我发出的已绑定普通守护卡（无人数上限），与「守护我的人」严格分区
   List<Map<String, dynamic>> _guardedByMe = [];
   // 「我守护的人」备注名（本地存储，key=guarded_by_me_remark_<receiver_id>）
@@ -225,6 +229,23 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
       if (kDebugMode) debugPrint('[GuardianPage] App resumed, refreshing guardians...');
       _loadGuardians(isSilent: true);
     }
+  }
+
+  /// 按手机号去重守护者列表（规避后端补偿重复调用产生的脏数据）
+  List<Map<String, dynamic>> _dedupGuardians(List<Map<String, dynamic>> list) {
+    final seen = <String>{};
+    final out = <Map<String, dynamic>>[];
+    for (final c in list) {
+      final phone = (c['phone']?.toString() ?? '').trim();
+      if (phone.isEmpty) {
+        out.add(c);
+        continue;
+      }
+      if (seen.contains(phone)) continue;
+      seen.add(phone);
+      out.add(c);
+    }
+    return out;
   }
 
   Future<void> _loadGuardians({bool isSilent = false}) async {
@@ -275,7 +296,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
         };
       }).toList();
       setState(() {
-        _guardians = initialGuardians;
+        _guardians = _dedupGuardians(initialGuardians);
       });
     }
 
@@ -308,12 +329,9 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
       }
 
       if (statsRes['success'] == true) {
-        if (mounted) {
-          setState(() {
-            _totalRegistered = (statsRes['total_registered'] as int?) ?? 0;
-          });
+        if (kDebugMode) {
+          debugPrint('[GuardianPage] ✅ 获取邀请统计: total_registered=${statsRes['total_registered']}');
         }
-        if (kDebugMode) debugPrint('[GuardianPage] ✅ 获取邀请统计: total_registered=$_totalRegistered');
       }
 
       // 【2026-07-12 议题B】我守护的人（我发出的已绑定普通守护卡）
@@ -527,7 +545,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
     final results = await Future.wait(statusFutures);
     if (mounted) {
       setState(() {
-        _guardians = results;
+        _guardians = _dedupGuardians(results);
       });
     }
   }
@@ -927,7 +945,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                               color: Colors.white.withValues(alpha: 0.3),
                             ),
                             Text(
-                              '已成功守护 $_totalRegistered 位朋友',
+                              '已成功守护 ${_guardedByMe.length} 位朋友',
                               style: TextStyle(
                                 fontSize: ZaiNeFontSize.caption,
                                 color: Colors.white.withValues(alpha: 0.9),
@@ -1382,7 +1400,9 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
     final name = _guardedDisplayName(person);
     final url = AppConstants.guardianInviteUrl;
     final message =
-        '$name，你在「在呢」有张守护卡还没激活哦～\n下载 App 登录，我们就能互相报平安、有事第一时间找到彼此啦：\n$url';
+        '$name，我在「在呢」给你发了一张守护卡，还没激活哦~\n\n'
+        '下载 App 登录后，我们就能互相报平安、遇到事情第一时间找到彼此。\n\n'
+        '点下面链接立即激活守护关系：\n$url';
     // 先关闭管理弹窗，避免遮挡 SnackBar
     if (mounted && Navigator.of(context).canPop()) {
       Navigator.of(context).pop();
