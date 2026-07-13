@@ -33,7 +33,6 @@ class _GuardedByMeManagerSheet extends StatefulWidget {
   final Widget Function(Map<String, dynamic>) avatarBuilder;
   final Future<void> Function(int, String) onEditRemark;
   final Future<void> Function(Map<String, dynamic>) onReinvite;
-  final Future<void> Function(Map<String, dynamic>) onReinvitePanel;
 
   const _GuardedByMeManagerSheet({
     required this.people,
@@ -42,7 +41,6 @@ class _GuardedByMeManagerSheet extends StatefulWidget {
     required this.avatarBuilder,
     required this.onEditRemark,
     required this.onReinvite,
-    required this.onReinvitePanel,
   });
 
   @override
@@ -163,36 +161,12 @@ class _GuardedByMeManagerSheetState extends State<_GuardedByMeManagerSheet> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       if (isPending)
-                        PopupMenuButton<String>(
+                        IconButton(
                           tooltip: '重新邀请',
                           icon: const Icon(Icons.replay_outlined, size: 18),
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(),
-                          onSelected: (mode) {
-                            if (mode == 'copy') {
-                              widget.onReinvite(p);
-                            } else {
-                              widget.onReinvitePanel(p);
-                            }
-                          },
-                          itemBuilder: (_) => const [
-                            PopupMenuItem(
-                              value: 'copy',
-                              child: Row(children: [
-                                Icon(Icons.link_rounded, size: 18),
-                                SizedBox(width: 8),
-                                Text('复制链接发微信'),
-                              ]),
-                            ),
-                            PopupMenuItem(
-                              value: 'panel',
-                              child: Row(children: [
-                                Icon(Icons.share_outlined, size: 18),
-                                SizedBox(width: 8),
-                                Text('微信分享面板'),
-                              ]),
-                            ),
-                          ],
+                          onPressed: () => widget.onReinvite(p),
                         ),
                       IconButton(
                         icon: const Icon(Icons.edit_outlined, size: 18),
@@ -1417,19 +1391,8 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
     await copyAndOpenWeChat(context, message);
   }
 
-  // 【复用现有提醒逻辑】待激活用户 - 微信分享面板模式：
-  // 复制完整文案(含链接)，分享面板只发剥离URL的纯文本，规避iOS系统分享面板抓取FC落地页预览卡死
-  Future<void> _reinviteGuardedViaPanel(Map<String, dynamic> person) async {
-    final name = _guardedDisplayName(person);
-    final url = AppConstants.guardianInviteUrl;
-    final fullMessage =
-        '$name，你在「在呢」有张守护卡还没激活哦～\n下载 App 登录，我们就能互相报平安、有事第一时间找到彼此啦：\n$url';
-    // 先关闭管理弹窗，避免遮挡系统分享面板
-    if (mounted && Navigator.of(context).canPop()) {
-      Navigator.of(context).pop();
-    }
-    await shareWeChatPanel(context, fullMessage);
-  }
+  // 注：原「微信分享面板」重邀模式已移除 —— iOS 系统分享面板对纯文本亦拒收（"不支持的分享类型"），
+  // 现统一走「复制链接发微信」(_reinviteGuarded)，与守护卡提醒TA 体验一致。
 
   void _showGuardedByMeManager() {
     showModalBottomSheet(
@@ -1451,7 +1414,6 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
         ),
         onEditRemark: _editGuardedRemark,
         onReinvite: _reinviteGuarded,
-        onReinvitePanel: _reinviteGuardedViaPanel,
       ),
     ).then((_) => _loadGuardians());
   }
