@@ -12,13 +12,13 @@ import 'package:image_gallery_saver/image_gallery_saver.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../services/guardian_card_service.dart';
 import '../services/api/card_service.dart';
 import '../services/api/auth_service.dart';
 import '../theme/theme_helper.dart';
 import '../utils/avatar_helper.dart';
+import '../utils/wechat_helper.dart';
 import '../widgets/guardian_card_painter.dart';
 import '../data/app_constants.dart';
 
@@ -2116,47 +2116,11 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
                     // 复制并打开微信按钮
                     GestureDetector(
                       onTap: () async {
-                        await Clipboard.setData(ClipboardData(text: currentMessage));
-                        HapticFeedback.mediumImpact();
-
+                        final msg = currentMessage;
                         // 关闭弹窗
                         if (ctx.mounted) Navigator.pop(ctx);
-
-                        // 提示
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              duration: const Duration(seconds: 3),
-                              behavior: SnackBarBehavior.floating,
-                              margin: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.small)),
-                              backgroundColor: const Color(0xFF323232),
-                              content: const Row(
-                                children: [
-                                  Icon(Icons.check_circle, color: Colors.green, size: 18),
-                                  SizedBox(width: ZaiNeSpacing.sm),
-                                  Expanded(
-                                    child: Text(
-                                      '已复制，去微信粘贴发送 💬',
-                                      style: TextStyle(fontSize: ZaiNeFontSize.bodySm, color: Colors.white),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              action: SnackBarAction(
-                                label: '打开微信',
-                                textColor: const Color(0xFF667EEA),
-                                onPressed: () async {
-                                  final url = Uri.parse('weixin://');
-                                  if (await canLaunchUrl(url)) {
-                                    await launchUrl(url, mode: LaunchMode.externalApplication);
-                                  }
-                                },
-                              ),
-                            ),
-                          );
-                        }
-
+                        // 复制 + 打开微信（不可用时自动降级到系统分享面板）
+                        await copyAndOpenWeChat(context, msg);
                         if (kDebugMode) debugPrint('[GuardianCard] 提醒TA文案已复制: 方案${currentIndex + 1}');
                       },
                       child: Container(

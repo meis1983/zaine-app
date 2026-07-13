@@ -20,6 +20,7 @@ import '../services/api/card_service.dart';
 import '../services/api_service.dart';
 import '../services/api/notify_service.dart';
 import '../data/app_constants.dart';
+import '../utils/wechat_helper.dart';
 
 /// 蓝色调：用于「我守护的人」专区，与橙色「守护我的人」严格区分
 const Color _kGuardedBlue = Color(0xFF3F7CFF);
@@ -1378,17 +1379,12 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
     final url = AppConstants.guardianInviteUrl;
     final message =
         '$name，你在「在呢」有张守护卡还没激活哦～\n下载 App 登录，我们就能互相报平安、有事第一时间找到彼此啦：\n$url';
-    await Clipboard.setData(ClipboardData(text: message));
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('已复制邀请文案，去微信粘贴发送给$name吧 ✅'),
-        behavior: SnackBarBehavior.floating,
-      ));
+    // 先关闭管理弹窗，避免遮挡 SnackBar
+    if (mounted && Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
     }
-    final wechat = Uri.parse('weixin://');
-    if (await canLaunchUrl(wechat)) {
-      await launchUrl(wechat);
-    }
+    // 复制 + 打开微信（不可用时自动降级到系统分享面板）
+    await copyAndOpenWeChat(context, message);
   }
 
   void _showGuardedByMeManager() {
