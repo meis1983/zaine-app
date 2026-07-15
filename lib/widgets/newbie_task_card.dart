@@ -359,7 +359,7 @@ class _NewbieTaskCardState extends State<NewbieTaskCard>
         'id': 'profile',
         'icon': Icons.assignment_ind,
         'title': '完善健康档案',
-        'subtitle': '填写关键健康信息，紧急时刻能救命',
+        'subtitle': '填写关键健康信息，关键时刻能帮上忙',
         // 【修复】使用 _profileCompleted 而非仅 isLoggedIn
         'done': _profileCompleted || widget.isLoggedIn,
         'action': widget.onOpenProfile,

@@ -235,7 +235,7 @@ class _PromotionalShowcasePageState extends State<PromotionalShowcasePage> with 
         _buildGuardianCircle(),
         const SizedBox(height: ZaiNeSpacing.xxl),
         const Text(
-          '紧急时刻，自动通知所有守护者',
+          '需要时，一键通知所有守护者',
           style: TextStyle(color: Colors.white70, fontSize: ZaiNeFontSize.bodySm),
         ),
       ],

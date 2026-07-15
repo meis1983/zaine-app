@@ -16,7 +16,7 @@ import '../services/api/card_service.dart'; // 新增
 import '../widgets/guardian_ritual.dart'; // 【修复 v1.9.95】统一守护仪式封装
 
 /// 开机引导页 — 5页专业引导
-/// 核心定位：这不是签到App，这是危急时刻能救命的应急救援工具
+/// 核心定位：这不是签到App，这是日常平安守护与亲友互助工具
 ///
 /// 【MVP】手机号直接登录（quickLogin），待营业执照下发后切换回验证码登录
 class OnboardingPage extends StatefulWidget {
@@ -684,7 +684,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
           'subtitle': '让救援人员在第一时间了解你的情况',
           'highlight': '关键信息，精准守护',
           'desc': [
-            {'icon': '🩸', 'text': '血型 —— 输血时救命'},
+            {'icon': '🩸', 'text': '血型 —— 输血时的关键参考'},
             {'icon': '💊', 'text': '药物过敏 —— 避免二次伤害'},
             {'icon': '📋', 'text': '病史备注 —— 帮助医生判断'},
           ],
@@ -735,7 +735,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
           'highlight': '手机号登录，即刻开启',
           'desc': [
             {'icon': '📱', 'text': '紧急求助短信将包含您的手机号'},
-            {'icon': '🔐', 'text': '您的信息仅用于紧急救援'},
+            {'icon': '🔐', 'text': '您的信息仅用于平安守护与亲友互助'},
             {'icon': '⚡', 'text': '未注册手机号将自动创建账号'},
           ],
           'footer': '在呢，守护独居的你',

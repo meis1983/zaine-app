@@ -55,7 +55,7 @@ class HelpResultDialog extends StatefulWidget {
   final HelpDataSnapshot data;
   /// 当弹窗内更新了某个状态时回调给父组件
   final ValueChanged<String> onStatusChanged;
-    /// 当前会员等级的自动通知上限（体验版=1，智能版=3）
+    /// 当前会员等级的通知上限（体验版=1，智能版=3）
   final int autoCallLimit;
     /// 是否为智能版会员（已升级则不显示升级提示）
     final bool isPremium;
@@ -132,7 +132,7 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
     }
   }
 
-  /// 获取可自动通知的联系人（前 autoCallLimit 位有效联系人）
+  /// 获取可通知的联系人（前 autoCallLimit 位有效联系人）
   List<Map<String, dynamic>> _getAutoNotifyContacts() {
     return widget.contacts
         .where((c) => (c['phone']?.toString() ?? '').isNotEmpty)
@@ -140,7 +140,7 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
         .toList();
   }
 
-  /// 获取超出自动通知上限的锁定联系人
+  /// 获取超出通知上限的锁定联系人
   List<Map<String, dynamic>> _getLockedContacts() {
     final validContacts = widget.contacts
         .where((c) => (c['phone']?.toString() ?? '').isNotEmpty)
@@ -241,7 +241,7 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
 
           const SizedBox(height: 10),
 
-          // ---- 自动通知联系人进度条 ----
+          // ---- 通知联系人进度条 ----
           if (autoNotify.isNotEmpty) ...[
             ...autoNotify.asMap().entries.map((entry) {
               final idx = entry.key;
@@ -331,7 +331,7 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
                   child: Row(children: [
                     Icon(Icons.workspace_premium_rounded, size: 15, color: Colors.amber.shade700),
                     const SizedBox(width: 6),
-                    Text('升级智能版，解锁全部守护人自动通知',
+                    Text('升级智能版，解锁全部守护人通知',
                       style: TextStyle(fontSize: 12, color: Colors.amber.shade800, fontWeight: FontWeight.w500)),
                   ]),
                 ),

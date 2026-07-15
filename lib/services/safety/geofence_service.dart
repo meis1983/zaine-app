@@ -1,6 +1,6 @@
 /// 安全围栏（地理围栏）服务
 ///
-/// 【v1.93.0】允许用户设置安全区域，离开时自动通知守护者
+/// 【v1.93.0】允许用户设置安全区域，离开时（经你确认后）通知守护者
 library;
 
 import 'dart:async';
@@ -10,6 +10,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:geolocator/geolocator.dart';
 import '../api/notify_service.dart';
+import '../../config/app_config.dart';
 
 /// 围栏类型
 enum GeoFenceType {
@@ -295,7 +296,7 @@ class GeoFenceService {
     for (final exited in exitedFences) {
       await _notifyFenceExited(exited);
       onFenceExited?.call(exited);
-      onFenceExitedGlobal?.call(exited); // 【P3】场景化确认（离开安全区自动签到）
+      onFenceExitedGlobal?.call(exited); // 【P3】场景化确认（离开安全区后确认签到）
     }
 
     if (kDebugMode && exitedFences.isNotEmpty) {
@@ -325,7 +326,7 @@ class GeoFenceService {
       await _notifications.show(
         fence.id.hashCode,
         '已离开${fence.name}安全区',
-        '你已离开「${fence.name}」安全区域，已自动通知你的守护者',
+        '你已离开「${fence.name}」安全区域',
         details,
       );
       if (kDebugMode) debugPrint('[GeoFence] 本地通知: 离开 ${fence.name}');
@@ -334,18 +335,35 @@ class GeoFenceService {
     }
 
     // 2. 通知守护者（App 内 + 后端推送）
-    try {
-      await NotifyService.notifyGuardiansAboutFenceExit(
-        fence: fence.toJson(),
-      );
-      if (kDebugMode) debugPrint('[GeoFence] 已通知守护者: 离开 ${fence.name}');
-    } catch (e) {
-      if (kDebugMode) debugPrint('[GeoFence] 通知守护者失败: $e');
+    // 【中国合规版整改】关闭"自动通知第三方亲友"（dead-man switch 核心之一）：
+    // cn 区仅本地提醒用户本人，由用户手动确认后才通知守护人（见 notifyGuardiansFenceExitManually）。
+    if (AppConfig.isChinaRegion) {
+      if (kDebugMode) {
+        debugPrint('[GeoFence][CN] 离开围栏本地提醒（未自动通知守护人）: ${fence.name}');
+      }
+    } else {
+      try {
+        await NotifyService.notifyGuardiansAboutFenceExit(
+          fence: fence.toJson(),
+        );
+        if (kDebugMode) debugPrint('[GeoFence] 已通知守护者: 离开 ${fence.name}');
+      } catch (e) {
+        if (kDebugMode) debugPrint('[GeoFence] 通知守护者失败: $e');
+      }
     }
+  }
+
+  /// 【中国合规版】用户手动确认后，主动通知守护人（围栏离开场景）
+  ///
+  /// UI 在用户明确确认时调用，守护人才可见。
+  Future<void> notifyGuardiansFenceExitManually(Map<String, dynamic> fence) async {
+    await NotifyService.notifyGuardiansAboutFenceExit(fence: fence);
   }
 
   /// 启动定时围栏检查
   void startPeriodicCheck({Duration interval = const Duration(minutes: 2)}) {
+    // 中国区首版隐藏地理围栏：即便位置共享开启也不启动围栏检查
+    if (AppConfig.isChinaRegion) return;
     _checkTimer?.cancel();
     _checkTimer = Timer.periodic(interval, (_) async {
       await checkAllFences();

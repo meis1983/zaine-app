@@ -2118,7 +2118,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
         ),
         content: Text(
            isRegistered
-               ? '确定要解除与 $name ($phone) 的守护关系吗？\n\n解除后，对方将不再接收你的 SOS 通知，你也无法再看到对方的签到状态。'
+               ? '确定要解除与 $name ($phone) 的守护关系吗？\n\n解除后，对方将不再接收你的求助通知，你也无法再看到对方的签到状态。'
                : '确定要将 $name ($phone) 从守护圈移除吗？',
          ),
         actions: [

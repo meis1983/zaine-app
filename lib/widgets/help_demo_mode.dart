@@ -122,7 +122,7 @@ class _HelpDemoModeState extends State<HelpDemoMode> with TickerProviderStateMix
     if (!mounted) return;
     setState(() {
       _statusText = '以上为演示，未发送任何真实信息';
-      _subText = '真实求助将自动联系您的紧急联系人并发送位置';
+      _subText = '真实求助将在您确认后联系守护人并发送位置';
       _isRunning = false;
     });
   }
@@ -433,7 +433,7 @@ class _HelpDemoModeState extends State<HelpDemoMode> with TickerProviderStateMix
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              '演示过程中没有发送任何真实短信或拨打电话。\n真实求助会自动联系您的紧急联系人并获取您的精确位置。',
+                              '演示过程中没有发送任何真实短信或拨打电话。\n真实求助将在您确认后联系守护人并获取您的精确位置。',
                               style: TextStyle(
                                 fontSize: 13,
                                 color: Colors.green.shade800,

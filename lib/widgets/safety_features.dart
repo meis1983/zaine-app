@@ -1425,7 +1425,7 @@ class FallDetectionCard extends StatelessWidget {
                           style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
                       SizedBox(height: 4),
                       Text(
-                        '需要 Apple Watch Series 4 及以上机型。利用手表的加速度传感器和陀螺仪精确检测跌倒。检测到跌倒时，会自动通知你的守护者。',
+                        '需要 Apple Watch Series 4 及以上机型。利用手表的加速度传感器和陀螺仪精确检测跌倒。检测到跌倒时，你可以在确认后通知你的守护者。',
                         style: TextStyle(fontSize: 12, color: Colors.grey),
                       ),
                     ],
@@ -1600,7 +1600,7 @@ class _GeoFenceCardState extends State<GeoFenceCard> {
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
-                        '离开安全区域时会自动通知守护者',
+                        '离开安全区域时，你可以选择通知守护者',
                         style: TextStyle(fontSize: 11, color: Colors.purple.shade600),
                       ),
                     ),

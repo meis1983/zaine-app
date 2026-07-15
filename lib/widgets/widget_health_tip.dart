@@ -24,7 +24,7 @@ class HealthTipWidget extends StatelessWidget {
       {'icon': Icons.emoji_emotions, 'color': Colors.pink, 'title': '心情记录', 'desc': '情绪低落时试着写下来，倾诉是治愈的第一步'},
       {'icon': Icons.safety_check, 'color': Colors.cyan, 'title': '检查门窗', 'desc': '睡前确认门窗已锁好，安全意识不能松懈'},
       {'icon': Icons.flash_on, 'color': Colors.amber.shade700, 'title': '充电备用', 'desc': '保持手机电量充足，紧急时刻它就是你的生命线'},
-      {'icon': Icons.local_hospital, 'color': Colors.redAccent, 'title': '急救知识', 'desc': '花10分钟学习心肺复苏（CPR），关键时刻能救命'},
+      {'icon': Icons.local_hospital, 'color': Colors.redAccent, 'title': '急救知识', 'desc': '花10分钟学习心肺复苏（CPR），关键时刻能派上用场'},
       {'icon': Icons.thermostat, 'color': Colors.lightBlue, 'title': '温度调节', 'desc': '室内温度保持在22-26℃，过冷过热都影响身体状态'},
     ];
 

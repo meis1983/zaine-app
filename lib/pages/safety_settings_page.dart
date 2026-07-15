@@ -11,6 +11,8 @@ import '../widgets/fall_confirmation_dialog.dart';
 import 'location_map_page.dart';
 import 'fall_event_history_page.dart';
 import 'geofence_page.dart';
+import '../config/feature_flags.dart';
+import '../config/app_config.dart';
 
 /// 安全设置页面
 ///
@@ -55,7 +57,7 @@ class _SafetySettingsPageState extends State<SafetySettingsPage> {
     };
     _fallDetectionService.onFallTimeout = () {
       if (kDebugMode) debugPrint('[SafetySettings] 跌倒超时回调触发');
-      // 超时后自动通知已在 service 中处理，这里可选择性刷新数据
+      // 超时后由用户手动确认再通知，已在 service 中处理，这里刷新数据并提示
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -63,7 +65,7 @@ class _SafetySettingsPageState extends State<SafetySettingsPage> {
               children: [
                 Icon(Icons.warning_amber, color: Colors.white),
                 SizedBox(width: ZaiNeSpacing.sm),
-                Expanded(child: Text('跌倒未响应，已自动通知守护者')),
+                Expanded(child: Text('跌倒未响应，请确认是否通知守护者')),
               ],
             ),
             backgroundColor: Colors.orange,
@@ -241,15 +243,17 @@ class _SafetySettingsPageState extends State<SafetySettingsPage> {
                     const SizedBox(height: ZaiNeSpacing.xl),
 
                     // 功能卡片
-                    CheckInReminderCard(
-                      config: _reminderConfig,
-                      onConfigChanged: (config) async {
-                        await _safetyService.saveReminderConfig(config);
-                        await _loadData();
-                      },
-                      onPerformCheckIn: _performCheckIn,
-                    ),
-                    const SizedBox(height: ZaiNeSpacing.lg),
+                    if (FeatureFlags.enableCheckInReminderCn || !AppConfig.isChinaRegion) ...[
+                      CheckInReminderCard(
+                        config: _reminderConfig,
+                        onConfigChanged: (config) async {
+                          await _safetyService.saveReminderConfig(config);
+                          await _loadData();
+                        },
+                        onPerformCheckIn: _performCheckIn,
+                      ),
+                      const SizedBox(height: ZaiNeSpacing.lg),
+                    ],
 
                     LocationTrackCard(
                       todayTrack: _todayTrack,
@@ -271,7 +275,7 @@ class _SafetySettingsPageState extends State<SafetySettingsPage> {
                         if (!mounted) return;
                         setState(() => _isLocationTracking = success);
                         if (success) {
-                          // 【v1.93.0】启动围栏定时检查
+                          // 【v1.93.0】启动围栏定时检查（cn 首版已禁用）
                           _geoFenceService.startPeriodicCheck();
                         }
                         if (!success && mounted) {
@@ -295,33 +299,37 @@ class _SafetySettingsPageState extends State<SafetySettingsPage> {
                     ),
                     const SizedBox(height: ZaiNeSpacing.lg),
 
-                    // 【v1.93.0】安全围栏
-                    GeoFenceCard(
-                      key: ValueKey(_geoFenceRefreshToken),
-                      onManageFences: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => const GeoFencePage()),
-                        ).then((_) => _loadData());
-                      },
-                    ),
-                    const SizedBox(height: ZaiNeSpacing.lg),
+                    if (FeatureFlags.enableGeoFenceCn || !AppConfig.isChinaRegion) ...[
+                      // 【v1.93.0】安全围栏
+                      GeoFenceCard(
+                        key: ValueKey(_geoFenceRefreshToken),
+                        onManageFences: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const GeoFencePage()),
+                          ).then((_) => _loadData());
+                        },
+                      ),
+                    ],
+                    if (FeatureFlags.enableFallDetectionCn || !AppConfig.isChinaRegion) ...[
+                      const SizedBox(height: ZaiNeSpacing.lg),
 
-                    FallDetectionCard(
-                      recentFalls: _fallEvents,
-                      watchPaired: _watchPaired,
-                      watchReachable: _watchReachable,
-                      phoneDetectionEnabled: _phoneDetectionEnabled,
-                      onTogglePhoneDetection: _togglePhoneDetection,
-                      onViewHistory: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const FallEventHistoryPage(),
-                          ),
-                        ).then((_) => _loadData());
-                      },
-                    ),
+                      FallDetectionCard(
+                        recentFalls: _fallEvents,
+                        watchPaired: _watchPaired,
+                        watchReachable: _watchReachable,
+                        phoneDetectionEnabled: _phoneDetectionEnabled,
+                        onTogglePhoneDetection: _togglePhoneDetection,
+                        onViewHistory: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const FallEventHistoryPage(),
+                            ),
+                          ).then((_) => _loadData());
+                        },
+                      ),
+                    ],
                     const SizedBox(height: ZaiNeSpacing.xl),
 
                     // 安全提示

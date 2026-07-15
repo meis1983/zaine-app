@@ -502,13 +502,13 @@ class _FallEventHistoryPageState extends State<FallEventHistoryPage> {
             _HelpItem(
               icon: Icons.people,
               title: '通知守护者',
-              desc: '当检测到跌倒且60秒内无响应时，系统将自动通知您设置的紧急联系人。',
+              desc: '当检测到跌倒且您60秒内未响应时，您可确认后通知您设置的守护人。',
             ),
             SizedBox(height: ZaiNeSpacing.cardSm),
             _HelpItem(
               icon: Icons.warning_amber,
               title: '免责声明',
-              desc: '本功能仅作为安全参考辅助工具，不能替代专业的医疗诊断或紧急救援服务。',
+              desc: '本功能仅作为安全参考辅助工具，不能替代专业的医疗诊断或救助服务。',
             ),
           ],
         ),

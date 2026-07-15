@@ -70,4 +70,17 @@ class FeatureFlags {
   /// 开发者模式（Release 包自动屏蔽）
   static const bool enableDeveloperMode =
       !bool.fromEnvironment('dart.vm.product');
+
+  // ========== 中国区首版隐藏（后续版本放开请将对应开关设为 true）==========
+  // 说明：cn 区首版为规避 dead-man switch 审核风险，先隐藏以下三项；
+  // 全球版(global) 不受影响。后续要在 cn 重新开放，仅需把对应开关改为 true。
+
+  /// 定时平安确认 / 漏签（cn 首版隐藏）
+  static const bool enableCheckInReminderCn = false;
+
+  /// 地理围栏 / 安全区域（cn 首版隐藏）
+  static const bool enableGeoFenceCn = false;
+
+  /// 跌倒检测（cn 首版隐藏）
+  static const bool enableFallDetectionCn = false;
 }

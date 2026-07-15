@@ -193,7 +193,7 @@ class _GeoFencePageState extends State<GeoFencePage> {
           ),
           const SizedBox(height: ZaiNeSpacing.sm),
           Text(
-            '设置家的位置或常去地点作为安全区域\n离开时会自动通知你的守护者',
+            '设置家的位置或常去地点作为安全区域\n离开时你可以选择通知守护者',
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 14, color: ZaiNeColors.textSecondary()),
           ),

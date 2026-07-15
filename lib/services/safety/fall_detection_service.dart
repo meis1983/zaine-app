@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:sensors_plus/sensors_plus.dart';
+import '../../config/app_config.dart';
 import 'safety_service.dart';
 
 /// 手机端跌倒检测服务（简化版）
@@ -47,6 +48,8 @@ class FallDetectionService {
 
   /// 开启手机端跌倒检测
   void startPhoneDetection({SafetyService? safetyService}) {
+    // 中国区首版隐藏跌倒检测：不注册加速度计监听
+    if (AppConfig.isChinaRegion) return;
     if (_isRunning) return;
 
     _safetyService = safetyService;
@@ -185,29 +188,42 @@ class FallDetectionService {
   void _startCancelTimer() {
     _cancelTimer?.cancel();
     _cancelTimer = Timer(const Duration(seconds: 60), () {
-      // 60秒无响应，自动确认事件并通知守护者
-      if (kDebugMode) debugPrint('[FallDetection] ⏰ 60秒无响应，自动通知守护者');
+      // 60秒无响应：cn 区不自动确认/不自动外发（dead-man switch 核心），等用户手动处理
+      if (kDebugMode) {
+        debugPrint(AppConfig.isChinaRegion
+            ? '[FallDetection] ⏰ 60秒无响应（cn 不自动外发，等待用户手动确认）'
+            : '[FallDetection] ⏰ 60秒无响应，超时自动确认');
+      }
       _onTimeoutNoResponse();
     });
   }
 
-  /// 超时无响应处理：自动通知守护者
+  /// 超时无响应处理
+  /// - global 区：沿用原行为，超时自动确认事件。
+  /// - cn 区（中国合规版）：用户无响应时【不】自动确认、【不】自动外发，
+  ///   仅保留事件待用户手动处理（确认后通知守护者 / 或取消误报），规避 dead-man switch。
   void _onTimeoutNoResponse() {
     if (_pendingFallEvent == null) return;
 
-    // 更新事件状态为已确认（超时自动确认）
-    if (_safetyService != null) {
-      _safetyService!.acknowledgeFallEvent(
-        _pendingFallEvent!.id,
-        notes: '超时自动确认 — 已通知守护者',
-      );
+    // 【中国合规版整改】仅 global 区超时自动确认；cn 区保持事件 pending，等用户手动操作
+    if (!AppConfig.isChinaRegion) {
+      if (_safetyService != null) {
+        _safetyService!.acknowledgeFallEvent(
+          _pendingFallEvent!.id,
+          notes: '超时自动确认 — 已通知守护者',
+        );
+      }
     }
 
     // 触发超时回调（UI 层可据此显示后续操作界面）
     onFallTimeout?.call();
 
     _pendingFallEvent = null;
-    if (kDebugMode) debugPrint('[FallDetection] 🆘 跌倒超时，守护者已通知');
+    if (kDebugMode) {
+      debugPrint(AppConfig.isChinaRegion
+          ? '[FallDetection] 跌倒超时（cn 不自动外发，等待用户手动确认）'
+          : '[FallDetection] 🆘 跌倒超时，守护者已通知');
+    }
   }
 
   /// 用户取消跌倒警报（误报）
@@ -239,6 +255,15 @@ class FallDetectionService {
         _pendingFallEvent!.id,
         notes: '用户确认需要帮助 — 已通知守护者',
       );
+
+      // 【中国合规版整改】用户手动确认后，才通知守护人（不再自动外发）
+      if (AppConfig.isChinaRegion) {
+        unawaited(_safetyService!.notifyGuardiansAboutFallManually(
+          timestamp: _pendingFallEvent!.timestamp,
+          latitude: _pendingFallEvent!.latitude.toString(),
+          longitude: _pendingFallEvent!.longitude.toString(),
+        ));
+      }
     }
     _pendingFallEvent = null;
 

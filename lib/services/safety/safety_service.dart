@@ -15,6 +15,7 @@ import '../api/notify_service.dart';
 import '../api/checkin_service.dart';
 import '../../services/platform/health_service.dart';
 import 'geofence_service.dart';
+import '../../config/app_config.dart';
 import 'package:intl/intl.dart';
 
 /// 定时确认状态
@@ -378,7 +379,8 @@ class SafetyService {
     if (kDebugMode) debugPrint('[SafetyService] 提醒配置已保存: ${config.status}');
 
     // 更新定时器
-    if (config.enabled) {
+    // 中国区首版隐藏定时确认：不启动漏签自动提醒定时器
+    if (config.enabled && !AppConfig.isChinaRegion) {
       _startReminderTimer(config);
     } else {
       _stopReminderTimer();
@@ -478,7 +480,22 @@ class SafetyService {
   }
 
   /// 【v1.90.2】尝试通过 Apple Watch 数据辅助完成签到
+  ///
+  /// 【中国合规版整改】关闭"传感器自动代操作"（dead-man switch 核心之一）：
+  /// cn 区不再自动完成签到，改为本地提醒用户本人决定是否确认平安。
   Future<void> _tryWatchAuxiliaryCheckin() async {
+    if (AppConfig.isChinaRegion) {
+      // 仅本地提示，绝不自动代操作
+      await _showLocalPrompt(
+        1004,
+        '手表检测到你 💓',
+        '是否已平安？点开 App 即可一键确认',
+      );
+      if (kDebugMode) {
+        debugPrint('[SafetyService][CN] 手表检测本地提醒（未自动签到）');
+      }
+      return;
+    }
     try {
       final hasRecentActivity = await HealthService.checkRecentHeartbeat();
       if (hasRecentActivity) {
@@ -498,8 +515,47 @@ class SafetyService {
 
     // 通知守护人（App 内 Push，通过后端 APNs 推送）
     if (updated.missedCount >= 1) {
-      await NotifyService.notifyGuardiansAboutMissedCheckIn(updated.missedCount);
+      if (AppConfig.isChinaRegion) {
+        // 【中国合规版整改】关闭"自动通知第三方亲友"（dead-man switch 核心）：
+        // 改为仅本地提醒用户本人，由用户手动确认后再通知守护人
+        await _showLocalPrompt(
+          1003,
+          '已连续 ${updated.missedCount} 次未确认平安',
+          '如需让守护人知道，请打开 App 手动通知守护人',
+        );
+        if (kDebugMode) {
+          debugPrint('[SafetyService][CN] 漏签本地提醒（未自动通知守护人）: '
+              '${updated.missedCount} 次');
+        }
+      } else {
+        await NotifyService.notifyGuardiansAboutMissedCheckIn(updated.missedCount);
+      }
     }
+  }
+
+  /// 【中国合规版】统一本地提醒用户本人（不自动外发、不自动代操作）
+  Future<void> _showLocalPrompt(int id, String title, String body) async {
+    const androidDetails = AndroidNotificationDetails(
+      'checkin_reminder',
+      '定时确认提醒',
+      channelDescription: '提醒您进行平安确认',
+      importance: Importance.high,
+      priority: Priority.high,
+    );
+    const iosDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+    );
+    const details = NotificationDetails(android: androidDetails, iOS: iosDetails);
+    await _notifications.show(id, title, body, details);
+  }
+
+  /// 【中国合规版】用户手动确认后，主动通知守护人（漏签场景）
+  ///
+  /// UI 在用户明确表示"要通知守护人"时调用，守护人才可见。
+  Future<void> notifyGuardiansMissedCheckInManually(int missedCount) async {
+    await NotifyService.notifyGuardiansAboutMissedCheckIn(missedCount);
   }
 
   Future<void> _showReminderNotification() async {
@@ -539,6 +595,20 @@ class SafetyService {
   /// 1. 任何真实签到都视为「已确认平安」，更新 lastCheckIn / 重置 missedCount / 重算 nextReminder
   /// 2. 仅当用户在「对应触发方式」时，才弹场景化主动通知（time 模式保持原有时间提醒流）
   Future<void> _applySceneCheckIn(String source, {String? fenceName}) async {
+    // 【中国合规版整改】关闭"传感器/场景自动代操作"（dead-man switch 核心之一）：
+    // cn 区不自动签到，仅本地提醒用户本人，由用户手动确认平安。
+    if (AppConfig.isChinaRegion) {
+      final title = source == 'location' ? '已离开${fenceName ?? '安全区'}' : '手表检测到你';
+      final body = source == 'location'
+          ? '你已离开「${fenceName ?? '安全区'}」，请打开 App 确认平安'
+          : '检测到你的心跳，请打开 App 确认平安';
+      await _showLocalPrompt(1005, title, body);
+      if (kDebugMode) {
+        debugPrint('[SafetyService][CN] 场景化确认本地提醒（未自动签到）: source=$source');
+      }
+      return;
+    }
+
     final current = await getReminderConfig();
     if (!current.enabled) return;
 
@@ -984,8 +1054,11 @@ class SafetyService {
     if (kDebugMode) debugPrint('[SafetyService] 跌倒事件已记录: ${event.id}');
     onFallDetected?.call(event);
 
-    // 【v1.93.0】手机端检测默认不立即通知，等用户确认
-    if (notifyGuardians) {
+    // 【中国合规版整改】关闭"自动通知第三方亲友"（dead-man switch 核心之一）：
+    // 任何自动外发（含 Watch 立即通知）在 cn 区均改为本地记录，
+    // 由用户手动确认（见 notifyGuardiansAboutFallManually）后才通知守护人。
+    final shouldAutoNotify = notifyGuardians && !AppConfig.isChinaRegion;
+    if (shouldAutoNotify) {
       try {
         await NotifyService.notifyGuardiansAboutFall(
           timestamp: event.timestamp,
@@ -996,8 +1069,28 @@ class SafetyService {
         if (kDebugMode) debugPrint('[SafetyService] 跌倒通知守护者失败: $e');
       }
     } else {
-      if (kDebugMode) debugPrint('[SafetyService] 跌倒事件已记录，等待用户确认后再通知守护者');
+      if (kDebugMode) {
+        debugPrint('[SafetyService] 跌倒事件已记录'
+            '${AppConfig.isChinaRegion ? '[CN] 等待用户手动确认后再通知守护者' : ''}');
+      }
     }
+  }
+
+  /// 【中国合规版】用户手动确认跌倒需要帮助后，主动通知守护人
+  ///
+  /// UI（跌倒确认弹窗"需要帮助"按钮）在用户明确确认时调用，守护人才可见。
+  Future<void> notifyGuardiansAboutFallManually({
+    required DateTime timestamp,
+    String? latitude,
+    String? longitude,
+    Map<String, dynamic>? healthSummary,
+  }) async {
+    await NotifyService.notifyGuardiansAboutFall(
+      timestamp: timestamp,
+      latitude: latitude,
+      longitude: longitude,
+      healthSummary: healthSummary,
+    );
   }
 
   /// 确认跌倒事件

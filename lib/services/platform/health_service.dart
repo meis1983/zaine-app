@@ -10,6 +10,7 @@ import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'watch_data_service.dart';
 import '../safety/safety_service.dart';
+import '../../config/app_config.dart';
 
 /// 健康数据服务 (Apple Watch / HealthKit 集成)
 /// 实现「多维度生命体征监测」的核心逻辑
@@ -621,6 +622,16 @@ class HealthService {
   ///   此时跳过门禁直接执行，手机端弹 💓 横幅（不回包 Watch，不打断用户）
   /// [clientId] 来自 Watch 的本次签到唯一 ID，用于把成功回包(streak/total)精准送回对应的 Watch
   static Future<void> performSilentHeartbeatCheckin({bool fromWatch = false, bool fromHeartbeat = false, String? clientId}) async {
+    // ====== 中国合规版整改 ======
+    // 关闭「传感器/信号自动代操作签到」（dead-man switch 核心之一）：
+    // cn 区仅允许用户在 Watch 上明确手动点击（fromWatch）触发的签到；
+    // 自动心率检测（fromHeartbeat，零操作）与基于最近心跳的自动签到（isAlive）一律不执行，
+    // 改由用户手动确认平安，杜绝「无响应/传感器触发 → 系统自动代操作」。
+    if (AppConfig.isChinaRegion && !fromWatch) {
+      if (kDebugMode) debugPrint('[HealthService][CN] 已禁用自动心跳/信号签到（手动确认模式）');
+      return;
+    }
+
     // ====== 新增：检查来自 Watch App 的主动签到信号 ======
     final prefs = await SharedPreferences.getInstance();
     bool hasWatchSignal = prefs.getBool('pending_watch_checkin') ?? false;
@@ -664,7 +675,7 @@ class HealthService {
     // 获取当前日期
     final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
 
-    // 调用现有的签到接口 (心情默认为 0，代表静默自动签到)
+    // 调用现有的签到接口 (心情默认为 0，代表静默签到)
     final res = await CheckinService.checkIn(
       date: today,
       mood: 0,

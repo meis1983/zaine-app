@@ -53,9 +53,9 @@
 	<key>NSHealthShareUsageDescription</key>
 	<string>在呢需要同步您的健康数据（心率、血氧、睡眠、经期等），以实现生命体征守护功能。</string>
 	<key>NSHealthUpdateUsageDescription</key>
-	<string>在呢需要读取您的健康数据，以实现自动平安签到和经期跟踪功能。</string>
+	<string>在呢需要读取您的健康数据，以实现每日签到报平安和经期跟踪功能。</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>在呢需要始终获取您的位置，以便在紧急情况下向您的联系人发送您的位置信息。</string>
+	<string>在呢需要始终获取您的位置，以便在您发起求助时向您的守护人发送位置信息。</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>在呢需要获取您的位置，以便在紧急情况下向您的联系人发送您的位置信息。</string>
 	<key>NSPhoneUsageDescription</key>
