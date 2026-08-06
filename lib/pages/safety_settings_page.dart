@@ -238,9 +238,11 @@ class _SafetySettingsPageState extends State<SafetySettingsPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // 安全状态总览
-                    _buildSafetyOverview(),
-                    const SizedBox(height: ZaiNeSpacing.xl),
+                    // 安全状态总览（仅海外版；CN 合规版按监管要求隐藏）
+                    if (!AppConfig.isChinaRegion) ...[
+                      _buildSafetyOverview(),
+                      const SizedBox(height: ZaiNeSpacing.xl),
+                    ],
 
                     // 功能卡片
                     if (FeatureFlags.enableCheckInReminderCn || !AppConfig.isChinaRegion) ...[
@@ -255,49 +257,52 @@ class _SafetySettingsPageState extends State<SafetySettingsPage> {
                       const SizedBox(height: ZaiNeSpacing.lg),
                     ],
 
-                    LocationTrackCard(
-                      todayTrack: _todayTrack,
-                      isTracking: _isLocationTracking,
-                      currentMode: _trackingMode,
-                      lastRecordTime: _lastRecordTime,
-                      onViewFullMap: _todayTrack.isNotEmpty
-                          ? () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => LocationMapPage(day: DateTime.now()),
-                                ),
-                              ).then((_) => _loadData());
-                            }
-                          : null,
-                      onStartTracking: () async {
-                        final success = await _safetyService.startLocationTracking(mode: _trackingMode);
-                        if (!mounted) return;
-                        setState(() => _isLocationTracking = success);
-                        if (success) {
-                          // 【v1.93.0】启动围栏定时检查（cn 首版已禁用）
-                          _geoFenceService.startPeriodicCheck();
-                        }
-                        if (!success && mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('请开启位置权限'),
-                              backgroundColor: Colors.orange,
-                            ),
-                          );
-                        }
-                      },
-                      onStopTracking: () {
-                        _safetyService.stopLocationTracking();
-                        _geoFenceService.stopPeriodicCheck(); // 【v1.93.0】
-                        if (mounted) setState(() => _isLocationTracking = false);
-                      },
-                      onModeChanged: (mode) {
-                        _safetyService.switchTrackingMode(mode);
-                        setState(() => _trackingMode = mode);
-                      },
-                    ),
-                    const SizedBox(height: ZaiNeSpacing.lg),
+                    // 【v1.97 中国合规】位置共享/持续定位属监控能力，CN 版彻底隐藏，不暴露任何入口
+                    if (!AppConfig.isChinaRegion) ...[
+                      LocationTrackCard(
+                        todayTrack: _todayTrack,
+                        isTracking: _isLocationTracking,
+                        currentMode: _trackingMode,
+                        lastRecordTime: _lastRecordTime,
+                        onViewFullMap: _todayTrack.isNotEmpty
+                            ? () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => LocationMapPage(day: DateTime.now()),
+                                  ),
+                                ).then((_) => _loadData());
+                              }
+                            : null,
+                        onStartTracking: () async {
+                          final success = await _safetyService.startLocationTracking(mode: _trackingMode);
+                          if (!mounted) return;
+                          setState(() => _isLocationTracking = success);
+                          if (success) {
+                            // 【v1.93.0】启动围栏定时检查（cn 首版已禁用）
+                            _geoFenceService.startPeriodicCheck();
+                          }
+                          if (!success && mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('请开启位置权限'),
+                                backgroundColor: Colors.orange,
+                              ),
+                            );
+                          }
+                        },
+                        onStopTracking: () {
+                          _safetyService.stopLocationTracking();
+                          _geoFenceService.stopPeriodicCheck(); // 【v1.93.0】
+                          if (mounted) setState(() => _isLocationTracking = false);
+                        },
+                        onModeChanged: (mode) {
+                          _safetyService.switchTrackingMode(mode);
+                          setState(() => _trackingMode = mode);
+                        },
+                      ),
+                      const SizedBox(height: ZaiNeSpacing.lg),
+                    ],
 
                     if (FeatureFlags.enableGeoFenceCn || !AppConfig.isChinaRegion) ...[
                       // 【v1.93.0】安全围栏
@@ -332,8 +337,8 @@ class _SafetySettingsPageState extends State<SafetySettingsPage> {
                     ],
                     const SizedBox(height: ZaiNeSpacing.xl),
 
-                    // 安全提示
-                    _buildSafetyTips(),
+                    // 安全提示（仅海外版；CN 合规版按监管要求隐藏）
+                    if (!AppConfig.isChinaRegion) _buildSafetyTips(),
                   ],
                 ),
               ),
@@ -451,7 +456,7 @@ class _SafetySettingsPageState extends State<SafetySettingsPage> {
                   spacing: 6,
                   runSpacing: 4,
                   children: [
-                    if (_reminderConfig.enabled)
+                    if (_reminderConfig.enabled && !AppConfig.isChinaRegion)
                       _buildStatusChip('定时确认', Colors.green),
                     if (_isLocationTracking)
                       _buildStatusChip('位置追踪', Colors.blue),
@@ -535,7 +540,7 @@ class _SafetySettingsPageState extends State<SafetySettingsPage> {
           const SizedBox(height: ZaiNeSpacing.md),
           _buildTipItem('1', '建议每天至少确认一次平安'),
           _buildTipItem('2', '开启位置追踪可在紧急时快速定位'),
-          _buildTipItem('3', '佩戴 Apple Watch 可自动检测跌倒'),
+          _buildTipItem('3', '绑定 Apple Watch 可同步健康数据'),
           _buildTipItem('4', '记得定期检查紧急联系人是否正确'),
         ],
       ),

@@ -737,6 +737,69 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     }
   }
 
+  /// 【修复 v1.97.2】与服务端对账签到状态：拉取服务端今日状态 + 签到历史，
+  /// MERGE 到本地后从「本地历史」单一真相源重算连续天数，确保展示天数准确。
+  /// 用于「今日已签到」弹窗等需在点击瞬间拿到准确天数的场景（首屏后台对账可能尚未完成）。
+  Future<void> _reconcileCheckInFromServer() async {
+    try {
+      if (!_isLoggedIn) {
+        final localStreak = await _calculateStreakFromHistory();
+        if (mounted) setState(() => _continuousDays = localStreak);
+        return;
+      }
+      final prefs = await SharedPreferences.getInstance();
+      final uid = (await AuthService.getUserId()) ?? '';
+      final streakKey = uid.isNotEmpty ? 'continuous_days_$uid' : 'continuous_days';
+      final totalKey = uid.isNotEmpty ? 'total_check_in_days_$uid' : 'total_check_in_days';
+      final historyKey = uid.isNotEmpty ? 'checkin_history_$uid' : 'checkin_history';
+
+      final res = await CheckinService.getTodayStatus().timeout(const Duration(seconds: 3));
+      if (res['success'] == true) {
+        // 合并服务端历史到本地（MERGE 而非覆盖，保留本地已签到日期）
+        try {
+          final histRes = await CheckinService.getHistory(page: 1, pageSize: 100)
+              .timeout(const Duration(seconds: 3));
+          if (histRes['success'] == true && histRes['history'] != null) {
+            final localDates = (prefs.getStringList(historyKey) ?? []).toSet();
+            for (final item in histRes['history'] as List<dynamic>) {
+              if (item is Map && item['date'] != null) {
+                final parsed = DateTime.tryParse(item['date'].toString());
+                if (parsed != null) localDates.add(DateFormat('yyyy-MM-dd').format(parsed));
+              }
+            }
+            await prefs.setStringList(historyKey, localDates.toList());
+          }
+        } catch (e) {
+          if (kDebugMode) debugPrint('[HomePage] 合并服务端历史失败（保留本地）: $e');
+        }
+
+        final localStreak = await _calculateStreakFromHistory();
+        if (mounted) {
+          setState(() {
+            _continuousDays = localStreak;
+            // 累计天数以服务端为准，但只增不减，避免偶发回退
+            if (res['total_days'] != null && (res['total_days'] as int) > _totalDays) {
+              _totalDays = res['total_days'] as int;
+            }
+            if (res.containsKey('checked_in_today')) {
+              _checkedInToday = res['checked_in_today'] == true ? true : _checkedInToday;
+            }
+            _daysSinceLastCheckin = res['days_since_last_checkin'] ?? _daysSinceLastCheckin;
+          });
+        }
+        await prefs.setInt(streakKey, localStreak);
+        if (res['total_days'] != null) await prefs.setInt(totalKey, res['total_days'] as int);
+      }
+    } catch (e) {
+      // 网络超时/失败：退化到本地历史重算，保证弹窗仍显示本地最优值
+      if (kDebugMode) debugPrint('[HomePage] 对账失败，退化本地重算: $e');
+      try {
+        final localStreak = await _calculateStreakFromHistory();
+        if (mounted) setState(() => _continuousDays = localStreak);
+      } catch (_) {}
+    }
+  }
+
   Future<void> _handleCheckIn() async {
     // 【修复 v1.83.0】双重防重复签到：
     // 1. 内存状态 _checkedInToday
@@ -753,6 +816,10 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       // 导致 _checkedInToday 被误设为 true，用户点击"签到"却无响应
       // 改为：仍弹出庆祝弹窗，不让用户体验断掉
       if (kDebugMode) debugPrint('[HomePage] 今日已签到（可能为时区误判），显示庆祝弹窗');
+      // 【修复 v1.97.2】弹窗前先与服务端对账并合并历史、重算连续天数：
+      // 避免首屏后台对账尚未完成时，弹窗读到未合并的本地旧值（表现为第一次数字不准、第二次才对）。
+      // 带 3s 超时与本地降级，绝不阻塞弹窗。
+      await _reconcileCheckInFromServer();
       try {
         if (mounted) {
           await showDialog(

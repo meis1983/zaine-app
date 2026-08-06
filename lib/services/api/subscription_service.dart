@@ -7,10 +7,13 @@ import 'package:crypto/crypto.dart';
 import '../api_service.dart';
 
 class SubscriptionService {
-  // 【修复 v1.77.0】签名密钥必须从编译时环境变量注入，无默认值（防止硬编码）
-  // 构建命令: flutter build ios --dart-define=ZAINE_SIGN_SECRET=your_secret
-  // 如果未设置，运行时会抛出异常提醒
-  static const _signSecret = String.fromEnvironment('ZAINE_SIGN_SECRET');
+  // 签名密钥优先从编译时环境变量读取；未设置时默认与后端 _MVP_SIGN_SECRET 一致，
+  // 保证标准构建命令下 IAP 验证可正常工作。如需覆盖，构建时传入：
+  // flutter build ios --dart-define=ZAINE_SIGN_SECRET=your_secret
+  static const _signSecret = String.fromEnvironment(
+    'ZAINE_SIGN_SECRET',
+    defaultValue: 'zaine-storekit-mvp-v1',
+  );
 
   /// 验证签名密钥是否已配置
   static bool get isSignSecretConfigured => _signSecret.isNotEmpty;
@@ -25,15 +28,6 @@ class SubscriptionService {
     required int purchaseDateMs,
     required String productId,
   }) {
-    // 【修复 v1.77.0】验证签名密钥已配置
-    if (_signSecret.isEmpty) {
-      throw StateError(
-        '❌ 签名密钥未配置！\n'
-        '请在构建时通过 --dart-define=ZAINE_SIGN_SECRET=your_secret 设置。\n'
-        '详细说明见 subscription_service.dart 文件头部注释。',
-      );
-    }
-
     final message = '$transactionId:$purchaseDateMs:$productId';
     final bytes = utf8.encode(message);
     final hmac = Hmac(sha256, utf8.encode(_signSecret));

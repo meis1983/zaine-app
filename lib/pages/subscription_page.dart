@@ -948,7 +948,7 @@ class _SubscriptionPageState extends State<SubscriptionPage>
           const SizedBox(height: ZaiNeSpacing.sm),
           // 锚点文案
           Text(
-            _selectedPlan == 'monthly' ? '每天仅需 0.3 元' : '每天仅需 0.24 元，省 ¥20',
+            '每天仅需 ${_perDayLabel()}',
             style: TextStyle(
               fontSize: ZaiNeFontSize.caption,
               color: const Color(0xFFFF7043).withValues(alpha: 0.85),
@@ -1096,7 +1096,7 @@ class _SubscriptionPageState extends State<SubscriptionPage>
             child: _buildPlanTab(
               label: '年度',
               price: '${IapService().getYearlyPrice()}/年',
-              unit: '≈¥7.3/月',
+              unit: _yearlyPerMonthLabel(),
               isSelected: _selectedPlan == 'yearly',
               onTap: () => setState(() => _selectedPlan = 'yearly'),
               badge: '省18%',
@@ -1572,6 +1572,43 @@ class _SubscriptionPageState extends State<SubscriptionPage>
   // ═══════════════════════════════════════════════════════════════
   //  Apple 审核要求的完整订阅条款（Guideline 3.1.2(c) 合规）
   //  ═══════════════════════════════════════════════════════════════
+  // ── 动态价格辅助（避免写死货币，消除 $12.99 与 ¥88 并存问题）──
+  String _dynamicPrice() {
+    final pid = _selectedPlan == 'monthly'
+        ? IapService.productIdMonthly
+        : IapService.productIdYearly;
+    try {
+      final p = _products.firstWhere((x) => x.id == pid);
+      return p.price; // 已含本地化货币符号，如 ¥88 或 $12.99
+    } catch (_) {
+      return _selectedPlan == 'monthly' ? '¥9' : '¥88';
+    }
+  }
+
+  String _perDayLabel() {
+    final pid = _selectedPlan == 'monthly'
+        ? IapService.productIdMonthly
+        : IapService.productIdYearly;
+    try {
+      final p = _products.firstWhere((x) => x.id == pid);
+      final days = _selectedPlan == 'monthly' ? 30 : 365;
+      final perDay = p.rawPrice / days;
+      return '${p.currencyCode} ${perDay.toStringAsFixed(2)}';
+    } catch (_) {
+      return _selectedPlan == 'monthly' ? '¥0.30' : '¥0.24';
+    }
+  }
+
+  String _yearlyPerMonthLabel() {
+    try {
+      final p = _products.firstWhere((x) => x.id == IapService.productIdYearly);
+      final perMonth = p.rawPrice / 12;
+      return '≈${p.currencyCode} ${perMonth.toStringAsFixed(2)}/月';
+    } catch (_) {
+      return '≈¥7.3/月';
+    }
+  }
+
   Widget _buildSubscriptionTerms() {
     return Container(
       padding: const EdgeInsets.all(ZaiNeSpacing.cardSm),
@@ -1594,7 +1631,9 @@ class _SubscriptionPageState extends State<SubscriptionPage>
                 ),
               ),
               Text(
-                _selectedPlan == 'monthly' ? ' · 月度 ¥9/月' : ' · 年度 ¥88/年',
+                _selectedPlan == 'monthly'
+                    ? ' · 月度 ${_dynamicPrice()}'
+                    : ' · 年度 ${_dynamicPrice()}',
                 style: TextStyle(
                   fontSize: ZaiNeFontSize.caption,
                   fontWeight: FontWeight.w500,
@@ -1609,7 +1648,7 @@ class _SubscriptionPageState extends State<SubscriptionPage>
           Text(
             '• 订阅名称：在呢智能版\n'
             '• 订阅时长：${_selectedPlan == 'monthly' ? '每月自动续费' : '每年自动续费'}\n'
-            '• 订阅价格：${_selectedPlan == 'monthly' ? '¥9/月（约合 ¥0.30/天）' : '¥88/年（约合 ¥0.24/天）'}\n'
+            '• 订阅价格：${_selectedPlan == 'monthly' ? '${_dynamicPrice()}/月（约合 ${_perDayLabel()}/天）' : '${_dynamicPrice()}/年（约合 ${_perDayLabel()}/天）'}\n'
             '• 自动续费：当前计费周期结束前24小时自动扣款\n'
             '• 取消方式：随时可在 Apple ID 设置中取消，取消后当前周期仍可用',
             style: TextStyle(

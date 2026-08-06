@@ -16,6 +16,7 @@ import '../services/api_service.dart';
 import 'redeem_card_page.dart';
 import 'settings_page.dart';
 import 'safety_settings_page.dart';
+import '../config/app_config.dart';
 
 class ProfilePage extends StatefulWidget {
   /// 是否为 push 模式（需要返回按钮）
@@ -945,10 +946,11 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
 
                   const SizedBox(height: ZaiNeSpacing.sm),
 
-                  // ====== 2.5 安全中心入口（从底部Tab降级） ======
-                  _buildSafetyCenterEntry(isDark),
-
-                  const SizedBox(height: ZaiNeSpacing.sm),
+                  // ====== 2.5 安全中心入口（仅海外版；CN 合规版按监管要求隐藏） ======
+                  if (!AppConfig.isChinaRegion) ...[
+                    _buildSafetyCenterEntry(isDark),
+                    const SizedBox(height: ZaiNeSpacing.sm),
+                  ],
 
                   // ====== 2.6 医疗急救卡引导（iOS 原生功能） ======
                   _buildMedicalIDGuide(isDark),

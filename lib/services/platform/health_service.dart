@@ -108,6 +108,34 @@ class HealthService {
         return name.contains('watch') || id.contains('watch');
       }
 
+      /// 【2026-07-15 修复】合并重叠睡眠区间，返回总分钟数。
+      /// HealthKit 常因多 App/多源写入产生重叠区间，简单求和会重复计入导致时长虚高；
+      /// 此处按开始时间排序后合并重叠段，仅累加不重叠部分，得到准确总睡眠时长。
+      static int _mergeSleepMinutes(List<Map<String, int>> intervals) {
+        if (intervals.isEmpty) return 0;
+        final sorted = [...intervals]
+          ..sort((a, b) => (a['from'] ?? 0).compareTo(b['from'] ?? 0));
+        int total = 0;
+        int curFrom = sorted[0]['from'] ?? 0;
+        int curTo = sorted[0]['to'] ?? 0;
+        for (int i = 1; i < sorted.length; i++) {
+          final f = sorted[i]['from'] ?? 0;
+          final t = sorted[i]['to'] ?? 0;
+          if (f <= curTo) {
+            // 与当前区间重叠，合并（仅扩展结束时间）
+            if (t > curTo) curTo = t;
+          } else {
+            // 不重叠，结算上一段并开启新段
+            total += curTo - curFrom;
+            curFrom = f;
+            curTo = t;
+          }
+        }
+    total += curTo - curFrom;
+    // 区间差是毫秒(ms)，但外部按「分钟」使用，此处统一换算为分钟
+    return total ~/ 60000;
+  }
+
       /// 获取多维度健康摘要
   static Future<Map<String, dynamic>> getHealthSummary() async {
     final Map<String, dynamic> summary = {};
@@ -127,6 +155,12 @@ class HealthService {
       final typeCounts = <String, int>{};
       final typeErrors = <String, String>{};
       final all = <HealthDataPoint>[];
+      // 【2026-07-15 修复】睡眠区间收集，稍后合并重叠区间再计算时长，避免多源/多段重叠导致虚高
+      final sleepIntervals = <String, List<Map<String, int>>>{
+        'SLEEP_ASLEEP': <Map<String, int>>[],
+        'SLEEP_DEEP': <Map<String, int>>[],
+        'SLEEP_REM': <Map<String, int>>[],
+      };
 
       for (final t in _types) {
         final startTime = _isSleepType(t) ? startSleep : startWide;
@@ -190,13 +224,22 @@ class HealthService {
             latestAt['blood_oxygen'] = pointTime;
           }
         } else if (type == HealthDataType.SLEEP_ASLEEP) {
-          summary['sleep_asleep'] = (summary['sleep_asleep'] ?? 0) + numVal.round();
+          sleepIntervals['SLEEP_ASLEEP']!.add({
+            'from': point.dateFrom.millisecondsSinceEpoch,
+            'to': point.dateTo.millisecondsSinceEpoch,
+          });
         } else if (type == HealthDataType.SLEEP_AWAKE) {
           summary['sleep_awake'] = (summary['sleep_awake'] ?? 0) + numVal.round();
         } else if (type == HealthDataType.SLEEP_DEEP) {
-          summary['sleep_deep'] = (summary['sleep_deep'] ?? 0) + numVal.round();
+          sleepIntervals['SLEEP_DEEP']!.add({
+            'from': point.dateFrom.millisecondsSinceEpoch,
+            'to': point.dateTo.millisecondsSinceEpoch,
+          });
         } else if (type == HealthDataType.SLEEP_REM) {
-          summary['sleep_rem'] = (summary['sleep_rem'] ?? 0) + numVal.round();
+          sleepIntervals['SLEEP_REM']!.add({
+            'from': point.dateFrom.millisecondsSinceEpoch,
+            'to': point.dateTo.millisecondsSinceEpoch,
+          });
         } else if (type == HealthDataType.RESPIRATORY_RATE) {
           final prev = latestAt['respiratory_rate'];
           if (prev == null || pointTime.isAfter(prev)) {
@@ -290,22 +333,32 @@ class HealthService {
         */
       }
       
-      // 【修复 v1.93.9】计算总睡眠（避免重复计算）
-      // sleep_asleep 是总睡眠时长，已包含深度和 REM 睡眠
-      // 所以总睡眠 = sleep_asleep（不重复加 deep 和 rem）
+      // 【2026-07-15 修复】合并重叠睡眠区间后再计算时长，避免多源/多段重叠导致虚高
+      summary['sleep_asleep'] = _mergeSleepMinutes(sleepIntervals['SLEEP_ASLEEP'] ?? []);
+      summary['sleep_deep'] = _mergeSleepMinutes(sleepIntervals['SLEEP_DEEP'] ?? []);
+      summary['sleep_rem'] = _mergeSleepMinutes(sleepIntervals['SLEEP_REM'] ?? []);
+
+      // 【修复 v1.93.9】计算总睡眠（合并重叠区间后即为准确总睡眠）
+      // 核心睡眠 = 总睡眠 - 深度睡眠 - REM 睡眠（核心睡眠是总睡眠中既非深度也非REM的部分）
       if (summary.containsKey('sleep_asleep')) {
-        summary['sleep_total'] = summary['sleep_asleep'] ?? 0;
-        
+        final asleep = (summary['sleep_asleep'] ?? 0) as int;
+        final deep = (summary['sleep_deep'] ?? 0) as int;
+        final rem = (summary['sleep_rem'] ?? 0) as int;
+        summary['sleep_total'] = asleep;
+
+        // 核心睡眠，确保非负且不超过总睡眠
+        final core = asleep - deep - rem;
+        summary['sleep_core'] = core > 0 ? core : 0;
+
         // 验证数据合理性：如果总睡眠超过 12 小时（720分钟），标记为异常
         final totalSleep = summary['sleep_total'] ?? 0;
         if (totalSleep > 720) { // 12 小时
           if (kDebugMode) debugPrint('[HealthService] ⚠️ 睡眠时间异常: ${totalSleep} 分钟');
           // 尝试使用 sleep_deep + sleep_rem 的总和作为参考值
-          final estimatedTotal = ((summary['sleep_deep'] ?? 0) as int) + 
-                                ((summary['sleep_rem'] ?? 0) as int) +
-                                ((summary['sleep_awake'] ?? 0) as int);
+          final estimatedTotal = deep + rem + ((summary['sleep_awake'] ?? 0) as int);
           if (estimatedTotal > 0 && estimatedTotal < 720) {
             summary['sleep_total'] = estimatedTotal;
+            summary['sleep_core'] = (estimatedTotal - deep - rem) > 0 ? (estimatedTotal - deep - rem) : 0;
             if (kDebugMode) debugPrint('[HealthService] 使用修正后的睡眠时间: $estimatedTotal 分钟');
           }
         }
@@ -517,10 +570,10 @@ class HealthService {
     // 2. 检查低血氧
     if (summary.containsKey('blood_oxygen')) {
       double bo = double.tryParse(summary['blood_oxygen'].toString()) ?? 0;
-      if (bo > 0 && bo < 0.90) { // HealthKit 血氧通常是 0.0-1.0
-        alerts.add('血氧饱和度偏低 (${(bo * 100).toStringAsFixed(0)}%)');
-      } else if (bo > 1.0 && bo < 90) { // 有些设备直接给百分比
-        alerts.add('血氧饱和度偏低 ($bo%)');
+      // 【2026-07-15 修复】统一归一化为百分比：0.0-1.0 分数 → ×100；>1 视为已是百分比
+      final boPct = bo <= 1.0 ? bo * 100 : bo;
+      if (boPct > 0 && boPct < 90) {
+        alerts.add('血氧饱和度偏低 (${boPct.toStringAsFixed(0)}%)');
       }
     }
 
@@ -675,19 +728,56 @@ class HealthService {
     // 获取当前日期
     final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
 
+    // 【v1.97.0 修复】用户隔离 key：连续 / 累计天数按 uid 后缀存储，
+    // 回包 Watch 必须读取同名 key，否则 Watch 端显示的天数与手机不一致（历史 bug）。
+    final uid = prefs.getString('user_id') ?? '';
+    final streakKey = uid.isNotEmpty ? 'continuous_days_$uid' : 'continuous_days';
+    final totalKey = uid.isNotEmpty ? 'total_check_in_days_$uid' : 'total_check_in_days';
+
     // 调用现有的签到接口 (心情默认为 0，代表静默签到)
-    final res = await CheckinService.checkIn(
-      date: today,
-      mood: 0,
-    );
+    // 【v1.97.0 修复】包 try-catch：CheckinService.checkIn 在登录失效 / 网络异常时会抛异常，
+    // 若未捕获会导致整个 _executeCheckIn 中断 —— 既不回包 Watch（手表卡「签到中」），
+    // 也不刷新手机 UI（手机显示未签到）。这里无论成功 / 失败 / 异常都确保回包 + 刷新。
+    Map<String, dynamic> res;
+    try {
+      res = await CheckinService.checkIn(
+        date: today,
+        mood: 0,
+      ).timeout(const Duration(seconds: 10));
+    } on TimeoutException catch (e) {
+      if (kDebugMode) debugPrint('[HealthService] ⚠️ Watch 签到请求超时(10s，避免永久卡死): $e');
+      if (source == 'watch' && clientId != null && clientId.isNotEmpty) {
+        _sendWatchAck(
+          clientId: clientId,
+          streak: prefs.getInt(streakKey) ?? 0,
+          total: prefs.getInt(totalKey) ?? 0,
+          success: false,
+          alreadyDone: false,
+        );
+      }
+      watchCheckinCompleteSignal.value++;
+      return;
+    } catch (e) {
+      if (kDebugMode) debugPrint('[HealthService] ⚠️ Watch 签到请求异常(登录失效/网络错误): $e');
+      // 异常兜底：让 Watch 不卡死，但诚实回包「失败」（不再假绿为已签到），
+      // 手机端刷新最新状态
+      if (source == 'watch' && clientId != null && clientId.isNotEmpty) {
+        _sendWatchAck(
+          clientId: clientId,
+          streak: prefs.getInt(streakKey) ?? 0,
+          total: prefs.getInt(totalKey) ?? 0,
+          success: false,
+          alreadyDone: false,
+        );
+      }
+      watchCheckinCompleteSignal.value++;
+      return;
+    }
 
     if (res['success'] == true) {
       if (kDebugMode) debugPrint('[HealthService] ✅ 签到成功 (source=$source)');
-      final uid = prefs.getString('user_id') ?? '';
       final lastDateKey = uid.isNotEmpty ? 'last_check_in_date_$uid' : 'last_check_in_date';
       // 【修复 v1.93.1】同时保存连续天数和累计天数到本地
-      final streakKey = uid.isNotEmpty ? 'continuous_days_$uid' : 'continuous_days';
-      final totalKey = uid.isNotEmpty ? 'total_check_in_days_$uid' : 'total_check_in_days';
       final serverStreak = res['streak'] as int?;
       final serverTotal = res['total_days'] as int?;
       if (serverStreak != null && serverStreak > 0) {
@@ -730,23 +820,24 @@ class HealthService {
 
       // 【v1.94.0 新增】把成功回包(streak/total)精准送回对应的 Apple Watch（仅手动签到需要庆祝回包）
       if (source == 'watch' && clientId != null && clientId.isNotEmpty) {
-        _sendWatchAck(clientId: clientId, streak: serverStreak ?? 0, total: serverTotal ?? 0);
+        _sendWatchAck(clientId: clientId, streak: serverStreak ?? prefs.getInt(streakKey) ?? 0, total: serverTotal ?? prefs.getInt(totalKey) ?? 0);
       }
     } else {
       if (kDebugMode) debugPrint('[HealthService] ⚠️ 签到返回未成功: ${res['error']}');
       // 即使服务端返回未成功(例如已签到)，也尝试回包让 Watch 显示已签到状态
       if (source == 'watch' && clientId != null && clientId.isNotEmpty) {
-        _sendWatchAck(clientId: clientId, streak: prefs.getInt('continuous_days') ?? 0, total: prefs.getInt('total_check_in_days') ?? 0, alreadyDone: true);
+        _sendWatchAck(clientId: clientId, streak: prefs.getInt(streakKey) ?? 0, total: prefs.getInt(totalKey) ?? 0, alreadyDone: true);
       }
     }
   }
 
-  /// 【v1.94.0】把签到成功结果回包给对应的 Apple Watch（streak/total 用于 Watch 端庆祝动画）
-  static void _sendWatchAck({required String clientId, required int streak, required int total, bool alreadyDone = false}) {
+  /// 【v1.94.0】把签到结果回包给对应的 Apple Watch（streak/total 用于 Watch 端庆祝动画）
+  /// [success] 签到你真正是否成功（异常时为 false，便于 Watch 诚实显示失败而非假绿）
+  static void _sendWatchAck({required String clientId, required int streak, required int total, bool alreadyDone = false, bool success = true}) {
     try {
       _watchChannel.invokeMethod('ackWatchCheckin', {
         'client_id': clientId,
-        'success': true,
+        'success': success,
         'already_done': alreadyDone,
         'streak': streak,
         'total': total,
@@ -755,6 +846,19 @@ class HealthService {
     } catch (e) {
       if (kDebugMode) debugPrint('[HealthService] ⚠️ 回包 Watch 失败: $e');
     }
+  }
+
+  /// 【v1.97.0 修复】查询当前用户(已登录 uid 隔离)的连续/累计签到天数，
+  /// 供 Apple Watch 通过 status_query 主动拉取，确保每天打开手表都显示与手机一致的最新值。
+  static Future<Map<String, int>> _queryWatchStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    final uid = prefs.getString('user_id') ?? '';
+    final streakKey = uid.isNotEmpty ? 'continuous_days_$uid' : 'continuous_days';
+    final totalKey = uid.isNotEmpty ? 'total_check_in_days_$uid' : 'total_check_in_days';
+    return {
+      'streak': prefs.getInt(streakKey) ?? 0,
+      'total': prefs.getInt(totalKey) ?? 0,
+    };
   }
 
   // ==================== HealthKit 跌倒检测 MethodChannel ====================
@@ -788,27 +892,75 @@ class HealthService {
     _watchChannelInitialized = true;
     if (kDebugMode) debugPrint('[HealthService] 📱 initWatchChannel() 被调用，开始注册 MethodChannel 监听...');
     _watchChannel.setMethodCallHandler((call) async {
-      if (kDebugMode) debugPrint('[HealthService] 📨 MethodChannel 收到调用: method=${call.method}, arguments=${call.arguments}');
-      if (call.method == 'watchCheckin') {
-        if (kDebugMode) debugPrint('[HealthService] 📱 收到 Watch 签到通知，立即执行签到...');
-        // 【P0】区分手动签到(watch)与自动心率签到(heartbeat)，两者都跳过健康权限/心跳门禁
-        final args = call.arguments as Map<dynamic, dynamic>?;
-        final clientId = args?['client_id'] as String?;
-        final fromWatch = args?['fromWatch'] as bool? ?? false;
-        final fromHeartbeat = args?['fromHeartbeat'] as bool? ?? false;
-        await performSilentHeartbeatCheckin(fromWatch: fromWatch, fromHeartbeat: fromHeartbeat, clientId: clientId);
-        if (kDebugMode) debugPrint('[HealthService] ✅ Watch 签到执行完成 (fromWatch=$fromWatch, fromHeartbeat=$fromHeartbeat)');
-      } else if (call.method == 'watchSOS') {
-        // 【v1.93.0 修复】Watch SOS — 通知 Flutter 端触发紧急求助流程
-        if (kDebugMode) debugPrint('[HealthService] 🚨 收到 Watch SOS 通知，触发紧急求助...');
-        pendingWatchSOS = true;
-        watchSOSSignal.value++;
-        if (kDebugMode) debugPrint('[HealthService] ✅ Watch SOS 信号已发出 (watchSOSSignal=${watchSOSSignal.value})');
-      } else {
-        if (kDebugMode) debugPrint('[HealthService] ❓ 未知的 MethodChannel 调用: ${call.method}');
+      // 【2026-07-15 修复】handler 整体包 try-catch：任何异常都被隔离，绝不中断 MethodChannel，
+      // 保证后续 Watch 消息（签到/SOS）仍能正常处理，手表不会因一次异常永久卡死。
+      try {
+        if (kDebugMode) debugPrint('[HealthService] 📨 MethodChannel 收到调用: method=${call.method}, arguments=${call.arguments}');
+        if (call.method == 'watchCheckin') {
+          if (kDebugMode) debugPrint('[HealthService] 📱 收到 Watch 签到通知，立即执行签到...');
+          // 【P0】区分手动签到(watch)与自动心率签到(heartbeat)，两者都跳过健康权限/心跳门禁
+          final args = call.arguments as Map<dynamic, dynamic>?;
+          final clientId = args?['client_id'] as String?;
+          final fromWatch = args?['fromWatch'] as bool? ?? false;
+          final fromHeartbeat = args?['fromHeartbeat'] as bool? ?? false;
+          await performSilentHeartbeatCheckin(fromWatch: fromWatch, fromHeartbeat: fromHeartbeat, clientId: clientId);
+          if (kDebugMode) debugPrint('[HealthService] ✅ Watch 签到执行完成 (fromWatch=$fromWatch, fromHeartbeat=$fromHeartbeat)');
+        } else if (call.method == 'watchSOS') {
+          // 【v1.93.0 修复】Watch SOS — 通知 Flutter 端触发紧急求助流程
+          if (kDebugMode) debugPrint('[HealthService] 🚨 收到 Watch SOS 通知，触发紧急求助...');
+          pendingWatchSOS = true;
+          watchSOSSignal.value++;
+          if (kDebugMode) debugPrint('[HealthService] ✅ Watch SOS 信号已发出 (watchSOSSignal=${watchSOSSignal.value})');
+        } else if (call.method == 'queryWatchStatus') {
+          // 【v1.97.0 修复】Watch 主动拉取当前连续/累计天数，确保每天打开手表与手机一致
+          if (kDebugMode) debugPrint('[HealthService] 📱 Watch 请求当前签到状态(queryWatchStatus)');
+          final status = await _queryWatchStatus();
+          return status;
+        } else {
+          if (kDebugMode) debugPrint('[HealthService] ❓ 未知的 MethodChannel 调用: ${call.method}');
+        }
+      } catch (e) {
+        if (kDebugMode) debugPrint('[HealthService] ⚠️ Watch MethodChannel 处理异常(已隔离，不影响后续消息): $e');
       }
     });
     if (kDebugMode) debugPrint('[HealthService] ✅ Watch MethodChannel 已初始化（含 SOS 监听）, _watchChannelInitialized=$_watchChannelInitialized');
+
+    // 【2026-07-16 修复】轮询兜底：即使 native→Flutter 的 invokeMethod 因冷启动/后台/messenger
+    // 路由问题未送达，也通过监听 UserDefaults 的 pending_watch_checkin 主动补发签到。
+    // 这是彻底解决「手表签到手机无反应」的最后一道保险。
+    _startWatchCheckinPolling();
+    // 立即检查一次（覆盖 cold start 期间已到达的签到）
+    _pollWatchCheckin();
+  }
+
+  /// 【2026-07-16 修复】轮询兜底：检测 native 写入的 pending_watch_checkin + watch_pending_client_id，
+  /// 主动补发 Watch 签到，彻底绕过 native→Flutter invokeMethod 的路由不确定性。
+  static final Set<String> _polledWatchClientIds = {};
+  static Timer? _watchCheckinPoller;
+  static void _startWatchCheckinPolling() {
+    _watchCheckinPoller?.cancel();
+    _watchCheckinPoller = Timer.periodic(const Duration(seconds: 2), (_) => _pollWatchCheckin());
+    if (kDebugMode) debugPrint('[HealthService] 🔄 Watch 签到轮询兜底已启动(每2s)');
+  }
+  static Future<void> _pollWatchCheckin() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final pending = prefs.getBool('pending_watch_checkin') ?? false;
+      if (!pending) return;
+      final cid = prefs.getString('watch_pending_client_id');
+      if (cid == null || cid.isEmpty) {
+        if (kDebugMode) debugPrint('[HealthService] 🔄 轮询发现待处理 Watch 签到(无 clientId)，直接补发');
+        await performSilentHeartbeatCheckin(fromWatch: true);
+        await prefs.setBool('pending_watch_checkin', false);
+        return;
+      }
+      if (_polledWatchClientIds.contains(cid)) return; // 防重复处理同一签到
+      _polledWatchClientIds.add(cid);
+      if (kDebugMode) debugPrint('[HealthService] 🔄 轮询发现待处理 Watch 签到 (clientId=$cid)');
+      await performSilentHeartbeatCheckin(fromWatch: true, clientId: cid);
+    } catch (e) {
+      if (kDebugMode) debugPrint('[HealthService] ⚠️ 轮询 Watch 签到异常: $e');
+    }
   }
 
   /// 请求跌倒检测授权

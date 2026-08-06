@@ -20,16 +20,65 @@ class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
     @Published var healthData: [String: Any] = [:]
     @Published var lastCheckIn: String?
 
+    // 【修复】今日是否已签到：基于持久化日期，跨天自动复位，
+    // 避免"第一天签到成功后，第二天手表 App 仍驻留内存、按钮被隐藏导致无法再签到"。
+    @Published var hasCheckedInToday: Bool = false
+    private let lastCheckInDateKey = "watch_last_checkin_date"
+    private static func todayString() -> String {
+        let fmt = DateFormatter()
+        fmt.dateFormat = "yyyy-MM-dd"
+        return fmt.string(from: Date())
+    }
+    /// 标记今日已签到（持久化 + 即时刷新 UI）
+    private func markCheckedInToday() {
+        let t = Self.todayString()
+        UserDefaults.standard.set(t, forKey: lastCheckInDateKey)
+        hasCheckedInToday = true
+    }
+    /// 重新计算今日签到状态（App 回到前台 / 启动 / 跨午夜自检 时调用，强制刷新 UI）
+    func refreshCheckInState() {
+        let stored = UserDefaults.standard.string(forKey: lastCheckInDateKey)
+        let isToday = (stored == Self.todayString())
+        hasCheckedInToday = isToday
+        if !isToday {
+            // 【v1.97.0 修复】跨天且今日未签：清除昨日的"已签到/庆祝"残留态，
+            // 否则第二天手表仍卡在昨日已签到界面、签到按钮不出现、无法再次签到。
+            checkInSuccess = false
+            checkInAlreadyDone = false
+            checkInFailed = false
+        }
+        // 读回上次已知的正确连续/累计天数，避免第二天打开手表显示 0
+        checkInStreak = UserDefaults.standard.integer(forKey: watchStreakKey)
+        checkInTotal = UserDefaults.standard.integer(forKey: watchTotalKey)
+    }
+
     // 【v1.94.0】签到结果状态（用于酷炫庆祝 UI）
     @Published var checkInSuccess = false
     @Published var checkInFailed = false
     @Published var checkInStreak = 0
     @Published var checkInTotal = 0
+    private let watchStreakKey = "watch_checkin_streak"
+    private let watchTotalKey = "watch_checkin_total"
+    /// 统一设置并持久化连续/累计天数（避免第二天打开手表显示 0 / 旧数据）
+    private func setCheckInStats(streak: Int, total: Int) {
+        checkInStreak = streak
+        checkInTotal = total
+        UserDefaults.standard.set(streak, forKey: watchStreakKey)
+        UserDefaults.standard.set(total, forKey: watchTotalKey)
+    }
     @Published var checkInAlreadyDone = false
     @Published var autoCheckInSuccess = false   // 【P0 心跳自动签到】独立庆祝态
     @Published var isHeartbeatGuardian = false  // 【P0 心跳守护中】状态指示
     @Published var lastHeartRate: Double = 0
     private var pendingClientId: String?
+
+    /// 【中国合规版整改】cn 区自检：build_ipa.sh 将 Bundle ID 由
+    /// com.zaine.app.watchkitapp 切为 com.zaine.app.cn.watchkitapp，
+    /// 由此判断当前是否为中国合规版，关闭"心率自动签到"（dead-man switch 核心之一）。
+    let isChinaRegion: Bool = {
+        let bid = Bundle.main.bundleIdentifier ?? ""
+        return bid.contains("zaine.app.cn")
+    }()
 
     // 【P0】HealthKit 心率监控
     private let healthStore = HKHealthStore()
@@ -47,6 +96,20 @@ class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
         } else {
             print("[Watch] ❌ WCSession 不支持！")
             activationState = "不支持"
+        }
+
+        // 【v1.97.0 修复】App 每次切到前台都重新计算"今日是否已签"并主动拉最新天数，
+        // 解决"第二天手表常驻内存未重启、onAppear 不重触发 → 卡在昨日已签到态、无法再次签到"。
+        NotificationCenter.default.addObserver(
+            forName: WKExtension.applicationDidBecomeActiveNotification,
+            object: nil, queue: .main
+        ) { [weak self] _ in
+            self?.refreshCheckInState()
+            self?.requestCheckInStatus()
+        }
+        // 兜底：App 常驻内存跨过午夜时，每 60s 自检日期翻转，确保状态随日期更新
+        Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
+            self?.refreshCheckInState()
         }
     }
 
@@ -87,21 +150,52 @@ class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
         // 乐观 UI：立即进入「签到中」状态
         lastAction = "签到中..."
 
-        // 加速路径：手机可达时尝试 sendMessage 即时确认（失败不影响主路径）
+        // 加速路径：手机可达时通过 sendMessage 即时拿到「真实结果」回包（失败不影响主路径）
         if WCSession.default.isReachable {
-            WCSession.default.sendMessage(message, replyHandler: { _ in
-                print("[Watch] ✅ sendMessage 即时回包成功")
+            WCSession.default.sendMessage(message, replyHandler: { reply in
+                print("[Watch] ✅ sendMessage 即时回包: \(reply)")
+                if let success = reply["success"] as? Bool {
+                    DispatchQueue.main.async {
+                        if success {
+                            self.checkInSuccess = true
+                            self.markCheckedInToday()
+                            self.checkInFailed = false
+                            self.checkInAlreadyDone = reply["already_done"] as? Bool ?? false
+                            self.setCheckInStats(streak: reply["streak"] as? Int ?? 0, total: reply["total"] as? Int ?? 0)
+                            self.lastAction = self.checkInAlreadyDone ? "今日已签到 ✅" : "签到成功 ✅"
+                            self.lastCheckIn = self.formatNow()
+                            self.pendingClientId = nil
+                            WKInterfaceDevice.current().play(.success)
+                        } else {
+                            self.checkInSuccess = false
+                            self.checkInFailed = true
+                            self.lastAction = "签到失败 ❌"
+                            self.pendingClientId = nil
+                            WKInterfaceDevice.current().play(.failure)
+                        }
+                    }
+                }
             }, errorHandler: { error in
                 print("[Watch] ℹ️ sendMessage 即时回包失败(已走 transferUserInfo 兜底，无影响): \(error.localizedDescription)")
             })
         }
 
-        // 兜底：1.4s 内未收到 ack 则先显示「已发送」，避免一直转圈
+        // 软兜底：1.4s 内未收到 ack 则先显示「已发送」，避免一直转圈
         let capturedClientId = clientId
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.4) { [weak self] in
             guard let self = self else { return }
-            if !self.checkInSuccess && self.pendingClientId == capturedClientId {
+            if !self.checkInSuccess && !self.checkInFailed && self.pendingClientId == capturedClientId {
                 self.lastAction = "签到已发送 ⏳"
+            }
+        }
+        // 硬兜底：12s 内两端仍未打通，诚实显示失败，绝不再无限「签到中」
+        DispatchQueue.main.asyncAfter(deadline: .now() + 12.0) { [weak self] in
+            guard let self = self else { return }
+            if !self.checkInSuccess && self.pendingClientId == capturedClientId {
+                self.checkInFailed = true
+                self.lastAction = "签到失败 ❌"
+                self.pendingClientId = nil
+                WKInterfaceDevice.current().play(.failure)
             }
         }
     }
@@ -150,10 +244,38 @@ class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
         }
     }
 
+    // MARK: - Request latest check-in status (streak/total) from iPhone
+    /// 【v1.97.0 修复】主动向 iPhone 请求当前连续/累计天数，
+    /// 解决「第一天签到正确、第二天手表仍显示旧数据」的问题（手表不再依赖本地乐观值）。
+    func requestCheckInStatus() {
+        guard WCSession.default.activationState == .activated else { return }
+        let message: [String: Any] = ["action": "status_query", "timestamp": Date().timeIntervalSince1970]
+        // 主路径：可靠队列（后台/不可达也能投递）
+        WCSession.default.transferUserInfo(message)
+        // 加速路径：可达时即时拿到回包
+        if WCSession.default.isReachable {
+            WCSession.default.sendMessage(message, replyHandler: { reply in
+                self.handleStatusQueryReply(reply)
+            }, errorHandler: { error in
+                print("[Watch] ℹ️ status_query sendMessage 失败(已走 transferUserInfo 兜底): \(error.localizedDescription)")
+            })
+        }
+    }
+
+    private func handleStatusQueryReply(_ reply: [String: Any]) {
+        guard let action = reply["action"] as? String, action == "status_query_ack" else { return }
+        setCheckInStats(streak: reply["streak"] as? Int ?? 0, total: reply["total"] as? Int ?? 0)
+    }
+
     // MARK: - 【P0】自动心跳签到（核心酷炫功能）
     /// 由 ContentView.onAppear 调用，启动 HealthKit 心率监控
     /// 检测到有效心率后自动触发签到，用户零操作
     func startHeartRateMonitoring() {
+        // 【中国合规版整改】cn 区关闭"心率自动签到"：不启动心率监控、不自动签到
+        guard !isChinaRegion else {
+            print("[Watch][CN] 已关闭心率自动签到守护")
+            return
+        }
         guard HKHealthStore.isHealthDataAvailable() else {
             print("[Watch] ⚠️ HealthKit 不可用，无法启用心跳守护")
             return
@@ -217,6 +339,8 @@ class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
 
     /// 自动心跳签到：WCSession 不可达时排队 transferUserInfo（后台也能投递）
     func sendAutoCheckIn(heartRate: Double) {
+        // 【中国合规版整改】cn 区绝不自动签到（双保险）
+        guard !isChinaRegion else { return }
         print("[Watch] 💓 检测到有效心率 \(Int(heartRate)) bpm，触发自动签到")
         let today = Calendar.current.component(.day, from: Date())
         let lastDay = UserDefaults.standard.integer(forKey: "watch_last_auto_checkin_day")
@@ -261,6 +385,7 @@ class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
             case .activated:
                 self.activationState = "✅ 已激活"
                 print("[Watch] ✅ WCSession 激活成功, isReachable=\(session.isReachable)")
+                self.requestCheckInStatus()
             case .inactive:
                 self.activationState = "⚠️ 未激活"
                 print("[Watch] ⚠️ WCSession 未激活")
@@ -281,6 +406,9 @@ class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
         DispatchQueue.main.async {
             self.isReachable = session.isReachable
             print("[Watch] 📡 可达性变化: isReachable=\(session.isReachable)")
+            if session.isReachable {
+                self.requestCheckInStatus()
+            }
         }
     }
 
@@ -288,17 +416,33 @@ class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
         DispatchQueue.main.async {
             print("[Watch] 📥 收到来自 iPhone 的数据: \(userInfo)")
 
+            // 【v1.97.0 修复】iPhone 回包的当前连续/累计天数
+            if let action = userInfo["action"] as? String, action == "status_query_ack" {
+                self.setCheckInStats(streak: userInfo["streak"] as? Int ?? 0, total: userInfo["total"] as? Int ?? 0)
+                return
+            }
+
             // 【v1.94.0】签到成功回包 — 显示庆祝态
             if let action = userInfo["action"] as? String, action == "checkin_ack" {
-                self.checkInSuccess = true
-                self.checkInFailed = false
-                self.checkInStreak = userInfo["streak"] as? Int ?? 0
-                self.checkInTotal = userInfo["total"] as? Int ?? 0
-                self.checkInAlreadyDone = userInfo["already_done"] as? Bool ?? false
-                self.lastAction = self.checkInAlreadyDone ? "今日已签到 ✅" : "签到成功 ✅"
-                self.lastCheckIn = self.formatNow()
-                self.pendingClientId = nil
-                WKInterfaceDevice.current().play(.success)
+                let success = userInfo["success"] as? Bool ?? true
+                if success {
+                    self.checkInSuccess = true
+                    self.markCheckedInToday()
+                    self.checkInFailed = false
+                    self.setCheckInStats(streak: userInfo["streak"] as? Int ?? 0, total: userInfo["total"] as? Int ?? 0)
+                    self.checkInAlreadyDone = userInfo["already_done"] as? Bool ?? false
+                    self.lastAction = self.checkInAlreadyDone ? "今日已签到 ✅" : "签到成功 ✅"
+                    self.lastCheckIn = self.formatNow()
+                    self.pendingClientId = nil
+                    WKInterfaceDevice.current().play(.success)
+                } else {
+                    // 【2026-07-15 修复】签到真正失败（如登录失效/网络错误）→ 诚实显示失败，不再假绿
+                    self.checkInSuccess = false
+                    self.checkInFailed = true
+                    self.lastAction = "签到失败 ❌"
+                    self.pendingClientId = nil
+                    WKInterfaceDevice.current().play(.failure)
+                }
                 return
             }
 
@@ -321,6 +465,11 @@ class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
     // iOS 端回调用
     func session(_ session: WCSession, didReceiveMessage message: [String : Any], replyHandler: @escaping ([String : Any]) -> Void) {
         print("[Watch] 📥 收到来自 iPhone 的消息: \(message)")
+        if let action = message["action"] as? String, action == "status_query_ack" {
+            setCheckInStats(streak: message["streak"] as? Int ?? 0, total: message["total"] as? Int ?? 0)
+            replyHandler(["received": true])
+            return
+        }
         replyHandler(["received": true])
     }
 }

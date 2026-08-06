@@ -178,7 +178,7 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
         _buildMetricCard(
           title: '血氧',
           value: _metrics['blood_oxygen'] != null
-              ? '${(_parseValue(_metrics['blood_oxygen']) * (_parseValue(_metrics['blood_oxygen']) < 1 ? 100 : 1)).toStringAsFixed(0)}%'
+              ? _formatSpo2(_parseValue(_metrics['blood_oxygen']))
               : '--',
           icon: Icons.bloodtype,
           color: Colors.blue,
@@ -245,6 +245,15 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
   double _parseValue(dynamic val) {
     if (val == null) return 0;
     return double.tryParse(val.toString()) ?? 0;
+  }
+
+  /// 【2026-07-15 修复】血氧(SpO2)显示：HealthKit 可能返回 0.0–1.0 分数或 0–100 百分比，
+  /// 统一归一化为百分比；超出合理区间(70%–100%)视为脏数据，显示「数据异常」，避免误导。
+  String _formatSpo2(double raw) {
+    if (raw <= 0) return '数据异常';
+    final pct = raw <= 1.0 ? raw * 100 : raw; // 分数→百分比，或已为百分比
+    if (pct >= 70 && pct <= 100) return '${pct.toStringAsFixed(0)}%';
+    return '数据异常';
   }
 
   Widget _buildMetricCard({
@@ -347,7 +356,7 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
             children: [
               _buildSleepBit('深度睡眠', _metrics['sleep_deep'] ?? 0, Colors.blue.shade200),
               _buildSleepBit('REM', _metrics['sleep_rem'] ?? 0, Colors.purple.shade200),
-              _buildSleepBit('核心睡眠', _metrics['sleep_asleep'] ?? 0, Colors.indigo.shade200),
+              _buildSleepBit('核心睡眠', _metrics['sleep_core'] ?? _metrics['sleep_asleep'] ?? 0, Colors.indigo.shade200),
             ],
           ),
           const SizedBox(height: ZaiNeSpacing.sm),

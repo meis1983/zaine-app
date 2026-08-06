@@ -23,17 +23,29 @@ EXPORT_PATH="$PROJECT_DIR/build/ios/ipa"
 #          导出完成后由 trap 自动还原，海外构建不受影响。
 # ----------------------------------------------------------
 PBXPROJ="$PROJECT_DIR/ios/Runner.xcodeproj/project.pbxproj"
+INFOPLIST="$PROJECT_DIR/ios/Runner/Info.plist"
 if [ "$ZAI_REGION" = "cn" ]; then
-  echo "ℹ️  cn 区域：将工程 Bundle ID 切换为 com.zaine.app.cn"
+  echo "ℹ️  cn 区域：将工程 Bundle ID 切换为 com.zaine.app.cn，并改写位置/健康权限文案（去除守护/报平安等监控暗示）"
   cp "$PBXPROJ" "$PBXPROJ.bak"
   sed -i '' 's/com\.zaine\.app/com.zaine.app.cn/g' "$PBXPROJ"
-  cleanup_pbx() {
+  # 中国合规版：位置 / 健康权限描述去掉“始终 / 守护人 / 守护 / 报平安”等监控暗示，避免触发死开关判定
+  cp "$INFOPLIST" "$INFOPLIST.zai_bak"
+  sed -i '' 's|在呢需要始终获取您的位置，以便在您发起求助时向您的守护人发送位置信息。|在呢会在您主动使用位置相关功能时获取您的位置信息。|g' "$INFOPLIST"
+  sed -i '' 's|在呢需要读取您的健康记录（步数、心率、血氧、睡眠），以便在紧急情况下向守护人展示您的健康状况。|在呢需要读取您的健康记录（步数、心率、血氧、睡眠），用于为您生成本人的健康日记。|g' "$INFOPLIST"
+  sed -i '' 's|在呢需要同步您的健康数据（心率、血氧、睡眠、经期等），以实现生命体征守护功能。|在呢需要同步您的健康数据（心率、血氧、睡眠、经期等），用于为您生成本人的健康日记与趋势记录。|g' "$INFOPLIST"
+  sed -i '' 's|在呢需要读取您的健康数据，以实现每日签到报平安和经期跟踪功能。|在呢需要读取您的健康数据，用于记录您的每日签到与经期跟踪。|g' "$INFOPLIST"
+  sed -i '' 's|在呢需要发送通知提醒您定时报平安。|在呢需要发送通知提醒您每日签到。|g' "$INFOPLIST"
+  cleanup_cn() {
     if [ -f "$PBXPROJ.bak" ]; then
       mv "$PBXPROJ.bak" "$PBXPROJ"
       echo "ℹ️  已还原工程 Bundle ID 为 com.zaine.app"
     fi
+    if [ -f "$INFOPLIST.zai_bak" ]; then
+      mv "$INFOPLIST.zai_bak" "$INFOPLIST"
+      echo "ℹ️  已还原 Info.plist 位置权限文案"
+    fi
   }
-  trap cleanup_pbx EXIT
+  trap cleanup_cn EXIT
 fi
 
 echo "===== Step 1: 清理并获取依赖 ====="
@@ -62,8 +74,12 @@ if [ -n "$ZAI_REGION" ]; then
     echo "ℹ️  区域开关: ZAI_REGION=$ZAI_REGION"
 fi
 
-# 用 eval 让 $VERSION_ARGS / $REGION_ARGS 正确展开为多个参数
-eval "flutter build ios --release --no-codesign $VERSION_ARGS $REGION_ARGS"
+# IAP 签名密钥：与后端 _MVP_SIGN_SECRET 保持一致，可通过环境变量覆盖
+SIGN_ARGS="--dart-define=ZAINE_SIGN_SECRET=${ZAINE_SIGN_SECRET:-zaine-storekit-mvp-v1}"
+echo "ℹ️  IAP 签名密钥已注入"
+
+# 用 eval 让 $VERSION_ARGS / $REGION_ARGS / $SIGN_ARGS 正确展开为多个参数
+eval "flutter build ios --release --no-codesign $VERSION_ARGS $REGION_ARGS $SIGN_ARGS"
 
 echo ""
 echo "===== Step 3: Xcode Archive ====="

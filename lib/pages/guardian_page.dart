@@ -200,6 +200,8 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
   List<Map<String, dynamic>> _guardians = [];
   // 【2026-07-12 议题B】我守护的人：我发出的已绑定普通守护卡（无人数上限），与「守护我的人」严格分区
   List<Map<String, dynamic>> _guardedByMe = [];
+  // 【2026-07-15 修复】用 String 作 key 兼容 int/String 类型，存储「我守护的人」的签到状态，用于覆盖「守护我的人」同一 user 的显示状态
+  Map<String, bool> _guardedByMeCheckedIn = {};
   // 「我守护的人」备注名（本地存储，key=guarded_by_me_remark_<receiver_id>）
   Map<int, String> _guardedRemarks = {};
   Timer? _refreshTimer; // 定期刷新定时器
@@ -344,6 +346,13 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
             _guardedByMe = list;
           });
         }
+        // 【2026-07-15 修复】构建 user_id -> 今日是否已签到的映射，用于覆盖「守护我的人」显示状态
+        // 用 .toString() 作 key，兼容后端 int/String 两种返回类型
+        _guardedByMeCheckedIn = {
+          for (final p in list)
+            if (p['receiver_id'] != null)
+              p['receiver_id'].toString(): (p['checked_in_today'] == true),
+        };
         if (kDebugMode) debugPrint('[GuardianPage] ✅ 我守护的人: ${list.length} 位');
 
         // 加载「我守护的人」备注名（本地存储，key=guarded_by_me_remark_<receiver_id>）
@@ -384,8 +393,13 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
         final foundUserId = status['user_id'] as int?;
         final avatarBase64 = status['avatar_base64']?.toString() ?? '';
         final lastSigninAt = status['last_signin_at']?.toString() ?? '';
-        final checkedInToday = status['checked_in_today'] == true;
+        var checkedInToday = status['checked_in_today'] == true;
         final todayMood = status['today_mood'] as int?;  // 1-5，null 表示未签到
+
+        // 【2026-07-15 修复】同一人若也在「我守护的人」列表，以其更权威的签到状态覆盖，消除两列表自相矛盾
+        if (foundUserId != null && _guardedByMeCheckedIn.containsKey(foundUserId.toString())) {
+          checkedInToday = _guardedByMeCheckedIn[foundUserId.toString()]!;
+        }
 
         if (avatarBase64.isNotEmpty && foundUserId != null) {
           await prefs.setString('contact_avatar_$foundUserId', avatarBase64);
@@ -510,6 +524,10 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
           if (checkinRes['success'] == true) {
             checkedInToday = checkinRes['checked_in_today'] == true;
           }
+          // 【2026-07-15 修复】与「我守护的人」列表对齐，消除同一人状态自相矛盾
+          if (foundUserId != null && _guardedByMeCheckedIn.containsKey(foundUserId.toString())) {
+            checkedInToday = _guardedByMeCheckedIn[foundUserId.toString()]!;
+          }
         } catch (e) {
           if (kDebugMode) debugPrint('[GuardianPage] 签到状态查询失败: $e');
         }
@@ -546,6 +564,32 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
     if (mounted) {
       setState(() {
         _guardians = _dedupGuardians(results);
+      });
+    }
+
+    // 【2026-07-15 修复】最终兜底：再次确保「守护我的人」与「我守护的人」签到状态一致
+    // 因为前序分支可能因异常/类型不匹配等原因没有覆盖成功
+    _finalSyncGuardianCheckInStatus();
+  }
+
+  /// 用「我守护的人」权威签到状态，强制同步「守护我的人」列表中同一 user 的显示状态
+  void _finalSyncGuardianCheckInStatus() {
+    if (_guardedByMeCheckedIn.isEmpty || _guardians.isEmpty) return;
+    bool changed = false;
+    final synced = _guardians.map((g) {
+      final uid = g['userId']?.toString();
+      if (uid != null &&
+          uid.isNotEmpty &&
+          _guardedByMeCheckedIn.containsKey(uid) &&
+          g['checkedInToday'] != _guardedByMeCheckedIn[uid]) {
+        changed = true;
+        return {...g, 'checkedInToday': _guardedByMeCheckedIn[uid]};
+      }
+      return g;
+    }).toList();
+    if (changed && mounted) {
+      setState(() {
+        _guardians = synced;
       });
     }
   }

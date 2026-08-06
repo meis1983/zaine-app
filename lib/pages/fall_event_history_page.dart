@@ -240,12 +240,6 @@ class _FallEventHistoryPageState extends State<FallEventHistoryPage> {
                   color: ZaiNeColors.textHint(), height: 1.6),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: ZaiNeSpacing.sm),
-            Text(
-              '检测到跌倒后会自动记录并通知守护者',
-              style: TextStyle(fontSize: ZaiNeFontSize.micro,
-                  color: Colors.indigo.shade400),
-            ),
           ],
         ),
       ),

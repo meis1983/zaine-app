@@ -5,6 +5,8 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 
+import '../../config/app_config.dart';
+
 class IapService {
   // 单例
   static final IapService _instance = IapService._();
@@ -14,8 +16,14 @@ class IapService {
   final InAppPurchase _iap = InAppPurchase.instance;
 
   /// 产品 ID（与 ASC 后台完全一致，使用点分隔）
-  static const String productIdMonthly = 'com.zaine.smart.monthly';
-  static const String productIdYearly = 'com.zaine.smart.yearly';
+  /// 海外版：com.zaine.smart.*（保留历史 ID）
+  /// 中国版：com.zaine.app.cn.*（与 cn Bundle ID 一致，避免与海外版 ID 冲突）
+  static const String productIdMonthly = AppConfig.isChinaRegion
+      ? 'com.zaine.app.cn.monthly'
+      : 'com.zaine.smart.monthly';
+  static const String productIdYearly = AppConfig.isChinaRegion
+      ? 'com.zaine.app.cn.yearly'
+      : 'com.zaine.smart.yearly';
   static const Set<String> _productIds = {
     productIdMonthly,
     productIdYearly,

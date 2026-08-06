@@ -34,36 +34,19 @@ struct ContentView: View {
                 }
 
                 // ===== 签到主区域 =====
-                if watchManager.checkInSuccess {
+                if watchManager.hasCheckedInToday {
                     // ✅ 成功庆祝态：星芒填充 + 小爱心 + 星火
                     VStack(spacing: 6) {
                         ZStack {
-                            Image(systemName: "star.fill")
-                                .font(.system(size: 46))
+                            Image(systemName: "heart.fill")
+                                .font(.system(size: 52))
                                 .foregroundStyle(
                                     LinearGradient(colors: [Color.green, Color.teal],
                                                    startPoint: .topLeading, endPoint: .bottomTrailing)
                                 )
                                 .scaleEffect(pulse ? 1.12 : 1.0)
+                                .shadow(color: .green.opacity(0.6), radius: pulse ? 14 : 5)
                                 .onAppear { startPulse() }
-                            // 角落冒出的小爱心，呼应 Logo 的「心」
-                            Image(systemName: "heart.fill")
-                                .font(.system(size: 15))
-                                .foregroundColor(.pink)
-                                .offset(x: 24, y: -24)
-                                .scaleEffect(celebrate ? 1.0 : 0.0)
-                                .opacity(celebrate ? 1 : 0)
-                                .animation(.spring(response: 0.45, dampingFraction: 0.6).delay(0.12), value: celebrate)
-                            // 星火点缀
-                            ForEach(0..<3) { i in
-                                Image(systemName: "sparkle")
-                                    .font(.system(size: 12))
-                                    .foregroundColor(.cyan)
-                                    .offset(sparkleOffset(i))
-                                    .scaleEffect(celebrate ? 1.0 : 0.2)
-                                    .opacity(celebrate ? 0.9 : 0)
-                                    .animation(.spring(response: 0.4, dampingFraction: 0.7).delay(0.1 + Double(i) * 0.06), value: celebrate)
-                            }
                         }
                         .onAppear {
                             celebrate = false
@@ -108,48 +91,53 @@ struct ContentView: View {
                     )
                     .cornerRadius(16)
                 } else {
-                    // 大号动画签到按钮：星芒图标
+                    // 心形 Logo 签到按钮：未签到=红色脉动心跳，点一下→绿色已签到
                     Button(action: {
                         withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
                             watchManager.sendCheckIn()
                         }
                     }) {
-                        VStack(spacing: 4) {
-                            Image(systemName: "star")
-                                .font(.system(size: 30))
-                                .foregroundStyle(.white)
-                                .shadow(color: .black.opacity(0.18), radius: 2, x: 0, y: 1)
-                                .scaleEffect(pulse ? 1.08 : 1.0)
-                                .onAppear { startPulse() }
-                            Text(watchManager.lastAction == "签到中..." ? "签到中..." : "我很好 · 点亮")
-                                .font(.system(size: 15, weight: .semibold))
+                        VStack(spacing: 8) {
+                            ZStack {
+                                // 红色心跳光环（呼吸脉动）
+                                Circle()
+                                    .stroke(Color.red.opacity(0.5), lineWidth: 2)
+                                    .frame(width: 62, height: 62)
+                                    .scaleEffect(pulse ? 1.28 : 1.0)
+                                    .opacity(pulse ? 0.15 : 0.55)
+                                Image(systemName: "heart.fill")
+                                    .font(.system(size: 46))
+                                    .foregroundStyle(
+                                        LinearGradient(colors: [Color.red, Color.pink],
+                                                       startPoint: .topLeading, endPoint: .bottomTrailing)
+                                    )
+                                    .scaleEffect(pulse ? 1.1 : 1.0)
+                                    .shadow(color: .red.opacity(0.5), radius: pulse ? 12 : 4, x: 0, y: 0)
+                                    .onAppear { startPulse() }
+                            }
+                            Text(watchManager.lastAction == "签到中..." ? "签到中..." : "我很好 · 点一下签到")
+                                .font(.system(size: 14, weight: .semibold))
                                 .foregroundColor(.white)
                         }
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 18)
-                        .background(
-                            LinearGradient(
-                                colors: [Color.green, Color.teal],
-                                startPoint: .topLeading, endPoint: .bottomTrailing
-                            )
-                        )
-                        .cornerRadius(18)
-                        .shadow(color: .green.opacity(0.5), radius: pulse ? 12 : 4, x: 0, y: 0)
+                        .padding(.vertical, 16)
                     }
                     .buttonStyle(PlainButtonStyle())
-                    .opacity(watchManager.lastAction == "签到中..." ? 0.7 : 1.0)
                 }
 
-                // ===== 【P0】智能心跳守护状态条 =====
+                // ===== 智能心跳守护状态条（仅海外版；cn 已关闭自动监测，故隐藏）=====
+                if !watchManager.isChinaRegion {
                 HStack(spacing: 6) {
                     Image(systemName: "heart.fill")
                         .font(.system(size: 13))
                         .foregroundColor(watchManager.isHeartbeatGuardian ? .red : .gray)
                         .scaleEffect(watchManager.isHeartbeatGuardian ? 1.1 : 1.0)
                     VStack(alignment: .leading, spacing: 1) {
-                        Text(watchManager.autoCheckInSuccess
-                             ? "今日心跳打卡已完成 ✅"
-                             : "心跳守护中 · 戴着表就自动签到")
+                        Text(watchManager.isChinaRegion
+                             ? "心率守护已关闭"
+                             : (watchManager.autoCheckInSuccess
+                                 ? "今日心跳打卡已完成 ✅"
+                                 : "心跳守护中 · 戴着表就自动签到"))
                             .font(.system(size: 11, weight: .medium))
                             .foregroundColor(watchManager.autoCheckInSuccess ? .green : .cyan)
                         if watchManager.lastHeartRate > 0 {
@@ -164,6 +152,7 @@ struct ContentView: View {
                 .padding(.vertical, 6)
                 .background(Color.white.opacity(0.06))
                 .cornerRadius(10)
+                } // end if !isChinaRegion
 
                 // ===== 健康速览 =====
                 VStack(alignment: .leading, spacing: 8) {
@@ -227,8 +216,11 @@ struct ContentView: View {
             .padding(12)
         }
         .onAppear {
+            watchManager.refreshCheckInState()
             watchManager.requestHealthData()
-            watchManager.startHeartRateMonitoring()
+            if !watchManager.isChinaRegion {
+                watchManager.startHeartRateMonitoring()
+            }
         }
     }
 
