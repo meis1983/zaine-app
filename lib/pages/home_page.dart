@@ -30,6 +30,8 @@ import '../widgets/check_in_button_widget.dart';
 import '../services/api/auth_service.dart';
 import '../services/api/sync_service.dart';
 import '../utils/streak_util.dart';
+import '../config/app_config.dart';
+import '../services/social/guardian_message_service.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -964,6 +966,18 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       if (kDebugMode) debugPrint('[HomePage] 签到成功，已取消断签预警通知');
     } catch (e) {
       if (kDebugMode) debugPrint('[HomePage] 取消断签预警通知失败（忽略）: $e');
+    }
+
+    // 【养成闭环 v1.97.2】把连续签到天数同步到成就进度（仅海外版，避免 CN 多余写入）
+    if (!AppConfig.isChinaRegion && uid.isNotEmpty) {
+      try {
+        final svc = SocialService();
+        await svc.updateAchievementProgress(uid, 'checkin_7', _continuousDays);
+        await svc.updateAchievementProgress(uid, 'checkin_30', _continuousDays);
+        await svc.updateAchievementProgress(uid, 'checkin_100', _continuousDays);
+      } catch (e) {
+        if (kDebugMode) debugPrint('[HomePage] 成就进度同步失败（忽略）: $e');
+      }
     }
 
     // 弹出签到成功弹窗（断签回归时传 isReturnCheckin）

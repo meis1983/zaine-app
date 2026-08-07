@@ -17,6 +17,9 @@ import 'redeem_card_page.dart';
 import 'settings_page.dart';
 import 'safety_settings_page.dart';
 import '../config/app_config.dart';
+import 'statistics_page.dart';
+import '../widgets/guardian_achievement_badge.dart';
+import '../services/social/guardian_message_service.dart';
 
 class ProfilePage extends StatefulWidget {
   /// 是否为 push 模式（需要返回按钮）
@@ -952,6 +955,12 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
                     const SizedBox(height: ZaiNeSpacing.sm),
                   ],
 
+                  // ====== 2.55 成长与记录（仅海外版：数据统计 + 我的成就） ======
+                  if (!AppConfig.isChinaRegion) ...[
+                    _buildGrowthSection(isDark),
+                    const SizedBox(height: ZaiNeSpacing.sm),
+                  ],
+
                   // ====== 2.6 医疗急救卡引导（iOS 原生功能） ======
                   _buildMedicalIDGuide(isDark),
 
@@ -1187,6 +1196,125 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
           ),
         ),
       ),
+    );
+  }
+
+  // ==================== 成长与记录（仅海外版：数据统计 + 我的成就） ====================
+  Widget _buildGrowthSection(bool isDark) {
+    return Column(
+      children: [
+        // 数据统计
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16),
+          decoration: BoxDecoration(
+            color: ZaiNeColors.cardBg(),
+            borderRadius: BorderRadius.circular(ZaiNeRadius.card),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withAlpha(((isDark ? 0.12 : 0.04) * 255).round()),
+                blurRadius: 10,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: InkWell(
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const StatisticsPage()),
+              );
+            },
+            borderRadius: BorderRadius.circular(ZaiNeRadius.card),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+              child: Row(
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(colors: [Colors.teal.shade400, Colors.teal.shade600]),
+                      borderRadius: BorderRadius.circular(ZaiNeRadius.small),
+                    ),
+                    child: const Icon(Icons.bar_chart_rounded, color: Colors.white, size: 22),
+                  ),
+                  const SizedBox(width: ZaiNeSpacing.cardSm),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('数据统计', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: ZaiNeColors.textPrimary())),
+                        const SizedBox(height: 3),
+                        Text('签到日历 · 健康趋势 · 经期周期', style: TextStyle(fontSize: 12, color: ZaiNeColors.textSecondary())),
+                      ],
+                    ),
+                  ),
+                  Icon(Icons.chevron_right_rounded, color: ZaiNeColors.textSecondary(), size: 22),
+                ],
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: ZaiNeSpacing.sm),
+        // 我的成就
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16),
+          decoration: BoxDecoration(
+            color: ZaiNeColors.cardBg(),
+            borderRadius: BorderRadius.circular(ZaiNeRadius.card),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withAlpha(((isDark ? 0.12 : 0.04) * 255).round()),
+                blurRadius: 10,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: InkWell(
+            onTap: () async {
+              final prefs = await SharedPreferences.getInstance();
+              final aid = prefs.getString('user_id') ?? '';
+              if (!mounted) return;
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => GuardianAchievementsPage(
+                    userId: aid,
+                    socialService: SocialService(),
+                  ),
+                ),
+              );
+            },
+            borderRadius: BorderRadius.circular(ZaiNeRadius.card),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+              child: Row(
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(colors: [Colors.amber.shade400, Colors.amber.shade600]),
+                      borderRadius: BorderRadius.circular(ZaiNeRadius.small),
+                    ),
+                    child: const Icon(Icons.emoji_events_rounded, color: Colors.white, size: 22),
+                  ),
+                  const SizedBox(width: ZaiNeSpacing.cardSm),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('我的成就', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: ZaiNeColors.textPrimary())),
+                        const SizedBox(height: 3),
+                        Text('连续签到 · 关怀 · 里程碑', style: TextStyle(fontSize: 12, color: ZaiNeColors.textSecondary())),
+                      ],
+                    ),
+                  ),
+                  Icon(Icons.chevron_right_rounded, color: ZaiNeColors.textSecondary(), size: 22),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 

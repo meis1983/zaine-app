@@ -319,9 +319,9 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
       alertHour = 12;
       alertMinute = 0;
     } else if (daysSinceLastCheckIn >= 3) {
-      // 第3天+未签到 → 09:00 强提醒 + 守护圈影响
-      title = '【重要】连续$daysSinceLastCheckIn天未签到';
-      body = '守护圈将收到异常提醒。点击签到，让大家放心 ❤️';
+      // 第3天+未签到 → 09:00 强提醒（本机本地通知，仅提醒自己，不通知守护人，CN/海外均可）
+      title = '【提醒】连续$daysSinceLastCheckIn天没签到了';
+      body = '今天花3秒打开「在呢」签到，给自己一个安心 ❤️';
       alertHour = 9;
       alertMinute = 0;
     } else {

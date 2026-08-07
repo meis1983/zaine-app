@@ -53,13 +53,13 @@ class FeatureFlags {
   static const bool enableSocial = false;
 
   /// 数据统计图表（热力图/趋势图等高级统计）
-  static const bool enableStatistics = false;
+  static const bool enableStatistics = true;
 
   /// 经期预测
   static const bool enableMenstruation = true;
 
   /// 成就系统
-  static const bool enableAchievements = false;
+  static const bool enableAchievements = true;
 
   /// 新手任务卡片
   static const bool enableNewbieTask = false;
