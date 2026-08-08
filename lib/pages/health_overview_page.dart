@@ -134,7 +134,12 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
                   ],
                   // ② L1 守护级：异常时守护圈需要被惊动的 5 项
                   const SizedBox(height: ZaiNeSpacing.xl),
-                  _buildSectionTitle('守护指标', '异常时会提醒你向守护圈报平安'),
+                  _buildSectionTitle(
+                    '守护指标',
+                    AppConfig.isChinaRegion
+                        ? '记录今日体征，随时可主动分享'
+                        : '异常时会提醒你向守护圈报平安',
+                  ),
                   const SizedBox(height: ZaiNeSpacing.lg),
                   _buildL1Grid(),
                   // ③ 睡眠（Apple Watch 原生分期）

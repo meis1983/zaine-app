@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../config/app_config.dart';
 
 /// ============================================================================
 /// 安全信号引擎 (SafetySignalEngine) — v1.97.2
@@ -294,8 +295,23 @@ class SafetySignalEngine {
   }
 
   // ---------- 文案生成：指标是原料，结论才是产品 ----------
-
+  // 【v1.97.2 合规】CN 版禁用任何「守护圈/报平安/通知」措辞，
+  // 走 manual-confirm 路线，文案须中性与主动；海外版保留自动外发相关用语。
   static String _headline(SafetyLevel level, DateTime t) {
+    if (AppConfig.isChinaRegion) {
+      switch (level) {
+        case SafetyLevel.ok:
+          if (t.hour < 11) return '早上状态不错';
+          if (t.hour < 18) return '今天状态平稳';
+          return '今天一切都好';
+        case SafetyLevel.attention:
+          return '有几项值得留意';
+        case SafetyLevel.alert:
+          return '今日状态良好，可主动告知家人'; // CN 中性版（你的拍板）
+        case SafetyLevel.unknown:
+          return '暂无健康数据';
+      }
+    }
     switch (level) {
       case SafetyLevel.ok:
         if (t.hour < 11) return '早上状态不错';
@@ -311,6 +327,20 @@ class SafetySignalEngine {
   }
 
   static String _detail(SafetyLevel level, List<SafetyReason> reasons, Map<String, dynamic> m) {
+    if (AppConfig.isChinaRegion) {
+      switch (level) {
+        case SafetyLevel.ok:
+          final steps = _num(m['steps']).toInt();
+          if (steps > 0) return '今日 $steps 步，各项体征正常，可随时主动告知家人';
+          return '各项体征正常，可随时主动告知家人';
+        case SafetyLevel.attention:
+          return '共 ${reasons.length} 项提醒，不一定有问题，建议留意一下';
+        case SafetyLevel.alert:
+          return '检测到一些值得关注的信号，可主动告知家人，让家人少担心一点';
+        case SafetyLevel.unknown:
+          return '佩戴 Apple Watch 并开启健康权限后，这里会显示你的今日状态';
+      }
+    }
     switch (level) {
       case SafetyLevel.ok:
         final steps = _num(m['steps']).toInt();
