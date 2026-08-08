@@ -70,12 +70,59 @@ import HealthKit
             let args = call.arguments as? [String: Any] ?? [:]
             let hours = args["hours"] as? Int ?? 24
             self.getRecentFallEvents(hours: hours, result: result)
+        case "getWristTemperature":
+            self.getWristTemperature(result: result)
+        case "getFullHealthSummary":
+            // 【v1.97.2】全量健康镜像：一次性读取 Apple Watch 同步进 HealthKit 的所有可读指标
+            self.getFullHealthSummary(result: result)
         default:
             result(FlutterMethodNotImplemented)
         }
     }
   }
   
+  // MARK: - 手腕温度（Apple Watch 同步）
+  /// 【v1.97.2 修复】读取由 Apple Watch 同步到 iPhone HealthKit 的手腕温度。
+  /// health Flutter 包未暴露 APPLE_SLEEPING_WRIST_TEMPERATURE 类型，故走原生桥。
+  /// 返回: {"value": 摄氏度(Double), "date": ISO8601}；无数据/未授权返回 nil（Dart 侧显示 "--"）。
+  private func getWristTemperature(result: @escaping FlutterResult) {
+    guard HKHealthStore.isHealthDataAvailable() else {
+      result(FlutterError(code: "NO_HEALTH", message: "HealthKit unavailable", details: nil))
+      return
+    }
+    guard let healthStore = self.healthStore else {
+      result(FlutterError(code: "NO_HEALTH", message: "HealthKit store not initialized", details: nil))
+      return
+    }
+    // 手腕温度需 iOS 16+（HKQuantityTypeIdentifierAppleSleepingWristTemperature 始于 iOS 16）
+    guard #available(iOS 16.0, *) else {
+      result(nil)
+      return
+    }
+    let type = HKQuantityType.quantityType(forIdentifier: .appleSleepingWristTemperature)!
+    // 首次调用可能触发一次性系统授权弹窗；已决定则不再弹。
+    healthStore.requestAuthorization(toShare: nil, read: [type]) { granted, _ in
+      guard granted else {
+        result(nil)
+        return
+      }
+      let now = Date()
+      let start = Calendar.current.date(byAdding: .day, value: -7, to: now)!
+      let predicate = HKQuery.predicateForSamples(withStart: start, end: now, options: .strictStartDate)
+      let sort = [NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)]
+      let query = HKSampleQuery(sampleType: type, predicate: predicate, limit: 1, sortDescriptors: sort) { _, samples, error in
+        guard error == nil, let sample = samples?.first as? HKQuantitySample else {
+          result(nil)
+          return
+        }
+        let celsius = sample.quantity.doubleValue(for: HKUnit.degreeCelsius())
+        let dateStr = ISO8601DateFormatter().string(from: sample.endDate)
+        result(["value": celsius, "date": dateStr])
+      }
+      healthStore.execute(query)
+    }
+  }
+
   // MARK: - Watch Method Channel（v1.94.0）
   /// 接收 Flutter 回包的 Watch 签到结果，转发给 Apple Watch
   /// 【v1.97.0 修复】接收引擎级 binaryMessenger（来自 didInitializeImplicitFlutterEngine），不再强转 VC
@@ -507,5 +554,454 @@ import HealthKit
   /// 【v1.93.2 修复】监听可达性变化
   func sessionReachabilityDidChange(_ session: WCSession) {
       print("[iOS AppDelegate] 📡 WCSession 可达性变化: isReachable=\(session.isReachable)")
+  }
+}
+
+// MARK: - ==================== 全量健康镜像 HealthMirror (v1.97.2) ====================
+//
+// 目标：把 Apple Watch 系统级同步进 iPhone HealthKit 的**全部可读**健康指标一次性读出，
+//      让「在呢+」健康页 ≈ Apple Watch 健康页，用户不必再回系统「健康」App 查看。
+//
+// 设计要点：
+//  1) 单一数据源：Dart 侧 HealthService 只调 getFullHealthSummary，
+//     杜绝「health 包 + 原生桥」两套逻辑分叉（历史上多次因此出现数据不一致）。
+//  2) 容错优先：任一项查询失败/未授权 → 该 key 缺失，绝不抛错、绝不影响其他项。
+//  3) 部署目标 iOS 15.0 → 仅 iOS 16+ 符号需 #available 守卫。
+//  4) 全部 key 扁平 snake_case，兼容既有 key（heart_rate / steps / sleep_* 等）。
+
+/// 线程安全结果收集盒：HealthKit 各查询回调来自不同队列，必须加锁写入。
+private final class ZaiMirrorBox {
+  private let lock = NSLock()
+  private var data: [String: Any] = [:]
+  func set(_ key: String, _ value: Any?) {
+    guard let v = value else { return }
+    lock.lock(); data[key] = v; lock.unlock()
+  }
+  func snapshot() -> [String: Any] {
+    lock.lock(); let d = data; lock.unlock(); return d
+  }
+}
+
+extension AppDelegate {
+
+  // MARK: - 入口
+
+  /// 一次性读取全部可读健康指标，返回扁平 Map。
+  func getFullHealthSummary(result: @escaping FlutterResult) {
+    guard HKHealthStore.isHealthDataAvailable(), let store = self.healthStore else {
+      result(FlutterError(code: "NO_HEALTH", message: "HealthKit unavailable", details: nil))
+      return
+    }
+    let readTypes = self.zaiMirrorReadTypes()
+    store.requestAuthorization(toShare: nil, read: readTypes) { _, _ in
+      // 授权结果不判断：HealthKit 出于隐私从不告知读权限真实状态，
+      // 未授权类型查询会返回空数组，天然降级，不阻塞其余指标。
+      self.zaiRunMirrorQueries(store: store, result: result)
+    }
+  }
+
+  // MARK: - 读权限清单
+
+  private func zaiMirrorReadTypes() -> Set<HKObjectType> {
+    var t = Set<HKObjectType>()
+    func q(_ id: HKQuantityTypeIdentifier) {
+      if let x = HKObjectType.quantityType(forIdentifier: id) { t.insert(x) }
+    }
+    func c(_ id: HKCategoryTypeIdentifier) {
+      if let x = HKObjectType.categoryType(forIdentifier: id) { t.insert(x) }
+    }
+
+    // ① 活动（三环）
+    q(.stepCount); q(.distanceWalkingRunning); q(.activeEnergyBurned); q(.basalEnergyBurned)
+    q(.appleExerciseTime); q(.appleStandTime); q(.flightsClimbed)
+    c(.appleStandHour)
+    t.insert(HKObjectType.activitySummaryType())
+
+    // ② 步行稳定性
+    q(.walkingSpeed); q(.walkingStepLength); q(.walkingAsymmetryPercentage)
+    q(.walkingDoubleSupportPercentage); q(.sixMinuteWalkTestDistance); q(.stairAscentSpeed)
+    q(.appleWalkingSteadiness)
+
+    // ③ 心脏
+    q(.heartRate); q(.restingHeartRate); q(.walkingHeartRateAverage)
+    q(.heartRateVariabilitySDNN); q(.vo2Max)
+    c(.highHeartRateEvent); c(.lowHeartRateEvent); c(.irregularHeartRhythmEvent)
+    t.insert(HKObjectType.electrocardiogramType())          // 心电图（iOS 14+ 可读）
+    if #available(iOS 16.0, *) { q(.atrialFibrillationBurden) }
+
+    // ④ 呼吸
+    q(.oxygenSaturation); q(.respiratoryRate)
+
+    // ⑤ 身体
+    q(.bodyTemperature); q(.bloodPressureSystolic); q(.bloodPressureDiastolic)
+    q(.bodyMass); q(.height); q(.bodyMassIndex); q(.bodyFatPercentage)
+    if #available(iOS 16.0, *) { q(.appleSleepingWristTemperature) }
+
+    // ⑥ 听力
+    q(.environmentalAudioExposure); q(.headphoneAudioExposure)
+    c(.environmentalAudioExposureEvent)
+    if #available(iOS 14.2, *) { c(.headphoneAudioExposureEvent) }
+
+    // ⑦ 睡眠 / 正念
+    c(.sleepAnalysis); c(.mindfulSession)
+
+    // ⑧ 训练
+    t.insert(HKObjectType.workoutType())
+
+    return t
+  }
+
+  // MARK: - 查询编排
+
+  private func zaiRunMirrorQueries(store: HKHealthStore, result: @escaping FlutterResult) {
+    let box = ZaiMirrorBox()
+    let group = DispatchGroup()
+    let cal = Calendar.current
+    let now = Date()
+    let todayStart = cal.startOfDay(for: now)
+    let d7 = cal.date(byAdding: .day, value: -7, to: now) ?? now
+    let d30 = cal.date(byAdding: .day, value: -30, to: now) ?? now
+    // 睡眠窗：昨日 18:00 → 现在（与 Dart 侧 v1.97.2 口径一致，避免 48h 窗口串天）
+    let yst = cal.date(byAdding: .day, value: -1, to: now) ?? now
+    let sleepStart = cal.date(bySettingHour: 18, minute: 0, second: 0, of: yst) ?? d7
+
+    let bpm = HKUnit.count().unitDivided(by: .minute())
+    let mps = HKUnit.meter().unitDivided(by: .second())
+
+    // ---------- ① 活动（今日累计） ----------
+    zaiSum(store, .stepCount, .count(), todayStart, now, group) { box.set("steps", Int($0)) }
+    zaiSum(store, .distanceWalkingRunning, .meter(), todayStart, now, group) { box.set("distance_m", Int($0)) }
+    zaiSum(store, .activeEnergyBurned, .kilocalorie(), todayStart, now, group) { box.set("active_energy", Int($0)) }
+    zaiSum(store, .basalEnergyBurned, .kilocalorie(), todayStart, now, group) { box.set("basal_energy", Int($0)) }
+    zaiSum(store, .appleExerciseTime, .minute(), todayStart, now, group) { box.set("exercise_minutes", Int($0)) }
+    zaiSum(store, .flightsClimbed, .count(), todayStart, now, group) { box.set("flights_climbed", Int($0)) }
+    zaiActivityRings(store, cal, now, group, box)
+
+    // ---------- ② 步行稳定性（近 7 天最新值） ----------
+    zaiLatest(store, .walkingSpeed, mps, d30, now, group) { v, _ in box.set("walking_speed_mps", v) }
+    zaiLatest(store, .walkingStepLength, HKUnit.meterUnit(with: .centi), d30, now, group) { v, _ in box.set("walking_step_length_cm", v) }
+    zaiLatest(store, .walkingAsymmetryPercentage, .percent(), d30, now, group) { v, _ in box.set("walking_asymmetry_pct", v * 100) }
+    zaiLatest(store, .walkingDoubleSupportPercentage, .percent(), d30, now, group) { v, _ in box.set("walking_double_support_pct", v * 100) }
+    zaiLatest(store, .sixMinuteWalkTestDistance, .meter(), d30, now, group) { v, _ in box.set("six_min_walk_m", v) }
+    zaiLatest(store, .stairAscentSpeed, mps, d30, now, group) { v, _ in box.set("stair_ascent_speed_mps", v) }
+    zaiLatest(store, .appleWalkingSteadiness, .percent(), d30, now, group) { v, _ in box.set("walking_steadiness_pct", v * 100) }
+
+    // ---------- ③ 心脏 ----------
+    zaiLatest(store, .heartRate, bpm, d7, now, group) { v, d in
+      box.set("heart_rate", v); box.set("heart_rate_date", ZaiMirrorFmt.iso(d))
+    }
+    zaiStats(store, .heartRate, bpm, todayStart, now, group) { mn, mx, avg in
+      box.set("heart_rate_min", mn); box.set("heart_rate_max", mx); box.set("heart_rate_avg", avg)
+    }
+    zaiLatest(store, .restingHeartRate, bpm, d7, now, group) { v, _ in box.set("resting_heart_rate", v) }
+    zaiLatest(store, .walkingHeartRateAverage, bpm, d7, now, group) { v, _ in box.set("walking_heart_rate_avg", v) }
+    zaiLatest(store, .heartRateVariabilitySDNN, HKUnit.secondUnit(with: .milli), d7, now, group) { v, _ in box.set("hrv", v) }
+    zaiLatest(store, .vo2Max, HKUnit(from: "ml/kg*min"), d30, now, group) { v, _ in box.set("vo2max", v) }
+    zaiCount(store, .highHeartRateEvent, d30, now, group) { box.set("high_hr_events_30d", $0) }
+    zaiCount(store, .lowHeartRateEvent, d30, now, group) { box.set("low_hr_events_30d", $0) }
+    zaiCount(store, .irregularHeartRhythmEvent, d30, now, group) { box.set("irregular_rhythm_events_30d", $0) }
+    zaiEcg(store, d30, now, group, box)
+    if #available(iOS 16.0, *) {
+      zaiLatest(store, .atrialFibrillationBurden, .percent(), d30, now, group) { v, _ in box.set("afib_burden_pct", v * 100) }
+    }
+
+    // ---------- ④ 呼吸 ----------
+    zaiLatest(store, .oxygenSaturation, .percent(), d7, now, group) { v, d in
+      box.set("blood_oxygen", v * 100); box.set("blood_oxygen_date", ZaiMirrorFmt.iso(d))
+    }
+    zaiLatest(store, .respiratoryRate, bpm, d7, now, group) { v, _ in box.set("respiratory_rate", v) }
+
+    // ---------- ⑤ 身体 ----------
+    zaiLatest(store, .bodyTemperature, .degreeCelsius(), d30, now, group) { v, _ in box.set("body_temperature", v) }
+    zaiLatest(store, .bloodPressureSystolic, .millimeterOfMercury(), d30, now, group) { v, d in
+      box.set("bp_systolic", v); box.set("bp_date", ZaiMirrorFmt.iso(d))
+    }
+    zaiLatest(store, .bloodPressureDiastolic, .millimeterOfMercury(), d30, now, group) { v, _ in box.set("bp_diastolic", v) }
+    zaiLatest(store, .bodyMass, HKUnit.gramUnit(with: .kilo), d30, now, group) { v, _ in box.set("body_mass_kg", v) }
+    zaiLatest(store, .height, .meter(), d30, now, group) { v, _ in box.set("height_cm", v * 100) }
+    zaiLatest(store, .bodyMassIndex, .count(), d30, now, group) { v, _ in box.set("bmi", v) }
+    zaiLatest(store, .bodyFatPercentage, .percent(), d30, now, group) { v, _ in box.set("body_fat_pct", v * 100) }
+    if #available(iOS 16.0, *) {
+      zaiLatest(store, .appleSleepingWristTemperature, .degreeCelsius(), d7, now, group) { v, d in
+        box.set("wrist_temperature", v); box.set("wrist_temperature_date", ZaiMirrorFmt.iso(d))
+      }
+    }
+
+    // ---------- ⑥ 听力 ----------
+    // 注意：音量暴露属 discreteEquivalentContinuousLevel 聚合风格，
+    // 用 HKStatisticsQuery 的 discreteAverage 可能抛 ObjC 异常直接崩溃，故只取最新样本。
+    let dbUnit = HKUnit.decibelAWeightedSoundPressureLevel()
+    zaiLatest(store, .environmentalAudioExposure, dbUnit, d7, now, group) { v, d in
+      box.set("env_audio_db", v); box.set("env_audio_db_date", ZaiMirrorFmt.iso(d))
+    }
+    zaiLatest(store, .headphoneAudioExposure, dbUnit, d7, now, group) { v, d in
+      box.set("headphone_audio_db", v); box.set("headphone_audio_db_date", ZaiMirrorFmt.iso(d))
+    }
+    zaiCount(store, .environmentalAudioExposureEvent, d7, now, group) { box.set("env_audio_events_7d", $0) }
+    if #available(iOS 14.2, *) {
+      zaiCount(store, .headphoneAudioExposureEvent, d7, now, group) { box.set("headphone_audio_events_7d", $0) }
+    }
+
+    // ---------- ⑦ 睡眠 / 正念 ----------
+    zaiSleep(store, sleepStart, now, group, box)
+    zaiMindful(store, d7, now, group, box)
+
+    // ---------- ⑧ 训练 ----------
+    zaiWorkouts(store, d7, now, group, box)
+
+    // ---------- 汇总 ----------
+    group.notify(queue: .main) {
+      var out = box.snapshot()
+      out["generated_at"] = ZaiMirrorFmt.iso(now)
+      out["mirror_version"] = "1.97.2"
+      print("[HealthMirror] ✅ 全量读取完成，共 \(out.count) 项")
+      result(out)
+    }
+  }
+
+  // MARK: - 通用查询工具
+
+  /// 区间累计（cumulative 类型）
+  private func zaiSum(_ store: HKHealthStore, _ id: HKQuantityTypeIdentifier, _ unit: HKUnit,
+                      _ start: Date, _ end: Date, _ group: DispatchGroup,
+                      _ done: @escaping (Double) -> Void) {
+    guard let type = HKQuantityType.quantityType(forIdentifier: id) else { return }
+    group.enter()
+    let pred = HKQuery.predicateForSamples(withStart: start, end: end, options: .strictStartDate)
+    let q = HKStatisticsQuery(quantityType: type, quantitySamplePredicate: pred, options: .cumulativeSum) { _, stats, _ in
+      defer { group.leave() }
+      guard let sum = stats?.sumQuantity() else { return }
+      done(sum.doubleValue(for: unit))
+    }
+    store.execute(q)
+  }
+
+  /// 最新一条离散样本
+  private func zaiLatest(_ store: HKHealthStore, _ id: HKQuantityTypeIdentifier, _ unit: HKUnit,
+                         _ start: Date, _ end: Date, _ group: DispatchGroup,
+                         _ done: @escaping (Double, Date) -> Void) {
+    guard let type = HKQuantityType.quantityType(forIdentifier: id) else { return }
+    group.enter()
+    let pred = HKQuery.predicateForSamples(withStart: start, end: end, options: .strictStartDate)
+    let sort = [NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)]
+    let q = HKSampleQuery(sampleType: type, predicate: pred, limit: 1, sortDescriptors: sort) { _, samples, _ in
+      defer { group.leave() }
+      guard let s = samples?.first as? HKQuantitySample else { return }
+      done(s.quantity.doubleValue(for: unit), s.endDate)
+    }
+    store.execute(q)
+  }
+
+  /// 区间 min / max / avg（离散类型）
+  private func zaiStats(_ store: HKHealthStore, _ id: HKQuantityTypeIdentifier, _ unit: HKUnit,
+                        _ start: Date, _ end: Date, _ group: DispatchGroup,
+                        _ done: @escaping (Double?, Double?, Double?) -> Void) {
+    guard let type = HKQuantityType.quantityType(forIdentifier: id) else { return }
+    group.enter()
+    let pred = HKQuery.predicateForSamples(withStart: start, end: end, options: .strictStartDate)
+    let q = HKStatisticsQuery(quantityType: type, quantitySamplePredicate: pred,
+                              options: [.discreteMin, .discreteMax, .discreteAverage]) { _, stats, _ in
+      defer { group.leave() }
+      guard let s = stats else { return }
+      done(s.minimumQuantity()?.doubleValue(for: unit),
+           s.maximumQuantity()?.doubleValue(for: unit),
+           s.averageQuantity()?.doubleValue(for: unit))
+    }
+    store.execute(q)
+  }
+
+  /// Category 事件计数
+  private func zaiCount(_ store: HKHealthStore, _ id: HKCategoryTypeIdentifier,
+                        _ start: Date, _ end: Date, _ group: DispatchGroup,
+                        _ done: @escaping (Int) -> Void) {
+    guard let type = HKCategoryType.categoryType(forIdentifier: id) else { return }
+    group.enter()
+    let pred = HKQuery.predicateForSamples(withStart: start, end: end, options: .strictStartDate)
+    let q = HKSampleQuery(sampleType: type, predicate: pred, limit: HKObjectQueryNoLimit, sortDescriptors: nil) { _, samples, _ in
+      defer { group.leave() }
+      done(samples?.count ?? 0)
+    }
+    store.execute(q)
+  }
+
+  // MARK: - 专项查询
+
+  /// 活动三环（含目标值）——HKActivitySummary 是唯一能拿到「圆环目标」的接口
+  private func zaiActivityRings(_ store: HKHealthStore, _ cal: Calendar, _ now: Date,
+                                _ group: DispatchGroup, _ box: ZaiMirrorBox) {
+    group.enter()
+    var comps = cal.dateComponents([.year, .month, .day], from: now)
+    comps.calendar = cal
+    let pred = HKQuery.predicateForActivitySummary(with: comps)
+    let q = HKActivitySummaryQuery(predicate: pred) { _, summaries, _ in
+      defer { group.leave() }
+      guard let s = summaries?.first else { return }
+      box.set("ring_move_kcal", s.activeEnergyBurned.doubleValue(for: .kilocalorie()))
+      box.set("ring_move_goal_kcal", s.activeEnergyBurnedGoal.doubleValue(for: .kilocalorie()))
+      box.set("ring_exercise_min", s.appleExerciseTime.doubleValue(for: .minute()))
+      box.set("ring_exercise_goal_min", s.appleExerciseTimeGoal.doubleValue(for: .minute()))
+      box.set("ring_stand_hours", s.appleStandHours.doubleValue(for: .count()))
+      box.set("ring_stand_goal_hours", s.appleStandHoursGoal.doubleValue(for: .count()))
+    }
+    store.execute(q)
+  }
+
+  /// 心电图（iOS 14+ 第三方可读：分类结果 + 平均心率 + 症状标记）
+  private func zaiEcg(_ store: HKHealthStore, _ start: Date, _ end: Date,
+                      _ group: DispatchGroup, _ box: ZaiMirrorBox) {
+    group.enter()
+    let type = HKObjectType.electrocardiogramType()
+    let pred = HKQuery.predicateForSamples(withStart: start, end: end, options: .strictStartDate)
+    let sort = [NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)]
+    let q = HKSampleQuery(sampleType: type, predicate: pred, limit: HKObjectQueryNoLimit, sortDescriptors: sort) { _, samples, _ in
+      defer { group.leave() }
+      guard let list = samples as? [HKElectrocardiogram], let latest = list.first else { return }
+      box.set("ecg_count_30d", list.count)
+      box.set("ecg_date", ZaiMirrorFmt.iso(latest.endDate))
+      box.set("ecg_classification", ZaiMirrorFmt.ecgText(latest.classification))
+      if let hr = latest.averageHeartRate?.doubleValue(for: HKUnit.count().unitDivided(by: .minute())) {
+        box.set("ecg_avg_bpm", hr)
+      }
+    }
+    store.execute(q)
+  }
+
+  /// 睡眠：阶段时长 + 入睡/起床时间 + 睡眠期间心率/血氧/呼吸均值
+  private func zaiSleep(_ store: HKHealthStore, _ start: Date, _ end: Date,
+                        _ group: DispatchGroup, _ box: ZaiMirrorBox) {
+    guard let type = HKCategoryType.categoryType(forIdentifier: .sleepAnalysis) else { return }
+    group.enter()
+    let pred = HKQuery.predicateForSamples(withStart: start, end: end, options: .strictStartDate)
+    let sort = [NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)]
+    let q = HKSampleQuery(sampleType: type, predicate: pred, limit: HKObjectQueryNoLimit, sortDescriptors: sort) { _, samples, _ in
+      defer { group.leave() }
+      guard let list = samples as? [HKCategorySample], !list.isEmpty else { return }
+      // 原始 rawValue：0=inBed 1=asleepUnspecified 2=awake 3=asleepCore 4=asleepDeep 5=asleepREM
+      var inBed = 0.0, core = 0.0, deep = 0.0, rem = 0.0, awake = 0.0, unspecified = 0.0
+      var sleepStart: Date? = nil
+      var sleepEnd: Date? = nil
+      for s in list {
+        let mins = s.endDate.timeIntervalSince(s.startDate) / 60.0
+        switch s.value {
+        case 0: inBed += mins
+        case 1: unspecified += mins
+        case 2: awake += mins
+        case 3: core += mins
+        case 4: deep += mins
+        case 5: rem += mins
+        default: break
+        }
+        if s.value != 0 && s.value != 2 {
+          if sleepStart == nil || s.startDate < sleepStart! { sleepStart = s.startDate }
+          if sleepEnd == nil || s.endDate > sleepEnd! { sleepEnd = s.endDate }
+        }
+      }
+      let asleep = core + deep + rem + unspecified
+      box.set("sleep_in_bed", Int(inBed.rounded()))
+      box.set("sleep_core", Int(core.rounded()))
+      box.set("sleep_deep", Int(deep.rounded()))
+      box.set("sleep_rem", Int(rem.rounded()))
+      box.set("sleep_awake", Int(awake.rounded()))
+      box.set("sleep_asleep", Int(asleep.rounded()))
+      box.set("sleep_total", Int(asleep.rounded()))
+      if let ss = sleepStart { box.set("sleep_bedtime", ZaiMirrorFmt.iso(ss)) }
+      if let se = sleepEnd { box.set("sleep_wake_time", ZaiMirrorFmt.iso(se)) }
+
+      // 睡眠区间内的生命体征均值（Apple Watch 夜间监测的核心价值）
+      if let ss = sleepStart, let se = sleepEnd, se > ss {
+        let bpm = HKUnit.count().unitDivided(by: .minute())
+        self.zaiStats(store, .heartRate, bpm, ss, se, group) { _, _, avg in box.set("sleep_heart_rate_avg", avg) }
+        self.zaiStats(store, .oxygenSaturation, .percent(), ss, se, group) { _, _, avg in
+          if let a = avg { box.set("sleep_spo2_avg", a * 100) }
+        }
+        self.zaiStats(store, .respiratoryRate, bpm, ss, se, group) { _, _, avg in box.set("sleep_respiratory_avg", avg) }
+      }
+    }
+    store.execute(q)
+  }
+
+  /// 正念/呼吸训练
+  private func zaiMindful(_ store: HKHealthStore, _ start: Date, _ end: Date,
+                          _ group: DispatchGroup, _ box: ZaiMirrorBox) {
+    guard let type = HKCategoryType.categoryType(forIdentifier: .mindfulSession) else { return }
+    group.enter()
+    let pred = HKQuery.predicateForSamples(withStart: start, end: end, options: .strictStartDate)
+    let q = HKSampleQuery(sampleType: type, predicate: pred, limit: HKObjectQueryNoLimit, sortDescriptors: nil) { _, samples, _ in
+      defer { group.leave() }
+      guard let list = samples, !list.isEmpty else { return }
+      let total = list.reduce(0.0) { $0 + $1.endDate.timeIntervalSince($1.startDate) / 60.0 }
+      box.set("mindful_sessions_7d", list.count)
+      box.set("mindful_minutes_7d", Int(total.rounded()))
+    }
+    store.execute(q)
+  }
+
+  /// 训练记录（近 7 天，最多 20 条）
+  private func zaiWorkouts(_ store: HKHealthStore, _ start: Date, _ end: Date,
+                           _ group: DispatchGroup, _ box: ZaiMirrorBox) {
+    group.enter()
+    let pred = HKQuery.predicateForSamples(withStart: start, end: end, options: .strictStartDate)
+    let sort = [NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: false)]
+    let q = HKSampleQuery(sampleType: HKObjectType.workoutType(), predicate: pred, limit: 20, sortDescriptors: sort) { _, samples, _ in
+      defer { group.leave() }
+      guard let list = samples as? [HKWorkout], !list.isEmpty else { return }
+      var arr: [[String: Any]] = []
+      for w in list {
+        var item: [String: Any] = [
+          "type": ZaiMirrorFmt.workoutText(w.workoutActivityType),
+          "start": ZaiMirrorFmt.iso(w.startDate),
+          "end": ZaiMirrorFmt.iso(w.endDate),
+          "minutes": Int((w.duration / 60.0).rounded()),
+        ]
+        if let e = w.totalEnergyBurned?.doubleValue(for: .kilocalorie()) { item["kcal"] = Int(e.rounded()) }
+        if let d = w.totalDistance?.doubleValue(for: .meter()) { item["distance_m"] = Int(d.rounded()) }
+        arr.append(item)
+      }
+      box.set("workouts", arr)
+      box.set("workout_count_7d", arr.count)
+    }
+    store.execute(q)
+  }
+}
+
+// MARK: - 格式化工具
+
+private enum ZaiMirrorFmt {
+  static let isoFormatter = ISO8601DateFormatter()
+
+  static func iso(_ d: Date) -> String { isoFormatter.string(from: d) }
+
+  static func ecgText(_ c: HKElectrocardiogram.Classification) -> String {
+    switch c {
+    case .sinusRhythm: return "sinus_rhythm"
+    case .atrialFibrillation: return "atrial_fibrillation"
+    case .inconclusiveHighHeartRate: return "inconclusive_high_hr"
+    case .inconclusiveLowHeartRate: return "inconclusive_low_hr"
+    case .inconclusivePoorReading: return "inconclusive_poor_reading"
+    case .inconclusiveOther: return "inconclusive_other"
+    case .unrecognized: return "unrecognized"
+    case .notSet: return "not_set"
+    @unknown default: return "unknown"
+    }
+  }
+
+  static func workoutText(_ t: HKWorkoutActivityType) -> String {
+    switch t {
+    case .walking: return "walking"
+    case .running: return "running"
+    case .cycling: return "cycling"
+    case .swimming: return "swimming"
+    case .hiking: return "hiking"
+    case .yoga: return "yoga"
+    case .traditionalStrengthTraining, .functionalStrengthTraining: return "strength"
+    case .highIntensityIntervalTraining: return "hiit"
+    case .elliptical: return "elliptical"
+    case .rowing: return "rowing"
+    case .cardioDance, .socialDance: return "dance"
+    case .coreTraining: return "core"
+    case .mindAndBody: return "mind_body"
+    case .stairClimbing, .stairs: return "stairs"
+    default: return "other"
+    }
   }
 }

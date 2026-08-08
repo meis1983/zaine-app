@@ -902,7 +902,10 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
             await prefs.setInt(totalKey, serverTotal);
             if (mounted) setState(() => _totalDays = serverTotal);
           }
-          if (serverStreak != null && serverStreak > 0) {
+          // 【v1.97.2 彻底修复】本地历史已用 StreakUtil 重算为单一真相源(newDays)，
+          // 仅在本地历史为空(newDays==0)时才用服务端 streak 兜底，
+          // 避免后端偶发错值覆盖正确的本地重算结果（手机端自身签到同理防御）。
+          if (serverStreak != null && serverStreak > 0 && newDays == 0) {
             await prefs.setInt(streakKey, serverStreak);
             if (mounted) setState(() => _continuousDays = serverStreak);
           }

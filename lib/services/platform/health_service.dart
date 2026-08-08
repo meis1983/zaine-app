@@ -10,13 +10,18 @@ import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'watch_data_service.dart';
 import '../safety/safety_service.dart';
+import '../safety/safety_signal_engine.dart';
 import '../../config/app_config.dart';
+import '../../utils/streak_util.dart';
 
 /// 健康数据服务 (Apple Watch / HealthKit 集成)
 /// 实现「多维度生命体征监测」的核心逻辑
 class HealthService {
   static final Health _health = Health();
-  
+
+  // 【v1.97.2 修复】手腕温度原生桥（health 包未暴露该类型，改走 iOS 原生读取）
+  static const MethodChannel _hkChannel = MethodChannel('zaine/healthkit');
+
   // 扩展后的健康数据类型
   static final List<HealthDataType> _types = [
     HealthDataType.HEART_RATE,           // 心率
@@ -150,7 +155,10 @@ class HealthService {
 
       final now = DateTime.now();
       final startWide = now.subtract(const Duration(days: 7));
-      final startSleep = now.subtract(const Duration(hours: 48));
+      // 【v1.97.2 修复】睡眠窗口收窄为「昨晚 18:00 起」，只取最近一夜，
+      // 避免 48h 宽窗把前晚+午睡累加导致睡眠时长虚高（与 Apple Watch 睡眠监测一致）
+      final yesterday = now.subtract(const Duration(days: 1));
+      final startSleep = DateTime(yesterday.year, yesterday.month, yesterday.day, 18, 0);
 
       final typeCounts = <String, int>{};
       final typeErrors = <String, String>{};
@@ -372,7 +380,20 @@ class HealthService {
         summary.addAll(menstruationInfo);
       }
 
-      if (kDebugMode) debugPrint('[HealthService] 获取到健康摘要: $summary');
+      // 【v1.97.2】全量健康镜像叠加：把 iOS 原生桥读到的全部 HealthKit 指标覆盖/补齐进 summary。
+      // 原生桥是权威源（直读 Apple Watch 同步进 iPhone HealthKit 的原始样本），
+      // health 包路径退化为兜底——原生失败时仍保留原有数据，零回归风险。
+      final mirror = await getFullMirror();
+      if (mirror.isNotEmpty) {
+        summary.addAll(mirror);
+        // 兼容旧 UI：以下三个 key 历史上是字符串（'72'），原生返回 double，需回填为整数字符串
+        for (final k in ['heart_rate', 'respiratory_rate', 'resting_heart_rate']) {
+          final v = summary[k];
+          if (v is num) summary[k] = v.toStringAsFixed(0);
+        }
+      }
+
+      if (kDebugMode) debugPrint('[HealthService] 获取到健康摘要: ${summary.keys.length} 项');
     } catch (e) {
       if (kDebugMode) debugPrint('[HealthService] 获取健康摘要失败: $e');
       final prefs = await SharedPreferences.getInstance();
@@ -380,6 +401,57 @@ class HealthService {
       await prefs.setString('health_last_fetch_time', DateTime.now().toIso8601String());
     }
     return summary;
+  }
+
+  // ==================== 全量健康镜像 HealthMirror (v1.97.2) ====================
+
+  /// 内存缓存：健康页与签到流程可能在数秒内多次触发，避免重复全量查询 HealthKit
+  static Map<String, dynamic>? _mirrorCache;
+  static DateTime? _mirrorCacheAt;
+  static const Duration _mirrorTtl = Duration(seconds: 60);
+
+  /// 读取 Apple Watch 同步进 iPhone HealthKit 的**全部可读**健康指标（约 70 项）。
+  ///
+  /// 唯一数据源：iOS 原生 MethodChannel `zaine/healthkit#getFullHealthSummary`。
+  ///
+  /// ⚠️ 设计约束（勿改）：
+  /// 全读 ≠ 全展示。本方法读全量是为了喂给「安全信号引擎」做异常判定
+  /// （例：判断「长时间无活动」需同时看步数 / 运动时长 / 站立小时 / 心率波动），
+  /// UI 层只展示 L1 守护级指标，保持克制。详见 SafetySignalEngine。
+  ///
+  /// 任一指标缺失 → 对应 key 不存在，调用方按 '--' 处理，绝不抛错。
+  static Future<Map<String, dynamic>> getFullMirror({bool forceRefresh = false}) async {
+    if (defaultTargetPlatform != TargetPlatform.iOS) return const {};
+    if (!forceRefresh &&
+        _mirrorCache != null &&
+        _mirrorCacheAt != null &&
+        DateTime.now().difference(_mirrorCacheAt!) < _mirrorTtl) {
+      return _mirrorCache!;
+    }
+    try {
+      final raw = await _hkChannel.invokeMethod('getFullHealthSummary');
+      if (raw is Map) {
+        final data = <String, dynamic>{};
+        raw.forEach((k, v) => data[k.toString()] = v);
+        // 规范化训练列表：platform channel 回传 List<Object?> / Map<Object?, Object?>
+        final w = data['workouts'];
+        if (w is List) {
+          data['workouts'] = w.whereType<Map>().map((e) {
+            final m = <String, dynamic>{};
+            e.forEach((k, v) => m[k.toString()] = v);
+            return m;
+          }).toList();
+        }
+        _mirrorCache = data;
+        _mirrorCacheAt = DateTime.now();
+        if (kDebugMode) debugPrint('[HealthMirror] ✅ 原生返回 ${data.length} 项指标');
+        return data;
+      }
+    } catch (e) {
+      // 原生桥失败不影响既有 health 包路径，健康页照常显示旧数据
+      if (kDebugMode) debugPrint('[HealthMirror] ⚠️ 原生读取失败(降级): $e');
+    }
+    return const {};
   }
 
   /// 计算经期状态（是否在经期、周期天数、预测下次经期）
@@ -537,9 +609,19 @@ class HealthService {
           }
 
           if (shouldNotify) {
-            if (kDebugMode) debugPrint('[HealthService] 检测到异常体征，且通过冷静期校验，准备报警: $alerts');
-            await NotifyService.sendHealthAlert(alerts);
-            
+            // 🔴【v1.97.2 合规修复】此前本调用**无区域闸门**，CN 版会自动向守护圈外发
+            // 健康异常报警 —— 正是 Apple 判定 dead-man switch 的行为。现补上闸门：
+            //   - 海外版：自动外发（保持原有能力）
+            //   - CN 版：只写本地待确认队列，由用户在 App 内手动确认后才外发
+            if (AppConfig.isChinaRegion) {
+              if (kDebugMode) debugPrint('[HealthService] [CN] 检测到异常体征，已拦截自动外发，转本地待确认: $alerts');
+              await prefs.setStringList('pending_health_alerts', alerts);
+              await prefs.setString('pending_health_alert_time', DateTime.now().toIso8601String());
+            } else {
+              if (kDebugMode) debugPrint('[HealthService] 检测到异常体征，且通过冷静期校验，准备报警: $alerts');
+              await NotifyService.sendHealthAlert(alerts);
+            }
+
             // 更新缓存
             await prefs.setStringList('last_health_alerts', alerts);
             await prefs.setString('last_health_alert_time', DateTime.now().toIso8601String());
@@ -547,13 +629,91 @@ class HealthService {
             if (kDebugMode) debugPrint('[HealthService] 检测到异常但处于冷静期内且内容未变，跳过重复报警');
           }
         }
-        
+
+        // 【v1.97.2 新增】安全信号引擎判定：长时间无活动等「安全」维度异常
+        // 与上方 checkAnomalies（纯生理指标越界）互补，二者独立冷静期、互不覆盖。
+        await _evaluateSafetySignal(summary);
+
         return true;
       }
     } catch (e) {
       if (kDebugMode) debugPrint('[HealthService] 同步健康数据异常: $e');
     }
     return false;
+  }
+
+  // ==================== 安全信号自动守护 (v1.97.2) ====================
+
+  /// 安全信号外发冷静期：同一等级 6 小时内不重复打扰守护圈
+  static const Duration _safetyAlertCooldown = Duration(hours: 6);
+
+  /// 用户开关键：异常时是否自动通知守护圈（仅海外版有效）
+  static const String kSafetyAutoAlertKey = 'safety_auto_alert_enabled';
+
+  /// 读取「异常自动通知守护圈」开关。
+  /// CN 版恒为 false（合规硬闸门，不受用户设置影响）。
+  static Future<bool> isSafetyAutoAlertEnabled() async {
+    if (AppConfig.isChinaRegion) return false;
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(kSafetyAutoAlertKey) ?? true; // 海外版默认开启
+  }
+
+  /// 设置「异常自动通知守护圈」开关（CN 版调用无效）
+  static Future<void> setSafetyAutoAlertEnabled(bool v) async {
+    if (AppConfig.isChinaRegion) return;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(kSafetyAutoAlertKey, v);
+  }
+
+  /// 依据安全信号引擎结论，决定是否惊动守护圈。
+  ///
+  /// 【与 checkAnomalies 的分工】
+  ///   - checkAnomalies：单项生理指标越界（心率/血氧/体温…）
+  ///   - 本方法：**安全维度**判定，核心是「长时间无活动」——
+  ///     独居风险最强的信号，Apple 健康 App 永远不会做，是本 App 的差异化能力。
+  ///
+  /// 🔴【中国合规版红线】
+  /// CN 版**绝不自动外发**，仅写入本地待确认队列 + 本机通知提醒用户本人，
+  /// 由用户手动确认后守护人才可见。这正是当初被判定 dead-man switch 下架的红线。
+  static Future<void> _evaluateSafetySignal(Map<String, dynamic> summary) async {
+    try {
+      final signal = SafetySignalEngine.evaluate(summary);
+
+      // 仅 alert 级别才考虑惊动守护圈；attention 级只在 App 内展示，不外发
+      if (signal.level != SafetyLevel.alert) return;
+
+      final prefs = await SharedPreferences.getInstance();
+      final lastStr = prefs.getString('last_safety_alert_time');
+      final last = lastStr != null ? DateTime.tryParse(lastStr) : null;
+      if (last != null && DateTime.now().difference(last) < _safetyAlertCooldown) {
+        if (kDebugMode) debugPrint('[SafetySignal] 处于冷静期内，跳过重复外发');
+        return;
+      }
+
+      final reasons = signal.reasons
+          .where((r) => r.level == SafetyLevel.alert)
+          .map((r) => r.text)
+          .toList();
+      if (reasons.isEmpty) return;
+
+      // 双重闸门：① 区域合规（CN 恒关，用户不可开）② 用户自主开关（海外版可关）
+      final autoAlertOn = await isSafetyAutoAlertEnabled();
+      if (!autoAlertOn) {
+        final why = AppConfig.isChinaRegion ? '[CN 合规闸门]' : '[用户已关闭]';
+        if (kDebugMode) debugPrint('[SafetySignal] $why 拦截自动外发，转本地待确认: $reasons');
+        await prefs.setStringList('pending_safety_alerts', reasons);
+        await prefs.setString('pending_safety_alert_time', DateTime.now().toIso8601String());
+      } else {
+        // 海外版且用户开启：自动通知守护圈
+        if (kDebugMode) debugPrint('[SafetySignal] 触发自动外发: $reasons');
+        await NotifyService.sendHealthAlert(reasons);
+      }
+
+      await prefs.setString('last_safety_alert_time', DateTime.now().toIso8601String());
+    } catch (e) {
+      // 守护判定失败绝不影响主同步流程
+      if (kDebugMode) debugPrint('[SafetySignal] 判定异常(忽略): $e');
+    }
   }
 
   /// 检查是否存在异常体征
@@ -777,15 +937,24 @@ class HealthService {
     if (res['success'] == true) {
       if (kDebugMode) debugPrint('[HealthService] ✅ 签到成功 (source=$source)');
       final lastDateKey = uid.isNotEmpty ? 'last_check_in_date_$uid' : 'last_check_in_date';
-      // 【修复 v1.93.1】同时保存连续天数和累计天数到本地
-      final serverStreak = res['streak'] as int?;
+      // 【v1.97.2 彻底修复】以「本地签到历史」为单一真相源重算连续天数，
+      // 不再直接信任后端易错的 streak 字段（曾导致手表签到后手机首屏显示 6 而非真实 3，
+      // 需等后台 SyncService.pullFromServer 二次合并才纠正）。
+      // 把今天并入本地历史后用 StreakUtil 统一计算，与手机端 _handleCheckIn 完全一致，
+      // 保证「第一次签到连续天数就准确」，且回包 Watch 的值也一致。
+      final historyKey = uid.isNotEmpty ? 'checkin_history_$uid' : 'checkin_history';
+      final historyList = List<String>.from(prefs.getStringList(historyKey) ?? []);
+      if (!historyList.contains(today)) historyList.add(today);
+      final newDays = StreakUtil.calculateStreak(historyList);
+      // 累计天数：优先取服务端 total_days（含跨设备历史），否则以本地历史条数为准（只增不减）
       final serverTotal = res['total_days'] as int?;
-      if (serverStreak != null && serverStreak > 0) {
-        await prefs.setInt(streakKey, serverStreak);
-      }
-      if (serverTotal != null) {
-        await prefs.setInt(totalKey, serverTotal);
-      }
+      final newTotal = (serverTotal != null && serverTotal > historyList.length)
+          ? serverTotal
+          : historyList.length;
+
+      await prefs.setStringList(historyKey, historyList);
+      await prefs.setInt(streakKey, newDays);
+      await prefs.setInt(totalKey, newTotal);
       await prefs.setString(lastDateKey, today);
       await prefs.setString('last_check_in_date', today);
 
@@ -799,8 +968,8 @@ class HealthService {
         watchCheckinCelebration.value = {
           'success': true,
           'source': source,
-          'streak': serverStreak ?? 0,
-          'total': serverTotal ?? 0,
+          'streak': newDays,
+          'total': newTotal,
           'clientId': clientId ?? '',
         };
 
@@ -820,7 +989,7 @@ class HealthService {
 
       // 【v1.94.0 新增】把成功回包(streak/total)精准送回对应的 Apple Watch（仅手动签到需要庆祝回包）
       if (source == 'watch' && clientId != null && clientId.isNotEmpty) {
-        _sendWatchAck(clientId: clientId, streak: serverStreak ?? prefs.getInt(streakKey) ?? 0, total: serverTotal ?? prefs.getInt(totalKey) ?? 0);
+        _sendWatchAck(clientId: clientId, streak: newDays, total: newTotal);
       }
     } else {
       if (kDebugMode) debugPrint('[HealthService] ⚠️ 签到返回未成功: ${res['error']}');

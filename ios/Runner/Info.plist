@@ -37,6 +37,13 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<!-- 【v1.97.2】深链跳转系统「健康」App 白名单。
+	     心电图/房颤/听力等数据 Apple 禁止第三方读取，只能引导用户到系统 App 查看。
+	     url_launcher 在 iOS 上会先调 canOpenURL，scheme 未登记会直接失败。 -->
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>x-apple-health</string>
+	</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSAppTransportSecurity</key>
