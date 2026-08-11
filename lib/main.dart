@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
+import 'dart:async';
 import 'theme/theme_helper.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -15,6 +16,7 @@ import 'services/silent_login_service.dart';
 import 'services/membership_service.dart';
 import 'services/api/auth_service.dart';
 import 'services/platform/health_service.dart'; // 【v1.91.0】Watch 签到通道
+import 'services/platform/watch_data_service.dart'; // 【修复】Watch 健康数据推送初始化
 import 'data/app_constants.dart';
 // import 'config/feature_flags.dart';  // 暂时未使用，保留以备后续功能开发
 
@@ -61,6 +63,14 @@ void main() async {
 
   // 【v1.91.0】初始化 Watch MethodChannel — AppDelegate 收到 Watch 签到后立即通知 Flutter
   HealthService.initWatchChannel();
+
+  // 【修复】初始化 Watch 数据推送通道 — 否则 _isPaired 恒 false，手表健康速览永远空白。
+  // 加超时保护，避免 watch_connectivity 在异常环境下阻塞 App 启动。
+  try {
+    await WatchDataService().init().timeout(const Duration(seconds: 3));
+  } catch (e) {
+    if (kDebugMode) debugPrint('[Main] WatchDataService.init 超时/失败(忽略): $e');
+  }
 
   // 【修复 v1.77.0】迁移敏感信息从 SP 到 Keychain（安全）
   await _migrateSensitiveDataToKeychain();
@@ -132,17 +142,30 @@ class ZaiNeApp extends StatefulWidget {
   State<ZaiNeApp> createState() => _ZaiNeAppState();
 }
 
-class _ZaiNeAppState extends State<ZaiNeApp> {
+class _ZaiNeAppState extends State<ZaiNeApp> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
     themeNotifier.addListener(_onThemeChanged);
+    // 🔴【v1.97.3 (162) 修复 Bug 5】监听 App 前后台切换：回到前台时刷新 Watch 配对状态，
+    // 让冷启动阶段 _isPaired 尚未就绪时，下次健康数据推送能拿到正确的配对状态。
+    WidgetsBinding.instance.addObserver(this);
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     themeNotifier.removeListener(_onThemeChanged);
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.resumed) {
+      // 回到前台：刷新 Watch 连接状态（配对/可达），供后续推送使用
+      unawaited(WatchDataService().refreshWatchState());
+    }
   }
 
   void _onThemeChanged() {

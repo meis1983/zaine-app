@@ -43,7 +43,10 @@ class _GuardianAchievementsPageState extends State<GuardianAchievementsPage>
 
   Future<void> _loadAchievements() async {
     setState(() => _isLoading = true);
-    _achievements = await widget.socialService.getUserAchievements(widget.userId);
+    // 🔴【v1.97.3 修复 Bug 3 + Bug 6】主动刷新全部 11 个成就进度
+    // 原因：getUserAchievements 只读 SharedPreferences 已存值，不主动从真实数据源刷新——
+    // 导致进度条恒显 0/7、0/30、0/100，且关怀/里程碑两类从未接入过任何更新流。
+    _achievements = await widget.socialService.refreshAllAchievements(widget.userId);
     _unlockedCount = _achievements.where((a) => a.isUnlocked).length;
     _totalCount = _achievements.length;
     setState(() => _isLoading = false);

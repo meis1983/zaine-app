@@ -498,7 +498,6 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     // 修复：读取到 prefs 后立即展示本地状态，不再等待用户 ID 解析
     String? lastDate = prefs.getString('last_check_in_date');
     String uid = '';
-    bool hasLocalCache = false; // 【修复 v1.91.0】是否已有任何本地签到缓存
 
     // 尝试获取用户 ID（异步），但不阻塞第一次 setState
     try {
@@ -508,16 +507,10 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         final userSpecificDate = prefs.getString('last_check_in_date_$uid');
         if (userSpecificDate != null) {
           lastDate = userSpecificDate;
-          hasLocalCache = true;
-        } else if (lastDate != null) {
-          // 全局有缓存但用户隔离没有（新登录 / 切号），也认为有缓存
-          hasLocalCache = true;
         }
-      } else if (lastDate != null) {
-        hasLocalCache = true;
       }
     } catch (_) {
-      if (lastDate != null) hasLocalCache = true;
+      // 忽略，lastDate 已从全局缓存读取
     }
 
     if (!mounted) return;
@@ -525,16 +518,23 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       // 【修复 v1.91.0】先设置本地读取的状态，避免闪烁
       _checkedInToday = lastDate == today;
       // 使用用户隔离的键值（如果已读取到）
-      final streakKey = uid.isNotEmpty ? 'continuous_days_$uid' : 'continuous_days';
       final totalKey = uid.isNotEmpty ? 'total_check_in_days_$uid' : 'total_check_in_days';
       final historyKey = uid.isNotEmpty ? 'checkin_history_$uid' : 'checkin_history';
-      // 【修复 v1.91.0】优先信任本地隔离缓存；首次登录时 continuousDays=0 是正确的（新用户）
-      _continuousDays = prefs.getInt(streakKey) ?? 0;
+      // 🔴【v1.97.2 根治首屏跳变】不再直接读 `continuous_days_$uid` 缓存。
+      //
+      // 旧行为：读缓存 → 缓存已被后端漂移值污染（如 6）→ 首屏渲染 6
+      //        → 约 1s 后网络重算得到 3 → setState 跳变（用户可见闪烁）。
+      // 新行为：直接用本地签到历史重算。SharedPreferences 是内存镜像、同步可读，
+      //        **零延迟、首帧即正确**，从源头消除跳变；历史为空时才回退缓存（新用户 0）。
+      _continuousDays = StreakUtil.readStreak(prefs, uid);
       _totalDays = prefs.getInt(totalKey) ?? 0;
       _weeklyDays = _calculateWeeklyDays(prefs, historyKey);
-      // 【修复 v1.91.0】如果有本地缓存，标记数据已就绪；否则保持未就绪，
-      // 等服务端返回后再标记就绪，避免出现"短暂显示 0 天"的视觉错
-      if (hasLocalCache) _isCheckinDataReady = true;
+      // 【v1.97.2 根治首屏跳变】只在本地签到历史非空时标记就绪——
+      // 有历史 = 有可靠数据可直算 streak，首帧即正确，无跳变。
+      // 历史为空（新登录 / 首装 / 历史未同步）→ 保持 loading，
+      // 等网络同步拉到历史后直接显示正确值，绝不闪现错误数字。
+      final localHistory = prefs.getStringList(historyKey) ?? const <String>[];
+      if (localHistory.isNotEmpty) _isCheckinDataReady = true;
     });
 
         // 同步服务器获取断签天数和签到状态（覆盖本地状态，确保准确性）
@@ -605,12 +605,13 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
               if (kDebugMode) debugPrint('[HomePage] ⚠️ 拉取签到历史失败: $e');
             }
 
-            // 现在本地有了完整的签到历史，重新计算
-            localStreak = await _calculateStreakFromHistory();
-            // 【稳健修复 v1.94.1】以历史计算值写回本地缓存（仅在 >0 时，避免把真实的 0 误写为缓存），保持本地与服务端历史一致
-            if (localStreak > 0) {
-              await prefs.setInt(streakKey2, localStreak);
-              if (kDebugMode) debugPrint('[HomePage] ✅ 连续天数(历史重算)=$localStreak，已写回本地缓存');
+            // 🔴【v1.97.2 根治】本地历史已 MERGE 服务器数据，以其为单一真相源重算并落盘对齐。
+            // recalcAndPersist 语义：历史非空 → 无条件写回（含降低值，用于洗掉被后端污染的偏高缓存）；
+            //                       历史为空 → 不写，返回原缓存（避免网络失败时把缓存毒化为 0）。
+            final before = prefs.getInt(streakKey2) ?? 0;
+            localStreak = await StreakUtil.recalcAndPersist(prefs, currentUid);
+            if (kDebugMode && before != localStreak) {
+              debugPrint('[HomePage] ✅ 连续天数已对齐真相源: 缓存 $before → 重算 $localStreak');
             }
 
             if (kDebugMode) debugPrint('=' * 60);
@@ -645,14 +646,10 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
             });
           }
           // 同步到本地缓存（用户隔离 key）【修复 v1.77.0】
-          final streakKey = uid.isNotEmpty ? 'continuous_days_$uid' : 'continuous_days';
+          // 注：连续天数缓存已由上方 StreakUtil.recalcAndPersist 落盘，此处不再重复写入，
+          //     避免两处写入语义分叉（历史根因之一）。
           final totalKey = uid.isNotEmpty ? 'total_check_in_days_$uid' : 'total_check_in_days';
           final lastDateKey = uid.isNotEmpty ? 'last_check_in_date_$uid' : 'last_check_in_date';
-          // 【v1.95.x 修复】仅当确有本地签到历史时才以重算值写回缓存，
-          // 避免网络失败时 localStreak=0 把缓存毒化为 0（否则每次启动都从 0 起、且永远修不正）
-          final histKey = uid.isNotEmpty ? 'checkin_history_$uid' : 'checkin_history';
-          final hasRealHistory = (prefs.getStringList(histKey) ?? []).isNotEmpty;
-          await prefs.setInt(streakKey, hasRealHistory ? _continuousDays : (prefs.getInt(streakKey) ?? _continuousDays));
           await prefs.setInt(totalKey, _totalDays);
           if (_checkedInToday) {
             await prefs.setString(lastDateKey, today);
@@ -971,13 +968,14 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       if (kDebugMode) debugPrint('[HomePage] 取消断签预警通知失败（忽略）: $e');
     }
 
-    // 【养成闭环 v1.97.2】把连续签到天数同步到成就进度（仅海外版，避免 CN 多余写入）
+    // 【养成闭环 v1.97.2】把签到天数同步到成就进度（仅海外版，避免 CN 多余写入）
+    // 🔴【v1.97.3 修复】checkin_100 是「累计签到」应用总天数，不是连续天数
     if (!AppConfig.isChinaRegion && uid.isNotEmpty) {
       try {
         final svc = SocialService();
         await svc.updateAchievementProgress(uid, 'checkin_7', _continuousDays);
         await svc.updateAchievementProgress(uid, 'checkin_30', _continuousDays);
-        await svc.updateAchievementProgress(uid, 'checkin_100', _continuousDays);
+        await svc.updateAchievementProgress(uid, 'checkin_100', _totalDays);
       } catch (e) {
         if (kDebugMode) debugPrint('[HomePage] 成就进度同步失败（忽略）: $e');
       }

@@ -128,15 +128,17 @@ struct ContentView: View {
                 // ===== 智能心跳守护状态条（仅海外版；cn 已关闭自动监测，故隐藏）=====
                 if !watchManager.isChinaRegion {
                 HStack(spacing: 6) {
-                    Image(systemName: "heart.fill")
+                    // 🔴【v1.97.3 重设计】心跳打卡：已完成→绿色✓ / 未完成→橙色波形
+                    // 不再用心形，与签到红心区分，消除视觉疲劳
+                    Image(systemName: watchManager.autoCheckInSuccess ? "checkmark.circle.fill" : "waveform.path.ecg")
                         .font(.system(size: 13))
-                        .foregroundColor(watchManager.isHeartbeatGuardian ? .red : .gray)
-                        .scaleEffect(watchManager.isHeartbeatGuardian ? 1.1 : 1.0)
+                        .foregroundColor(watchManager.autoCheckInSuccess ? .green : .orange)
+                        .scaleEffect(watchManager.autoCheckInSuccess ? 1.0 : 1.1)
                     VStack(alignment: .leading, spacing: 1) {
                         Text(watchManager.isChinaRegion
                              ? "心率守护已关闭"
                              : (watchManager.autoCheckInSuccess
-                                 ? "今日心跳打卡已完成 ✅"
+                                 ? "今日心跳打卡已完成"
                                  : "心跳守护中 · 戴着表就自动签到"))
                             .font(.system(size: 11, weight: .medium))
                             .foregroundColor(watchManager.autoCheckInSuccess ? .green : .cyan)
@@ -154,16 +156,22 @@ struct ContentView: View {
                 .cornerRadius(10)
                 } // end if !isChinaRegion
 
-                // ===== 健康速览 =====
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Image(systemName: "heart.fill")
-                            .font(.system(size: 11))
-                            .foregroundColor(.red)
-                        Text("健康速览")
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundColor(.cyan)
-                    }
+                // ===== 健康速览（可点开查看详情）=====
+                // 🔴【v1.97.3 重设计】图标改蓝色图表，可点开看完整健康数据
+                NavigationLink(destination: HealthDetailView(healthData: watchManager.healthData)) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Image(systemName: "chart.bar.fill")
+                                .font(.system(size: 11))
+                                .foregroundColor(.blue)
+                            Text("健康速览")
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundColor(.blue)
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 9))
+                                .foregroundColor(.gray)
+                        }
 
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2), spacing: 8) {
                         if let heartRate = watchManager.healthData["heart_rate"] as? String {
@@ -185,10 +193,13 @@ struct ContentView: View {
                             HealthItemView(icon: "drop.fill", value: menstrual, unit: "", color: .pink)
                         }
                     }
+                    }
                 }
+                .buttonStyle(PlainButtonStyle())
                 .padding(.top, 4)
 
-                Spacer(minLength: 8)
+                // 🔴【v1.97.3 修复】SOS 按钮与健康速览至少 20pt 间距，防止热区重叠
+                Spacer(minLength: 20)
 
                 // ===== SOS 紧急求助 =====
                 Button(action: {

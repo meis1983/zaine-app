@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:convert';
+import '../utils/streak_util.dart';
 import 'dart:async';
 import 'contacts_page.dart';
 import 'guardian_card_page.dart';
@@ -1168,7 +1169,6 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                       child: Builder(builder: (context) {
                         // 【修复 v1.9.78】使用用户隔离 key，防止切换账号后数据污染
                         final uid = prefs?.getString('user_id') ?? '';
-                        final streakKey = uid.isNotEmpty ? 'continuous_days_$uid' : 'continuous_days';
                         final totalKey = uid.isNotEmpty ? 'total_check_in_days_$uid' : 'total_check_in_days';
                         final lastDateKey = uid.isNotEmpty ? 'last_check_in_date_$uid' : 'last_check_in_date';
                         final isCheckedInToday = prefs?.getString(lastDateKey) ==
@@ -1177,7 +1177,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                           children: [
                             _buildStatItem(
                               icon: Icons.local_fire_department,
-                              value: '${prefs != null ? prefs.getInt(streakKey) ?? 0 : 0} 天',
+                              value: '${prefs != null ? StreakUtil.readStreak(prefs, uid) : 0} 天',
                               label: '连续守护',
                               color: Colors.orange,
                               bgColor: Colors.orange.shade50,

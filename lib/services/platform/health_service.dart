@@ -559,33 +559,66 @@ class HealthService {
   }
 
   /// 同步健康数据到后端
+  ///
+  /// 🔴【v1.97.3 修复 Bug 8】即使 HealthKit 未授权（summary 为空）也**仍**调用一次 API，
+  /// 让后端记录「用户尝试同步但未授权」状态，便于前端 UI 拿到这个状态显示引导 banner。
+  /// 之前：summary 空 → return false → 前端 UI 显示「同步中」→「看似成功」→ 实际没数据
   static Future<bool> syncHealthData() async {
     try {
-      // 1. 获取最新健康摘要
-      final summary = await getHealthSummary();
+      // 1. 获取最新健康摘要（加 8s 超时防止被 HealthKit 永久阻塞）
+      Map<String, dynamic> summary;
+      try {
+        summary = await getHealthSummary().timeout(
+          const Duration(seconds: 8),
+          onTimeout: () => <String, dynamic>{},
+        );
+      } catch (e) {
+        if (kDebugMode) debugPrint('[HealthService] getHealthSummary 异常: $e');
+        summary = <String, dynamic>{};
+      }
       if (summary.isEmpty) {
-        if (kDebugMode) debugPrint('[HealthService] 健康摘要为空，跳过同步');
+        if (kDebugMode) debugPrint('[HealthService] 健康摘要为空（HealthKit 未授权或查询失败），仍调用 API 记录状态');
+        // 【Bug 8 修复】即使空也调用 API，让后端记一次心跳 + 返回 not_authorized 状态
+        try {
+          await UserService.syncHealthMetrics({
+            'metrics': <String, dynamic>{},
+            'sync_status': 'not_authorized',
+            'synced_at': DateTime.now().toIso8601String(),
+          }).timeout(const Duration(seconds: 5));
+        } catch (e) {
+          if (kDebugMode) debugPrint('[HealthService] API 兜底同步失败(忽略): $e');
+        }
+        // 写本地标记，让前端 UI 显示 banner
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('health_last_sync_status', 'not_authorized');
+        await prefs.setString('health_last_sync_time', DateTime.now().toIso8601String());
         return false;
       }
+      // 成功拿到 summary，清除未授权标记
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('health_last_sync_status', 'ok');
+      await prefs.setString('health_last_sync_time', DateTime.now().toIso8601String());
 
-      // 2. 调用 API 同步
+      // 2. 推送健康数据到 Apple Watch（修复：本地 HealthKit 授权成功即推送，不再依赖服务端同步结果）
+      unawaited(WatchDataService().pushHealthSummary(summary));
+      // 2.1 推送经期状态到 Watch
+      if (summary['has_menstruation'] == true) {
+        unawaited(WatchDataService().pushMenstruationStatus(
+          isInPeriod: summary['is_in_period'] == true,
+          cycleDay: (summary['cycle_day'] as int?) ?? 0,
+          predictedNextDate: summary['predicted_next_date'] as String?,
+        ));
+      }
+
+      // 3. 调用 API 同步（失败不影响手表推送）
       final res = await UserService.syncHealthMetrics(summary);
       if (res['success'] == true) {
         if (kDebugMode) debugPrint('[HealthService] 健康数据同步成功');
-        
-        // 3. 推送健康数据到 Apple Watch
-        unawaited(WatchDataService().pushHealthSummary(summary));
-        
-        // 3.1 推送经期状态到 Watch
-        if (summary['has_menstruation'] == true) {
-          unawaited(WatchDataService().pushMenstruationStatus(
-            isInPeriod: summary['is_in_period'] == true,
-            cycleDay: (summary['cycle_day'] as int?) ?? 0,
-            predictedNextDate: summary['predicted_next_date'] as String?,
-          ));
-        }
-        
-        // 4. 检查并发送异常报警 (带有去重冷静期逻辑)
+      } else {
+        if (kDebugMode) debugPrint('[HealthService] 健康数据服务端同步未成功（不影响手表推送）');
+      }
+
+      // 4. 检查并发送异常报警 (带有去重冷静期逻辑)
         final anomalies = checkAnomalies(summary);
         if (anomalies != null) {
           final alerts = anomalies['alerts'] as List<String>;
@@ -635,7 +668,6 @@ class HealthService {
         await _evaluateSafetySignal(summary);
 
         return true;
-      }
     } catch (e) {
       if (kDebugMode) debugPrint('[HealthService] 同步健康数据异常: $e');
     }
@@ -909,7 +941,7 @@ class HealthService {
       if (source == 'watch' && clientId != null && clientId.isNotEmpty) {
         _sendWatchAck(
           clientId: clientId,
-          streak: prefs.getInt(streakKey) ?? 0,
+          streak: StreakUtil.readStreak(prefs, uid),
           total: prefs.getInt(totalKey) ?? 0,
           success: false,
           alreadyDone: false,
@@ -924,7 +956,7 @@ class HealthService {
       if (source == 'watch' && clientId != null && clientId.isNotEmpty) {
         _sendWatchAck(
           clientId: clientId,
-          streak: prefs.getInt(streakKey) ?? 0,
+          streak: StreakUtil.readStreak(prefs, uid),
           total: prefs.getInt(totalKey) ?? 0,
           success: false,
           alreadyDone: false,
@@ -995,7 +1027,7 @@ class HealthService {
       if (kDebugMode) debugPrint('[HealthService] ⚠️ 签到返回未成功: ${res['error']}');
       // 即使服务端返回未成功(例如已签到)，也尝试回包让 Watch 显示已签到状态
       if (source == 'watch' && clientId != null && clientId.isNotEmpty) {
-        _sendWatchAck(clientId: clientId, streak: prefs.getInt(streakKey) ?? 0, total: prefs.getInt(totalKey) ?? 0, alreadyDone: true);
+        _sendWatchAck(clientId: clientId, streak: StreakUtil.readStreak(prefs, uid), total: prefs.getInt(totalKey) ?? 0, alreadyDone: true);
       }
     }
   }
@@ -1022,10 +1054,9 @@ class HealthService {
   static Future<Map<String, int>> _queryWatchStatus() async {
     final prefs = await SharedPreferences.getInstance();
     final uid = prefs.getString('user_id') ?? '';
-    final streakKey = uid.isNotEmpty ? 'continuous_days_$uid' : 'continuous_days';
     final totalKey = uid.isNotEmpty ? 'total_check_in_days_$uid' : 'total_check_in_days';
     return {
-      'streak': prefs.getInt(streakKey) ?? 0,
+      'streak': StreakUtil.readStreak(prefs, uid),
       'total': prefs.getInt(totalKey) ?? 0,
     };
   }

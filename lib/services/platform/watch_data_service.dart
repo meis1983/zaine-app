@@ -76,8 +76,46 @@ class WatchDataService {
   /// 推送健康数据摘要到 Watch
   ///
   /// [summary] 来自 HealthService.getHealthSummary() 的数据
-  Future<bool> pushHealthSummary(Map<String, dynamic> summary) async {
-    if (!_isSupported || !_isPaired) return false;
+  ///
+  /// 🔴【v1.97.3 (162) 修复 Bug 5】冷启动时 WCSession 可能尚未激活，_isPaired 在
+  /// init() 阶段读到 false 后便不再重查 → 首帧 push 直接 return false 且此后无重试
+  /// → Apple Watch 健康速览永远空白。
+  /// 修复：① 推送前先 refreshWatchState() 刷新一次配对/可达状态；
+  /// ② 若刷新后仍不配对，延迟 5s 自动重试一次（仅一次，不阻塞调用方）。
+  Future<bool> pushHealthSummary(Map<String, dynamic> summary) =>
+      _pushHealthSummary(summary, allowRetry: true);
+
+  Future<bool> _pushHealthSummary(
+    Map<String, dynamic> summary, {
+    required bool allowRetry,
+  }) async {
+    if (!_isSupported) return false;
+
+    // 🔴【v1.97.3 (162)】冷启动保护：未配对时先刷新一次状态
+    if (!_isPaired) {
+      await refreshWatchState();
+    }
+
+    if (!_isPaired) {
+      // 延迟 5s 后重试一次（仅一次，避免无限递归）
+      if (allowRetry) {
+        unawaited(Future.delayed(const Duration(seconds: 5), () async {
+          try {
+            await refreshWatchState();
+            if (_isPaired) {
+              await _pushHealthSummary(summary, allowRetry: false);
+            }
+          } catch (e) {
+            if (kDebugMode) debugPrint('[WatchData] 健康数据延迟重试失败(忽略): $e');
+          }
+        }));
+      }
+      if (kDebugMode) {
+        debugPrint('[WatchData] 健康数据推送跳过：Watch 未配对'
+            '（${allowRetry ? "已安排 5s 重试" : "重试后仍不配对"}）');
+      }
+      return false;
+    }
 
     try {
       // 过滤出 Watch 需要的关键指标

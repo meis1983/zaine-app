@@ -6,6 +6,9 @@ library;
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../utils/streak_util.dart';
+import '../api/contact_service.dart';
+import '../api/card_service.dart';
 
 /// 留言类型
 enum MessageType {
@@ -532,6 +535,109 @@ class SocialService {
       if (kDebugMode) debugPrint('[Social] 解析成就失败: $e');
       return achievements;
     }
+  }
+
+  /// 🔴【v1.97.3 修复 Bug 3 + Bug 6】一次性刷新全部 11 个成就进度
+  ///
+  /// 根因：成就进度只在首页签到成功后调 updateAchievementProgress，
+  /// 关怀类（care_*）和里程碑类（milestone_guardians_*）从未接入过任何更新流，
+  /// 所以这两类成就的 currentValue 恒为 0（用户看到的「关怀 0/1、0/10、0/50」、
+  /// 「里程碑 0/3、0/5、0/10」）。`emergency_tested` 测试 SOS 入口未实装，保留 0/1。
+  ///
+  /// 修复：成就页面打开时调用此方法，从 4 个真实数据源实时算出全部进度：
+  /// - checkin_7 / checkin_30         ← 连续签到天数（streak）
+  /// - checkin_100                     ← 累计签到天数（history 去重后的长度）
+  /// - care_first / care_10 / care_50  ← emoji_interactions_sent_$userId + _received_$userId 列表长度之和（双向关怀）
+  /// - milestone_guardians_3/5         ← ContactService.getContacts()（守护我的人）长度
+  /// - milestone_guardian_count_10     ← CardService.getGuardedByMe()（我守护的人）长度
+  /// - emergency_prepared              ← 守护我的人非空即 1
+  /// - emergency_tested                ← 跳过（SOS 测试入口未实装）
+  /// 然后持久化并返回刷新后的成就列表。
+  Future<List<GuardianAchievement>> refreshAllAchievements(String userId) async {
+    await _ensureInitialized();
+
+    // ── 1) 签到类：从签到历史读 ──
+    final history = _prefs!.getStringList(StreakUtil.historyKeyOf(userId)) ??
+        const <String>[];
+    final streak = StreakUtil.calculateStreak(history);
+    final totalCount = history.toSet().length; // 去重后的总签到天数
+
+    // ── 2) 关怀类：读「已发送 + 已收到」表情列表（双向关怀，修复关怀类恒为 0）──
+    int careCount = 0;
+    try {
+      final sentKey = '${_emojiInteractionsKey}_sent_$userId';
+      final receivedKey = '${_emojiInteractionsKey}_received_$userId';
+      final sentJson = _prefs!.getString(sentKey);
+      final receivedJson = _prefs!.getString(receivedKey);
+      int sent = 0;
+      int received = 0;
+      if (sentJson != null) {
+        sent = (jsonDecode(sentJson) as List<dynamic>).length;
+      }
+      if (receivedJson != null) {
+        received = (jsonDecode(receivedJson) as List<dynamic>).length;
+      }
+      careCount = sent + received;
+      if (kDebugMode) debugPrint('[Social] 关怀计数: sent=$sent, received=$received, total=$careCount');
+    } catch (e) {
+      if (kDebugMode) debugPrint('[Social] 读表情列表失败: $e');
+    }
+
+    // ── 3) 里程碑类：从真实守护关系读取（修复里程碑恒为 0）──
+    //   守护我的人（incoming，紧急联系人上限 5/10）→ 决定 milestone_guardians_3/5 与 emergency_prepared
+    //   我守护的人（outgoing，议题B 无上限）→ 决定 milestone_guardian_count_10
+    int guardiansForMe = 0; // 守护我的人
+    int guardedByMe = 0;    // 我守护的人
+    try {
+      final contactsResp = await ContactService.getContacts();
+      if (contactsResp['success'] == true && contactsResp['contacts'] is List) {
+        guardiansForMe = (contactsResp['contacts'] as List).length;
+      }
+    } catch (e) {
+      if (kDebugMode) debugPrint('[Social] 读守护我的人失败: $e');
+    }
+    try {
+      final guardedResp = await CardService.getGuardedByMe();
+      if (guardedResp['success'] == true && guardedResp['guarded'] is List) {
+        guardedByMe = (guardedResp['guarded'] as List).length;
+      }
+    } catch (e) {
+      if (kDebugMode) debugPrint('[Social] 读我守护的人失败: $e');
+    }
+    if (kDebugMode) debugPrint('[Social] 里程碑计数: 守护我的人=$guardiansForMe, 我守护的人=$guardedByMe');
+
+    // ── 批量更新 ──
+    // 签到类
+    await updateAchievementProgress(userId, 'checkin_7', streak);
+    await updateAchievementProgress(userId, 'checkin_30', streak);
+    await updateAchievementProgress(userId, 'checkin_100', totalCount);
+
+    // 关怀类（care_first required=1，care_10 required=10，care_50 required=50）
+    await updateAchievementProgress(userId, 'care_first', careCount);
+    await updateAchievementProgress(userId, 'care_10', careCount);
+    await updateAchievementProgress(userId, 'care_50', careCount);
+
+    // 里程碑类
+    //   milestone_guardians_3/5：以「守护我的人」计数（紧急联系人圈层）
+    //   milestone_guardian_count_10：以「我守护的人」计数（议题B，无上限）
+    await updateAchievementProgress(userId, 'milestone_guardians_3', guardiansForMe);
+    await updateAchievementProgress(userId, 'milestone_guardians_5', guardiansForMe);
+    await updateAchievementProgress(userId, 'milestone_guardian_count_10', guardedByMe);
+
+    // 紧急类：守护我的人已配置即 1，未配置即 0
+    await updateAchievementProgress(
+        userId, 'emergency_prepared', guardiansForMe > 0 ? 1 : 0);
+
+    // emergency_tested：不在 refresh 中计算，由 help_demo_mode.dart 演示完成时主动写入
+    // （详情见 help_demo_mode._unlockEmergencyTestedAchievement）
+
+    return getUserAchievements(userId);
+  }
+
+  /// [保留旧方法以兼容潜在调用方] 仅刷新签到类
+  @Deprecated('请改用 refreshAllAchievements，一次性刷新全部 11 个成就')
+  Future<List<GuardianAchievement>> refreshCheckinAchievements(String userId) async {
+    return refreshAllAchievements(userId);
   }
 
   /// 更新成就进度

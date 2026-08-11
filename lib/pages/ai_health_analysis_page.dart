@@ -153,6 +153,11 @@ class _AIHealthAnalysisPageState extends State<AIHealthAnalysisPage> {
   Widget _buildAnalysisResult() {
     final result = _analysisResult!;
 
+    // 🔴【v1.97.3 修复 Bug 4】高优先级建议（priority>=3）提升为「今日待办」区，
+    // 不再和健康异常混在一起；低优先级仍归「个性化建议」。
+    final todoItems = result.recommendations.where((r) => r.priority >= 3).toList();
+    final generalRecs = result.recommendations.where((r) => r.priority < 3).toList();
+
     return RefreshIndicator(
       onRefresh: _performAnalysis,
       child: SingleChildScrollView(
@@ -164,6 +169,14 @@ class _AIHealthAnalysisPageState extends State<AIHealthAnalysisPage> {
             // 健康评分卡片
             _buildScoreCard(result.overallScore),
             const SizedBox(height: ZaiNeSpacing.xl),
+
+            // 今日待办（未签到等，柔和提醒，不恐吓）
+            if (todoItems.isNotEmpty) ...[
+              _buildSectionTitle('📝 今日待办', Colors.teal),
+              const SizedBox(height: ZaiNeSpacing.md),
+              ...todoItems.map((r) => _buildRecommendationCard(r)),
+              const SizedBox(height: ZaiNeSpacing.xl),
+            ],
 
             // 异常提醒
             if (result.anomalies.isNotEmpty) ...[
@@ -181,11 +194,11 @@ class _AIHealthAnalysisPageState extends State<AIHealthAnalysisPage> {
               const SizedBox(height: ZaiNeSpacing.xl),
             ],
 
-            // 个性化建议
-            if (result.recommendations.isNotEmpty) ...[
+            // 个性化建议（仅低优先级，高优先级已在今日待办展示）
+            if (generalRecs.isNotEmpty) ...[
               _buildSectionTitle('🎯 个性化建议', Colors.green),
               const SizedBox(height: ZaiNeSpacing.md),
-              ...result.recommendations.map((r) => _buildRecommendationCard(r)),
+              ...generalRecs.map((r) => _buildRecommendationCard(r)),
               const SizedBox(height: ZaiNeSpacing.xl),
             ],
 

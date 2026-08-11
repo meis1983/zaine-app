@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../theme/theme_helper.dart';
 import '../services/platform/health_service.dart';
 import '../services/api/user_service.dart';
@@ -51,6 +52,9 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
   /// 异常时是否自动通知守护圈（CN 版恒 false，且整个开关不显示）
   bool _autoAlert = false;
 
+  /// 🔴【v1.97.3 修复 Bug 8】HealthKit 未授权标记
+  bool _healthKitNotAuthorized = false;
+
   @override
   void initState() {
     super.initState();
@@ -72,15 +76,34 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
         _metrics = res['health_metrics'];
         _lastUpdated = _metrics['updated_at'] ?? '';
       }
-      
+
       // 2. 同时尝试从本地 HealthKit 获取最新数据并同步一次
-      final summary = await HealthService.getHealthSummary();
+      // 🔴【v1.97.3 修复 Bug 8】即使 summary 为空也要 setState，让 UI 显示未授权 banner
+      Map<String, dynamic> summary;
+      try {
+        summary = await HealthService.getHealthSummary().timeout(
+          const Duration(seconds: 8),
+          onTimeout: () => <String, dynamic>{},
+        );
+      } catch (e) {
+        if (kDebugMode) debugPrint('[HealthOverview] getHealthSummary 异常: $e');
+        summary = <String, dynamic>{};
+      }
+      // 🔴 主动调一次 syncHealthData，让它在 summary 为空时也写 prefs 标记
+      await HealthService.syncHealthData();
+      // 读同步状态
+      final prefs = await SharedPreferences.getInstance();
+      final syncStatus = prefs.getString('health_last_sync_status') ?? '';
+      final notAuthorized = summary.isEmpty || syncStatus == 'not_authorized';
+
       if (summary.isNotEmpty) {
-        await HealthService.syncHealthData();
         setState(() {
           _metrics.addAll(summary);
           _lastUpdated = DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now());
+          _healthKitNotAuthorized = false;
         });
+      } else if (notAuthorized) {
+        if (mounted) setState(() => _healthKitNotAuthorized = true);
       }
 
       // 3. 检查异常
@@ -121,6 +144,11 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
               child: ListView(
                 padding: const EdgeInsets.all(ZaiNeSpacing.section),
                 children: [
+                  // 🔴【v1.97.3 修复 Bug 8】HealthKit 未授权 banner（顶部常驻，用户点「知道了」才隐藏）
+                  if (_healthKitNotAuthorized) ...[
+                    _buildHealthKitAuthBanner(),
+                    const SizedBox(height: ZaiNeSpacing.lg),
+                  ],
                   // ① 今日状态卡：一句结论 + 一个动作（本页差异化核心）
                   _buildTodayStatusCard(),
                   if (_alerts.isNotEmpty) ...[
@@ -163,6 +191,67 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
   }
 
   // ==================== ① 今日状态卡（差异化核心） ====================
+
+  /// 🔴【v1.97.3 修复 Bug 8】HealthKit 未授权引导 banner
+  Widget _buildHealthKitAuthBanner() {
+    return Container(
+      padding: const EdgeInsets.all(ZaiNeSpacing.lg),
+      decoration: BoxDecoration(
+        color: Colors.orange.shade50,
+        borderRadius: BorderRadius.circular(ZaiNeRadius.card),
+        border: Border.all(color: Colors.orange.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.health_and_safety_outlined, color: Colors.orange.shade700, size: 24),
+              const SizedBox(width: ZaiNeSpacing.sm),
+              const Expanded(
+                child: Text(
+                  '请前往 iPhone 授权健康数据',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'iOS「设置 → 健康 → 数据来源与访问权限 → 在呢+ → 全部打开」，授权后本页数据会立即同步。',
+            style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              TextButton.icon(
+                onPressed: () => setState(() => _healthKitNotAuthorized = false),
+                icon: const Icon(Icons.check, size: 16),
+                label: const Text('我知道了'),
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.orange.shade700,
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  minimumSize: const Size(0, 32),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+              ),
+              TextButton.icon(
+                onPressed: _loadHealthData,
+                icon: const Icon(Icons.refresh, size: 16),
+                label: const Text('重新检测'),
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.orange.shade700,
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  minimumSize: const Size(0, 32),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 
   /// Apple 健康说「静息心率 62 bpm」，我们说「今天状态平稳，可以报平安了」。
   /// 指标是原料，**结论 + 动作**才是产品。

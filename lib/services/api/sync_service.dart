@@ -181,10 +181,19 @@ class SyncService {
       try {
         final statusRes = await ApiService.get('/api/checkin/status');
         if (statusRes['success'] == true) {
-          // 【修复 v1.93.10】后端返回 signin_streak，兼容 streak 字段名
-          final serverStreak = statusRes['streak'] ?? statusRes['signin_streak'] ?? 0;
-          if (serverStreak > 0) {
-            await prefs.setInt(streakKey, serverStreak as int);
+          // 🔴【v1.97.2 根治】**不再把后端 streak 写入本地缓存**。
+          //
+          // 根因：后端 `signin_streak` 是独立累加计数器（checkin_service.py L59-75），
+          // 不是从 checkin_history 表算出来的，已知会漂移偏高
+          // （实测：后端 6 / 本地按后端自己的历史重算 3，后端两套数据自相矛盾）。
+          // 旧代码在此无条件写入 → 每次启动都把缓存污染成错值 → 首屏渲染错误天数
+          // → 随后本地重算再跳变（用户可见「先 6 后 3」闪烁）。
+          //
+          // 现策略：连续天数唯一真相源 = 本地签到历史（已 MERGE 服务器 history）。
+          // 后端 streak 仅在 debug 日志中作对账参考，绝不落盘。
+          if (kDebugMode) {
+            final serverStreak = statusRes['streak'] ?? statusRes['signin_streak'] ?? 0;
+            debugPrint('[SyncService] ℹ️ 后端 streak=$serverStreak（仅参考，不写缓存；以本地历史重算为准）');
           }
           if (statusRes['total_days'] != null) {
             await prefs.setInt(totalKey, statusRes['total_days'] as int);
@@ -237,11 +246,18 @@ class SyncService {
             if (kDebugMode) debugPrint('[SyncService] ✅ 合并签到历史(本地+服务器) 共 ${localDates.length} 条');
 
             // 用合并后的完整历史重算连续天数（单一真相源）
+            // 🔴【v1.97.2 根治】改为**无条件写回**（含降低值）。
+            // 旧代码 `if (calculatedStreak > cachedStreak)` 的「只升不降」保护，
+            // 本意是防网络失败把缓存打成 0，实际后果是：一旦缓存被后端错值抬高（如 6），
+            // 正确的重算值（3）因为「更小」而永远无法写回 → 污染值终身驻留。
+            // 现在写入前已确认 `localDates.isNotEmpty`（历史非空），不存在误写 0 的风险。
             final calculatedStreak = StreakUtil.calculateStreak(localDates.toList());
             final cachedStreak = prefs.getInt(streakKey) ?? 0;
-            if (calculatedStreak > cachedStreak) {
+            if (calculatedStreak != cachedStreak) {
               await prefs.setInt(streakKey, calculatedStreak);
-              if (kDebugMode) debugPrint('[SyncService] ✅ 重算连续天数=$calculatedStreak（本地缓存=$cachedStreak），已修正');
+              if (kDebugMode) {
+                debugPrint('[SyncService] ✅ 连续天数已对齐真相源: 缓存 $cachedStreak → 重算 $calculatedStreak');
+              }
             }
           } else {
             if (kDebugMode) debugPrint('[SyncService] ⚠️ 服务器历史为空，保留本地，不清空');

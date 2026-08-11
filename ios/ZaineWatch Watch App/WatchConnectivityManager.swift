@@ -147,10 +147,14 @@ class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
         WCSession.default.transferUserInfo(message)
         print("[Watch] 📤 transferUserInfo 已排队签到 (clientId=\(clientId))")
 
-        // 乐观 UI：立即进入「签到中」状态
-        lastAction = "签到中..."
+        // 🔴【v1.97.3 修复 · 第一性原理】乐观 UI：立即标记已签到
+        // 原因：用户点了签到 = 表达「我在呢」，应该立即看到反馈
+        // transferUserInfo 保证消息最终到达手机端处理；如果签到失败（登录失效等），
+        // 下次 refreshCheckInState / requestCheckInStatus 会从手机拉最新状态自动纠正
+        self.markCheckedInToday()
+        self.lastAction = "签到成功 ✅"
 
-        // 加速路径：手机可达时通过 sendMessage 即时拿到「真实结果」回包（失败不影响主路径）
+        // 加速路径：手机可达时通过 sendMessage 即时拿到「真实结果」回包，纠正 streak/total
         if WCSession.default.isReachable {
             WCSession.default.sendMessage(message, replyHandler: { reply in
                 print("[Watch] ✅ sendMessage 即时回包: \(reply)")
@@ -158,7 +162,6 @@ class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
                     DispatchQueue.main.async {
                         if success {
                             self.checkInSuccess = true
-                            self.markCheckedInToday()
                             self.checkInFailed = false
                             self.checkInAlreadyDone = reply["already_done"] as? Bool ?? false
                             self.setCheckInStats(streak: reply["streak"] as? Int ?? 0, total: reply["total"] as? Int ?? 0)
@@ -167,6 +170,9 @@ class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
                             self.pendingClientId = nil
                             WKInterfaceDevice.current().play(.success)
                         } else {
+                            // 回包明确失败（登录失效等），纠正乐观标记
+                            self.hasCheckedInToday = false
+                            UserDefaults.standard.removeObject(forKey: self.lastCheckInDateKey)
                             self.checkInSuccess = false
                             self.checkInFailed = true
                             self.lastAction = "签到失败 ❌"
@@ -178,25 +184,6 @@ class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
             }, errorHandler: { error in
                 print("[Watch] ℹ️ sendMessage 即时回包失败(已走 transferUserInfo 兜底，无影响): \(error.localizedDescription)")
             })
-        }
-
-        // 软兜底：1.4s 内未收到 ack 则先显示「已发送」，避免一直转圈
-        let capturedClientId = clientId
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.4) { [weak self] in
-            guard let self = self else { return }
-            if !self.checkInSuccess && !self.checkInFailed && self.pendingClientId == capturedClientId {
-                self.lastAction = "签到已发送 ⏳"
-            }
-        }
-        // 硬兜底：12s 内两端仍未打通，诚实显示失败，绝不再无限「签到中」
-        DispatchQueue.main.asyncAfter(deadline: .now() + 12.0) { [weak self] in
-            guard let self = self else { return }
-            if !self.checkInSuccess && self.pendingClientId == capturedClientId {
-                self.checkInFailed = true
-                self.lastAction = "签到失败 ❌"
-                self.pendingClientId = nil
-                WKInterfaceDevice.current().play(.failure)
-            }
         }
     }
 

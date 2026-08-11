@@ -221,7 +221,7 @@ class AIHealthAnalyzer {
     }
 
     // 6. 分析签到习惯
-    _analyzeCheckinPattern(userProfile, insights, anomalies, recommendations);
+    await _analyzeCheckinPattern(userProfile, insights, anomalies, recommendations);
 
     // 7. 计算综合评分
     final score = _calculateOverallScore(insights, anomalies);
@@ -500,30 +500,68 @@ class AIHealthAnalyzer {
   }
 
   /// 分析签到习惯
-  static void _analyzeCheckinPattern(
+  /// 🔴【v1.97.3 (162) 修复 Bug 4】"今日打卡"推荐必须基于「今天是否真的签到」判断，
+  /// 不能只凭 profile['last_checkin_at'] != null 就认为已签到（旧逻辑：该字段可能是
+  /// 昨天/更早，导致「已打卡却仍提示未打卡」或「没打卡却不提示」）。
+  /// 改为以本地签到历史 checkin_history_$uid（与 StreakUtil 一致的单一真相源）判断今天是否在列；
+  /// 仅当本地历史为空时才 fallback 用 profile['last_checkin_at'] 解析判断是否今天。
+  static Future<void> _analyzeCheckinPattern(
     Map<String, dynamic> profile,
     List<HealthInsight> insights,
     List<HealthAnomaly> anomalies,
     List<HealthRecommendation> recommendations,
-  ) {
-    final lastCheckin = profile['last_checkin_at'];
-    if (lastCheckin == null) {
-      anomalies.add(HealthAnomaly(
-        type: HealthAnomalyType.checkinMissed,
-        title: '未签到',
-        description: '今天还没有确认平安，记得签到哦',
-        detectedAt: DateTime.now(),
-        severity: 0.3,
-      ));
+  ) async {
+    final checkedInToday = await _hasCheckedInToday(profile);
+    if (!checkedInToday) {
       recommendations.add(const HealthRecommendation(
-        title: '每日签到',
-        description: '养成每日签到习惯，让守护你的人放心',
+        title: '今日打卡',
+        description: '今天还没有确认平安，点击签到让守护你的人放心',
         category: 'general',
         priority: 3,
         actionText: '立即签到',
         actionRoute: '/home',
       ));
     }
+  }
+
+  /// 判断今天是否已签到
+  /// 🔴【v1.97.3 (162) 修复 Bug 4】
+  /// 优先以本地签到历史 checkin_history_$uid 为准（该 key 在签到成功时由
+  /// StreakUtil.appendDate 写入，是连续天数/首屏的单一真相源）；
+  /// 本地历史为空时 fallback 解析 profile['last_checkin_at'] 判断是否今天。
+  static Future<bool> _hasCheckedInToday(Map<String, dynamic> profile) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final uid = prefs.getString('user_id') ?? '';
+      final historyKey =
+          uid.isNotEmpty ? 'checkin_history_$uid' : 'checkin_history';
+      final history = prefs.getStringList(historyKey) ?? const <String>[];
+
+      final today = DateTime(
+          DateTime.now().year, DateTime.now().month, DateTime.now().day);
+      for (final s in history) {
+        final d = DateTime.tryParse(s);
+        if (d != null) {
+          final dd = DateTime(d.year, d.month, d.day);
+          if (dd == today) return true;
+        }
+      }
+
+      // fallback：本地历史为空时，用 profile['last_checkin_at'] 判断是否为今天
+      final lastCheckin = profile['last_checkin_at'];
+      if (lastCheckin != null) {
+        final d = lastCheckin is DateTime
+            ? lastCheckin
+            : DateTime.tryParse(lastCheckin.toString());
+        if (d != null) {
+          final dd = DateTime(d.year, d.month, d.day);
+          if (dd == today) return true;
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) debugPrint('[AI] 判断今日签到失败(忽略): $e');
+    }
+    return false;
   }
 
   /// 计算综合健康评分

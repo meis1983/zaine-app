@@ -11,12 +11,14 @@ struct ZaineWatch_Watch_AppApp: App {
     
     var body: some Scene {
         WindowGroup {
-            ContentView()
-                .environmentObject(watchManager)
-                .onAppear {
-                    // Initialize WatchConnectivity on app launch
-                    _ = WatchConnectivityManager.shared
-                }
+            NavigationStack {
+                ContentView()
+                    .environmentObject(watchManager)
+                    .onAppear {
+                        // Initialize WatchConnectivity on app launch
+                        _ = WatchConnectivityManager.shared
+                    }
+            }
         }
     }
 }

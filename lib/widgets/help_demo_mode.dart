@@ -1,7 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../theme/theme_helper.dart';
+import '../services/social/guardian_message_service.dart';
 
 /// 求助演示模式 — 让用户无需真出事就能体验完整求助流程
 ///
@@ -125,6 +128,23 @@ class _HelpDemoModeState extends State<HelpDemoMode> with TickerProviderStateMix
       _subText = '真实求助将在您确认后联系守护人并发送位置';
       _isRunning = false;
     });
+
+    // 🔴【v1.97.3 (162) 修复 Bug #1】演示完成 → 解锁「未雨绸缪」成就
+    // 异步 fire-and-forget，失败也不影响演示 UI
+    unawaited(_unlockEmergencyTestedAchievement());
+  }
+
+  /// 演示完成时主动写入 emergency_tested 成就（之前 SOS 测试入口未实装 → 0/1 永远不解锁）
+  Future<void> _unlockEmergencyTestedAchievement() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final uid = prefs.getString('user_id') ?? '';
+      if (uid.isEmpty) return;
+      await SocialService().updateAchievementProgress(uid, 'emergency_tested', 1);
+      if (kDebugMode) debugPrint('[HelpDemo] ✅ emergency_tested 已解锁（uid=$uid）');
+    } catch (e) {
+      if (kDebugMode) debugPrint('[HelpDemo] 解锁 emergency_tested 失败(忽略): $e');
+    }
   }
 
   Future<void> _setStep(int step, String status, String sub, double progress) async {

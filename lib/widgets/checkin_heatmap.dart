@@ -3,24 +3,29 @@ import '../theme/theme_helper.dart';
 
 /// 签到热力图组件
 ///
-/// 展示用户过去一年的签到情况，类似 GitHub 贡献图
+/// 展示用户过去的签到情况，类似 GitHub 贡献图
 /// 每个方块代表一天，颜色深浅表示当天的签到状态
-class CheckinHeatmap extends StatelessWidget {
+/// 🔴【v1.97.3 修复 Bug 5】
+/// - 多级颜色（4 级渐变）替代单调两态色
+/// - 时间范围切换（7天 / 30天 / 90天 / 365天）
+/// - 点击格子显示日期 + 签到状态 Tooltip
+/// - 连续签到格子高亮边框
+class CheckinHeatmap extends StatefulWidget {
   /// 签到记录列表，包含签到的日期
   final List<DateTime> checkinDates;
-  
+
   /// 热力图颜色主题
   final Color baseColor;
-  
+
   /// 是否显示月份标签
   final bool showMonthLabels;
-  
+
   /// 是否显示星期标签
   final bool showWeekdayLabels;
-  
+
   /// 方块大小
   final double cellSize;
-  
+
   /// 方块间距
   final double cellSpacing;
 
@@ -35,14 +40,97 @@ class CheckinHeatmap extends StatelessWidget {
   });
 
   @override
+  State<CheckinHeatmap> createState() => _CheckinHeatmapState();
+}
+
+class _CheckinHeatmapState extends State<CheckinHeatmap> {
+  /// 0 = 7天（默认）, 1 = 30天, 2 = 90天, 3 = 365天
+  /// 🔴【v1.97.3 (162) 修复】默认由 1年 改为 7天（用户反馈默认一年太长）
+  int _selectedRange = 0;
+
+  static const _rangeOptions = [
+    {'label': '7天', 'days': 7},
+    {'label': '30天', 'days': 30},
+    {'label': '90天', 'days': 90},
+    {'label': '1年', 'days': 365},
+  ];
+
+  int get _rangeDays => _rangeOptions[_selectedRange]['days'] as int;
+
+  /// 预计算日期→签到映射，避免每次遍历
+  late Set<String> _checkinSet;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _rebuildCheckinSet();
+  }
+
+  void _rebuildCheckinSet() {
+    _checkinSet = widget.checkinDates
+        .map((d) => '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}')
+        .toSet();
+  }
+
+  bool _isCheckedIn(DateTime date) {
+    final key = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+    return _checkinSet.contains(key);
+  }
+
+  /// 计算某日所在连续签到段的长度（前后延伸）
+  int _streakLength(DateTime date) {
+    if (!_isCheckedIn(date)) return 0;
+    int count = 1;
+    // 往前数
+    DateTime prev = date.subtract(const Duration(days: 1));
+    while (_isCheckedIn(prev) && count < 365) {
+      count++;
+      prev = prev.subtract(const Duration(days: 1));
+    }
+    // 往后数
+    DateTime next = date.add(const Duration(days: 1));
+    while (_isCheckedIn(next) && count < 365) {
+      count++;
+      next = next.add(const Duration(days: 1));
+    }
+    return count;
+  }
+
+  /// 根据连续签到长度返回颜色级别 (0-3)
+  /// 1天 = 浅色, 2-3天 = 中浅, 4-6天 = 中深, 7+天 = 深色
+  int _colorLevel(int streakLen) {
+    if (streakLen <= 0) return 0;
+    if (streakLen <= 1) return 1;
+    if (streakLen <= 3) return 2;
+    if (streakLen <= 6) return 3;
+    return 4; // 7天+，最高级
+  }
+
+  Color _levelColor(int level) {
+    switch (level) {
+      case 0:
+        return Colors.grey.shade200;
+      case 1:
+        return widget.baseColor.withValues(alpha: 0.55);
+      case 2:
+        return widget.baseColor.withValues(alpha: 0.7);
+      case 3:
+        return widget.baseColor.withValues(alpha: 0.85);
+      case 4:
+        return widget.baseColor; // 满色
+      default:
+        return Colors.grey.shade200;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // 生成过去一年的日期网格
+    _rebuildCheckinSet();
+
     final now = DateTime.now();
-    final startDate = now.subtract(const Duration(days: 365));
-    
-    // 计算统计数据
+    final startDate = now.subtract(Duration(days: _rangeDays));
     final stats = _calculateStats(startDate, now);
-    
+
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
@@ -54,13 +142,10 @@ class CheckinHeatmap extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 标题和统计
             _buildHeader(stats),
             const SizedBox(height: ZaiNeSpacing.lg),
-            // 热力图
-            _buildHeatmapGrid(startDate, now),
+            if (stats['totalCheckins'] == 0) _buildEmptyState() else _buildHeatmapGrid(startDate, now),
             const SizedBox(height: ZaiNeSpacing.md),
-            // 图例
             _buildLegend(),
           ],
         ),
@@ -84,7 +169,7 @@ class CheckinHeatmap extends StatelessWidget {
               ),
               const SizedBox(height: ZaiNeSpacing.xxs),
               Text(
-                '过去一年的签到记录',
+                '总签到 ${stats['totalCheckins']} 天 · 连续 ${stats['currentStreak']} 天 · 最长 ${stats['maxStreak']} 天',
                 style: TextStyle(
                   fontSize: 12,
                   color: Colors.grey.shade500,
@@ -93,58 +178,50 @@ class CheckinHeatmap extends StatelessWidget {
             ],
           ),
         ),
-        // 统计数据
-        _buildStatItem('总签到', '${stats['totalCheckins']}', '天'),
-        const SizedBox(width: ZaiNeSpacing.lg),
-        _buildStatItem('连续', '${stats['currentStreak']}', '天'),
-        const SizedBox(width: ZaiNeSpacing.lg),
-        _buildStatItem('最长', '${stats['maxStreak']}', '天'),
+        // 时间范围切换
+        _buildRangeSelector(),
       ],
     );
   }
 
-  Widget _buildStatItem(String label, String value, String unit) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 10,
-            color: Colors.grey.shade400,
-          ),
-        ),
-        const SizedBox(height: ZaiNeSpacing.xxs),
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: baseColor,
+  Widget _buildRangeSelector() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: List.generate(_rangeOptions.length, (index) {
+          final isSelected = _selectedRange == index;
+          return GestureDetector(
+            onTap: () => setState(() => _selectedRange = index),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: isSelected ? widget.baseColor : Colors.transparent,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                _rangeOptions[index]['label'] as String,
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  color: isSelected ? Colors.white : Colors.grey.shade500,
+                ),
               ),
             ),
-            const SizedBox(width: ZaiNeSpacing.xxs),
-            Text(
-              unit,
-              style: TextStyle(
-                fontSize: 10,
-                color: Colors.grey.shade400,
-              ),
-            ),
-          ],
-        ),
-      ],
+          );
+        }),
+      ),
     );
   }
 
   Widget _buildHeatmapGrid(DateTime startDate, DateTime endDate) {
-    // 计算需要显示的总周数
     final totalDays = endDate.difference(startDate).inDays;
     final totalWeeks = (totalDays / 7).ceil();
-    
+
     // 找到起始日期所在周的第一天（周日）
     final firstSunday = startDate.subtract(
       Duration(days: startDate.weekday % 7),
@@ -156,18 +233,16 @@ class CheckinHeatmap extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 星期标签
-          if (showWeekdayLabels) _buildWeekdayLabels(),
+          if (widget.showWeekdayLabels) _buildWeekdayLabels(),
           const SizedBox(width: ZaiNeSpacing.sm),
-          // 月份标签 + 热力图网格
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (showMonthLabels) _buildMonthLabels(firstSunday, totalWeeks),
+              if (widget.showMonthLabels) _buildMonthLabels(firstSunday, totalWeeks),
               const SizedBox(height: ZaiNeSpacing.xxs),
               Row(
                 children: List.generate(totalWeeks, (weekIndex) {
-                  return _buildWeekColumn(firstSunday, weekIndex);
+                  return _buildWeekColumn(firstSunday, weekIndex, endDate);
                 }),
               ),
             ],
@@ -179,17 +254,16 @@ class CheckinHeatmap extends StatelessWidget {
 
   Widget _buildWeekdayLabels() {
     final weekdays = ['日', '一', '二', '三', '四', '五', '六'];
-    // 只显示部分星期标签，避免拥挤
     final visibleIndices = [1, 3, 5]; // 一、三、五
-    
+
     return Column(
       children: List.generate(7, (index) {
         if (!visibleIndices.contains(index)) {
-          return SizedBox(height: cellSize + cellSpacing);
+          return SizedBox(height: widget.cellSize + widget.cellSpacing);
         }
         return Container(
-          height: cellSize,
-          margin: EdgeInsets.only(bottom: cellSpacing),
+          height: widget.cellSize,
+          margin: EdgeInsets.only(bottom: widget.cellSpacing),
           alignment: Alignment.centerRight,
           child: Text(
             weekdays[index],
@@ -207,15 +281,15 @@ class CheckinHeatmap extends StatelessWidget {
     final months = <Widget>[];
     DateTime current = firstSunday;
     int? lastMonth;
-    
+
     for (int week = 0; week < totalWeeks; week++) {
       final middleOfWeek = current.add(const Duration(days: 3));
-      
+
       if (middleOfWeek.month != lastMonth) {
         lastMonth = middleOfWeek.month;
         months.add(
           Container(
-            width: (cellSize + cellSpacing) * 7,
+            width: (widget.cellSize + widget.cellSpacing) * 7,
             alignment: Alignment.centerLeft,
             child: Text(
               '${middleOfWeek.month}月',
@@ -228,47 +302,60 @@ class CheckinHeatmap extends StatelessWidget {
         );
       } else {
         months.add(
-          SizedBox(width: (cellSize + cellSpacing) * 7),
+          SizedBox(width: (widget.cellSize + widget.cellSpacing) * 7),
         );
       }
-      
+
       current = current.add(const Duration(days: 7));
     }
-    
+
     return Row(children: months);
   }
 
-  Widget _buildWeekColumn(DateTime firstSunday, int weekIndex) {
+  Widget _buildWeekColumn(DateTime firstSunday, int weekIndex, DateTime endDate) {
     final weekStart = firstSunday.add(Duration(days: weekIndex * 7));
-    
+
     return Column(
       children: List.generate(7, (dayIndex) {
         final date = weekStart.add(Duration(days: dayIndex));
-        final isCheckedIn = _isDateCheckedIn(date);
+        final isCheckedIn = _isCheckedIn(date);
         final isInRange = date.isAfter(
-          DateTime.now().subtract(const Duration(days: 365)),
-        ) && date.isBefore(DateTime.now().add(const Duration(days: 1)));
-        
-        return Container(
-          width: cellSize,
-          height: cellSize,
-          margin: EdgeInsets.only(
-            right: cellSpacing,
-            bottom: cellSpacing,
+          endDate.subtract(Duration(days: _rangeDays)),
+        ) && date.isBefore(endDate.add(const Duration(days: 1)));
+
+        final streakLen = isCheckedIn ? _streakLength(date) : 0;
+        final level = _colorLevel(streakLen);
+
+        // 连续签到 ≥3 天的格子加微妙边框
+        final showBorder = isCheckedIn && streakLen >= 3;
+
+        final dateStr = '${date.month}/${date.day}';
+        final weekdayNames = ['日', '一', '二', '三', '四', '五', '六'];
+        final tooltipMsg = isCheckedIn
+            ? '$dateStr 周${weekdayNames[date.weekday % 7]} · 已签到'
+            : (isInRange ? '$dateStr 周${weekdayNames[date.weekday % 7]} · 未签到' : '');
+
+        return Tooltip(
+          message: tooltipMsg,
+          preferBelow: false,
+          child: Container(
+            width: widget.cellSize,
+            height: widget.cellSize,
+            margin: EdgeInsets.only(
+              right: widget.cellSpacing,
+              bottom: widget.cellSpacing,
+            ),
+            decoration: BoxDecoration(
+              color: _levelColor(level),
+              borderRadius: BorderRadius.circular(ZaiNeRadius.tiny),
+              border: showBorder
+                  ? Border.all(
+                      color: widget.baseColor.withValues(alpha: 0.5),
+                      width: 0.5,
+                    )
+                  : null,
+            ),
           ),
-          decoration: BoxDecoration(
-            color: _getCellColor(isCheckedIn, isInRange),
-            borderRadius: BorderRadius.circular(ZaiNeRadius.tiny),
-          ),
-          child: isCheckedIn
-              ? Center(
-                  child: Icon(
-                    Icons.check,
-                    size: cellSize * 0.6,
-                    color: Colors.white,
-                  ),
-                )
-              : null,
         );
       }),
     );
@@ -286,13 +373,13 @@ class CheckinHeatmap extends StatelessWidget {
           ),
         ),
         const SizedBox(width: ZaiNeSpacing.xxs),
-        ...List.generate(4, (index) {
+        ...List.generate(5, (index) {
           return Container(
             width: 12,
             height: 12,
             margin: const EdgeInsets.only(right: 3),
             decoration: BoxDecoration(
-              color: baseColor.withValues(alpha: 0.2 + (index * 0.25)),
+              color: _levelColor(index),
               borderRadius: BorderRadius.circular(ZaiNeRadius.tiny),
             ),
           );
@@ -309,41 +396,42 @@ class CheckinHeatmap extends StatelessWidget {
     );
   }
 
-  bool _isDateCheckedIn(DateTime date) {
-    final normalizedDate = DateTime(date.year, date.month, date.day);
-    return checkinDates.any((checkinDate) {
-      final normalized = DateTime(
-        checkinDate.year,
-        checkinDate.month,
-        checkinDate.day,
-      );
-      return normalized.isAtSameMomentAs(normalizedDate);
-    });
-  }
-
-  Color _getCellColor(bool isCheckedIn, bool isInRange) {
-    if (!isInRange) {
-      return Colors.grey.shade100;
-    }
-    if (!isCheckedIn) {
-      return Colors.grey.shade200;
-    }
-    // 根据连续签到天数调整颜色深浅
-    return baseColor.withValues(alpha: 0.8);
+  /// 选中时间范围内没有任何签到时的空态提示（修复「整片空白」无反馈问题）
+  Widget _buildEmptyState() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 28),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.calendar_month_outlined, size: 42, color: Colors.grey.shade300),
+          const SizedBox(height: 10),
+          Text(
+            '最近 $_rangeDays 天还没有签到记录',
+            style: TextStyle(fontSize: 13, color: Colors.grey.shade400),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '每天签到，点亮你的安全日历',
+            style: TextStyle(fontSize: 11, color: Colors.grey.shade300),
+          ),
+        ],
+      ),
+    );
   }
 
   Map<String, dynamic> _calculateStats(DateTime startDate, DateTime endDate) {
-    // 统计总签到天数
-    final totalCheckins = checkinDates.where((date) {
+    // 统计范围内的总签到天数
+    final totalCheckins = widget.checkinDates.where((date) {
       return date.isAfter(startDate) && date.isBefore(endDate);
     }).length;
 
     // 计算当前连续签到
     int currentStreak = 0;
     final today = DateTime(endDate.year, endDate.month, endDate.day);
-    for (int i = 0; i < 365; i++) {
+    for (int i = 0; i < _rangeDays; i++) {
       final checkDate = today.subtract(Duration(days: i));
-      if (_isDateCheckedIn(checkDate)) {
+      if (_isCheckedIn(checkDate)) {
         currentStreak++;
       } else if (i > 0) {
         break;
@@ -353,12 +441,12 @@ class CheckinHeatmap extends StatelessWidget {
     // 计算最长连续签到
     int maxStreak = 0;
     int tempStreak = 0;
-    final sortedDates = checkinDates.toList()..sort();
+    final sortedDates = widget.checkinDates.toList()..sort();
     DateTime? prevDate;
-    
+
     for (final date in sortedDates) {
       final normalized = DateTime(date.year, date.month, date.day);
-      
+
       if (prevDate != null) {
         final diff = normalized.difference(prevDate).inDays;
         if (diff == 1) {
