@@ -5,7 +5,7 @@ import UserNotifications
 import HealthKit
 
 @main
-@objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate, WCSessionDelegate {
+@objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate, WCSessionDelegate, UNUserNotificationCenterDelegate {
   
   private var healthStore: HKHealthStore?
   private let fallMethodChannel = "zaine/healthkit"
@@ -47,6 +47,22 @@ import HealthKit
     if HKHealthStore.isHealthDataAvailable() {
         healthStore = HKHealthStore()
     }
+
+    // 【v1.97.3 SOS 后台】注册可操作通知类别：手表 SOS → 手机弹🆘通知(带"立即求助"按钮)
+    // 用户点击按钮/横幅 → App 回到前台 → userNotificationCenter(didReceive:) 驱动 Flutter SOS 流程
+    let sosAction = UNNotificationAction(
+        identifier: "SOS_ACTION",
+        title: "立即求助",
+        options: [.foreground]
+    )
+    let sosCategory = UNNotificationCategory(
+        identifier: "SOS_CATEGORY",
+        actions: [sosAction],
+        intentIdentifiers: [],
+        options: []
+    )
+    UNUserNotificationCenter.current().setNotificationCategories([sosCategory])
+    UNUserNotificationCenter.current().delegate = self
 
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
@@ -369,14 +385,25 @@ import HealthKit
           }
 
       case "sos":
-          // Watch 端紧急求助 → 记录到 UserDefaults + 立即通知 Flutter 执行 SOS 流程
+          // Watch 端紧急求助
           UserDefaults.standard.set(true, forKey: "pending_watch_sos")
           UserDefaults.standard.set("sos", forKey: "watch_last_action")
           UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: "watch_last_action_ts")
-          // 发送本地通知提醒用户
-          self.sendLocalNotification(title: "紧急求助", body: "Apple Watch 发起了 SOS 紧急求助")
-          // 【v1.93.0 修复】立即通知 Flutter 执行 SOS 流程（之前只设 flag，Flutter 端无人读取）
-          self.notifyFlutterWatchSOS()
+          if UIApplication.shared.applicationState == .active {
+              // App 前台：立即驱动 Flutter SOS 流程（5秒倒计时 + 自动发短信/拨号）
+              self.notifyFlutterWatchSOS()
+          } else {
+              // App 后台/锁屏：弹🆘可操作通知，用户点按后 userNotificationCenter(didReceive:) 再驱动
+              self.sendLocalNotification(
+                  title: "🆘 手表紧急求助",
+                  body: "Apple Watch 已发起 SOS，点击立即展开求助倒计时并自动联系守护人")
+          }
+          replyHandler(["success": true])
+
+      case "request_health_data":
+          // 【v1.97.3 修复 Issue A】手表健康速览主动拉取：触发 Flutter 同步并推送健康数据到 Watch
+          print("[AppDelegate] 📥 收到 Watch 健康数据请求(request_health_data)")
+          self.notifyFlutterRequestHealth()
           replyHandler(["success": true])
 
       default:
@@ -466,13 +493,34 @@ import HealthKit
       }
   }
 
-  // 发送本地通知
+  /// 【v1.97.3 修复 Issue A】通知 Flutter 端按需同步健康数据并推送到 Watch
+  /// 手表健康速览页主动发起 request_health_data 时调用
+  private func notifyFlutterRequestHealth() {
+      DispatchQueue.main.async {
+          guard let channel = self.watchChannel else {
+              print("[AppDelegate] ⚠️ watchChannel 未初始化，无法响应手表健康请求")
+              return
+          }
+          channel.invokeMethod("requestHealthData", arguments: nil) { result in
+              DispatchQueue.main.async {
+                  if let error = result as? FlutterError {
+                      print("[AppDelegate] 手表健康请求 Flutter 回调失败: \(error.message ?? "unknown")")
+                  } else {
+                      print("[AppDelegate] ✅ 已通知 Flutter 同步并推送健康数据到 Watch")
+                  }
+              }
+          }
+      }
+  }
+
+  // 【v1.97.3 SOS 后台】发送手表 SOS 可操作通知（带"立即求助"按钮，点击自动展开倒计时）
   private func sendLocalNotification(title: String, body: String) {
       let content = UNMutableNotificationContent()
       content.title = title
       content.body = body
       content.sound = .defaultCritical
-      content.categoryIdentifier = "SOS"
+      content.categoryIdentifier = "SOS_CATEGORY"
+      content.userInfo = ["zaine_sos": true]
 
       let request = UNNotificationRequest(
           identifier: "watch_sos_\(Date().timeIntervalSince1970)",
@@ -486,6 +534,24 @@ import HealthKit
       }
   }
   
+  // 【v1.97.3 SOS 后台】用户点按 SOS 通知(或"立即求助"按钮) → App 回到前台 → 驱动 Flutter SOS 流程
+  func userNotificationCenter(
+      _ center: UNUserNotificationCenter,
+      didReceive response: UNNotificationResponse,
+      withCompletionHandler completionHandler: @escaping () -> Void
+  ) {
+      let category = response.notification.request.content.categoryIdentifier
+      if category == "SOS_CATEGORY" {
+          print("[AppDelegate] 🚨 用户点按 SOS 通知，触发紧急求助流程")
+          // App 已前台、引擎存活 → 直接驱动 Flutter（5秒倒计时 + 自动发短信/拨号）
+          self.notifyFlutterWatchSOS()
+          // 保持 flag，供 Dart 在引擎尚未就绪的极端情况下兜底
+          UserDefaults.standard.set(true, forKey: "pending_watch_sos")
+      }
+      // 本项目未使用 FCM 远程推送，无需转发给 super；直接完成回调即可。
+      completionHandler()
+  }
+
   func session(_ session: WCSession, activationDidCompleteWith activationState: WCSessionActivationState, error: Error?) {
       print("[iOS AppDelegate] 📡 WCSession 激活完成，state=\(activationState.rawValue), isReachable=\(session.isReachable)")
   }
@@ -543,8 +609,20 @@ import HealthKit
           UserDefaults.standard.set(true, forKey: "pending_watch_sos")
           UserDefaults.standard.set("sos", forKey: "watch_last_action")
           UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: "watch_last_action_ts")
-          self.sendLocalNotification(title: "紧急求助", body: "Apple Watch 发起了 SOS 紧急求助")
-          self.notifyFlutterWatchSOS()
+          if UIApplication.shared.applicationState == .active {
+              // App 前台：立即驱动 Flutter SOS 流程
+              self.notifyFlutterWatchSOS()
+          } else {
+              // App 后台/锁屏：弹🆘可操作通知，用户点按后再驱动
+              self.sendLocalNotification(
+                  title: "🆘 手表紧急求助",
+                  body: "Apple Watch 已发起 SOS，点击立即展开求助倒计时并自动联系守护人")
+          }
+
+      case "request_health_data":
+          // 【v1.97.3 修复 Issue A】手表健康速览主动拉取：触发 Flutter 同步并推送健康数据到 Watch
+          print("[AppDelegate] 📥 收到 Watch 健康数据请求(request_health_data, transferUserInfo 兜底)")
+          self.notifyFlutterRequestHealth()
 
       default:
           break

@@ -165,6 +165,27 @@ class _ZaiNeAppState extends State<ZaiNeApp> with WidgetsBindingObserver {
     if (state == AppLifecycleState.resumed) {
       // 回到前台：刷新 Watch 连接状态（配对/可达），供后续推送使用
       unawaited(WatchDataService().refreshWatchState());
+      // 【v1.97.3 SOS 后台】兜底：从通知点按冷启动(terminated→relaunch)时，原生已把
+      // pending_watch_sos 写入 UserDefaults，此处读出来驱动 Flutter SOS 流程
+      // （5秒倒计时 + 自动发短信/拨号）。后台→点按场景由原生 userNotificationCenter 直接驱动，
+      // 此处为引擎尚未就绪时的极端兜底。
+      unawaited(_consumePendingWatchSOS());
+    }
+  }
+
+  // 【v1.97.3 SOS 后台】兜底消费原生写入的待处理 Watch SOS 标记
+  Future<void> _consumePendingWatchSOS() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final pending = prefs.getBool('pending_watch_sos') ?? false;
+      if (pending) {
+        await prefs.setBool('pending_watch_sos', false);
+        HealthService.pendingWatchSOS = true;
+        HealthService.watchSOSSignal.value++;
+        if (kDebugMode) debugPrint('[main] ✅ 消费待处理 Watch SOS，触发紧急求助');
+      }
+    } catch (e) {
+      if (kDebugMode) debugPrint('[main] 消费 pending_watch_sos 失败(忽略): $e');
     }
   }
 

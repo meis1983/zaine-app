@@ -433,9 +433,8 @@ class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
                 return
             }
 
-            if let health = userInfo["health_data"] as? [String: Any] {
-                self.healthData = health
-            }
+            // 【v1.97.3 修复】iPhone pushHealthSummary 直接发平铺健康字段（无 health_data 包裹），统一走 applyHealthData
+            self.applyHealthData(userInfo)
             if let checkIn = userInfo["last_check_in"] as? String {
                 self.lastCheckIn = checkIn
             }
@@ -449,6 +448,35 @@ class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
         return fmt.string(from: Date())
     }
     
+    // MARK: - 【v1.97.3 修复】健康数据接收（iPhone 通过 sendMessage / updateApplicationContext 推送）
+    /// 统一抽取健康相关字段写入 healthData，供健康速览页展示。
+    /// iPhone pushHealthSummary 直接发平铺字段（heart_rate/blood_oxygen/temperature/sleep/menstrual...），
+    /// 不走 health_data 包裹，故此处按字段名直接合并，避免覆盖签到回包等其他消息。
+    private func applyHealthData(_ data: [String: Any]) {
+        let healthKeys = ["heart_rate", "blood_oxygen", "hrv", "temperature", "sleep", "menstrual",
+                          "steps", "resting_heart_rate"]
+        var merged = self.healthData
+        var hasHealth = false
+        for k in healthKeys {
+            if let v = data[k] {
+                merged[k] = v
+                hasHealth = true
+            }
+        }
+        if hasHealth {
+            self.healthData = merged
+            print("[Watch] ✅ 健康数据已更新: \(merged)")
+        }
+    }
+
+    // iPhone 通过 updateApplicationContext 推送健康数据（App 后台/不可达时主路径）
+    func session(_ session: WCSession, didReceiveApplicationContext applicationContext: [String : Any]) {
+        DispatchQueue.main.async {
+            print("[Watch] 📥 收到 ApplicationContext: \(applicationContext)")
+            self.applyHealthData(applicationContext)
+        }
+    }
+
     // iOS 端回调用
     func session(_ session: WCSession, didReceiveMessage message: [String : Any], replyHandler: @escaping ([String : Any]) -> Void) {
         print("[Watch] 📥 收到来自 iPhone 的消息: \(message)")
@@ -457,6 +485,8 @@ class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
             replyHandler(["received": true])
             return
         }
+        // 【v1.97.3 修复】健康数据可能随 sendMessage 到达（可达时主路径）
+        applyHealthData(message)
         replyHandler(["received": true])
     }
 }

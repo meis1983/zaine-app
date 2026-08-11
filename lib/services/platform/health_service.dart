@@ -1116,6 +1116,10 @@ class HealthService {
           if (kDebugMode) debugPrint('[HealthService] 📱 Watch 请求当前签到状态(queryWatchStatus)');
           final status = await _queryWatchStatus();
           return status;
+        } else if (call.method == 'requestHealthData') {
+          // 【v1.97.3 修复 Issue A】手表健康速览主动拉取：同步健康并推送到 Watch
+          if (kDebugMode) debugPrint('[HealthService] 📱 Watch 请求健康数据(requestHealthData)，同步并推送');
+          unawaited(syncHealthData());
         } else {
           if (kDebugMode) debugPrint('[HealthService] ❓ 未知的 MethodChannel 调用: ${call.method}');
         }

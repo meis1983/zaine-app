@@ -119,10 +119,13 @@ class WatchDataService {
 
     try {
       // 过滤出 Watch 需要的关键指标
+      // 🔴【v1.97.3 修复 Issue A】字段名必须与手表 HealthDetailView 读取的 key 完全一致：
+      //   手表读 temperature / sleep / menstrual，手机原发 body_temperature / sleep_total / has_menstruation
+      //   → 永远对不上，故此处映射；且手表按 String 读取，统一转 String；睡眠原始单位为分钟 → 转小时。
       final watchData = <String, dynamic>{};
 
       if (summary.containsKey('heart_rate')) {
-        watchData['heart_rate'] = summary['heart_rate'];
+        watchData['heart_rate'] = summary['heart_rate'].toString();
       }
       if (summary.containsKey('blood_oxygen')) {
         watchData['blood_oxygen'] = (double.tryParse(
@@ -130,24 +133,35 @@ class WatchDataService {
             .toStringAsFixed(0);
       }
       if (summary.containsKey('steps')) {
-        watchData['steps'] = summary['steps'];
+        watchData['steps'] = summary['steps'].toString();
       }
       if (summary.containsKey('resting_heart_rate')) {
-        watchData['resting_heart_rate'] = summary['resting_heart_rate'];
+        watchData['resting_heart_rate'] = summary['resting_heart_rate'].toString();
       }
       if (summary.containsKey('hrv')) {
-        watchData['hrv'] = summary['hrv'];
+        watchData['hrv'] = summary['hrv'].toString();
       }
       if (summary.containsKey('body_temperature')) {
-        watchData['body_temperature'] =
+        watchData['temperature'] =
             (double.tryParse(summary['body_temperature'].toString()) ?? 0)
                 .toStringAsFixed(1);
+      } else if (summary.containsKey('temperature')) {
+        watchData['temperature'] = summary['temperature'].toString();
       }
       if (summary.containsKey('sleep_total')) {
-        watchData['sleep_total'] = summary['sleep_total'];
+        // 睡眠原始单位为分钟 → 转换为小时字符串（手表 UI 以 h 显示）
+        final raw = summary['sleep_total'];
+        final minutes = (raw is num)
+            ? raw.toDouble()
+            : (double.tryParse(raw.toString()) ?? 0);
+        watchData['sleep'] = (minutes / 60.0).toStringAsFixed(1);
+      } else if (summary.containsKey('sleep')) {
+        watchData['sleep'] = summary['sleep'].toString();
       }
       if (summary.containsKey('has_menstruation')) {
-        watchData['has_menstruation'] = summary['has_menstruation'];
+        watchData['menstrual'] = (summary['has_menstruation'] == true) ? '经期中' : '未记录';
+      } else if (summary.containsKey('menstrual')) {
+        watchData['menstrual'] = summary['menstrual'].toString();
       }
 
       // 添加推送时间戳
