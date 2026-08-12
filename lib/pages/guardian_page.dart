@@ -269,6 +269,9 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
     if (state == AppLifecycleState.resumed) {
       if (kDebugMode) debugPrint('[GuardianPage] App resumed, refreshing guardians...');
       _loadGuardians(isSilent: true);
+      // 【v1.97.3+171】从系统设置/体征页完成 HealthKit 授权后回 App，守护圈需要重新读 health_last_authorized
+      // 否则「守护中」绿色角标不会即时显示
+      _loadSafetyStatus();
     }
   }
 
@@ -1729,7 +1732,8 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
       ),
       child: Row(
         children: [
-          const Icon(Icons.lock_rounded, size: 18, color: Color(0xFF7C4DFF)),
+          // 【v1.97.3+171】互为守护用 diversity_3 图标（多个小人）替代 lock 图标，语义更贴合
+          const Icon(Icons.diversity_3_rounded, size: 18, color: Color(0xFF7C4DFF)),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
@@ -2412,6 +2416,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
   /// 【v1.97.3+166 双向视觉】互相守护标记（绿色「互护」徽标）；非互相守护返回空占位以保持布局稳定
   Widget _buildMutualBadge(bool isMutual) {
     if (!isMutual) return const SizedBox.shrink();
+    // 【v1.97.3+171】互为守护徽标图标化：diversity_3 图标 + 短文字标签
     return Container(
       margin: const EdgeInsets.only(left: ZaiNeSpacing.sm),
       padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.sm, vertical: ZaiNeSpacing.xs),
@@ -2420,19 +2425,53 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
         borderRadius: BorderRadius.circular(ZaiNeRadius.small),
         border: Border.all(color: const Color(0xFF1D9E75)),
       ),
-      child: const Text(
-        '互为守护',
-        style: TextStyle(
-          fontSize: ZaiNeFontSize.micro,
-          color: Color(0xFF0F6E56),
-          fontWeight: FontWeight.w600,
+      child: const Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.diversity_3_rounded, size: 11, color: Color(0xFF0F6E56)),
+          SizedBox(width: 3),
+          Text(
+            '互为守护',
+            style: TextStyle(
+              fontSize: ZaiNeFontSize.micro,
+              color: Color(0xFF0F6E56),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 【v1.97.3+171】次按钮：仅图标圆形（电话/消息），浅紫底+0.5px 紫描边
+  Widget _buildIconOnlyButton({
+    required IconData icon,
+    required String tooltip,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Tooltip(
+        message: tooltip,
+        child: Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: const Color(0xFF7C4DFF).withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: const Color(0xFF7C4DFF).withValues(alpha: 0.3),
+              width: 0.5,
+            ),
+          ),
+          child: Icon(icon, size: 16, color: const Color(0xFF7C4DFF)),
         ),
       ),
     );
   }
 
-  // 【v1.97.3+170】操作列品牌统一胶囊：图标+文字，全部品牌紫，不再按 index/状态轮换多色
-  Widget _buildActionPill({
+  // 【v1.97.3+171】主按钮：实心紫胶囊（图+2字），用于平安/提醒/邀请
+  Widget _buildPrimaryActionPill({
     required IconData icon,
     required String label,
     required String tooltip,
@@ -2443,27 +2482,23 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
       child: Tooltip(
         message: tooltip,
         child: Container(
-          height: 26,
-          padding: const EdgeInsets.symmetric(horizontal: 10),
+          height: 32,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
           decoration: BoxDecoration(
-            color: const Color(0xFF7C4DFF).withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(13),
-            border: Border.all(
-              color: const Color(0xFF7C4DFF).withValues(alpha: 0.3),
-              width: 0.5,
-            ),
+            color: const Color(0xFF7C4DFF),
+            borderRadius: BorderRadius.circular(16),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 13, color: const Color(0xFF7C4DFF)),
-              const SizedBox(width: 4),
+              Icon(icon, size: 14, color: Colors.white),
+              const SizedBox(width: 5),
               Text(
                 label,
                 style: const TextStyle(
                   fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color: Color(0xFF7C4DFF),
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
                 ),
               ),
             ],
@@ -2565,14 +2600,12 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                 ],
               ),
             ),
-            // 【v1.97.3+170】操作列升级：统一品牌紫胶囊（图标+文字），不再按 index/状态轮换多色
-            Column(
+            // 【v1.97.3+171】操作列横排+层级：电话/消息 次按钮（仅图标圆形）+ 平安/提醒/邀请 主按钮（实心紫胶囊）
+            Row(
               mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                _buildActionPill(
+                _buildIconOnlyButton(
                   icon: Icons.phone,
-                  label: '电话',
                   tooltip: '拨打电话',
                   onTap: () {
                     HapticFeedback.lightImpact();
@@ -2580,10 +2613,9 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                         (guardian['phone'] ?? '').toString());
                   },
                 ),
-                const SizedBox(height: 6),
-                _buildActionPill(
+                const SizedBox(width: 6),
+                _buildIconOnlyButton(
                   icon: Icons.sms,
-                  label: '消息',
                   tooltip: '发送短信',
                   onTap: () {
                     HapticFeedback.mediumImpact();
@@ -2591,8 +2623,8 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                         (guardian['phone'] ?? '').toString());
                   },
                 ),
-                const SizedBox(height: 6),
-                _buildActionPill(
+                const SizedBox(width: 6),
+                _buildPrimaryActionPill(
                   icon: (guardian['isRegistered'] == true && guardian['isActive'] == true)
                       ? Icons.favorite_border
                       : (guardian['isRegistered'] == true && guardian['isActive'] != true)
