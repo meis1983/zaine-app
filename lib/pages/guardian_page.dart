@@ -25,9 +25,30 @@ import '../utils/wechat_helper.dart';
 import '../config/app_config.dart';
 import '../services/platform/health_service.dart';
 import '../services/safety/safety_signal_engine.dart';
+import '../services/database/circle_event_dao.dart';
+import '../services/database/checkin_dao.dart';
 
 /// 蓝色调：用于「我守护的人」专区，与橙色「守护我的人」严格区分
 const Color _kGuardedBlue = Color(0xFF3F7CFF);
+
+/// 【v1.97.3+167 今天时间流】今日事件流条目（纯本地聚合，不涉后端）
+class _FeedItem {
+  final String type;
+  final String title;
+  final String subtitle;
+  final DateTime ts;
+  final IconData icon;
+  final Color accent;
+
+  _FeedItem({
+    required this.type,
+    required this.title,
+    required this.subtitle,
+    required this.ts,
+    required this.icon,
+    required this.accent,
+  });
+}
 
 /// 「我守护的人」管理面板（备注名 + 重新邀请，无解除）
 class _GuardedByMeManagerSheet extends StatefulWidget {
@@ -218,11 +239,16 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
   bool _healthAuthorized = false;
   bool _autoAlertEnabled = true;
 
+  // 【v1.97.3+167 今天时间流】本地聚合的今日事件流
+  List<_FeedItem> _todayFeed = [];
+  bool _feedLoading = true;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _loadGuardians();
+    _loadTodayFeed();
     // 【v1.95.0】定期刷新缩短为 30 秒，确保守护圈状态以服务端为准、及时纠正偶发错乱
     _refreshTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
       if (mounted) _loadGuardians(isSilent: true);
@@ -480,6 +506,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
             _guardians = updatedGuardians;
           });
         }
+        _loadTodayFeed();
         return;
       }
     } catch (e) {
@@ -578,6 +605,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
         _guardians = _dedupGuardians(results);
       });
     }
+    _loadTodayFeed();
 
     // 【2026-07-15 修复】最终兜底：再次确保「守护我的人」与「我守护的人」签到状态一致
     // 因为前序分支可能因异常/类型不匹配等原因没有覆盖成功
@@ -673,6 +701,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
       setState(() {
         _guardians = synced;
       });
+      _loadTodayFeed();
     }
   }
 
@@ -1012,6 +1041,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
             child: RefreshIndicator(
             onRefresh: () async {
               await _loadGuardians(isSilent: false);
+              await _loadTodayFeed();
               // 模拟短暂延迟，让用户看到刷新动画
               await Future.delayed(const Duration(milliseconds: 500));
             },
@@ -1306,6 +1336,9 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
               // ====== 生命体征守护 状态引擎卡（v1.97.4 状态引擎上提）======
               _buildVitalSignsCard(),
 
+              // ====== 二·今天时间流（v1.97.3+167 新增区块，本地聚合）======
+              _buildTodayFeed(),
+
               const SliverToBoxAdapter(child: SizedBox(height: ZaiNeSpacing.xl)),
 
               // ====== 守护者列表 ======
@@ -1502,6 +1535,285 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
   /// 生命体征守护 状态引擎卡（v1.97.4 状态引擎上提）
   /// 把产品真正引擎（安全信号）提到守护圈主页顶部，作为整页数据生产方与状态入口。
   /// 纯展示 + 导航，不触发外发；CN 版不显示自动外发相关文案。
+  // ════════════════════════════════════════════════════════════
+  // 【v1.97.3+167 今天时间流】本地聚合「今天圈内发生了什么」
+  // ════════════════════════════════════════════════════════════
+
+  /// 聚合今日事件（纯本地，不涉后端）：
+  /// ① 我 今日签到（实时派生）② 守护者 今日签到（实时派生）
+  /// ③ 体征异常预警（circle_events）④ 报平安（circle_events）
+  Future<void> _loadTodayFeed() async {
+    try {
+      final items = <_FeedItem>[];
+
+      // ① 我 今日签到
+      final myCheckin = await CheckinDao.getToday();
+      if (myCheckin != null) {
+        items.add(_FeedItem(
+          type: 'checkin_me',
+          title: '你 今日签到',
+          subtitle: '已经完成今天的报到，一切安好',
+          ts: DateTime.fromMillisecondsSinceEpoch(myCheckin.timestamp),
+          icon: Icons.check_circle_rounded,
+          accent: const Color(0xFF4CAF50),
+        ));
+      }
+
+      // ② 守护者 今日签到（依赖已加载的 _guardians 缓存）
+      for (final g in _guardians) {
+        if (g['checkedInToday'] != true) continue;
+        final name = (g['name'] ?? '守护者').toString();
+        items.add(_FeedItem(
+          type: 'checkin_guardian',
+          title: '$name 今日签到',
+          subtitle: '你的守护者已报平安',
+          ts: _parseSigninTs(g['lastSigninAt']),
+          icon: Icons.verified_user_rounded,
+          accent: _kGuardedBlue,
+        ));
+      }
+
+      // ③④ 体征异常 + 报平安（来自 circle_events 本地表）
+      final events = await CircleEventDao.getToday();
+      for (final ev in events) {
+        if (ev.type == CircleEventType.vitalAnomaly) {
+          items.add(_FeedItem(
+            type: ev.type,
+            title: ev.summary,
+            subtitle: ev.detail,
+            ts: DateTime.fromMillisecondsSinceEpoch(ev.ts),
+            icon: Icons.warning_amber_rounded,
+            accent: ZaiNeColors.danger(),
+          ));
+        } else if (ev.type == CircleEventType.peace) {
+          items.add(_FeedItem(
+            type: ev.type,
+            title: ev.summary,
+            subtitle: ev.detail,
+            ts: DateTime.fromMillisecondsSinceEpoch(ev.ts),
+            icon: Icons.favorite_rounded,
+            accent: const Color(0xFFEC407A),
+          ));
+        }
+      }
+
+      items.sort((a, b) => b.ts.compareTo(a.ts));
+
+      if (mounted) {
+        setState(() {
+          _todayFeed = items;
+          _feedLoading = false;
+        });
+      }
+    } catch (e) {
+      if (kDebugMode) debugPrint('[GuardianPage] 加载今日事件流失败: $e');
+      if (mounted) setState(() => _feedLoading = false);
+    }
+  }
+
+  /// 解析守护者签到时间戳（服务端 last_signin_at 可能为 unix 秒/毫秒或 ISO 字符串）
+  DateTime _parseSigninTs(dynamic raw) {
+    if (raw == null) return DateTime.now();
+    final s = raw.toString();
+    if (s.isEmpty) return DateTime.now();
+    final asInt = int.tryParse(s);
+    if (asInt != null) {
+      // 10 位=秒，13 位=毫秒
+      return DateTime.fromMillisecondsSinceEpoch(asInt < 1e12 ? asInt * 1000 : asInt);
+    }
+    final parsed = DateTime.tryParse(s);
+    if (parsed != null) return parsed;
+    return DateTime.now();
+  }
+
+  /// 事件时间相对/绝对格式化
+  String _formatFeedTime(DateTime ts) {
+    final now = DateTime.now();
+    final diff = now.difference(ts);
+    if (diff.inMinutes < 1) return '刚刚';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}分钟前';
+    if (ts.year == now.year && ts.month == now.month && ts.day == now.day) {
+      return DateFormat('HH:mm').format(ts);
+    }
+    return DateFormat('MM/dd HH:mm').format(ts);
+  }
+
+  /// 今天时间流区块（Sliver）
+  Widget _buildTodayFeed() {
+    return SliverToBoxAdapter(
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(20, 4, 20, 0),
+        decoration: BoxDecoration(
+          color: ZaiNeColors.cardBg(),
+          borderRadius: BorderRadius.circular(ZaiNeRadius.card),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 标题栏
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+              child: Row(
+                children: [
+                  Container(
+                    width: 30,
+                    height: 30,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF7C4DFF).withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(9),
+                    ),
+                    child: const Icon(Icons.timeline_rounded,
+                        color: Color(0xFF7C4DFF), size: 18),
+                  ),
+                  const SizedBox(width: 10),
+                  Text('今天',
+                      style: TextStyle(
+                          fontSize: ZaiNeFontSize.subtitle,
+                          fontWeight: FontWeight.bold,
+                          color: ZaiNeColors.textPrimary())),
+                  const SizedBox(width: 6),
+                  Text('圈内动态',
+                      style: TextStyle(
+                          fontSize: ZaiNeFontSize.caption,
+                          color: ZaiNeColors.textSecondary())),
+                ],
+              ),
+            ),
+            // 互护常驻卡
+            if (_mutualUserIds.isNotEmpty) _buildMutualPin(),
+            // 事件列表
+            if (_feedLoading)
+              _buildFeedLoading()
+            else if (_todayFeed.isEmpty)
+              _buildFeedEmpty()
+            else
+              for (final item in _todayFeed) _buildFeedRow(item),
+            const SizedBox(height: ZaiNeSpacing.md),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 互护常驻卡（非事件，关系状态提示）
+  Widget _buildMutualPin() {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 0, 12, 6),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFF7C4DFF).withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(ZaiNeRadius.input),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.lock_rounded, size: 18, color: Color(0xFF7C4DFF)),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              '你与 ${_mutualUserIds.length} 位圈友互相守护',
+              style: TextStyle(
+                fontSize: ZaiNeFontSize.body,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF7C4DFF),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 单条事件行（微信对话列表风格）
+  Widget _buildFeedRow(_FeedItem item) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        border: Border(
+          top: BorderSide(
+              color: ZaiNeColors.dividerColor().withValues(alpha: 0.6)),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: item.accent.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(item.icon, color: item.accent, size: 22),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(item.title,
+                    style: TextStyle(
+                        fontSize: ZaiNeFontSize.body,
+                        fontWeight: FontWeight.w600,
+                        color: ZaiNeColors.textPrimary())),
+                const SizedBox(height: 3),
+                Text(item.subtitle,
+                    style: TextStyle(
+                        fontSize: ZaiNeFontSize.caption,
+                        color: ZaiNeColors.textSecondary()),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(_formatFeedTime(item.ts),
+              style: TextStyle(
+                  fontSize: ZaiNeFontSize.micro,
+                  color: ZaiNeColors.textHint())),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFeedLoading() {
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 28),
+      child: Center(
+        child: CircularProgressIndicator(
+            strokeWidth: 2, color: Color(0xFF7C4DFF)),
+      ),
+    );
+  }
+
+  Widget _buildFeedEmpty() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 26),
+      child: Column(
+        children: [
+          Icon(Icons.auto_awesome_outlined,
+              size: 32, color: Colors.grey),
+          const SizedBox(height: ZaiNeSpacing.sm),
+          Text('今天圈内还静悄悄的',
+              style: TextStyle(
+                  fontSize: ZaiNeFontSize.body,
+                  color: ZaiNeColors.textSecondary(),
+                  fontWeight: FontWeight.w500)),
+          const SizedBox(height: 4),
+          Text('签到或报个平安，让守护圈看见你',
+              style: TextStyle(
+                  fontSize: ZaiNeFontSize.caption,
+                  color: ZaiNeColors.textHint())),
+        ],
+      ),
+    );
+  }
+
   Widget _buildVitalSignsCard() {
     final signal = _safetySignal;
     final summary = _healthSummary;
@@ -2449,6 +2761,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
         );
       }
     }
+    _loadTodayFeed();
   }
 
   /// 执行平安确认API调用
@@ -2735,6 +3048,18 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
       );
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri);
+        // 【v1.97.3+167 今天时间流】报平安落本地事件表（仅记录，不影响短信发送流程）
+        try {
+          await CircleEventDao.insert(CircleEvent(
+            type: CircleEventType.peace,
+            actor: 'me',
+            summary: '你 报平安',
+            detail: '已向 ${contacts.length} 位守护者发送平安消息',
+            ts: DateTime.now().millisecondsSinceEpoch,
+          ));
+        } catch (logErr) {
+          if (kDebugMode) debugPrint('[GuardianPage] 写报平安事件失败(忽略): $logErr');
+        }
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text('已为 ${contacts.length} 位守护者准备短信，请在短信App中发送'),

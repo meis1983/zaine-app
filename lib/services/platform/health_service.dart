@@ -11,6 +11,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'watch_data_service.dart';
 import '../safety/safety_service.dart';
 import '../safety/safety_signal_engine.dart';
+import '../database/circle_event_dao.dart';
 import '../../config/app_config.dart';
 import '../../utils/streak_util.dart';
 
@@ -742,6 +743,19 @@ class HealthService {
       }
 
       await prefs.setString('last_safety_alert_time', DateTime.now().toIso8601String());
+
+      // 【v1.97.3+167 今天时间流】体征异常落本地事件表（仅记录，不影响外发闸门逻辑）
+      try {
+        await CircleEventDao.insert(CircleEvent(
+          type: CircleEventType.vitalAnomaly,
+          actor: 'me',
+          summary: '体征异常预警',
+          detail: reasons.join('；'),
+          ts: DateTime.now().millisecondsSinceEpoch,
+        ));
+      } catch (logErr) {
+        if (kDebugMode) debugPrint('[SafetySignal] 写今日事件失败(忽略): $logErr');
+      }
     } catch (e) {
       // 守护判定失败绝不影响主同步流程
       if (kDebugMode) debugPrint('[SafetySignal] 判定异常(忽略): $e');
