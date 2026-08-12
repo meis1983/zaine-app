@@ -507,6 +507,9 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
           });
         }
         _loadTodayFeed();
+        // 【v1.97.3+168 修复】batchLookup 主路径也需重算互相守护（与 fallback 路径 L612-615 对齐）
+        _recomputeMutual();
+        if (mounted) setState(() {});
         return;
       }
     } catch (e) {
