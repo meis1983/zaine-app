@@ -2431,6 +2431,48 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
     );
   }
 
+  // 【v1.97.3+170】操作列品牌统一胶囊：图标+文字，全部品牌紫，不再按 index/状态轮换多色
+  Widget _buildActionPill({
+    required IconData icon,
+    required String label,
+    required String tooltip,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Tooltip(
+        message: tooltip,
+        child: Container(
+          height: 26,
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          decoration: BoxDecoration(
+            color: const Color(0xFF7C4DFF).withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(13),
+            border: Border.all(
+              color: const Color(0xFF7C4DFF).withValues(alpha: 0.3),
+              width: 0.5,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 13, color: const Color(0xFF7C4DFF)),
+              const SizedBox(width: 4),
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: Color(0xFF7C4DFF),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildGuardianCard(Map<String, dynamic> guardian, int index) {
     final colors = [
       ZaiNeColors.brandOrange,
@@ -2523,52 +2565,49 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                 ],
               ),
             ),
-            // 电话 + 短信 + 平安确认按钮（并排）
-            Row(
+            // 【v1.97.3+170】操作列升级：统一品牌紫胶囊（图标+文字），不再按 index/状态轮换多色
+            Column(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                // 电话按钮
-                GestureDetector(
+                _buildActionPill(
+                  icon: Icons.phone,
+                  label: '电话',
+                  tooltip: '拨打电话',
                   onTap: () {
                     HapticFeedback.lightImpact();
-                    _callGuardian((guardian['name'] ?? '守护者').toString(), (guardian['phone'] ?? '').toString());
+                    _callGuardian((guardian['name'] ?? '守护者').toString(),
+                        (guardian['phone'] ?? '').toString());
                   },
-                  child: Tooltip(
-                    message: '拨打电话',
-                    child: Container(
-                      width: 38,
-                      height: 38,
-                      decoration: BoxDecoration(
-                        color: accentColor.withValues(alpha: 0.1),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(Icons.phone, color: accentColor, size: 18),
-                    ),
-                  ),
                 ),
-                const SizedBox(width: ZaiNeSpacing.sm),
-                // 短信按钮
-                GestureDetector(
+                const SizedBox(height: 6),
+                _buildActionPill(
+                  icon: Icons.sms,
+                  label: '消息',
+                  tooltip: '发送短信',
                   onTap: () {
                     HapticFeedback.mediumImpact();
-                    _sendSMSToGuardian((guardian['name'] ?? '守护者').toString(), (guardian['phone'] ?? '').toString());
+                    _sendSMSToGuardian((guardian['name'] ?? '守护者').toString(),
+                        (guardian['phone'] ?? '').toString());
                   },
-                  child: Tooltip(
-                    message: '发送短信',
-                    child: Container(
-                      width: 38,
-                      height: 38,
-                      decoration: BoxDecoration(
-                        color: Colors.green.withValues(alpha: 0.1),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(Icons.sms, color: Colors.green.shade600, size: 18),
-                    ),
-                  ),
                 ),
-                const SizedBox(width: ZaiNeSpacing.sm),
-                // 第三按钮：已注册+已激活→平安确认 / 已注册+待激活→提醒TA / 未注册→邀请注册
-                GestureDetector(
+                const SizedBox(height: 6),
+                _buildActionPill(
+                  icon: (guardian['isRegistered'] == true && guardian['isActive'] == true)
+                      ? Icons.favorite_border
+                      : (guardian['isRegistered'] == true && guardian['isActive'] != true)
+                          ? Icons.notifications_active_outlined
+                          : Icons.person_add_alt_1,
+                  label: (guardian['isRegistered'] == true && guardian['isActive'] == true)
+                      ? '平安'
+                      : (guardian['isRegistered'] == true && guardian['isActive'] != true)
+                          ? '提醒'
+                          : '邀请',
+                  tooltip: (guardian['isRegistered'] == true && guardian['isActive'] == true)
+                      ? '请求平安确认'
+                      : (guardian['isRegistered'] == true && guardian['isActive'] != true)
+                          ? '提醒TA下载'
+                          : '邀请注册',
                   onTap: () {
                     HapticFeedback.mediumImpact();
                     if (guardian['isRegistered'] == true && guardian['isActive'] == true) {
@@ -2579,38 +2618,6 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                       _inviteToRegister(guardian);
                     }
                   },
-                  child: Tooltip(
-                    message: (guardian['isRegistered'] == true && guardian['isActive'] == true)
-                        ? '请求平安确认'
-                        : (guardian['isRegistered'] == true && guardian['isActive'] != true)
-                            ? '提醒TA下载'
-                            : '邀请注册',
-                    child: Container(
-                      width: 38,
-                      height: 38,
-                      decoration: BoxDecoration(
-                        color: (guardian['isRegistered'] == true && guardian['isActive'] == true)
-                            ? Colors.blue.shade50
-                            : (guardian['isRegistered'] == true && guardian['isActive'] != true)
-                                ? Colors.purple.shade50
-                                : Colors.orange.shade50,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        (guardian['isRegistered'] == true && guardian['isActive'] == true)
-                            ? Icons.favorite_border
-                            : (guardian['isRegistered'] == true && guardian['isActive'] != true)
-                                ? Icons.notifications_active_outlined
-                                : Icons.person_add_alt_1,
-                        color: (guardian['isRegistered'] == true && guardian['isActive'] == true)
-                            ? Colors.blue.shade600
-                            : (guardian['isRegistered'] == true && guardian['isActive'] != true)
-                                ? Colors.purple.shade600
-                                : Colors.orange.shade700,
-                        size: 18,
-                      ),
-                    ),
-                  ),
                 ),
               ],
             ),
