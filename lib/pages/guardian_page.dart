@@ -26,7 +26,6 @@ import '../config/app_config.dart';
 import '../services/platform/health_service.dart';
 import '../services/safety/safety_signal_engine.dart';
 import '../services/database/circle_event_dao.dart';
-import '../services/database/checkin_dao.dart';
 
 /// 蓝色调：用于「我守护的人」专区，与橙色「守护我的人」严格区分
 const Color _kGuardedBlue = Color(0xFF3F7CFF);
@@ -238,6 +237,8 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
   Map<String, dynamic>? _healthSummary;
   bool _healthAuthorized = false;
   bool _autoAlertEnabled = true;
+  // 【v1.97.3+169】最近一次体征同步时间戳(ms)，用于卡片显示「同步 X 分钟前」
+  int _lastHealthSyncAt = 0;
 
   // 【v1.97.3+167 今天时间流】本地聚合的今日事件流
   List<_FeedItem> _todayFeed = [];
@@ -641,6 +642,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
       final summary = await HealthService.getHealthSummary();
       if (!mounted) return;
       final signal = SafetySignalEngine.evaluate(summary);
+      _lastHealthSyncAt = DateTime.now().millisecondsSinceEpoch; // v1.97.3+169 同步时间反馈
       if (mounted) setState(() {
         _healthSummary = summary;
         _safetySignal = signal;
@@ -1120,7 +1122,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                               color: Colors.white.withValues(alpha: 0.3),
                             ),
                             Text(
-                              '与 ${_mutualUserIds.length} 位互相守护',
+                              '与 ${_mutualUserIds.length} 位互为守护',
                               style: TextStyle(
                                 fontSize: ZaiNeFontSize.caption,
                                 color: Colors.white.withValues(alpha: 0.9),
@@ -1550,13 +1552,24 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
       final items = <_FeedItem>[];
 
       // ① 我 今日签到
-      final myCheckin = await CheckinDao.getToday();
-      if (myCheckin != null) {
+      // 【v1.97.3+169 修复】改用本地签到历史 checkin_history（与首页签到环同一真相源），
+      // 原 CheckinDao.getToday() 依赖的 checkin_records 表在 App 内从未被写入，导致「我今日签到」永远为空。
+      final prefs = await SharedPreferences.getInstance();
+      final uid = prefs.getString('user_id') ?? '';
+      final history = prefs.getStringList(StreakUtil.historyKeyOf(uid)) ?? const <String>[];
+      final todayStr = '${DateTime.now().year}-${DateTime.now().month.toString().padLeft(2, '0')}-${DateTime.now().day.toString().padLeft(2, '0')}';
+      final checkedInToday = history.any((d) {
+        final parsed = DateTime.tryParse(d);
+        if (parsed == null) return d == todayStr;
+        final ds = '${parsed.year}-${parsed.month.toString().padLeft(2, '0')}-${parsed.day.toString().padLeft(2, '0')}';
+        return ds == todayStr;
+      });
+      if (checkedInToday) {
         items.add(_FeedItem(
           type: 'checkin_me',
           title: '你 今日签到',
           subtitle: '已经完成今天的报到，一切安好',
-          ts: DateTime.fromMillisecondsSinceEpoch(myCheckin.timestamp),
+          ts: DateTime.now(),
           icon: Icons.check_circle_rounded,
           accent: const Color(0xFF4CAF50),
         ));
@@ -1720,7 +1733,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              '你与 ${_mutualUserIds.length} 位圈友互相守护',
+              '你与 ${_mutualUserIds.length} 位圈友互为守护',
               style: TextStyle(
                 fontSize: ZaiNeFontSize.body,
                 fontWeight: FontWeight.w600,
@@ -1871,19 +1884,44 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
       );
     }
 
-    // 已授权但数据尚未返回：骨架占位
+    // 已授权但数据尚未返回：骨架占位（v1.97.3+169 强化状态文案）
     if (signal == null) {
       return SliverToBoxAdapter(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
           child: Container(
-            height: 96,
             padding: const EdgeInsets.all(ZaiNeSpacing.lg),
             decoration: BoxDecoration(
               color: ZaiNeColors.cardBg(),
               borderRadius: BorderRadius.circular(ZaiNeRadius.card),
+              border: Border.all(color: Colors.grey.withValues(alpha: 0.18)),
             ),
-            child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+            child: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Colors.green.withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Center(child: CircularProgressIndicator(strokeWidth: 2, color: Colors.green)),
+                ),
+                const SizedBox(width: ZaiNeSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: const [
+                      Text('守护就绪 · 数据收集中',
+                          style: TextStyle(fontSize: ZaiNeFontSize.subtitle, fontWeight: FontWeight.w500)),
+                      SizedBox(height: ZaiNeSpacing.xs),
+                      Text('已开启生命体征守护，正在同步 Apple Watch 数据',
+                          style: TextStyle(fontSize: ZaiNeFontSize.caption, color: Colors.grey)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       );
@@ -1915,6 +1953,20 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
         : (_autoAlertEnabled
             ? '自动守护中 · 点按查看完整体征'
             : '自动守护已关闭 · 点按查看完整体征');
+
+    // 【v1.97.3+169】同步时间反馈：根据最近一次体征同步时间显示「同步 X 分钟前」
+    String syncHint = '刚刚同步';
+    if (_lastHealthSyncAt > 0) {
+      final diffMin = (DateTime.now().millisecondsSinceEpoch - _lastHealthSyncAt) ~/ 60000;
+      if (diffMin < 1) {
+        syncHint = '刚刚同步';
+      } else if (diffMin < 60) {
+        syncHint = '同步于 $diffMin 分钟前';
+      } else {
+        final diffH = diffMin ~/ 60;
+        syncHint = '同步于 $diffH 小时前';
+      }
+    }
 
     return SliverToBoxAdapter(
       child: Padding(
@@ -1949,12 +2001,40 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(signal.headline,
-                              style: TextStyle(
-                                fontSize: ZaiNeFontSize.subtitle,
-                                fontWeight: FontWeight.w500,
-                                color: ZaiNeColors.textPrimary(),
-                              )),
+                          Row(
+                            children: [
+                              Flexible(
+                                child: Text(signal.headline,
+                                    style: TextStyle(
+                                      fontSize: ZaiNeFontSize.subtitle,
+                                      fontWeight: FontWeight.w500,
+                                      color: ZaiNeColors.textPrimary(),
+                                    )),
+                              ),
+                              const SizedBox(width: ZaiNeSpacing.sm),
+                              // 守护中角标（绿色实心，强化已开启反馈）
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.green,
+                                  borderRadius: BorderRadius.circular(ZaiNeRadius.small),
+                                ),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.verified_rounded, color: Colors.white, size: 12),
+                                    SizedBox(width: 3),
+                                    Text('守护中',
+                                        style: TextStyle(
+                                          fontSize: ZaiNeFontSize.micro,
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w600,
+                                        )),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
                           const SizedBox(height: ZaiNeSpacing.xs),
                           Text(signal.detail,
                               style: TextStyle(
@@ -2001,12 +2081,23 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                   ),
                 ],
                 const SizedBox(height: ZaiNeSpacing.sm),
-                Text(actionHint,
-                    style: TextStyle(
-                      fontSize: ZaiNeFontSize.micro,
-                      color: color,
-                      fontWeight: FontWeight.w500,
-                    )),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(actionHint,
+                          style: TextStyle(
+                            fontSize: ZaiNeFontSize.micro,
+                            color: color,
+                            fontWeight: FontWeight.w500,
+                          )),
+                    ),
+                    Text(syncHint,
+                        style: TextStyle(
+                          fontSize: ZaiNeFontSize.micro,
+                          color: Colors.grey[500],
+                        )),
+                  ],
+                ),
               ],
             ),
           ),
@@ -2120,7 +2211,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                         ),
                       ),
                       Text(
-                        '我发出的守护卡 · 已与你互相守护（人数不限）',
+                        '我发出的守护卡 · 已与你互为守护（人数不限）',
                         style: TextStyle(
                           fontSize: ZaiNeFontSize.micro,
                           color: Colors.grey[500],
@@ -2278,7 +2369,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                                       border: Border.all(color: const Color(0xFF1D9E75)),
                                     ),
                                     child: const Text(
-                                      '互护',
+                                      '互为守护',
                                       style: TextStyle(
                                         fontSize: ZaiNeFontSize.micro,
                                         color: Color(0xFF0F6E56),
@@ -2330,7 +2421,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
         border: Border.all(color: const Color(0xFF1D9E75)),
       ),
       child: const Text(
-        '互护',
+        '互为守护',
         style: TextStyle(
           fontSize: ZaiNeFontSize.micro,
           color: Color(0xFF0F6E56),
@@ -2382,6 +2473,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // 【v1.93.5 修复】Row 布局加 overflow 保护 + relation 空字符串兜底
+                  // 【v1.97.3+169 修复】互护徽标移出名字行，避免挤压名字导致互护 item 名字不可见
                   Row(
                     children: [
                       Flexible(
@@ -2418,12 +2510,16 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                           ),
                         ),
                       ),
-                      _buildMutualBadge(isMutual),
                     ],
                   ),
                   const SizedBox(height: ZaiNeSpacing.xs),
-                  // 三态状态标签
-                  _buildStatusLabel(guardian),
+                  // 三态状态标签 + 互护徽标（徽标独立成行，不再与名字争夺横向空间）
+                  Row(
+                    children: [
+                      Flexible(child: _buildStatusLabel(guardian)),
+                      _buildMutualBadge(isMutual),
+                    ],
+                  ),
                 ],
               ),
             ),
