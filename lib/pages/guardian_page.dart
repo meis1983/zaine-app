@@ -2354,25 +2354,37 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                                     ),
                                   ),
                                 ],
-                                // 【v1.97.3+172】互为守护徽标：握手图标（无文字），与 _buildMutualBadge 视觉一致
+                                // 【v1.97.3+173】互为守护徽标改双心相扣（与守护圈列表一致）
                                 if (isMutual)
                                   Padding(
-                                    padding: const EdgeInsets.only(left: 8),
+                                    padding: const EdgeInsets.only(left: 6),
                                     child: Tooltip(
                                       message: '互为守护',
-                                      child: Container(
-                                        width: 20,
-                                        height: 20,
-                                        alignment: Alignment.center,
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFFE1F5EE),
-                                          shape: BoxShape.circle,
-                                          border: Border.all(color: const Color(0xFF1D9E75), width: 0.6),
-                                        ),
-                                        child: const Icon(
-                                          Icons.handshake_rounded,
-                                          size: 12,
-                                          color: Color(0xFF0F6E56),
+                                      child: SizedBox(
+                                        width: 24,
+                                        height: 16,
+                                        child: Stack(
+                                          alignment: Alignment.center,
+                                          clipBehavior: Clip.none,
+                                          children: [
+                                            Transform.translate(
+                                              offset: const Offset(-3, 0),
+                                              child: const Icon(
+                                                Icons.favorite,
+                                                size: 16,
+                                                color: Color(0xFF7C4DFF),
+                                              ),
+                                            ),
+                                            Transform.translate(
+                                              offset: const Offset(3, 0),
+                                              child: Icon(
+                                                Icons.favorite,
+                                                size: 16,
+                                                color: const Color(0xFFA78DFF)
+                                                    .withValues(alpha: 0.85),
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ),
                                     ),
@@ -2392,26 +2404,42 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
     );
   }
 
-  /// 【v1.97.3+166 双向视觉】互为守护徽标（无文字，仅握手图标+tooltip）
+  /// 【v1.97.3+166 双向视觉】互为守护徽标（无文字，仅双心图标+tooltip）
   /// 非互为守护返回空占位以保持布局稳定
+  ///
+  /// 【v1.97.3+173】图标换成"双心相扣"（A 候选）：两心错位重叠，左深紫右浅紫，
+  /// 28×20 固定尺寸，配 Tooltip "互为守护"；不再用 handshake_rounded（语义偏商务握手）。
+  /// 位置（173）：从状态行尾移到姓名行紧贴名字，状态行不再放这个徽标。
   Widget _buildMutualBadge(bool isMutual) {
-    if (!isMutual) return const SizedBox(width: 24);
-    // 【v1.97.3+172】handshake_rounded 图标 + tooltip，无文字；固定 24px 宽避免挤压状态行
+    if (!isMutual) return const SizedBox.shrink();
     return Tooltip(
       message: '互为守护',
-      child: Container(
-        width: 24,
-        height: 24,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: const Color(0xFFE1F5EE),
-          shape: BoxShape.circle,
-          border: Border.all(color: const Color(0xFF1D9E75), width: 0.6),
-        ),
-        child: const Icon(
-          Icons.handshake_rounded,
-          size: 14,
-          color: Color(0xFF0F6E56),
+      child: SizedBox(
+        width: 28,
+        height: 18,
+        child: Stack(
+          alignment: Alignment.center,
+          clipBehavior: Clip.none,
+          children: [
+            // 左心：深品牌紫，外移 -4 让出重叠空间
+            Transform.translate(
+              offset: const Offset(-4, 0),
+              child: const Icon(
+                Icons.favorite,
+                size: 18,
+                color: Color(0xFF7C4DFF),
+              ),
+            ),
+            // 右心：浅紫 0.6 透，外移 +4 与左心错位形成"相扣"感
+            Transform.translate(
+              offset: const Offset(4, 0),
+              child: Icon(
+                Icons.favorite,
+                size: 18,
+                color: const Color(0xFFA78DFF).withValues(alpha: 0.85),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -2525,6 +2553,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                 children: [
                   // 【v1.93.5 修复】Row 布局加 overflow 保护 + relation 空字符串兜底
                   // 【v1.97.3+169 修复】互护徽标移出名字行，避免挤压名字导致互护 item 名字不可见
+                  // 【v1.97.3+173】互护徽标改回"姓名右侧"（紧贴名字），双心相扣图标
                   Row(
                     children: [
                       Flexible(
@@ -2538,7 +2567,9 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                           ),
                         ),
                       ),
-                      const SizedBox(width: ZaiNeSpacing.sm),
+                      const SizedBox(width: ZaiNeSpacing.xs),
+                      _buildMutualBadge(isMutual), // 28×18 双心图，isMutual=false 返回 SizedBox.shrink 不挤压
+                      const SizedBox(width: ZaiNeSpacing.xs),
                       // 关系标签
                       Flexible(
                         child: Container(
@@ -2564,13 +2595,13 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                     ],
                   ),
                   const SizedBox(height: ZaiNeSpacing.xs),
-                  // 【v1.97.3+172】状态标签占满，徽标固定 24px 推右；spaceBetween 给 status 稳定宽度
+                  // 【v1.97.3+173】互护徽标已挪到名字行，状态行只剩状态标签、不再 spaceBetween
+                  // 状态标签占满，padding 用 padding-left 视觉对齐
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    mainAxisAlignment: MainAxisAlignment.start,
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Flexible(child: _buildStatusLabel(guardian)),
-                      _buildMutualBadge(isMutual),
                     ],
                   ),
                 ],

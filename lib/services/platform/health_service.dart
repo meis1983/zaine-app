@@ -100,15 +100,25 @@ class HealthService {
     }
   }
 
-  /// 【v1.97.3+172】直接检测 HealthKit 权限状态
-  /// 绕过 prefs 时序问题：从 HealthKit SDK 读真实"是否已弹过授权框"状态。
-  /// 返回 true 表示系统已接收过授权请求（用户曾点过允许/不允许）；
-  /// 返回 false 表示从未弹过授权框（用户还未走到授权流程）。
-  /// Apple 因隐私不会披露具体 read 授权，但只要用户曾见过弹窗，hasPermissions 恒返回 true，
-  /// 这给我们一个比 prefs 更稳定的"已触发授权"信号。
+  /// 【v1.97.3+172 直接读 HealthKit；+173 子集修正】
+  /// 直接读 HealthKit 真实权限态，绕过 prefs 时序问题。
+  ///
+  /// 【+173 关键修正】改用 _coreTypes()（心率/血氧/睡眠 6 项）而非 _types（14 项）：
+  /// _types 里的 BODY_TEMPERATURE / BLOOD_PRESSURE_SYSTOLIC/_DIASTOLIC 在普通 iPhone +
+  /// Apple Watch 上**没有数据源**，iOS HealthKit 弹窗里根本不显示让用户授权的项
+  /// → 这些 type 的 authorizationStatus 永远是 .notDetermined
+  /// → 插件 `hasPermissions` 因含 notDetermined 整体返回 false，UI 误判"待开启"。
+  ///
+  /// _coreTypes() 的 6 项在所有 iPhone/Apple Watch 都可见，弹窗里可正常授权，
+  /// 体感副标题"同步 Apple Watch 心率、血氧与睡眠"也吻合。
+  ///
+  /// Apple 因隐私不会披露具体 read 授权状态，但只要任一 type 已被弹过授权框，
+  /// 插件视为已触发授权；返回 true。
   static Future<bool> hasPermissions() async {
     try {
-      final result = await _health.hasPermissions(_types, permissions: _permissions);
+      final core = _coreTypes();
+      final corePerms = core.map((_) => HealthDataAccess.READ).toList();
+      final result = await _health.hasPermissions(core, permissions: corePerms);
       return result ?? false;
     } catch (e) {
       if (kDebugMode) debugPrint('[HealthService] hasPermissions 异常: $e');
