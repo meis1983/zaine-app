@@ -100,6 +100,24 @@ class HealthService {
     }
   }
 
+  /// 【v1.97.3+172】直接检测 HealthKit 权限状态
+  /// 绕过 prefs 时序问题：从 HealthKit SDK 读真实"是否已弹过授权框"状态。
+  /// 返回 true 表示系统已接收过授权请求（用户曾点过允许/不允许）；
+  /// 返回 false 表示从未弹过授权框（用户还未走到授权流程）。
+  /// Apple 因隐私不会披露具体 read 授权，但只要用户曾见过弹窗，hasPermissions 恒返回 true，
+  /// 这给我们一个比 prefs 更稳定的"已触发授权"信号。
+  static Future<bool> hasPermissions() async {
+    try {
+      final result = await _health.hasPermissions(_types, permissions: _permissions);
+      return result ?? false;
+    } catch (e) {
+      if (kDebugMode) debugPrint('[HealthService] hasPermissions 异常: $e');
+      // 异常时回退到 prefs，避免 UI 在边缘情况下闪动
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getBool('health_last_authorized') ?? false;
+    }
+  }
+
   static bool _isSleepType(HealthDataType t) {
     return t == HealthDataType.SLEEP_ASLEEP ||
         t == HealthDataType.SLEEP_AWAKE ||

@@ -624,14 +624,19 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
     unawaited(_loadSafetyStatus());
   }
 
-  /// 【v1.97.4 状态引擎上提】加载生命体征守护状态卡数据
-  /// 安全约束：仅当本地已记录 HealthKit 授权(health_last_authorized)时才拉取，
-  /// 避免用户只是打开守护圈就被系统弹健康授权框（授权应在体征页触发）。
-  /// 调用 SafetySignalEngine.evaluate 纯判定，不触发任何外发。
+  /// 加载生命体征守护状态卡数据
+  /// 【v1.97.3+172】稳定性修复：直接调用 HealthService.hasPermissions() 读 HealthKit 真实权限态，
+  /// 不再依赖 prefs（prefs 由 getHealthSummary 异步写入，时序不稳导致 UI 在「开启」/「守护中」之间抖动）。
   Future<void> _loadSafetyStatus() async {
     if (!mounted) return;
     final prefs = await SharedPreferences.getInstance();
-    final authorized = prefs.getBool('health_last_authorized') ?? false;
+    // 首选：直接读 HealthKit SDK，回退到 prefs
+    bool authorized;
+    try {
+      authorized = await HealthService.hasPermissions();
+    } catch (_) {
+      authorized = prefs.getBool('health_last_authorized') ?? false;
+    }
     _healthAuthorized = authorized;
     if (!authorized) {
       if (mounted) setState(() {
@@ -2224,21 +2229,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                     ],
                   ),
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: guardedColor.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    '${_guardedByMe.length}',
-                    style: TextStyle(
-                      fontSize: ZaiNeFontSize.caption,
-                      fontWeight: FontWeight.w700,
-                      color: guardedColor,
-                    ),
-                  ),
-                ),
+                // 【v1.97.3+172】移除「N」数字徽标——subtitle 已表达方向，徽标多余
               ],
             ),
             const SizedBox(height: 12),
@@ -2363,38 +2354,26 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                                     ),
                                   ),
                                 ],
+                                // 【v1.97.3+172】互为守护徽标：握手图标（无文字），与 _buildMutualBadge 视觉一致
                                 if (isMutual)
-                                  Container(
-                                    margin: const EdgeInsets.only(left: 8),
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFE1F5EE),
-                                      borderRadius: BorderRadius.circular(ZaiNeRadius.small),
-                                      border: Border.all(color: const Color(0xFF1D9E75)),
-                                    ),
-                                    child: const Text(
-                                      '互为守护',
-                                      style: TextStyle(
-                                        fontSize: ZaiNeFontSize.micro,
-                                        color: Color(0xFF0F6E56),
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  )
-                                else
-                                  Container(
-                                    margin: const EdgeInsets.only(left: 8),
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: guardedColor.withValues(alpha: 0.12),
-                                      borderRadius: BorderRadius.circular(ZaiNeRadius.small),
-                                    ),
-                                    child: Text(
-                                      '你守护 TA',
-                                      style: TextStyle(
-                                        fontSize: ZaiNeFontSize.micro,
-                                        color: guardedColor,
-                                        fontWeight: FontWeight.w600,
+                                  Padding(
+                                    padding: const EdgeInsets.only(left: 8),
+                                    child: Tooltip(
+                                      message: '互为守护',
+                                      child: Container(
+                                        width: 20,
+                                        height: 20,
+                                        alignment: Alignment.center,
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFE1F5EE),
+                                          shape: BoxShape.circle,
+                                          border: Border.all(color: const Color(0xFF1D9E75), width: 0.6),
+                                        ),
+                                        child: const Icon(
+                                          Icons.handshake_rounded,
+                                          size: 12,
+                                          color: Color(0xFF0F6E56),
+                                        ),
                                       ),
                                     ),
                                   ),
@@ -2413,32 +2392,27 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
     );
   }
 
-  /// 【v1.97.3+166 双向视觉】互相守护标记（绿色「互护」徽标）；非互相守护返回空占位以保持布局稳定
+  /// 【v1.97.3+166 双向视觉】互为守护徽标（无文字，仅握手图标+tooltip）
+  /// 非互为守护返回空占位以保持布局稳定
   Widget _buildMutualBadge(bool isMutual) {
-    if (!isMutual) return const SizedBox.shrink();
-    // 【v1.97.3+171】互为守护徽标图标化：diversity_3 图标 + 短文字标签
-    return Container(
-      margin: const EdgeInsets.only(left: ZaiNeSpacing.sm),
-      padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.sm, vertical: ZaiNeSpacing.xs),
-      decoration: BoxDecoration(
-        color: const Color(0xFFE1F5EE),
-        borderRadius: BorderRadius.circular(ZaiNeRadius.small),
-        border: Border.all(color: const Color(0xFF1D9E75)),
-      ),
-      child: const Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.diversity_3_rounded, size: 11, color: Color(0xFF0F6E56)),
-          SizedBox(width: 3),
-          Text(
-            '互为守护',
-            style: TextStyle(
-              fontSize: ZaiNeFontSize.micro,
-              color: Color(0xFF0F6E56),
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
+    if (!isMutual) return const SizedBox(width: 24);
+    // 【v1.97.3+172】handshake_rounded 图标 + tooltip，无文字；固定 24px 宽避免挤压状态行
+    return Tooltip(
+      message: '互为守护',
+      child: Container(
+        width: 24,
+        height: 24,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: const Color(0xFFE1F5EE),
+          shape: BoxShape.circle,
+          border: Border.all(color: const Color(0xFF1D9E75), width: 0.6),
+        ),
+        child: const Icon(
+          Icons.handshake_rounded,
+          size: 14,
+          color: Color(0xFF0F6E56),
+        ),
       ),
     );
   }
@@ -2590,8 +2564,10 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                     ],
                   ),
                   const SizedBox(height: ZaiNeSpacing.xs),
-                  // 三态状态标签 + 互护徽标（徽标独立成行，不再与名字争夺横向空间）
+                  // 【v1.97.3+172】状态标签占满，徽标固定 24px 推右；spaceBetween 给 status 稳定宽度
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Flexible(child: _buildStatusLabel(guardian)),
                       _buildMutualBadge(isMutual),
