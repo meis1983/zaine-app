@@ -208,6 +208,8 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
   Map<String, bool> _guardedByMeCheckedIn = {};
   // 「我守护的人」备注名（本地存储，key=guarded_by_me_remark_<receiver_id>）
   Map<int, String> _guardedRemarks = {};
+  // 【v1.97.3+166 双向视觉】互相守护的用户 id 集合（「守护我的人」userId 与「我守护的人」receiver_id 的交集）
+  Set<String> _mutualUserIds = {};
   Timer? _refreshTimer; // 定期刷新定时器
 
   // 【v1.97.4 状态引擎上提】生命体征守护状态卡数据
@@ -580,6 +582,8 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
     // 【2026-07-15 修复】最终兜底：再次确保「守护我的人」与「我守护的人」签到状态一致
     // 因为前序分支可能因异常/类型不匹配等原因没有覆盖成功
     _finalSyncGuardianCheckInStatus();
+    // 【v1.97.3+166 双向视觉】重算「互相守护」集合（userId == receiver_id 交集），并触发重建
+    _recomputeMutual();
     if (mounted) setState(() {});
     // 【v1.97.4 状态引擎上提】并行加载生命体征守护状态（纯判定，不触发外发）
     unawaited(_loadSafetyStatus());
@@ -614,6 +618,41 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
       if (kDebugMode) debugPrint('[GuardianPage] 安全信号加载失败: $e');
     }
   }
+
+  /// 【v1.97.3+166 双向视觉】计算「互相守护」用户集合：
+  /// 同一人同时出现在「守护我的人」(userId) 与「我守护的人」(receiver_id) 中。
+  void _recomputeMutual() {
+    final guardianIds = _guardians
+        .map((g) => g['userId']?.toString())
+        .whereType<String>()
+        .where((id) => id.isNotEmpty)
+        .toSet();
+    final guardedIds = _guardedByMe
+        .map((p) => p['receiver_id']?.toString())
+        .whereType<String>()
+        .where((id) => id.isNotEmpty)
+        .toSet();
+    _mutualUserIds = guardianIds.intersection(guardedIds);
+  }
+
+  /// 【v1.97.3+166 双向视觉】互护优先排序：互相守护的排到列表最前（各自原相对顺序保持不变）
+  List<Map<String, dynamic>> _sortByMutual(
+      List<Map<String, dynamic>> list, String idKey) {
+    final sorted = List<Map<String, dynamic>>.from(list);
+    sorted.sort((a, b) {
+      final am = _mutualUserIds.contains(a[idKey]?.toString() ?? '');
+      final bm = _mutualUserIds.contains(b[idKey]?.toString() ?? '');
+      if (am == bm) return 0;
+      return am ? -1 : 1;
+    });
+    return sorted;
+  }
+
+  // 【v1.97.3+166 双向视觉】互护优先排序后的列表（getter，避免在外层 sliver 列表里声明变量）
+  List<Map<String, dynamic>> get _sortedGuardians =>
+      _sortByMutual(_guardians, 'userId');
+  List<Map<String, dynamic>> get _sortedGuardedByMe =>
+      _sortByMutual(_guardedByMe, 'receiver_id');
 
   /// 用「我守护的人」权威签到状态，强制同步「守护我的人」列表中同一 user 的显示状态
   void _finalSyncGuardianCheckInStatus() {
@@ -1040,6 +1079,22 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                               ),
                             ),
                           ],
+                          if (_mutualUserIds.isNotEmpty) ...[
+                            Container(
+                              margin: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.sm),
+                              width: 1,
+                              height: 10,
+                              color: Colors.white.withValues(alpha: 0.3),
+                            ),
+                            Text(
+                              '与 ${_mutualUserIds.length} 位互相守护',
+                              style: TextStyle(
+                                fontSize: ZaiNeFontSize.caption,
+                                color: Colors.white.withValues(alpha: 0.9),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                       const SizedBox(height: ZaiNeSpacing.xs),
@@ -1316,10 +1371,10 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                   sliver: SliverList(
                     delegate: SliverChildBuilderDelegate(
                       (context, index) {
-                        final guardian = _guardians[index];
+                        final guardian = _sortedGuardians[index];
                         return _buildGuardianCard(guardian, index);
                       },
-                      childCount: _guardians.length,
+                      childCount: _sortedGuardians.length,
                     ),
                   ),
                 ),
@@ -1810,11 +1865,13 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                 ),
               )
             else
-              ..._guardedByMe.map((person) {
+              ..._sortedGuardedByMe.map((person) {
                 final name = _guardedDisplayName(person);
                 final checkedIn = person['checked_in_today'] == true;
                 final isPending = person['last_signin_at'] == null; // 待激活：已注册但未登录 App
                 final boundAt = person['bound_at']?.toString() ?? '';
+                final rid = person['receiver_id']?.toString() ?? '';
+                final isMutual = _mutualUserIds.contains(rid);
                 return Container(
                   margin: const EdgeInsets.only(bottom: ZaiNeSpacing.cardXs),
                   padding: const EdgeInsets.all(ZaiNeSpacing.lg),
@@ -1822,8 +1879,10 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                     color: ZaiNeColors.cardBg(),
                     borderRadius: BorderRadius.circular(ZaiNeRadius.card),
                     border: Border.all(
-                      color: guardedColor.withValues(alpha: 0.18),
-                      width: 1,
+                      color: isMutual
+                          ? const Color(0xFF1D9E75)
+                          : guardedColor.withValues(alpha: 0.18),
+                      width: isMutual ? 1.5 : 1,
                     ),
                     boxShadow: [
                       BoxShadow(
@@ -1894,6 +1953,41 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                                     ),
                                   ),
                                 ],
+                                if (isMutual)
+                                  Container(
+                                    margin: const EdgeInsets.only(left: 8),
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFE1F5EE),
+                                      borderRadius: BorderRadius.circular(ZaiNeRadius.small),
+                                      border: Border.all(color: const Color(0xFF1D9E75)),
+                                    ),
+                                    child: const Text(
+                                      '互护',
+                                      style: TextStyle(
+                                        fontSize: ZaiNeFontSize.micro,
+                                        color: Color(0xFF0F6E56),
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  )
+                                else
+                                  Container(
+                                    margin: const EdgeInsets.only(left: 8),
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: guardedColor.withValues(alpha: 0.12),
+                                      borderRadius: BorderRadius.circular(ZaiNeRadius.small),
+                                    ),
+                                    child: Text(
+                                      '你守护 TA',
+                                      style: TextStyle(
+                                        fontSize: ZaiNeFontSize.micro,
+                                        color: guardedColor,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
                               ],
                             ),
                           ],
@@ -1909,6 +2003,28 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
     );
   }
 
+  /// 【v1.97.3+166 双向视觉】互相守护标记（绿色「互护」徽标）；非互相守护返回空占位以保持布局稳定
+  Widget _buildMutualBadge(bool isMutual) {
+    if (!isMutual) return const SizedBox.shrink();
+    return Container(
+      margin: const EdgeInsets.only(left: ZaiNeSpacing.sm),
+      padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.sm, vertical: ZaiNeSpacing.xs),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE1F5EE),
+        borderRadius: BorderRadius.circular(ZaiNeRadius.small),
+        border: Border.all(color: const Color(0xFF1D9E75)),
+      ),
+      child: const Text(
+        '互护',
+        style: TextStyle(
+          fontSize: ZaiNeFontSize.micro,
+          color: Color(0xFF0F6E56),
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+
   Widget _buildGuardianCard(Map<String, dynamic> guardian, int index) {
     final colors = [
       ZaiNeColors.brandOrange,
@@ -1917,6 +2033,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
       Colors.blue,
     ];
     final accentColor = colors[index % colors.length];
+    final isMutual = _mutualUserIds.contains(guardian['userId']?.toString() ?? '');
 
     return GestureDetector(
       onLongPress: () => _showRemoveGuardianDialog(guardian),
@@ -1926,7 +2043,9 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
         decoration: BoxDecoration(
           color: ZaiNeColors.cardBg(),
           borderRadius: BorderRadius.circular(ZaiNeRadius.card),
-          border: null,
+          border: isMutual
+              ? Border.all(color: const Color(0xFF1D9E75), width: 1.5)
+              : null,
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.03),
@@ -1984,6 +2103,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                           ),
                         ),
                       ),
+                      _buildMutualBadge(isMutual),
                     ],
                   ),
                   const SizedBox(height: ZaiNeSpacing.xs),
