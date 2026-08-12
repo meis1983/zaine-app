@@ -5,7 +5,7 @@ import UserNotifications
 import HealthKit
 
 @main
-@objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate, WCSessionDelegate, UNUserNotificationCenterDelegate {
+@objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate, WCSessionDelegate {
   
   private var healthStore: HKHealthStore?
   private let fallMethodChannel = "zaine/healthkit"
@@ -535,7 +535,9 @@ import HealthKit
   }
   
   // 【v1.97.3 SOS 后台】用户点按 SOS 通知(或"立即求助"按钮) → App 回到前台 → 驱动 Flutter SOS 流程
-  func userNotificationCenter(
+  // override 是因为 FlutterAppDelegate 父类已声明 UNUserNotificationCenterDelegate 并实现该方法
+  // 父类无 firebase_messaging 时默认只调 completionHandler()，不会做任何额外动作，override 安全
+  override func userNotificationCenter(
       _ center: UNUserNotificationCenter,
       didReceive response: UNNotificationResponse,
       withCompletionHandler completionHandler: @escaping () -> Void

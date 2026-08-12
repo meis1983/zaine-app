@@ -22,6 +22,9 @@ import '../services/api_service.dart';
 import '../services/api/notify_service.dart';
 import '../data/app_constants.dart';
 import '../utils/wechat_helper.dart';
+import '../config/app_config.dart';
+import '../services/platform/health_service.dart';
+import '../services/safety/safety_signal_engine.dart';
 
 /// 蓝色调：用于「我守护的人」专区，与橙色「守护我的人」严格区分
 const Color _kGuardedBlue = Color(0xFF3F7CFF);
@@ -206,6 +209,12 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
   // 「我守护的人」备注名（本地存储，key=guarded_by_me_remark_<receiver_id>）
   Map<int, String> _guardedRemarks = {};
   Timer? _refreshTimer; // 定期刷新定时器
+
+  // 【v1.97.4 状态引擎上提】生命体征守护状态卡数据
+  SafetySignal? _safetySignal;
+  Map<String, dynamic>? _healthSummary;
+  bool _healthAuthorized = false;
+  bool _autoAlertEnabled = true;
 
   @override
   void initState() {
@@ -571,6 +580,39 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
     // 【2026-07-15 修复】最终兜底：再次确保「守护我的人」与「我守护的人」签到状态一致
     // 因为前序分支可能因异常/类型不匹配等原因没有覆盖成功
     _finalSyncGuardianCheckInStatus();
+    if (mounted) setState(() {});
+    // 【v1.97.4 状态引擎上提】并行加载生命体征守护状态（纯判定，不触发外发）
+    unawaited(_loadSafetyStatus());
+  }
+
+  /// 【v1.97.4 状态引擎上提】加载生命体征守护状态卡数据
+  /// 安全约束：仅当本地已记录 HealthKit 授权(health_last_authorized)时才拉取，
+  /// 避免用户只是打开守护圈就被系统弹健康授权框（授权应在体征页触发）。
+  /// 调用 SafetySignalEngine.evaluate 纯判定，不触发任何外发。
+  Future<void> _loadSafetyStatus() async {
+    if (!mounted) return;
+    final prefs = await SharedPreferences.getInstance();
+    final authorized = prefs.getBool('health_last_authorized') ?? false;
+    _healthAuthorized = authorized;
+    if (!authorized) {
+      if (mounted) setState(() {
+        _safetySignal = null;
+        _healthSummary = null;
+      });
+      return;
+    }
+    _autoAlertEnabled = prefs.getBool('safety_auto_alert_enabled') ?? true;
+    try {
+      final summary = await HealthService.getHealthSummary();
+      if (!mounted) return;
+      final signal = SafetySignalEngine.evaluate(summary);
+      if (mounted) setState(() {
+        _healthSummary = summary;
+        _safetySignal = signal;
+      });
+    } catch (e) {
+      if (kDebugMode) debugPrint('[GuardianPage] 安全信号加载失败: $e');
+    }
   }
 
   /// 用「我守护的人」权威签到状态，强制同步「守护我的人」列表中同一 user 的显示状态
@@ -1206,6 +1248,9 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                 ),
               ),
 
+              // ====== 生命体征守护 状态引擎卡（v1.97.4 状态引擎上提）======
+              _buildVitalSignsCard(),
+
               const SliverToBoxAdapter(child: SizedBox(height: ZaiNeSpacing.xl)),
 
               // ====== 守护者列表 ======
@@ -1335,18 +1380,6 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                       ),
                       const SizedBox(height: ZaiNeSpacing.md),
                       _buildFunctionEntry(
-                        icon: Icons.health_and_safety_outlined,
-                        title: '生命体征守护',
-                        subtitle: '同步 Apple Watch 心率、血氧与睡眠',
-                        color: Colors.red.shade400,
-                        onTap: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => const HealthOverviewPage()),
-                          );
-                        },
-                      ),
-                      const SizedBox(height: ZaiNeSpacing.md),
-                      _buildFunctionEntry(
                         icon: Icons.help_outline,
                         title: '什么是守护圈',
                         subtitle: '了解守护圈的工作原理',
@@ -1407,6 +1440,207 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  /// 生命体征守护 状态引擎卡（v1.97.4 状态引擎上提）
+  /// 把产品真正引擎（安全信号）提到守护圈主页顶部，作为整页数据生产方与状态入口。
+  /// 纯展示 + 导航，不触发外发；CN 版不显示自动外发相关文案。
+  Widget _buildVitalSignsCard() {
+    final signal = _safetySignal;
+    final summary = _healthSummary;
+    final authorized = _healthAuthorized;
+
+    // 未授权：引导开启（点按进体征页，由体征页负责拉起授权，避免在守护圈被弹框）
+    if (!authorized) {
+      return SliverToBoxAdapter(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
+          child: GestureDetector(
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const HealthOverviewPage()),
+            ),
+            child: Container(
+              padding: const EdgeInsets.all(ZaiNeSpacing.lg),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(ZaiNeRadius.card),
+                border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade100,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.health_and_safety_outlined, color: Colors.grey[600], size: 22),
+                  ),
+                  const SizedBox(width: ZaiNeSpacing.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: const [
+                        Text('开启生命体征守护',
+                            style: TextStyle(fontSize: ZaiNeFontSize.subtitle, fontWeight: FontWeight.w500)),
+                        SizedBox(height: ZaiNeSpacing.xs),
+                        Text('同步 Apple Watch 心率、血氧与睡眠',
+                            style: TextStyle(fontSize: ZaiNeFontSize.caption, color: Colors.grey)),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.chevron_right, color: Colors.grey),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    // 已授权但数据尚未返回：骨架占位
+    if (signal == null) {
+      return SliverToBoxAdapter(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
+          child: Container(
+            height: 96,
+            padding: const EdgeInsets.all(ZaiNeSpacing.lg),
+            decoration: BoxDecoration(
+              color: ZaiNeColors.cardBg(),
+              borderRadius: BorderRadius.circular(ZaiNeRadius.card),
+            ),
+            child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+          ),
+        ),
+      );
+    }
+
+    // 已授权且数据就绪：状态引擎卡
+    final color = signal.color;
+    final metrics = <Map<String, String>>[];
+    if (summary != null) {
+      final hr = summary['heart_rate'];
+      if (hr != null) metrics.add({'心率': '$hr bpm'});
+      final spo2 = summary['blood_oxygen'];
+      if (spo2 != null) {
+        final spo2v = spo2 is num ? spo2.round() : spo2;
+        metrics.add({'血氧': '$spo2v%'});
+      }
+      final sleepMin = summary['sleep_total'];
+      if (sleepMin != null) {
+        final mins = (sleepMin is num)
+            ? sleepMin.toDouble()
+            : double.tryParse(sleepMin.toString()) ?? 0;
+        if (mins > 0) metrics.add({'睡眠': '${(mins / 60).toStringAsFixed(1)} h'});
+      }
+    }
+
+    final isCN = AppConfig.isChinaRegion;
+    final actionHint = isCN
+        ? '点按查看完整体征'
+        : (_autoAlertEnabled
+            ? '自动守护中 · 点按查看完整体征'
+            : '自动守护已关闭 · 点按查看完整体征');
+
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
+        child: GestureDetector(
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const HealthOverviewPage()),
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(ZaiNeSpacing.lg),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(ZaiNeRadius.card),
+              border: Border.all(color: color.withValues(alpha: 0.35)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: 0.15),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(signal.icon, color: color, size: 22),
+                    ),
+                    const SizedBox(width: ZaiNeSpacing.md),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(signal.headline,
+                              style: TextStyle(
+                                fontSize: ZaiNeFontSize.subtitle,
+                                fontWeight: FontWeight.w500,
+                                color: ZaiNeColors.textPrimary(),
+                              )),
+                          const SizedBox(height: ZaiNeSpacing.xs),
+                          Text(signal.detail,
+                              style: TextStyle(
+                                fontSize: ZaiNeFontSize.caption,
+                                color: Colors.grey[600],
+                              )),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                if (metrics.isNotEmpty) ...[
+                  const SizedBox(height: ZaiNeSpacing.md),
+                  Row(
+                    children: metrics
+                        .map(
+                          (m) => Expanded(
+                            child: Container(
+                              margin: const EdgeInsets.only(right: ZaiNeSpacing.sm),
+                              padding: const EdgeInsets.symmetric(vertical: ZaiNeSpacing.sm),
+                              decoration: BoxDecoration(
+                                color: ZaiNeColors.cardBg(),
+                                borderRadius: BorderRadius.circular(ZaiNeRadius.small),
+                              ),
+                              child: Column(
+                                children: [
+                                  Text(m.values.first,
+                                      style: const TextStyle(
+                                        fontSize: ZaiNeFontSize.body,
+                                        fontWeight: FontWeight.w500,
+                                      )),
+                                  const SizedBox(height: 2),
+                                  Text(m.keys.first,
+                                      style: TextStyle(
+                                        fontSize: ZaiNeFontSize.micro,
+                                        color: Colors.grey[500],
+                                      )),
+                                ],
+                              ),
+                            ),
+                          ),
+                        )
+                        .toList(),
+                  ),
+                ],
+                const SizedBox(height: ZaiNeSpacing.sm),
+                Text(actionHint,
+                    style: TextStyle(
+                      fontSize: ZaiNeFontSize.micro,
+                      color: color,
+                      fontWeight: FontWeight.w500,
+                    )),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -1692,6 +1926,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
         decoration: BoxDecoration(
           color: ZaiNeColors.cardBg(),
           borderRadius: BorderRadius.circular(ZaiNeRadius.card),
+          border: null,
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.03),

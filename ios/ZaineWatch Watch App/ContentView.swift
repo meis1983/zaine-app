@@ -174,23 +174,27 @@ struct ContentView: View {
                         }
 
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2), spacing: 8) {
+                        // 🔴【v1.97.3 速览 5 核心】心率/血氧/血压/睡眠/HRV 常驻；体温+经期降为详情页
                         if let heartRate = watchManager.healthData["heart_rate"] as? String {
                             HealthItemView(icon: "heart.fill", value: heartRate, unit: "bpm", color: .red)
                         }
                         if let bloodOxygen = watchManager.healthData["blood_oxygen"] as? String {
                             HealthItemView(icon: "lungs.fill", value: bloodOxygen, unit: "%", color: .blue)
                         }
-                        if let hrv = watchManager.healthData["hrv"] as? String {
-                            HealthItemView(icon: "waveform.path.ecg", value: hrv, unit: "ms", color: .orange)
-                        }
-                        if let temperature = watchManager.healthData["temperature"] as? String {
-                            HealthItemView(icon: "thermometer", value: temperature, unit: "°C", color: .yellow)
+                        if let bloodPressure = watchManager.healthData["blood_pressure"] as? String {
+                            HealthItemView(icon: "waveform.path", value: bloodPressure, unit: "mmHg", color: .green)
+                        } else if watchManager.healthData["blood_pressure"] != nil {
+                            // 【防御】非 String → 显示 "--" 不崩
+                            HealthItemView(icon: "waveform.path", value: "--", unit: "mmHg", color: .gray)
                         }
                         if let sleep = watchManager.healthData["sleep"] as? String {
                             HealthItemView(icon: "bed.double.fill", value: sleep, unit: "h", color: .purple)
                         }
-                        if let menstrual = watchManager.healthData["menstrual"] as? String {
-                            HealthItemView(icon: "drop.fill", value: menstrual, unit: "", color: .pink)
+                        if let hrv = watchManager.healthData["hrv"] as? String {
+                            HealthItemView(icon: "waveform.path.ecg", value: hrv, unit: "ms", color: .orange)
+                        } else if watchManager.healthData["hrv"] != nil {
+                            // 【v1.97.3 防御】非 String（上游误传 NSArray/NSNumber）→ 不渲染，避免显示 "[11.65, 0.396, ...]"
+                            HealthItemView(icon: "waveform.path.ecg", value: "--", unit: "ms", color: .gray)
                         }
                     }
                     }

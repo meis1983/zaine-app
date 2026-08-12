@@ -122,46 +122,63 @@ class WatchDataService {
       // 🔴【v1.97.3 修复 Issue A】字段名必须与手表 HealthDetailView 读取的 key 完全一致：
       //   手表读 temperature / sleep / menstrual，手机原发 body_temperature / sleep_total / has_menstruation
       //   → 永远对不上，故此处映射；且手表按 String 读取，统一转 String；睡眠原始单位为分钟 → 转小时。
+      // 🔴【v1.97.3 修复】watch UI 实测出现 [11.65, 0.396, 28.73, 64.93, 4] 这类 5 元素串值（HRV 单元）
+      //   根因：summary['hrv'] 上游某环节被赋为 List<num>（疑似 health 包版本对 HRV SDNN 数组包装），
+      //   直接 .toString() 得到 "[a, b, c, d, e]"，传到手表剥掉 [ ] , 空格后就是看到的串。
+      //   修法：所有数值字段统一走 _toWatchScalar() 归一为单个 num，再按字段格式化 String，
+      //   即使上游是 List 也只取首个有效元素，避免手表 UI 显示乱码。
       final watchData = <String, dynamic>{};
 
       if (summary.containsKey('heart_rate')) {
-        watchData['heart_rate'] = summary['heart_rate'].toString();
+        final v = _toWatchScalar(summary['heart_rate']);
+        if (v != null) watchData['heart_rate'] = v.toStringAsFixed(0);
       }
       if (summary.containsKey('blood_oxygen')) {
-        watchData['blood_oxygen'] = (double.tryParse(
-                summary['blood_oxygen'].toString()) ?? 0)
-            .toStringAsFixed(0);
+        final v = _toWatchScalar(summary['blood_oxygen']);
+        if (v != null) watchData['blood_oxygen'] = v.toStringAsFixed(0);
       }
       if (summary.containsKey('steps')) {
-        watchData['steps'] = summary['steps'].toString();
+        final v = _toWatchScalar(summary['steps']);
+        if (v != null) watchData['steps'] = v.toStringAsFixed(0);
       }
       if (summary.containsKey('resting_heart_rate')) {
-        watchData['resting_heart_rate'] = summary['resting_heart_rate'].toString();
+        final v = _toWatchScalar(summary['resting_heart_rate']);
+        if (v != null) watchData['resting_heart_rate'] = v.toStringAsFixed(0);
       }
       if (summary.containsKey('hrv')) {
-        watchData['hrv'] = summary['hrv'].toString();
+        // HRV SDNN 单位 ms，单值
+        final v = _toWatchScalar(summary['hrv']);
+        if (v != null) watchData['hrv'] = v.toStringAsFixed(0);
       }
       if (summary.containsKey('body_temperature')) {
-        watchData['temperature'] =
-            (double.tryParse(summary['body_temperature'].toString()) ?? 0)
-                .toStringAsFixed(1);
+        final v = _toWatchScalar(summary['body_temperature']);
+        if (v != null) watchData['temperature'] = v.toStringAsFixed(1);
       } else if (summary.containsKey('temperature')) {
-        watchData['temperature'] = summary['temperature'].toString();
+        final v = _toWatchScalar(summary['temperature']);
+        if (v != null) watchData['temperature'] = v.toStringAsFixed(1);
       }
       if (summary.containsKey('sleep_total')) {
         // 睡眠原始单位为分钟 → 转换为小时字符串（手表 UI 以 h 显示）
-        final raw = summary['sleep_total'];
-        final minutes = (raw is num)
-            ? raw.toDouble()
-            : (double.tryParse(raw.toString()) ?? 0);
+        final minutes = _toWatchScalar(summary['sleep_total']) ?? 0;
         watchData['sleep'] = (minutes / 60.0).toStringAsFixed(1);
       } else if (summary.containsKey('sleep')) {
-        watchData['sleep'] = summary['sleep'].toString();
+        final v = _toWatchScalar(summary['sleep']);
+        if (v != null) watchData['sleep'] = v.toStringAsFixed(1);
       }
       if (summary.containsKey('has_menstruation')) {
         watchData['menstrual'] = (summary['has_menstruation'] == true) ? '经期中' : '未记录';
       } else if (summary.containsKey('menstrual')) {
         watchData['menstrual'] = summary['menstrual'].toString();
+      }
+      // 🔴【v1.97.3 修复】Apple Watch S9+/iOS26 原生血压趋势写回 HealthKit 标准血压样本，
+      //   手机侧已在 health_service 采集 bp_systolic/bp_diastolic → 此处推到 Watch 速览。
+      //   无硬件血压计也可读（Watch 自身后台采样）；旧 iOS 设备无此数据则跳过，Watch 显示"未测"。
+      if (summary.containsKey('bp_systolic') && summary.containsKey('bp_diastolic')) {
+        final sys = _toWatchScalar(summary['bp_systolic']);
+        final dia = _toWatchScalar(summary['bp_diastolic']);
+        if (sys != null && dia != null) {
+          watchData['blood_pressure'] = '${sys.toStringAsFixed(0)}/${dia.toStringAsFixed(0)}';
+        }
       }
 
       // 添加推送时间戳
@@ -184,6 +201,26 @@ class WatchDataService {
       if (kDebugMode) debugPrint('[WatchData] 推送健康数据失败: $e');
       return false;
     }
+  }
+
+  /// 🔴【v1.97.3 修复】把 summary 字段归一为单个 double。
+  /// 背景：iPhone 端 push 字段历史上曾直接 .toString()，当上游 health 包返回 List<num> 时
+  /// （实测 hrv 出现 [11.65, 0.396, 28.73, 64.93, 4]）会输出 "[a, b, c, d, e]" 串到手表，
+  /// UI 剥掉 [ ] 后呈现为多数字串。统一入口收口后，所有数值字段都强制走单值归一。
+  /// - num → 直接 .toDouble()
+  /// - List → 取首个 num 元素（保留首个 SDNN 样本，避免 watch 乱码）
+  /// - String → 尝试解析为 double，失败回 null（由调用方判 null 跳过）
+  static double? _toWatchScalar(dynamic v) {
+    if (v == null) return null;
+    if (v is num) return v.toDouble();
+    if (v is List) {
+      for (final e in v) {
+        if (e is num) return e.toDouble();
+      }
+      return null;
+    }
+    final s = v.toString();
+    return double.tryParse(s);
   }
 
   /// 推送守护圈信息到 Watch
