@@ -1739,8 +1739,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                 ],
               ),
             ),
-            // 互护常驻卡
-            if (_mutualUserIds.isNotEmpty) _buildMutualPin(),
+            // 【v1.97.3+175】删互护常驻 pin（顶部 banner 已显示"与 N 位互为守护"，重复）
             // 事件列表
             if (_feedLoading)
               _buildFeedLoading()
@@ -1751,35 +1750,6 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
             const SizedBox(height: ZaiNeSpacing.md),
           ],
         ),
-      ),
-    );
-  }
-
-  /// 互护常驻卡（非事件，关系状态提示）
-  Widget _buildMutualPin() {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(12, 0, 12, 6),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: const Color(0xFF7C4DFF).withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(ZaiNeRadius.input),
-      ),
-      child: Row(
-        children: [
-          // 【v1.97.3+171】互为守护用 diversity_3 图标（多个小人）替代 lock 图标，语义更贴合
-          const Icon(Icons.diversity_3_rounded, size: 18, color: Color(0xFF7C4DFF)),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              '你与 ${_mutualUserIds.length} 位圈友互为守护',
-              style: TextStyle(
-                fontSize: ZaiNeFontSize.body,
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF7C4DFF),
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -2356,10 +2326,10 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // 【v1.97.3+174】双人形守护关系图：名字 + 双心徽标（与守护我的人统一位置）
+                            // 【v1.97.3+175】双心紧贴姓名：名字 Flexible（不强制占满）双心紧跟；不再被推右
                             Row(
                               children: [
-                                Expanded(
+                                Flexible(
                                   child: Text(
                                     name,
                                     overflow: TextOverflow.ellipsis,
@@ -2506,21 +2476,22 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
       child: Tooltip(
         message: tooltip,
         child: Container(
-          height: 32,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
+          // 【v1.97.3+175】缩窄缩矮：height 32→30、padding 12→8、icon 14→13、spacing 5→4、字号 12→11、radius 16→15
+          height: 30,
+          padding: const EdgeInsets.symmetric(horizontal: 8),
           decoration: BoxDecoration(
             color: const Color(0xFF7C4DFF),
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(15),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 14, color: Colors.white),
-              const SizedBox(width: 5),
+              Icon(icon, size: 13, color: Colors.white),
+              const SizedBox(width: 4),
               Text(
                 label,
                 style: const TextStyle(
-                  fontSize: 12,
+                  fontSize: 11,
                   fontWeight: FontWeight.w600,
                   color: Colors.white,
                 ),
@@ -2576,10 +2547,11 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                   // 【v1.93.5 修复】Row 布局加 overflow 保护 + relation 空字符串兜底
                   // 【v1.97.3+169 修复】互护徽标移出名字行，避免挤压名字导致互护 item 名字不可见
                   // 【v1.97.3+173】互护徽标改回"姓名右侧"（紧贴名字），双心相扣图标
-                  // 【v1.97.3+173】互护徽标放姓名右侧（紧贴名字）；【+174】删关系 chip（添加时已选，冗余）
+                  // 【v1.97.3+174】删关系 chip（添加时已选，冗余）
+                  // 【v1.97.3+175】双心紧贴姓名：名字改 Flexible，双心不再被操作列推右
                   Row(
                     children: [
-                      Expanded(
+                      Flexible(
                         child: Text(
                           guardian['name'] ?? '未命名',
                           overflow: TextOverflow.ellipsis,
