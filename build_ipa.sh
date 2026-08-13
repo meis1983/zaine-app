@@ -50,6 +50,27 @@ fi
 
 echo "===== Step 1: 清理并获取依赖 ====="
 cd "$PROJECT_DIR"
+
+# ----------------------------------------------------------
+# 自动定位 Flutter SDK
+# 说明：本脚本若由 .command 文件 / 非交互 shell 调用，不会加载
+#       ~/.zshrc，PATH 中可能没有 flutter，导致 "command not found"。
+#       此处显式把已知 Flutter 安装路径注入 PATH（写死绝对路径，
+#       不依赖用户 shell 配置），找不到再用 which 兜底。
+# ----------------------------------------------------------
+if ! command -v flutter >/dev/null 2>&1; then
+  for p in "/Users/meixulin/flutter/bin" "/opt/homebrew/bin" "/usr/local/bin" "/usr/bin"; do
+    if [ -x "$p/flutter" ]; then
+      export PATH="$p:$PATH"
+      echo "ℹ️  已将 Flutter 加入 PATH: $p"
+      break
+    fi
+  done
+fi
+# 国内镜像，避免 pub get 超时（用户 ~/.zshrc 中配置，此处兜底）
+export PUB_HOSTED_URL="${PUB_HOSTED_URL:-https://pub.flutter-io.cn}"
+export FLUTTER_STORAGE_BASE_URL="${FLUTTER_STORAGE_BASE_URL:-https://storage.flutter-io.cn}"
+
 flutter clean
 flutter pub get
 
