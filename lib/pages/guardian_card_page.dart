@@ -68,6 +68,8 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
   bool _needsLogin = false;
   bool _isLoadingData = false;  // 【修复 v1.14.0】区分"加载中"和"真的待解锁"
   bool _syncFailed = false;  // 【新增 v1.84.0】后端同步失败标记
+  // 【v1.97.3+177 诊断】最近一次同步失败的错误描述（应用内直接可见，免开控制台）
+  String _syncError = '';
   bool _hasFailedCards = false;  // 【新增 v1.84.0】有发送失败的守护卡
 
   // 展开状态（方案C：显示待注册卡片列表）
@@ -188,11 +190,14 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
     }
 
     // 后台静默校正（不阻塞 UI，失败则继续使用本地缓存）
+    // 【v1.97.3+177 诊断】捕获错误到 initialSyncError，最终填入 _syncError 显示在 banner
+    String initialSyncError = '';
     try {
       final cardListRes = await CardService.listMyCards(); // 单次调用，同时作为配额 + 待注册卡数据源
+      debugPrint('[GuardianCardPage] 初始 listMyCards 完整返回: $cardListRes');
       if (cardListRes['success'] == true) {
         final cards = cardListRes['cards'] as List<dynamic>? ?? [];
-        if (kDebugMode) debugPrint('[GuardianCardPage] 🔍 listMyCards 原始返回: ${cards.length}张卡片');
+        debugPrint('[GuardianCardPage] 🔍 listMyCards 原始返回: ${cards.length}张卡片');
         _pendingCards = cards
             .where((c) {
           final status = c['status'];
@@ -201,7 +206,7 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
           final accepted = ((status is int && status == 0) ||
                   (status is String && status.toLowerCase() == 'pending')) &&
               !isFree;
-          if (!accepted && kDebugMode) {
+          if (!accepted) {
             debugPrint('  ⚠️ 卡片被过滤器丢弃: status=$status is_free=$isFree');
           }
           return accepted;
@@ -221,7 +226,7 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
             'expire_at': expireAt,
           };
         }).toList();
-        if (kDebugMode) debugPrint('[GuardianCardPage] 待注册卡片数: ${_pendingCards.length}');
+        debugPrint('[GuardianCardPage] 待注册卡片数: ${_pendingCards.length}');
 
         final stats = cardListRes['stats'] as Map<String, dynamic>?;
         if (stats != null) {
@@ -236,20 +241,35 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
             await GuardianCardService.updateLocalCache(_availableCards);
           }
         }
+      } else {
+        initialSyncError = 'card/list success=false: ${cardListRes['message'] ?? cardListRes['error'] ?? '未知'}';
       }
-    } catch (e) {
-      if (kDebugMode) debugPrint('[GuardianCardPage] 后台校正卡片列表失败(继续使用缓存): $e');
+    } catch (e, stack) {
+      initialSyncError = 'card/list 异常: $e';
+      debugPrint('[GuardianCardPage] 后台校正卡片列表失败(继续使用缓存): $e');
+      debugPrint('[GuardianCardPage] 异常栈: $stack');
     }
 
     try {
       final statsRes = await CardService.getInviteStats(); // 单次调用
+      debugPrint('[GuardianCardPage] 初始 getInviteStats 完整返回: $statsRes');
       if (statsRes['success'] == true) {
         _invitedCount = (statsRes['total_registered'] as int?) ?? 0;
+      } else if (initialSyncError.isEmpty) {
+        initialSyncError = 'invite/stats success=false: ${statsRes['message'] ?? statsRes['error'] ?? '未知'}';
       }
-    } catch (_) {}
+    } catch (e) {
+      if (initialSyncError.isEmpty) initialSyncError = 'invite/stats 异常: $e';
+      debugPrint('[GuardianCardPage] getInviteStats 异常: $e');
+    }
 
     // 同步失败标记（仅当本地与后端都为 0 时提示）
     _syncFailed = cachedCards == 0 && _availableCards == 0;
+    if (_syncFailed) {
+      _syncError = initialSyncError.isNotEmpty
+          ? initialSyncError
+          : 'card/list 与 invite/stats 都返回 0';
+    }
 
     if (mounted) setState(() {}); // 用校正后的数据刷新 UI
   }
@@ -784,21 +804,50 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
           Icon(Icons.cloud_off, color: Colors.red.shade700, size: 20),
           const SizedBox(width: ZaiNeSpacing.md),
           Expanded(
-            child: Text(
-              '无法同步守护卡额度，请检查网络后重试',
-              style: TextStyle(fontSize: ZaiNeFontSize.caption, color: Colors.red.shade800, fontWeight: FontWeight.w500),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  '无法同步守护卡额度，请检查网络后重试',
+                  style: TextStyle(fontSize: ZaiNeFontSize.caption, color: Color(0xFFB71C1C), fontWeight: FontWeight.w500),
+                ),
+                // 【v1.97.3+177 诊断】重试后从异常捕获的真实原因
+                if (_syncError.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Text(
+                      '诊断：$_syncError',
+                      style: TextStyle(fontSize: ZaiNeFontSize.micro, color: Colors.red.shade700),
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+              ],
             ),
           ),
           TextButton(
             onPressed: () async {
               // 重新同步
-              if (kDebugMode) debugPrint('[GuardianCardPage] 用户点击重试同步');
-              setState(() => _syncFailed = false);
-              final result = await GuardianCardService.forceSyncFromBackend();
+              debugPrint('[GuardianCardPage] 用户点击重试同步');
+              setState(() {
+                _syncFailed = false;
+                _syncError = '';
+              });
+              int result = 0;
+              String errMsg = '';
+              try {
+                result = await GuardianCardService.forceSyncFromBackend();
+              } catch (e) {
+                errMsg = e.toString();
+              }
               if (mounted) {
                 setState(() {
                   _availableCards = result;
                   _syncFailed = result == 0;
+                  _syncError = result == 0
+                      ? (errMsg.isNotEmpty ? errMsg : 'card/list 与 invite/stats 都返回 0 或失败')
+                      : '';
                 });
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(

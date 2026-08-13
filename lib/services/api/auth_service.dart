@@ -272,8 +272,28 @@ class AuthService {
     await prefs.remove('user_id');
     await prefs.remove('user_phone');
 
-    // 【修复 v1.9.73】保留头像缓存和文件（与健康档案/紧急联系人保持一致）
-    // 不退出时清除头像，确保重新登录后头像仍然存在
+    // 【v1.97.3+177 修复】退出登录时清理未分用户 ID 的头像缓存 + 头像文件，
+    // 防止「A 退出 → B 登录」时显示 A 的头像（多账号切换场景）。
+    // 保留 avatar_path_<oldUid> / avatar_base64_<oldUid>（按用户 ID 后缀），
+    // A 重新登录时仍可恢复自己的头像。
+    // 注意：上方已先 prefs.remove('user_id')，所以这里必须先取一次旧 ID 再删
+    final oldUidForAvatar = prefs.getString('user_id');
+    await prefs.remove('avatar_path');
+    await prefs.remove('avatar_base64');
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final f = File('${dir.path}/avatar.png');
+      if (await f.exists()) await f.delete();
+    } catch (e) {
+      debugPrint('[AuthService.logout] 清理头像文件异常: $e');
+    }
+    debugPrint('[AuthService.logout] 头像缓存已清理（oldUid=$oldUidForAvatar，per-user 后缀头像保留供回登）');
+    // 注：avatar_path_<oldUid> / avatar_base64_<oldUid> 在 logout 不删，
+    // 原因：单用户设备上 A 退出再登 A，silent_login 路径会清这些带后缀的，避免重复 IO；
+    // 但 A 退出登 B 时，B 的 silent_login 拿不到 A 的 oldUid 不会清，B 用 B 的 ID 索引不到 A 的头像，不会显示 A 的。
+    // 历史原因：v1.9.73 注释"保留头像缓存"是单用户设计假设；多账号测试发现会串头像 → +177 加清理。
+    // ↑【修复 v1.9.73】保留头像缓存和文件（与健康档案/紧急联系人保持一致）
+    // 注：上述 +177 已切到「清理」语义，原"保留"语义被覆盖
     await _deleteToken();
     // 【修复 v1.77.0】从 Keychain 中删除敏感信息
     await _secureStorage.delete(key: 'user_id');

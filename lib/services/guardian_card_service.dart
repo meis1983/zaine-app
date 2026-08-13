@@ -226,42 +226,46 @@ class GuardianCardService {
     try {
       // 方案1：优先使用 /card/list（后端会懒检查过期卡并退回）
       final cardListRes = await CardService.listMyCards();
+      debugPrint('[GuardianCard] syncQuotaFromBackend → /card/list 完整返回: $cardListRes');
       if (cardListRes['success'] == true) {
         final stats = cardListRes['stats'] as Map<String, dynamic>?;
         if (stats != null) {
           final backendAvailable = (stats['available_cards'] as int?) ?? 0;
           await updateLocalCache(backendAvailable);
-          if (kDebugMode) debugPrint('[GuardianCard] syncQuotaFromBackend (card/list): $backendAvailable 张 (forceSync=$forceSync)');
+          debugPrint('[GuardianCard] syncQuotaFromBackend (card/list): $backendAvailable 张 (forceSync=$forceSync)');
           return backendAvailable;
         }
       }
-    } catch (e) {
-      if (kDebugMode) debugPrint('[GuardianCard] syncQuotaFromBackend (card/list) 失败: $e');
+    } catch (e, stack) {
+      debugPrint('[GuardianCard] syncQuotaFromBackend (card/list) 异常: $e');
+      debugPrint('[GuardianCard] syncQuotaFromBackend (card/list) 异常栈: $stack');
     }
 
     // 方案2：备用 /invite/stats
     try {
       final res = await CardService.getInviteStats();
+      debugPrint('[GuardianCard] syncQuotaFromBackend → /invite/stats 完整返回: $res');
       if (res['success'] == true) {
         final backendAvailable = (res['available_cards'] as int?) ?? 0;
         await updateLocalCache(backendAvailable);
-        if (kDebugMode) debugPrint('[GuardianCard] syncQuotaFromBackend (invite/stats): $backendAvailable 张 (forceSync=$forceSync)');
+        debugPrint('[GuardianCard] syncQuotaFromBackend (invite/stats): $backendAvailable 张 (forceSync=$forceSync)');
         return backendAvailable;
       }
-    } catch (e) {
-      if (kDebugMode) debugPrint('[GuardianCard] syncQuotaFromBackend (invite/stats) 失败: $e');
+    } catch (e, stack) {
+      debugPrint('[GuardianCard] syncQuotaFromBackend (invite/stats) 异常: $e');
+      debugPrint('[GuardianCard] syncQuotaFromBackend (invite/stats) 异常栈: $stack');
     }
 
     // 失败时返回本地缓存值
-    if (kDebugMode) debugPrint('[GuardianCard] syncQuotaFromBackend 失败，使用本地缓存: $cached 张 (syncId=$syncId, forceSync=$forceSync)');
+    debugPrint('[GuardianCard] syncQuotaFromBackend 失败，使用本地缓存: $cached 张 (syncId=$syncId, forceSync=$forceSync)');
     return cached;
   }
 
   /// 【新增 v1.84.0】强制从后端同步额度（清除缓存后调用）
   static Future<int> forceSyncFromBackend() async {
-    if (kDebugMode) debugPrint('[GuardianCard] forceSyncFromBackend() 开始强制同步...');
+    debugPrint('[GuardianCard] forceSyncFromBackend() 开始强制同步...');
     final result = await syncQuotaFromBackend(forceSync: true);
-    if (kDebugMode) debugPrint('[GuardianCard] forceSyncFromBackend() 完成，后端返回: $result 张');
+    debugPrint('[GuardianCard] forceSyncFromBackend() 完成，后端返回: $result 张');
     return result;
   }
 
