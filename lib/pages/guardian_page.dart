@@ -652,22 +652,25 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
     bool sticky = await HealthService.isAuthorized();
 
     if (!sticky) {
-      // 未授权：用真实样本探测一次（仅用于"探测是否已授权"，不用于反复推翻）
-      Map<String, dynamic> authResult;
-      try {
-        authResult = await HealthService.checkRealAuthStatus();
-      } catch (e) {
-        debugPrint('[GuardianPage] checkRealAuthStatus 抛异常: $e');
-        authResult = {'authorized': false, 'hr_count': 0, 'bo_count': 0, 'sleep_count': 0, 'source': 'none'};
-      }
-      if (authResult['authorized'] == true) {
-        await HealthService.markAuthorized();
+      // 【v1.97.6 破冰修复】若当前标记 false，但历史上曾成功授权过(health_authorized_at 存在)，
+      // 直接认定「守护中」——iOS HealthKit 隐私模型下实时探测(read 状态)不可靠、常失败，
+      // 绝不能让偶发探测失败把"曾授权"的事实推翻回「尚未检测」。这是跳动的根治点。
+      final everAuthorized = await HealthService.hasEverAuthorized();
+      if (everAuthorized) {
         sticky = true;
-      }
-      // 【v1.97.4 竞态修复】若本次探测失败，但并发的其他探测已写入粘性标记，
-      // 以标记为准，避免「慢速失败探测」把已判定为守护中的状态覆盖回「未检测」。
-      if (!sticky) {
-        sticky = await HealthService.isAuthorized();
+      } else {
+        // 从未授权过：用真实样本探测一次（仅用于"探测是否已授权"）
+        Map<String, dynamic> authResult;
+        try {
+          authResult = await HealthService.checkRealAuthStatus();
+        } catch (e) {
+          debugPrint('[GuardianPage] checkRealAuthStatus 抛异常: $e');
+          authResult = {'authorized': false, 'hr_count': 0, 'bo_count': 0, 'sleep_count': 0, 'source': 'none'};
+        }
+        if (authResult['authorized'] == true) {
+          await HealthService.markAuthorized();
+          sticky = true;
+        }
       }
     }
 

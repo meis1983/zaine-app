@@ -35,15 +35,26 @@ class HealthService {
   static const String _kAuthorized = 'health_authorized';
 
   /// 标记已授权（持久化）。授权成功路径(requestPermissions 成功 / checkRealAuthStatus 实测有数据)调用。
+  /// 【v1.97.6 修复】同时写入 health_authorized_at 时间戳，作为「历史上曾授权」的破冰证据，
+  /// 使 _loadSafetyStatus 在 iOS 实时探测偶发失败时仍能维持「守护中」，根除跳动。
   static Future<void> markAuthorized() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_kAuthorized, true);
+    await prefs.setString('health_authorized_at', DateTime.now().toIso8601String());
   }
 
   /// 读取授权态粘性标记（单一真相源）
   static Future<bool> isAuthorized() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getBool(_kAuthorized) ?? false;
+  }
+
+  /// 【v1.97.6 修复】是否「历史上曾成功授权过」(设备级事实，不随实时探测抖动)。
+  /// 用于 _loadSafetyStatus 的破冰兜底：只要用户走过的配对(哪怕更早版本)，
+  /// 就恒定显示「守护中」，不再因 iOS HealthKit 隐私模型下的探测失败回落「尚未检测」。
+  static Future<bool> hasEverAuthorized() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('health_authorized_at') != null;
   }
 
   /// 清除授权态标记 + HealthKit 镜像缓存（登出时调用，避免下一账号误判已授权 / 读到旧镜像）
