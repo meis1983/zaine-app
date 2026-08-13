@@ -800,75 +800,59 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   }
 
   Future<void> _handleCheckIn() async {
-    // 【修复 v1.83.0】双重防重复签到：
-    // 1. 内存状态 _checkedInToday
-    // 2. 本地存储 last_check_in_date（防止 Widget 重建后内存状态丢失导致重复签到）
-    final guardPrefs = await SharedPreferences.getInstance();
-    final guardUid = (await AuthService.getUserId()) ?? '';
-    final guardToday = DateFormat('yyyy-MM-dd').format(DateTime.now());
-    // 仅用于诊断日志，不作为早退依据（prefs 残留会成为幽灵阻塞 do_checkin）
-    final guardLastDate = (guardUid.isNotEmpty
-            ? guardPrefs.getString('last_check_in_date_$guardUid')
-            : guardPrefs.getString('last_check_in_date')) ??
-        '';
+    // 🔴【v1.97.7 根治，185 落地】不要让任何本地状态/prefs 残留/_isLoggedIn 假阴 阻塞 do_checkin。
+    // FC 日志铁证：用户装 184 后仍是 0 条 do_checkin。说明仅靠 184 的 _checkedInToday && historySaysChecked
+    // 还没覆盖全部场景：可能 _isLoggedIn=false 命中 line 908 if 跳过、或异常走入离线队列。
+    // 新原则：**永远调用 do_checkin（仅做最弱的 UI 立即反馈），让服务端做唯一真相源**。
+    // 服务端 already_checked_in = 正常已签到；其他错误才是真正的失败。
+    // 用 print() 而非 debugPrint()：release 包也能在 Xcode 控制台看到诊断。
+    final dbgPrefs0 = await SharedPreferences.getInstance();
+    final dbgUid0 = (await AuthService.getUserId()) ?? '';
+    final dbgLastKey0 = dbgUid0.isNotEmpty ? 'last_check_in_date_$dbgUid0' : 'last_check_in_date';
+    final dbgHistKey0 = dbgUid0.isNotEmpty ? 'checkin_history_$dbgUid0' : 'checkin_history';
+    print('[185 _handleCheckIn] 入口 _isLoggedIn=$_isLoggedIn _checkedInToday=$_checkedInToday lastDate=${dbgPrefs0.getString(dbgLastKey0)} historyLen=${(dbgPrefs0.getStringList(dbgHistKey0) ?? const []).length}');
 
-    // 【v1.97.6 根治】不要让「本地 prefs 残留今日已签到」幽灵阻塞 do_checkin。
-    // 旧实现：仅看 prefs 的 last_check_in_date_$uid，命中就早退 → 后端永远收不到 do_checkin → 守护圈永远看不到签到。
-    // 新实现：
-    //   - 内存态 _checkedInToday 本次 session 确实走过签到路径才信任
-    //   - 本地历史包含今天才作为兜底（与 _checkedInToday 互相印证）
-    //   - 仅当历史明确含今天，才走"已签到庆祝"路径
-    //   - 其它情况（prefs 残留 / 内存不一致 / 历史没今天）一律放行 do_checkin，让后端做最终判断
-    final uidEarly = (await AuthService.getUserId()) ?? '';
-    final historyKeyEarly = uidEarly.isNotEmpty ? 'checkin_history_$uidEarly' : 'checkin_history';
-    final historyEarly = (await SharedPreferences.getInstance()).getStringList(historyKeyEarly) ?? [];
-    final todayEarly = DateFormat('yyyy-MM-dd').format(DateTime.now());
-    final historySaysChecked = historyEarly.contains(todayEarly);
-
-    if (_checkedInToday && historySaysChecked) {
-      // 内存 + 历史一致 = 真已签到，弹庆祝弹窗、不重发请求
-      if (kDebugMode) debugPrint('[HomePage] 今日已签到（内存+历史一致），显示庆祝弹窗');
-      // 【修复 v1.97.2】弹窗前先与服务端对账并合并历史、重算连续天数：
-      // 避免首屏后台对账尚未完成时，弹窗读到未合并的本地旧值（表现为第一次数字不准、第二次才对）。
-      // 带 3s 超时与本地降级，绝不阻塞弹窗。
-      await _reconcileCheckInFromServer();
+    // 若 _isLoggedIn=false，先尝试从 prefs 紧急重读 login 状态（避免状态滞后导致跳过）
+    if (!_isLoggedIn) {
+      print('[185 _handleCheckIn] ⚠️ _isLoggedIn=false，尝试从 prefs 重读 is_logged_in...');
       try {
-        if (mounted) {
-          await showDialog(
-            context: context,
-            barrierDismissible: true,
-            builder: (context) => CheckinMilestoneDialog(
-              continuousDays: _continuousDays,
-              totalDays: _totalDays,
-              moodIndex: -1,
-              userName: _userName ?? '在呢用户',
-              isReturnCheckin: _daysSinceLastCheckin > 0,
-              absentDays: _daysSinceLastCheckin,
-            ),
-          );
+        final reloadPrefs = await SharedPreferences.getInstance();
+        final reloadLoggedIn = reloadPrefs.getBool('is_logged_in') ?? false;
+        if (reloadLoggedIn && mounted) {
+          setState(() { _isLoggedIn = true; });
         }
-      } catch (e, stack) {
-        if (kDebugMode) debugPrint('[HomePage] 弹窗显示异常: $e');
-        if (kDebugMode) debugPrint(stack.toString());
+        print('[185 _handleCheckIn] 重读后 _isLoggedIn=$_isLoggedIn');
+      } catch (e) {
+        print('[185 _handleCheckIn] 重读 prefs 异常: $e');
+      }
+    }
+
+    // 仍未登录：弹提示并 return
+    if (!_isLoggedIn) {
+      print('[185 _handleCheckIn] ❌ 仍未登录，do_checkin 跳过');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('请先登录后再签到'),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 3),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
       }
       return;
     }
 
-    // 否则（prefs 残留 / 内存不一致 / 历史没今天）一律放行 do_checkin，让服务端做最终判断
-    if (kDebugMode) {
-      debugPrint('[HomePage] 放行 do_checkin：_checkedInToday=$_checkedInToday, historySaysChecked=$historySaysChecked, prefsLastDate=$guardLastDate');
-    }
-
-    // ✅ 立即更新 UI —— 让用户第一时间看到已签到
+    // ✅ 立即更新 UI —— 让用户第一时间看到已签到（不依赖任何后端结果）
     HapticFeedback.mediumImpact();
 
-    // 【修复 v1.9.7】动画加异常保护，防止 controller 被 dispose 后抛异常中断方法
+    // 【修复 v1.9.7】动画加异常保护
     try {
       _animationController.forward().then((_) {
         if (mounted) _animationController.reverse();
       });
     } catch (e) {
-      if (kDebugMode) debugPrint('[HomePage] 动画异常（忽略）: $e');
+      // ignore
     }
 
     final now = DateTime.now();
@@ -883,7 +867,6 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     final lastDateKey = uid.isNotEmpty ? 'last_check_in_date_$uid' : 'last_check_in_date';
 
     int newTotal = _totalDays + 1;
-    // 把今天加入历史后用 StreakUtil 统一重算（不再依赖内存增量，根除天数偶发归零）
     final historyList = List<String>.from(prefs.getStringList(historyKey) ?? []);
     if (!historyList.contains(today)) historyList.add(today);
     final newDays = StreakUtil.calculateStreak(historyList);
@@ -898,37 +881,48 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
 
     // 后台异步持久化（不阻塞 UI）
     await prefs.setString(lastDateKey, today);
-    // 兼容：同时保存全局 key（供未登录场景使用）
     await prefs.setString('last_check_in_date', today);
     await prefs.setInt(streakKey, newDays);
     await prefs.setInt(totalKey, newTotal);
     await prefs.setStringList(historyKey, historyList);
 
-    // 后台同步到服务器（如果已登录）
-    if (_isLoggedIn) {
-      try {
-        final res = await CheckinService.checkIn(date: today, mood: -1);
-        if (res['success'] == true) {
-          if (kDebugMode) debugPrint('[HomePage] 签到已同步到服务器: $res');
-          // 【修复 v1.9.7】后端 total_days 是累计总天数，不应覆盖 continuous_days（连续天数）
-          final serverTotal = res['total_days'] as int?;
-          final serverStreak = res['streak'] as int? ?? res['continuous_days'] as int?;
-          if (serverTotal != null && serverTotal > _totalDays) {
-            await prefs.setInt(totalKey, serverTotal);
-            if (mounted) setState(() => _totalDays = serverTotal);
-          }
-          // 【v1.97.2 彻底修复】本地历史已用 StreakUtil 重算为单一真相源(newDays)，
-          // 仅在本地历史为空(newDays==0)时才用服务端 streak 兜底，
-          // 避免后端偶发错值覆盖正确的本地重算结果（手机端自身签到同理防御）。
-          if (serverStreak != null && serverStreak > 0 && newDays == 0) {
-            await prefs.setInt(streakKey, serverStreak);
-            if (mounted) setState(() => _continuousDays = serverStreak);
-          }
-          // 显示同步成功反馈
+    // 📨 调用 do_checkin（**唯一真相源**）—— 不再做 if (_isLoggedIn) 包裹
+    print('[185 _handleCheckIn] 📨 调用 do_checkin date=$today uid=$uid');
+    try {
+      final res = await CheckinService.checkIn(date: today, mood: -1);
+      print('[185 _handleCheckIn] 📨 do_checkin 响应: $res');
+
+      if (res['success'] == true) {
+        print('[185 _handleCheckIn] ✅ do_checkin 成功');
+        final serverTotal = res['total_days'] as int?;
+        final serverStreak = res['streak'] as int? ?? res['continuous_days'] as int?;
+        if (serverTotal != null && serverTotal > _totalDays) {
+          await prefs.setInt(totalKey, serverTotal);
+          if (mounted) setState(() => _totalDays = serverTotal);
+        }
+        if (serverStreak != null && serverStreak > 0 && newDays == 0) {
+          await prefs.setInt(streakKey, serverStreak);
+          if (mounted) setState(() => _continuousDays = serverStreak);
+        }
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('☀️ 签到已同步'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 2),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      } else {
+        final errorMsg = res['error']?.toString() ?? res['message']?.toString() ?? '';
+        print('[185 _handleCheckIn] ⚠️ do_checkin 业务错误: $errorMsg');
+        if (errorMsg.contains('already_checked_in')) {
+          // 服务端确认今日已签到，正常
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('☀️ 签到已同步'),
+                content: Text('☀️ 今日已签到'),
                 backgroundColor: Colors.green,
                 duration: Duration(seconds: 2),
                 behavior: SnackBarBehavior.floating,
@@ -936,58 +930,50 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
             );
           }
         } else {
-          final errorMsg = res['error']?.toString() ?? res['message']?.toString() ?? '';
-          if (kDebugMode) debugPrint('[HomePage] 签到同步失败: $errorMsg');
           if (mounted) {
-            // 【修复 v1.9.75】already_checked_in 是正常状态，不显示警告
-            final isAlreadyCheckedIn = errorMsg.contains('already_checked_in');
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(isAlreadyCheckedIn
-                    ? '☀️ 今日已签到'
-                    : '签到已记录，云端同步暂时失败: $errorMsg'),
-                backgroundColor: isAlreadyCheckedIn ? Colors.green : Colors.orange,
-                duration: Duration(seconds: isAlreadyCheckedIn ? 2 : 3),
+                content: Text('签到已记录，云端同步失败: $errorMsg'),
+                backgroundColor: Colors.orange,
+                duration: const Duration(seconds: 3),
                 behavior: SnackBarBehavior.floating,
               ),
             );
           }
         }
-      } catch (e) {
-        if (kDebugMode) debugPrint('[HomePage] 签到同步异常（已本地保存）: $e');
-        
-        // 【P0 修复 v1.93.9】签到失败时保存到离线队列
-        try {
-          await CheckinService.saveToOfflineQueue(date: today, mood: -1);
-          if (kDebugMode) debugPrint('[HomePage] ✅ 签到请求已保存到离线队列');
-        } catch (queueError) {
-          if (kDebugMode) debugPrint('[HomePage] ⚠️ 保存离线队列失败: $queueError');
-        }
+      }
+    } catch (e, stack) {
+      print('[185 _handleCheckIn] ❌ do_checkin 异常: $e');
+      print(stack.toString());
+      // 【P0 修复 v1.93.9】签到失败时保存到离线队列
+      try {
+        await CheckinService.saveToOfflineQueue(date: today, mood: -1);
+        print('[185 _handleCheckIn] ✅ 已保存到离线队列');
+      } catch (queueError) {
+        print('[185 _handleCheckIn] ⚠️ 离线队列保存失败: $queueError');
+      }
 
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('签到已记录，已保存到离线队列，联网后自动同步 ☁️'),
-              backgroundColor: Colors.orange,
-              duration: Duration(seconds: 3),
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('签到已记录，已保存到离线队列，联网后自动同步 ☁️'),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 3),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
       }
     }
 
-    // 签到成功：取消断签预警通知（id=1），因为已经签到了
+    // 签到成功：取消断签预警通知（id=1）
     try {
       final notifications = FlutterLocalNotificationsPlugin();
-      await notifications.cancel(1); // 取消断签预警
-      if (kDebugMode) debugPrint('[HomePage] 签到成功，已取消断签预警通知');
+      await notifications.cancel(1);
     } catch (e) {
-      if (kDebugMode) debugPrint('[HomePage] 取消断签预警通知失败（忽略）: $e');
+      // ignore
     }
 
-    // 【养成闭环 v1.97.2】把签到天数同步到成就进度（仅海外版，避免 CN 多余写入）
-    // 🔴【v1.97.3 修复】checkin_100 是「累计签到」应用总天数，不是连续天数
+    // 【养成闭环 v1.97.2】把签到天数同步到成就进度（仅海外版）
     if (!AppConfig.isChinaRegion && uid.isNotEmpty) {
       try {
         final svc = SocialService();
@@ -995,12 +981,11 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         await svc.updateAchievementProgress(uid, 'checkin_30', _continuousDays);
         await svc.updateAchievementProgress(uid, 'checkin_100', _totalDays);
       } catch (e) {
-        if (kDebugMode) debugPrint('[HomePage] 成就进度同步失败（忽略）: $e');
+        // ignore
       }
     }
 
     // 弹出签到成功弹窗（断签回归时传 isReturnCheckin）
-    // 【修复 v1.9.7】弹窗加异常保护，防止 dialog 构建异常导致弹窗不显示
     try {
       if (mounted) {
         await showDialog(
@@ -1016,9 +1001,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           ),
         );
       }
-    } catch (e, stack) {
-      if (kDebugMode) debugPrint('[HomePage] 弹窗显示异常: $e');
-      if (kDebugMode) debugPrint(stack.toString());
+    } catch (e) {
+      print('[185 _handleCheckIn] 弹窗异常: $e');
     }
   }
 
