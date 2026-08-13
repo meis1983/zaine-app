@@ -236,6 +236,8 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
   SafetySignal? _safetySignal;
   Map<String, dynamic>? _healthSummary;
   bool _healthAuthorized = false;
+  // 【v1.97.3+176 诊断】最近一次 HealthKit 授权检测结论（应用内直接可见，免开控制台）
+  String _healthAuthDiag = '尚未检测';
   bool _autoAlertEnabled = true;
   // 【v1.97.3+169】最近一次体征同步时间戳(ms)，用于卡片显示「同步 X 分钟前」
   int _lastHealthSyncAt = 0;
@@ -635,10 +637,14 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
     try {
       authorized = await HealthService.hasPermissions();
     } catch (e) {
-      if (kDebugMode) debugPrint('[GuardianPage] hasPermissions 抛异常: $e');
+      debugPrint('[GuardianPage] hasPermissions 抛异常: $e');
       authorized = prefs.getBool('health_last_authorized') ?? false;
     }
-    if (kDebugMode) debugPrint('[GuardianPage] _loadSafetyStatus → _healthAuthorized = $authorized');
+    // 【v1.97.3+176 诊断】记录结论 + 时间戳，供卡片内直接显示（不依赖 context，避免跨 async gap）
+    final now = DateTime.now();
+    final ts = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+    _healthAuthDiag = 'HealthKit检测=$authorized · $ts';
+    debugPrint('[GuardianPage] _loadSafetyStatus → _healthAuthorized = $authorized');
     _healthAuthorized = authorized;
     if (!authorized) {
       if (mounted) setState(() {
@@ -672,21 +678,21 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
   ///    走正式授权流程，根治"用户在系统设置里手动开启但 App 未 request 过"的情况）
   /// 3. 重新加载安全状态并刷新 UI
   Future<void> _refreshHealthAuth() async {
-    if (kDebugMode) debugPrint('[GuardianPage] 手动重新检测健康授权 → 开始');
+    debugPrint('[GuardianPage] 手动重新检测健康授权 → 开始');
     bool authorized;
     try {
       authorized = await HealthService.hasPermissions();
     } catch (_) {
       authorized = false;
     }
-    if (kDebugMode) debugPrint('[GuardianPage] 重新检测 hasPermissions = $authorized');
+    debugPrint('[GuardianPage] 重新检测 hasPermissions = $authorized');
     if (!authorized) {
-      if (kDebugMode) debugPrint('[GuardianPage] 重新拉起 HealthKit 授权弹框');
+      debugPrint('[GuardianPage] 重新拉起 HealthKit 授权弹框');
       await HealthService.requestPermissions();
     }
     await _loadSafetyStatus();
     if (mounted) setState(() {});
-    if (kDebugMode) debugPrint('[GuardianPage] 手动重新检测健康授权 → 结束');
+    debugPrint('[GuardianPage] 手动重新检测健康授权 → 结束');
   }
 
   /// 【v1.97.3+166 双向视觉】计算「互相守护」用户集合：
@@ -1874,12 +1880,16 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
-                        Text('开启生命体征守护',
+                      children: [
+                        const Text('开启生命体征守护',
                             style: TextStyle(fontSize: ZaiNeFontSize.subtitle, fontWeight: FontWeight.w500)),
-                        SizedBox(height: ZaiNeSpacing.xs),
-                        Text('同步 Apple Watch 心率、血氧与睡眠',
+                        const SizedBox(height: ZaiNeSpacing.xs),
+                        const Text('同步 Apple Watch 心率、血氧与睡眠',
                             style: TextStyle(fontSize: ZaiNeFontSize.caption, color: Colors.grey)),
+                        // 【v1.97.3+176 诊断】直接显示 HealthKit 检测结论，免开控制台
+                        const SizedBox(height: ZaiNeSpacing.xs),
+                        Text('诊断：$_healthAuthDiag',
+                            style: TextStyle(fontSize: ZaiNeFontSize.micro, color: Colors.grey[500])),
                       ],
                     ),
                   ),

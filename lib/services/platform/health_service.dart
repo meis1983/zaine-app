@@ -114,28 +114,32 @@ class HealthService {
   ///
   /// Apple 因隐私不会披露具体 read 授权状态，但只要任一 type 已被弹过授权框，
   /// 插件视为已触发授权；返回 true。
+  /// 【v1.97.3+176 诊断】无条件日志（release 也输出到系统日志，不再被 kDebugMode 编译剔除）
   static Future<bool> hasPermissions() async {
     try {
       final core = _coreTypes();
       final corePerms = core.map((_) => HealthDataAccess.READ).toList();
-      if (kDebugMode) {
-        debugPrint('[HealthService] hasPermissions 请求类型(${core.length}项): '
-            '${core.map((e) => e.name).join(', ')}');
+      debugPrint('[HealthService] hasPermissions 请求类型(${core.length}项): '
+          '${core.map((e) => e.name).join(', ')}');
+      // 【v1.97.3+176 诊断】逐项单类型检测，定位是哪个 type 把整体拖成 false
+      for (var i = 0; i < core.length; i++) {
+        try {
+          final r = await _health.hasPermissions([core[i]], permissions: [HealthDataAccess.READ]);
+          debugPrint('[HealthService]   单类型[$i] ${core[i].name} = $r');
+        } catch (e) {
+          debugPrint('[HealthService]   单类型[$i] ${core[i].name} 检测异常: $e');
+        }
       }
       final result = await _health.hasPermissions(core, permissions: corePerms);
-      if (kDebugMode) {
-        debugPrint('[HealthService] hasPermissions 原始结果: $result (类型: ${result.runtimeType})');
-      }
+      debugPrint('[HealthService] hasPermissions 整体结果: $result (类型: ${result.runtimeType})');
       return result ?? false;
     } catch (e, stack) {
-      if (kDebugMode) {
-        debugPrint('[HealthService] hasPermissions 异常: $e');
-        debugPrint('[HealthService] hasPermissions 异常栈: $stack');
-      }
+      debugPrint('[HealthService] hasPermissions 异常: $e');
+      debugPrint('[HealthService] hasPermissions 异常栈: $stack');
       // 异常时回退到 prefs，避免 UI 在边缘情况下闪动
       final prefs = await SharedPreferences.getInstance();
       final fallback = prefs.getBool('health_last_authorized') ?? false;
-      if (kDebugMode) debugPrint('[HealthService] hasPermissions 回退 prefs: $fallback');
+      debugPrint('[HealthService] hasPermissions 回退 prefs: $fallback');
       return fallback;
     }
   }
