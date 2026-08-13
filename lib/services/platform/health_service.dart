@@ -115,6 +115,11 @@ class HealthService {
   /// Apple 因隐私不会披露具体 read 授权状态，但只要任一 type 已被弹过授权框，
   /// 插件视为已触发授权；返回 true。
   /// 【v1.97.3+176 诊断】无条件日志（release 也输出到系统日志，不再被 kDebugMode 编译剔除）
+  /// 【v1.97.4 重要】此方法在 iOS 上**永远返回 false**：
+  ///   health 插件 iOS 端 SwiftHealthPlugin.hasPermission() 对 READ 权限 case 0
+  ///   直接 `return nil`（Apple 隐私模型），外层循环任一 type 返回 nil/false 即 result(nil)。
+  ///   整段代码无任何修改能让插件在 iOS READ 上返回真值。请改用 checkRealAuthStatus()。
+  @Deprecated('iOS HealthKit 隐私模型下永远 false，请使用 checkRealAuthStatus()')
   static Future<bool> hasPermissions() async {
     try {
       final core = _coreTypes();
@@ -142,6 +147,112 @@ class HealthService {
       debugPrint('[HealthService] hasPermissions 回退 prefs: $fallback');
       return fallback;
     }
+  }
+
+  // ==================== 真实授权判定 (v1.97.4 修复) ====================
+  //
+  // 【根因】iOS HealthKit 因隐私模型**不向 App 披露读权限状态**。
+  // health 插件 iOS 端 SwiftHealthPlugin.hasPermission() 对 READ 权限：
+  //   case 0:  // READ
+  //     return nil   ← 永远 nil，导致外层 result(nil) = 假 false
+  // 173/174/175/176 一直在和这个必然 false 搏斗，全部失败。
+  //
+  // 【正确做法】用「真实样本数」作为授权证据——
+  // 能读到数据 = 已授权（隐私底线下的最佳代理）。
+  // 用 health 插件的 getHealthDataFromTypes 数 24h 内 3 类核心 type 的条数；
+  // 同时调原生桥 getFullHealthSummary 看 mirror 是否有合理 key（兜底）。
+  //
+  // 返回 Map（保持向后兼容 + 携带诊断信息）：
+  //   {
+  //     'authorized': bool,        // 是否有任一 type 拿到数据 → 视为已连接
+  //     'hr_count': int,           // 24h 内心率样本数
+  //     'bo_count': int,           // 24h 内血氧样本数
+  //     'sleep_count': int,        // 24h 内睡眠样本数
+  //     'plugin_perm': bool,       // 插件 hasPermissions 真实值（iOS 必为 false，调试用）
+  //     'source': String,          // 'data' / 'bridge' / 'none'
+  //   }
+  static Future<Map<String, dynamic>> checkRealAuthStatus() async {
+    final result = <String, dynamic>{
+      'authorized': false,
+      'hr_count': 0,
+      'bo_count': 0,
+      'sleep_count': 0,
+      'plugin_perm': false,
+      'source': 'none',
+    };
+
+    // 第一层：插件 getHealthDataFromTypes 数 24h 内真实样本
+    try {
+      final now = DateTime.now();
+      final startTime = now.subtract(const Duration(hours: 24));
+      final core = _coreTypes();
+      int hr = 0, bo = 0, sl = 0;
+      for (final t in core) {
+        try {
+          final part = await _health.getHealthDataFromTypes(
+            types: [t],
+            startTime: startTime,
+            endTime: now,
+          );
+          final n = part.length;
+          if (t == HealthDataType.HEART_RATE) {
+            hr += n;
+          } else if (t == HealthDataType.BLOOD_OXYGEN) {
+            bo += n;
+          } else if (_isSleepType(t)) {
+            sl += n;
+          }
+        } catch (e) {
+          debugPrint('[HealthService] checkRealAuthStatus 单类型 ${t.name} 读取异常: $e');
+        }
+      }
+      result['hr_count'] = hr;
+      result['bo_count'] = bo;
+      result['sleep_count'] = sl;
+      if (hr + bo + sl > 0) {
+        result['authorized'] = true;
+        result['source'] = 'data';
+      }
+    } catch (e, stack) {
+      debugPrint('[HealthService] checkRealAuthStatus 插件读取异常: $e');
+      debugPrint('[HealthService] checkRealAuthStatus 插件读取异常栈: $stack');
+    }
+
+    // 第二层：原生桥 getFullHealthSummary 兜底（即便插件 get 失败，原生桥仍能直读）
+    if (!(result['authorized'] as bool)) {
+      try {
+        final mirror = await getFullMirror(forceRefresh: true);
+        bool hasReasonable = false;
+        // 心率 30-200、血氧 80-100、睡眠分钟 > 0 → 任一合理即视为已连接
+        final hr = mirror['heart_rate'];
+        final bo = mirror['blood_oxygen'];
+        final sl = mirror['sleep_asleep'];
+        if (hr is num && hr >= 30 && hr <= 200) hasReasonable = true;
+        if (bo is num && bo >= 80 && bo <= 100) hasReasonable = true;
+        if (sl is num && sl > 0) hasReasonable = true;
+        if (hasReasonable) {
+          result['authorized'] = true;
+          result['source'] = 'bridge';
+        }
+        debugPrint('[HealthService] checkRealAuthStatus 原生桥 mirror keys: ${mirror.length}, hasReasonable=$hasReasonable');
+      } catch (e) {
+        debugPrint('[HealthService] checkRealAuthStatus 原生桥读取异常: $e');
+      }
+    }
+
+    // 调试用：插件 hasPermissions 真实值（iOS 必为 false，标注便于理解）
+    try {
+      final r = await _health.hasPermissions(
+        [HealthDataType.HEART_RATE],
+        permissions: [HealthDataAccess.READ],
+      );
+      result['plugin_perm'] = r ?? false;
+    } catch (_) {
+      // 忽略
+    }
+
+    debugPrint('[HealthService] checkRealAuthStatus 最终: $result');
+    return result;
   }
 
   static bool _isSleepType(HealthDataType t) {

@@ -629,22 +629,35 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
   /// 加载生命体征守护状态卡数据
   /// 【v1.97.3+172】稳定性修复：直接调用 HealthService.hasPermissions() 读 HealthKit 真实权限态，
   /// 不再依赖 prefs（prefs 由 getHealthSummary 异步写入，时序不稳导致 UI 在「开启」/「守护中」之间抖动）。
+  /// 【v1.97.4 关键修复】改用 checkRealAuthStatus()（真实样本判定）替代 hasPermissions()。
+  ///   旧方法在 iOS 上因 Apple 隐私模型永远 false（health 插件 SwiftHealthPlugin.hasPermission
+  ///   对 READ 权限 case 0 直接 return nil），导致 UI 误判"待开启"——见 health_service 注释。
   Future<void> _loadSafetyStatus() async {
     if (!mounted) return;
     final prefs = await SharedPreferences.getInstance();
-    // 首选：直接读 HealthKit SDK，回退到 prefs
-    bool authorized;
+    // 【v1.97.4】改用真实样本判定（24h 内心率/血氧/睡眠实际条数 + 原生桥兜底）
+    Map<String, dynamic> authResult;
     try {
-      authorized = await HealthService.hasPermissions();
+      authResult = await HealthService.checkRealAuthStatus();
     } catch (e) {
-      debugPrint('[GuardianPage] hasPermissions 抛异常: $e');
-      authorized = prefs.getBool('health_last_authorized') ?? false;
+      debugPrint('[GuardianPage] checkRealAuthStatus 抛异常: $e');
+      authResult = {'authorized': false, 'hr_count': 0, 'bo_count': 0, 'sleep_count': 0, 'source': 'none'};
     }
-    // 【v1.97.3+176 诊断】记录结论 + 时间戳，供卡片内直接显示（不依赖 context，避免跨 async gap）
+    final authorized = authResult['authorized'] == true;
+    // 【v1.97.3+176 诊断 + v1.97.4 增强】记录结论 + 时间戳 + 真实样本数，
+    // 卡片内直接显示（不依赖 context，避免跨 async gap）
     final now = DateTime.now();
     final ts = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
-    _healthAuthDiag = 'HealthKit检测=$authorized · $ts';
-    debugPrint('[GuardianPage] _loadSafetyStatus → _healthAuthorized = $authorized');
+    final hr = authResult['hr_count'] ?? 0;
+    final bo = authResult['bo_count'] ?? 0;
+    final sl = authResult['sleep_count'] ?? 0;
+    final source = authResult['source'] ?? 'none';
+    if (authorized) {
+      _healthAuthDiag = '已连接（心率$hr/血氧$bo/睡眠$sl · $ts）';
+    } else {
+      _healthAuthDiag = '未连接（心率$hr/血氧$bo/睡眠$sl · $ts · 源:$source）';
+    }
+    debugPrint('[GuardianPage] _loadSafetyStatus → authorized=$authorized, diag=$_healthAuthDiag');
     _healthAuthorized = authorized;
     if (!authorized) {
       if (mounted) setState(() {
@@ -673,19 +686,21 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
 
   /// 【v1.97.3+174】手动重新检测健康授权（P0 守护卡修复②）
   /// 用户已在系统+App 内两次授权但 UI 仍"待开启"时，点此按钮可逃离死循环：
-  /// 1. 先重读 hasPermissions（诊断用，日志可见每步）
+  /// 1. 先重读 checkRealAuthStatus（真实样本诊断，日志可见每步）
   /// 2. 若仍 false，强制重新走 requestAuthorization（重新弹 HealthKit 框，
   ///    走正式授权流程，根治"用户在系统设置里手动开启但 App 未 request 过"的情况）
   /// 3. 重新加载安全状态并刷新 UI
+  /// 【v1.97.4】改用 checkRealAuthStatus 替代 hasPermissions
   Future<void> _refreshHealthAuth() async {
     debugPrint('[GuardianPage] 手动重新检测健康授权 → 开始');
-    bool authorized;
+    Map<String, dynamic> authResult;
     try {
-      authorized = await HealthService.hasPermissions();
+      authResult = await HealthService.checkRealAuthStatus();
     } catch (_) {
-      authorized = false;
+      authResult = {'authorized': false, 'hr_count': 0, 'bo_count': 0, 'sleep_count': 0, 'source': 'none'};
     }
-    debugPrint('[GuardianPage] 重新检测 hasPermissions = $authorized');
+    final authorized = authResult['authorized'] == true;
+    debugPrint('[GuardianPage] 重新检测 checkRealAuthStatus = $authorized (${authResult.toString()})');
     if (!authorized) {
       debugPrint('[GuardianPage] 重新拉起 HealthKit 授权弹框');
       await HealthService.requestPermissions();
