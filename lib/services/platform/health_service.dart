@@ -23,6 +23,37 @@ class HealthService {
   // 【v1.97.2 修复】手腕温度原生桥（health 包未暴露该类型，改走 iOS 原生读取）
   static const MethodChannel _hkChannel = MethodChannel('zaine/healthkit');
 
+  // ==================== 授权态「粘性」标记 (v1.97.4 修复) ====================
+  //
+  // 【根因】_loadSafetyStatus 每次进页都调 checkRealAuthStatus() 实时查 HealthKit，
+  // 实时查询偶发失败(无网络/HealthKit 瞬时无响应/样本为空)就回落 false → UI 在
+  // 「守护中 ↔ 尚未检测」之间跳动。用户已两次授权，状态必须恒定。
+  //
+  // 【解法】引入持久化粘性标记 health_authorized：一旦用户完成 HealthKit 授权
+  // （弹框同意 或 实测有真实样本），即写入 true，作为「是否已开启生命体征守护」的
+  // 单一真相源。实时查询只用于刷新安全信号数据，**绝不反向推翻**此标记。
+  static const String _kAuthorized = 'health_authorized';
+
+  /// 标记已授权（持久化）。授权成功路径(requestPermissions 成功 / checkRealAuthStatus 实测有数据)调用。
+  static Future<void> markAuthorized() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_kAuthorized, true);
+  }
+
+  /// 读取授权态粘性标记（单一真相源）
+  static Future<bool> isAuthorized() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_kAuthorized) ?? false;
+  }
+
+  /// 清除授权态标记 + HealthKit 镜像缓存（登出时调用，避免下一账号误判已授权 / 读到旧镜像）
+  static Future<void> clearAuthorized() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_kAuthorized);
+    _mirrorCache = null;
+    _mirrorCacheAt = null;
+  }
+
   // 扩展后的健康数据类型
   static final List<HealthDataType> _types = [
     HealthDataType.HEART_RATE,           // 心率
@@ -73,6 +104,7 @@ class HealthService {
       bool authorized = await _health.requestAuthorization(_types, permissions: _permissions);
       if (kDebugMode) debugPrint('[HealthService] HealthKit 深度授权结果: $authorized');
       await prefs.setBool('health_last_authorized', authorized);
+      if (authorized) await markAuthorized(); // 【v1.97.4】授权成功 → 粘性标记
       await prefs.setString('health_last_auth_error', '');
       await prefs.setString('health_last_auth_time', DateTime.now().toIso8601String());
       return authorized;
@@ -87,6 +119,7 @@ class HealthService {
         final corePerms = core.map((_) => HealthDataAccess.READ).toList();
         final coreAuthorized = await _health.requestAuthorization(core, permissions: corePerms);
         await prefs.setBool('health_last_authorized', coreAuthorized);
+        if (coreAuthorized) await markAuthorized(); // 【v1.97.4】核心授权成功 → 粘性标记
         await prefs.setString('health_last_auth_error', coreAuthorized ? '' : 'core_not_authorized');
         await prefs.setString('health_last_auth_time', DateTime.now().toIso8601String());
         if (kDebugMode) debugPrint('[HealthService] HealthKit 核心授权结果: $coreAuthorized');
@@ -212,6 +245,7 @@ class HealthService {
       if (hr + bo + sl > 0) {
         result['authorized'] = true;
         result['source'] = 'data';
+        await markAuthorized(); // 【v1.97.4】实测有真实样本 → 粘性标记(自动检测到授权)
       }
     } catch (e, stack) {
       debugPrint('[HealthService] checkRealAuthStatus 插件读取异常: $e');
@@ -233,6 +267,7 @@ class HealthService {
         if (hasReasonable) {
           result['authorized'] = true;
           result['source'] = 'bridge';
+          await markAuthorized(); // 【v1.97.4】原生桥兜底确认有数据 → 粘性标记
         }
         debugPrint('[HealthService] checkRealAuthStatus 原生桥 mirror keys: ${mirror.length}, hasReasonable=$hasReasonable');
       } catch (e) {

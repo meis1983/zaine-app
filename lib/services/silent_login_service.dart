@@ -99,6 +99,10 @@ class SilentLoginService {
       final dir = await getApplicationDocumentsDirectory();
       final f = File('${dir.path}/avatar.png');
       if (await f.exists()) await f.delete();
+      if (oldUid != null && oldUid.isNotEmpty) {
+        final rf = File('${dir.path}/avatar_remote_$oldUid.png');
+        if (await rf.exists()) await rf.delete();
+      }
     } catch (_) {}
 
     await _secureStorage.write(key: 'auth_token', value: token);

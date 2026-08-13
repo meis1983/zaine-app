@@ -19,6 +19,7 @@ import '../api_service.dart';
 import '../deep_link_service.dart';
 import '../membership_service.dart';
 import '../guardian_card_service.dart';
+import '../platform/health_service.dart';
 
 /// 安全存储实例（单例）
 const _secureStorage = FlutterSecureStorage(
@@ -124,15 +125,17 @@ class AuthService {
           await prefs.remove('continuous_days_$oldUid');
           await prefs.remove('total_check_in_days_$oldUid');
           await prefs.remove('checkin_history_$oldUid');
-          try {
-            final dir = await getApplicationDocumentsDirectory();
-            final f = File('${dir.path}/avatar.png');
-            if (await f.exists()) await f.delete();
-          } catch (_) {}
-          // 【修复 v1.91.0】清除 Flutter 图像内存缓存，防止旧头像残影
-          try { PaintingBinding.instance.imageCache.clear(); } catch (_) {}
-        }
-        if (kDebugMode) debugPrint('[AuthService] ${isSameUser ? "同一用户重新登录，保留本地数据" : "切换账号，已清除旧数据"}');
+        try {
+          final dir = await getApplicationDocumentsDirectory();
+          final f = File('${dir.path}/avatar.png');
+          if (await f.exists()) await f.delete();
+          final rf = File('${dir.path}/avatar_remote_$oldUid.png'); // 清旧账号隔离远端头像
+          if (await rf.exists()) await rf.delete();
+        } catch (_) {}
+        // 【修复 v1.91.0】清除 Flutter 图像内存缓存，防止旧头像残影
+        try { PaintingBinding.instance.imageCache.clear(); } catch (_) {}
+      }
+      if (kDebugMode) debugPrint('[AuthService] ${isSameUser ? "同一用户重新登录，保留本地数据" : "切换账号，已清除旧数据"}');
 
         await _saveToken(res['token']);
         // 【修复 v1.94.x】手机号归一化为纯数字（去除 +、空格、横线），避免 SOS 短信出现 ++
@@ -233,6 +236,8 @@ class AuthService {
           final dir = await getApplicationDocumentsDirectory();
           final f = File('${dir.path}/avatar.png');
           if (await f.exists()) await f.delete();
+          final rf = File('${dir.path}/avatar_remote_$oldUid.png');
+          if (await rf.exists()) await rf.delete();
         } catch (_) {}
         // 【修复 v1.91.0】清除 Flutter 图像内存缓存
         try { PaintingBinding.instance.imageCache.clear(); } catch (_) {}
@@ -268,32 +273,42 @@ class AuthService {
   static Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
 
-    // 【修复 v1.90.1】清除 SharedPreferences 中的 user_id（防止 AvatarHelper 读到旧账号 ID）
-    await prefs.remove('user_id');
-    await prefs.remove('user_phone');
+    // 【v1.97.4 修复】先取旧 user_id 再清除（修复 +177 在 remove 之后才读导致 oldUid 恒为 null 的 bug）
+    final oldUid = prefs.getString('user_id') ?? '';
 
-    // 【v1.97.3+177 修复】退出登录时清理未分用户 ID 的头像缓存 + 头像文件，
-    // 防止「A 退出 → B 登录」时显示 A 的头像（多账号切换场景）。
-    // 保留 avatar_path_<oldUid> / avatar_base64_<oldUid>（按用户 ID 后缀），
-    // A 重新登录时仍可恢复自己的头像。
-    // 注意：上方已先 prefs.remove('user_id')，所以这里必须先取一次旧 ID 再删
-    final oldUidForAvatar = prefs.getString('user_id');
+    // 【v1.97.4 修复】彻底隔离头像，杜绝多账号切换串号：
+    // 1) 清除非隔离兜底键
     await prefs.remove('avatar_path');
     await prefs.remove('avatar_base64');
+    // 2) 清除旧账号按 uid 隔离的头像键（A 退出后 B 不会读到 A 的）
+    if (oldUid.isNotEmpty) {
+      await prefs.remove('avatar_path_$oldUid');
+      await prefs.remove('avatar_base64_$oldUid');
+    }
+    // 3) 删除所有头像文件：本地选择用的 avatar.png + 远端同步用的旧共享 avatar_remote.png + 按 uid 隔离的远端文件
     try {
       final dir = await getApplicationDocumentsDirectory();
-      final f = File('${dir.path}/avatar.png');
-      if (await f.exists()) await f.delete();
+      final names = ['avatar.png', 'avatar_remote.png'];
+      if (oldUid.isNotEmpty) names.add('avatar_remote_$oldUid.png');
+      for (final name in names) {
+        final f = File('${dir.path}/$name');
+        if (await f.exists()) await f.delete();
+      }
     } catch (e) {
       debugPrint('[AuthService.logout] 清理头像文件异常: $e');
     }
-    debugPrint('[AuthService.logout] 头像缓存已清理（oldUid=$oldUidForAvatar，per-user 后缀头像保留供回登）');
-    // 注：avatar_path_<oldUid> / avatar_base64_<oldUid> 在 logout 不删，
-    // 原因：单用户设备上 A 退出再登 A，silent_login 路径会清这些带后缀的，避免重复 IO；
-    // 但 A 退出登 B 时，B 的 silent_login 拿不到 A 的 oldUid 不会清，B 用 B 的 ID 索引不到 A 的头像，不会显示 A 的。
-    // 历史原因：v1.9.73 注释"保留头像缓存"是单用户设计假设；多账号测试发现会串头像 → +177 加清理。
-    // ↑【修复 v1.9.73】保留头像缓存和文件（与健康档案/紧急联系人保持一致）
-    // 注：上述 +177 已切到「清理」语义，原"保留"语义被覆盖
+    // 4) 清除全局档案（user_profile 非隔离，B 登录前若未重同步会残留 A 的姓名/头像）
+    await prefs.remove('user_profile');
+    if (oldUid.isNotEmpty) await prefs.remove('user_profile_$oldUid');
+    // 5) 清除 Flutter 图像内存缓存（防止旧头像残影）
+    try { PaintingBinding.instance.imageCache.clear(); } catch (_) {}
+    // 6) 清除 HealthKit 授权粘性标记 + 镜像缓存（防止下一账号误判已授权 / 读到旧镜像）
+    await HealthService.clearAuthorized();
+    debugPrint('[AuthService.logout] 头像/档案/HealthKit 缓存已彻底清理（oldUid=$oldUid）');
+
+    // 【修复 v1.90.1】清除 SharedPreferences 中的 user_id / user_phone
+    await prefs.remove('user_id');
+    await prefs.remove('user_phone');
     await _deleteToken();
     // 【修复 v1.77.0】从 Keychain 中删除敏感信息
     await _secureStorage.delete(key: 'user_id');

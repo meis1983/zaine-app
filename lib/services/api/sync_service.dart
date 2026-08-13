@@ -90,7 +90,8 @@ class SyncService {
             try {
               final bytes = base64Decode(avatarStr);
               final dir = await getApplicationDocumentsDirectory();
-              final path = '${dir.path}/avatar_remote.png';
+              // 【v1.97.4 修复】按用户隔离文件名，杜绝多账号共用 avatar_remote.png 导致头像串号
+              final path = '${dir.path}/avatar_remote_$uid.png';
               await File(path).writeAsBytes(bytes);
               await prefs.setString('avatar_path${uid.isNotEmpty ? '_$uid' : ''}', path);
             } catch (e) {
