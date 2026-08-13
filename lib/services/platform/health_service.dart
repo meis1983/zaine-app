@@ -54,6 +54,16 @@ class HealthService {
     _mirrorCacheAt = null;
   }
 
+  /// 【v1.97.4 修复】仅清除 HealthKit 镜像缓存（按账号的健康数据），保留授权态粘性标记。
+  /// 原因：HealthKit 授权是「设备级」(iOS 对 App 整体授权，与登录账号无关)，
+  /// 同一台手机上任意账号都应视为已授权。原先 logout 调用 clearAuthorized() 把标记也清掉，
+  /// 导致切账号后守护卡先闪「未检测」再靠实时探测回「守护中」——这正是跳动根因之一。
+  /// 登出只需清掉「旧账号的健康数据镜像」，授权标记应常驻。
+  static Future<void> clearHealthMirror() async {
+    _mirrorCache = null;
+    _mirrorCacheAt = null;
+  }
+
   // 扩展后的健康数据类型
   static final List<HealthDataType> _types = [
     HealthDataType.HEART_RATE,           // 心率

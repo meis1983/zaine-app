@@ -134,6 +134,8 @@ class AuthService {
         } catch (_) {}
         // 【修复 v1.91.0】清除 Flutter 图像内存缓存，防止旧头像残影
         try { PaintingBinding.instance.imageCache.clear(); } catch (_) {}
+        // 【v1.97.4 修复】清除联系人缓存，防止切换账号串号
+        await _clearContactCaches();
       }
       if (kDebugMode) debugPrint('[AuthService] ${isSameUser ? "同一用户重新登录，保留本地数据" : "切换账号，已清除旧数据"}');
 
@@ -269,6 +271,25 @@ class AuthService {
     return res;
   }
 
+  /// 【v1.97.4 修复】清除所有按手机号缓存的守护圈联系人状态（contact_* 键未做 per-uid 隔离），
+  /// 防止切换账号后旧账号的签到/激活/头像缓存串到新账号。
+  static Future<void> _clearContactCaches() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final keys = prefs.getKeys();
+      int n = 0;
+      for (final k in keys) {
+        if (k.startsWith('contact_')) {
+          await prefs.remove(k);
+          n++;
+        }
+      }
+      if (kDebugMode) debugPrint('[AuthService] 已清除 $n 个 contact_* 缓存');
+    } catch (e) {
+      debugPrint('[AuthService._clearContactCaches] 异常: $e');
+    }
+  }
+
   /// 退出登录
   static Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
@@ -302,9 +323,14 @@ class AuthService {
     if (oldUid.isNotEmpty) await prefs.remove('user_profile_$oldUid');
     // 5) 清除 Flutter 图像内存缓存（防止旧头像残影）
     try { PaintingBinding.instance.imageCache.clear(); } catch (_) {}
-    // 6) 清除 HealthKit 授权粘性标记 + 镜像缓存（防止下一账号误判已授权 / 读到旧镜像）
-    await HealthService.clearAuthorized();
-    debugPrint('[AuthService.logout] 头像/档案/HealthKit 缓存已彻底清理（oldUid=$oldUid）');
+    // 6) 清除 HealthKit「健康数据镜像缓存」，【保留】授权粘性标记 health_authorized：
+    //    HealthKit 授权是设备级（iOS 对 App 整体授权，与登录账号无关），同一台手机任意账号都应视为已授权；
+    //    旧逻辑 clearAuthorized() 把标记也清掉，导致切账号后守护卡先闪「未检测」再靠实时探测回「守护中」——跳动根因之一。
+    await HealthService.clearHealthMirror();
+    // 7) 【v1.97.4 修复】清除按手机号缓存的守护圈联系人状态（contact_* 键未做 per-uid 隔离），
+    //    防止切换账号后旧账号的签到/激活/头像缓存串到新账号。
+    await _clearContactCaches();
+    debugPrint('[AuthService.logout] 头像/档案/HealthKit 镜像/联系人缓存已彻底清理（oldUid=$oldUid）');
 
     // 【修复 v1.90.1】清除 SharedPreferences 中的 user_id / user_phone
     await prefs.remove('user_id');

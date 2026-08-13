@@ -657,6 +657,11 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
         await HealthService.markAuthorized();
         sticky = true;
       }
+      // 【v1.97.4 竞态修复】若本次探测失败，但并发的其他探测已写入粘性标记，
+      // 以标记为准，避免「慢速失败探测」把已判定为守护中的状态覆盖回「未检测」。
+      if (!sticky) {
+        sticky = await HealthService.isAuthorized();
+      }
     }
 
     final now = DateTime.now();

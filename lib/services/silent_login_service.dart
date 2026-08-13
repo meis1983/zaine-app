@@ -104,6 +104,14 @@ class SilentLoginService {
         if (await rf.exists()) await rf.delete();
       }
     } catch (_) {}
+    // 【v1.97.4 修复】清除联系人缓存，防止切换账号串号（contact_* 键未做 per-uid 隔离）
+    try {
+      final cps = await SharedPreferences.getInstance();
+      final ckeys = cps.getKeys();
+      for (final k in ckeys) {
+        if (k.startsWith('contact_')) await cps.remove(k);
+      }
+    } catch (_) {}
 
     await _secureStorage.write(key: 'auth_token', value: token);
     await prefs.setString('user_phone', (phone ?? '').replaceAll(RegExp(r'[^\d]'), ''));
