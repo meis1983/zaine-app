@@ -118,13 +118,25 @@ class HealthService {
     try {
       final core = _coreTypes();
       final corePerms = core.map((_) => HealthDataAccess.READ).toList();
+      if (kDebugMode) {
+        debugPrint('[HealthService] hasPermissions 请求类型(${core.length}项): '
+            '${core.map((e) => e.name).join(', ')}');
+      }
       final result = await _health.hasPermissions(core, permissions: corePerms);
+      if (kDebugMode) {
+        debugPrint('[HealthService] hasPermissions 原始结果: $result (类型: ${result.runtimeType})');
+      }
       return result ?? false;
-    } catch (e) {
-      if (kDebugMode) debugPrint('[HealthService] hasPermissions 异常: $e');
+    } catch (e, stack) {
+      if (kDebugMode) {
+        debugPrint('[HealthService] hasPermissions 异常: $e');
+        debugPrint('[HealthService] hasPermissions 异常栈: $stack');
+      }
       // 异常时回退到 prefs，避免 UI 在边缘情况下闪动
       final prefs = await SharedPreferences.getInstance();
-      return prefs.getBool('health_last_authorized') ?? false;
+      final fallback = prefs.getBool('health_last_authorized') ?? false;
+      if (kDebugMode) debugPrint('[HealthService] hasPermissions 回退 prefs: $fallback');
+      return fallback;
     }
   }
 

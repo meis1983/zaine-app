@@ -634,9 +634,11 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
     bool authorized;
     try {
       authorized = await HealthService.hasPermissions();
-    } catch (_) {
+    } catch (e) {
+      if (kDebugMode) debugPrint('[GuardianPage] hasPermissions 抛异常: $e');
       authorized = prefs.getBool('health_last_authorized') ?? false;
     }
+    if (kDebugMode) debugPrint('[GuardianPage] _loadSafetyStatus → _healthAuthorized = $authorized');
     _healthAuthorized = authorized;
     if (!authorized) {
       if (mounted) setState(() {
@@ -651,6 +653,9 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
       if (!mounted) return;
       final signal = SafetySignalEngine.evaluate(summary);
       _lastHealthSyncAt = DateTime.now().millisecondsSinceEpoch; // v1.97.3+169 同步时间反馈
+      if (kDebugMode) {
+        debugPrint('[GuardianPage] getHealthSummary 成功，summary keys: ${summary?.keys.toList()}');
+      }
       if (mounted) setState(() {
         _healthSummary = summary;
         _safetySignal = signal;
@@ -658,6 +663,30 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
     } catch (e) {
       if (kDebugMode) debugPrint('[GuardianPage] 安全信号加载失败: $e');
     }
+  }
+
+  /// 【v1.97.3+174】手动重新检测健康授权（P0 守护卡修复②）
+  /// 用户已在系统+App 内两次授权但 UI 仍"待开启"时，点此按钮可逃离死循环：
+  /// 1. 先重读 hasPermissions（诊断用，日志可见每步）
+  /// 2. 若仍 false，强制重新走 requestAuthorization（重新弹 HealthKit 框，
+  ///    走正式授权流程，根治"用户在系统设置里手动开启但 App 未 request 过"的情况）
+  /// 3. 重新加载安全状态并刷新 UI
+  Future<void> _refreshHealthAuth() async {
+    if (kDebugMode) debugPrint('[GuardianPage] 手动重新检测健康授权 → 开始');
+    bool authorized;
+    try {
+      authorized = await HealthService.hasPermissions();
+    } catch (_) {
+      authorized = false;
+    }
+    if (kDebugMode) debugPrint('[GuardianPage] 重新检测 hasPermissions = $authorized');
+    if (!authorized) {
+      if (kDebugMode) debugPrint('[GuardianPage] 重新拉起 HealthKit 授权弹框');
+      await HealthService.requestPermissions();
+    }
+    await _loadSafetyStatus();
+    if (mounted) setState(() {});
+    if (kDebugMode) debugPrint('[GuardianPage] 手动重新检测健康授权 → 结束');
   }
 
   /// 【v1.97.3+166 双向视觉】计算「互相守护」用户集合：
@@ -1884,6 +1913,23 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                       ],
                     ),
                   ),
+                  // 【v1.97.3+174②】手动重新检测授权按钮（逃离"已授权但 UI 待开启"死循环）
+                  GestureDetector(
+                    onTap: () async {
+                      HapticFeedback.lightImpact();
+                      await _refreshHealthAuth();
+                    },
+                    child: Container(
+                      width: 32,
+                      height: 32,
+                      margin: const EdgeInsets.only(right: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF2EEFF),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.refresh_rounded, size: 18, color: Color(0xFF7C4DFF)),
+                    ),
+                  ),
                   const Icon(Icons.chevron_right, color: Colors.grey),
                 ],
               ),
@@ -2310,12 +2356,23 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              name,
-                              style: const TextStyle(
-                                fontSize: ZaiNeFontSize.body,
-                                fontWeight: FontWeight.w600,
-                              ),
+                            // 【v1.97.3+174】双人形守护关系图：名字 + 双心徽标（与守护我的人统一位置）
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    name,
+                                    overflow: TextOverflow.ellipsis,
+                                    maxLines: 1,
+                                    style: const TextStyle(
+                                      fontSize: ZaiNeFontSize.body,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: ZaiNeSpacing.xs),
+                                _buildMutualBadge(isMutual),
+                              ],
                             ),
                             const SizedBox(height: 4),
                             Row(
@@ -2354,41 +2411,6 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                                     ),
                                   ),
                                 ],
-                                // 【v1.97.3+173】互为守护徽标改双心相扣（与守护圈列表一致）
-                                if (isMutual)
-                                  Padding(
-                                    padding: const EdgeInsets.only(left: 6),
-                                    child: Tooltip(
-                                      message: '互为守护',
-                                      child: SizedBox(
-                                        width: 24,
-                                        height: 16,
-                                        child: Stack(
-                                          alignment: Alignment.center,
-                                          clipBehavior: Clip.none,
-                                          children: [
-                                            Transform.translate(
-                                              offset: const Offset(-3, 0),
-                                              child: const Icon(
-                                                Icons.favorite,
-                                                size: 16,
-                                                color: Color(0xFF7C4DFF),
-                                              ),
-                                            ),
-                                            Transform.translate(
-                                              offset: const Offset(3, 0),
-                                              child: Icon(
-                                                Icons.favorite,
-                                                size: 16,
-                                                color: const Color(0xFFA78DFF)
-                                                    .withValues(alpha: 0.85),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ),
                               ],
                             ),
                           ],
@@ -2554,9 +2576,10 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                   // 【v1.93.5 修复】Row 布局加 overflow 保护 + relation 空字符串兜底
                   // 【v1.97.3+169 修复】互护徽标移出名字行，避免挤压名字导致互护 item 名字不可见
                   // 【v1.97.3+173】互护徽标改回"姓名右侧"（紧贴名字），双心相扣图标
+                  // 【v1.97.3+173】互护徽标放姓名右侧（紧贴名字）；【+174】删关系 chip（添加时已选，冗余）
                   Row(
                     children: [
-                      Flexible(
+                      Expanded(
                         child: Text(
                           guardian['name'] ?? '未命名',
                           overflow: TextOverflow.ellipsis,
@@ -2569,29 +2592,6 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                       ),
                       const SizedBox(width: ZaiNeSpacing.xs),
                       _buildMutualBadge(isMutual), // 28×18 双心图，isMutual=false 返回 SizedBox.shrink 不挤压
-                      const SizedBox(width: ZaiNeSpacing.xs),
-                      // 关系标签
-                      Flexible(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.sm, vertical: ZaiNeSpacing.xs),
-                          decoration: BoxDecoration(
-                            color: accentColor.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(ZaiNeRadius.small),
-                          ),
-                          child: Text(
-                            (guardian['relation'] == null || guardian['relation'].toString().isEmpty)
-                                ? '守护者'
-                                : guardian['relation'].toString(),
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 1,
-                            style: TextStyle(
-                              fontSize: ZaiNeFontSize.micro,
-                              color: accentColor,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ),
                     ],
                   ),
                   const SizedBox(height: ZaiNeSpacing.xs),
