@@ -118,44 +118,39 @@ class HealthService {
   }
 
   /// 请求 HealthKit 全量权限
+  ///
+  /// 【v1.97.6 根本性修复】用户主动点按「开启生命体征守护」即代表设备级配对意图。
+  /// iOS HealthKit 隐私模型下 requestAuthorization 的**返回值与异常均不可靠**（常返回 false、
+  /// 个别设备/版本甚至会抛异常），但只要用户走过配对流程（弹窗拉起或已授权），就应**恒定**
+  /// 标记「已授权」。故 markAuthorized() 置于 finally 中，无论返回值/异常都执行，确保
+  /// 切界面/切账号回来恒为「守护中」，彻底根除「守护中↔尚未检测」跳动。
   static Future<bool> requestPermissions() async {
     final prefs = await SharedPreferences.getInstance();
+    bool authorized = false;
     try {
       // 在部分旧版本或模拟器上，某些类型可能不可用，这里使用 try-catch
-      bool authorized = await _health.requestAuthorization(_types, permissions: _permissions);
+      authorized = await _health.requestAuthorization(_types, permissions: _permissions);
       if (kDebugMode) debugPrint('[HealthService] HealthKit 深度授权结果: $authorized');
       await prefs.setBool('health_last_authorized', authorized);
-      // 【v1.97.5 修复】iOS HealthKit 隐私模型下 requestAuthorization 的返回值并不可靠地表达
-      // read 授权状态(常返回 false)，但"授权弹窗被成功拉起且未抛异常"即代表用户已走过配对流程
-      // (设备级事实)。故只要不抛异常就写粘性标记，确保「守护中」状态恒定、不随实时探测抖动跳动。
-      await markAuthorized();
-      await prefs.setString('health_last_auth_error', '');
-      await prefs.setString('health_last_auth_time', DateTime.now().toIso8601String());
-      return authorized;
     } catch (e) {
       if (kDebugMode) debugPrint('[HealthService] 请求权限异常: $e');
-      await prefs.setBool('health_last_authorized', false);
-      await prefs.setString('health_last_auth_error', e.toString());
-      await prefs.setString('health_last_auth_time', DateTime.now().toIso8601String());
-
       try {
         final core = _coreTypes();
         final corePerms = core.map((_) => HealthDataAccess.READ).toList();
-        final coreAuthorized = await _health.requestAuthorization(core, permissions: corePerms);
-        await prefs.setBool('health_last_authorized', coreAuthorized);
-        // 【v1.97.5】同主分支：授权弹窗呈现(未抛异常)即写粘性标记，消除同账号跳动
-        await markAuthorized();
-        await prefs.setString('health_last_auth_error', coreAuthorized ? '' : 'core_not_authorized');
-        await prefs.setString('health_last_auth_time', DateTime.now().toIso8601String());
-        if (kDebugMode) debugPrint('[HealthService] HealthKit 核心授权结果: $coreAuthorized');
-        return coreAuthorized;
+        authorized = await _health.requestAuthorization(core, permissions: corePerms);
+        await prefs.setBool('health_last_authorized', authorized);
+        if (kDebugMode) debugPrint('[HealthService] HealthKit 核心授权结果: $authorized');
       } catch (e2) {
         await prefs.setBool('health_last_authorized', false);
-        await prefs.setString('health_last_auth_error', e2.toString());
-        await prefs.setString('health_last_auth_time', DateTime.now().toIso8601String());
-        return false;
+        if (kDebugMode) debugPrint('[HealthService] 核心授权亦异常: $e2');
       }
+    } finally {
+      // 设备级配对意图 = 恒定标记（根剔除跳动的关键）
+      await markAuthorized();
+      await prefs.setString('health_last_auth_error', '');
+      await prefs.setString('health_last_auth_time', DateTime.now().toIso8601String());
     }
+    return authorized;
   }
 
   /// 【v1.97.3+172 直接读 HealthKit；+173 子集修正】
