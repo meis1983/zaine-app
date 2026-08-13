@@ -246,6 +246,10 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
   List<_FeedItem> _todayFeed = [];
   bool _feedLoading = true;
 
+  // 【v1.97.5 修复】头部计数就绪标志：仅在「守护我的人 / 我守护的人 / 互为守护」三源全部
+  // 填充完成后才显示详细计数，消除进入页面时数字逐步跳变的级联刷新。
+  bool _headerReady = false;
+
   @override
   void initState() {
     super.initState();
@@ -385,11 +389,9 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
         final list = (guardedRes['guarded'] as List)
             .whereType<Map<String, dynamic>>()
             .toList();
-        if (mounted) {
-          setState(() {
-            _guardedByMe = list;
-          });
-        }
+        // 【v1.97.5 修复】仅赋值，延迟到 batchLookup 完成后(行516/521 统一 setState)再刷新，
+        // 避免头部「已成功守护 N 位」先于「X 位守护者 / 与 K 位互为守护」出现 → 数字级联跳动。
+        _guardedByMe = list;
         // 【2026-07-15 修复】构建 user_id -> 今日是否已签到的映射，用于覆盖「守护我的人」显示状态
         // 用 .toString() 作 key，兼容后端 int/String 两种返回类型
         _guardedByMeCheckedIn = {
@@ -414,7 +416,10 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
       if (kDebugMode) debugPrint('[GuardianPage] ⚠️ 后端拉取失败: $e');
     }
 
-    if (!mounted || contacts.isEmpty) {
+    if (!mounted) return;
+    if (contacts.isEmpty) {
+      _headerReady = true; // 无联系人 → 直接显示空态，无需等待
+      if (mounted) setState(() {});
       return;
     }
 
@@ -519,6 +524,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
         _loadTodayFeed();
         // 【v1.97.3+168 修复】batchLookup 主路径也需重算互相守护（与 fallback 路径 L612-615 对齐）
         _recomputeMutual();
+        _headerReady = true; // 【v1.97.5】三源已齐，允许显示详细计数
         if (mounted) setState(() {});
         return;
       }
@@ -627,6 +633,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
     _finalSyncGuardianCheckInStatus();
     // 【v1.97.3+166 双向视觉】重算「互相守护」集合（userId == receiver_id 交集），并触发重建
     _recomputeMutual();
+    _headerReady = true; // 【v1.97.5】三源已齐，允许显示详细计数
     if (mounted) setState(() {});
     // 【v1.97.4 状态引擎上提】并行加载生命体征守护状态（纯判定，不触发外发）
     unawaited(_loadSafetyStatus());
@@ -1155,48 +1162,58 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                       const SizedBox(height: ZaiNeSpacing.sm),
                       Row(
                         children: [
-                          Text(
-                            _guardians.isNotEmpty
-                                ? '${_guardians.length} 位守护者'
-                                : '暂无守护者',
-                            style: TextStyle(
-                              fontSize: ZaiNeFontSize.caption,
-                              color: Colors.white.withValues(alpha: 0.9),
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          if (_guardedByMe.isNotEmpty) ...[
-                            Container(
-                              margin: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.sm),
-                              width: 1,
-                              height: 10,
-                              color: Colors.white.withValues(alpha: 0.3),
-                            ),
+                          if (_headerReady) ...[
                             Text(
-                              '已成功守护 ${_guardedByMe.length} 位朋友',
+                              _guardians.isNotEmpty
+                                  ? '${_guardians.length} 位守护者'
+                                  : '暂无守护者',
                               style: TextStyle(
                                 fontSize: ZaiNeFontSize.caption,
                                 color: Colors.white.withValues(alpha: 0.9),
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
-                          ],
-                          if (_mutualUserIds.isNotEmpty) ...[
-                            Container(
-                              margin: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.sm),
-                              width: 1,
-                              height: 10,
-                              color: Colors.white.withValues(alpha: 0.3),
-                            ),
+                            if (_guardedByMe.isNotEmpty) ...[
+                              Container(
+                                margin: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.sm),
+                                width: 1,
+                                height: 10,
+                                color: Colors.white.withValues(alpha: 0.3),
+                              ),
+                              Text(
+                                '已成功守护 ${_guardedByMe.length} 位朋友',
+                                style: TextStyle(
+                                  fontSize: ZaiNeFontSize.caption,
+                                  color: Colors.white.withValues(alpha: 0.9),
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                            if (_mutualUserIds.isNotEmpty) ...[
+                              Container(
+                                margin: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.sm),
+                                width: 1,
+                                height: 10,
+                                color: Colors.white.withValues(alpha: 0.3),
+                              ),
+                              Text(
+                                '与 ${_mutualUserIds.length} 位互为守护',
+                                style: TextStyle(
+                                  fontSize: ZaiNeFontSize.caption,
+                                  color: Colors.white.withValues(alpha: 0.9),
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ] else
                             Text(
-                              '与 ${_mutualUserIds.length} 位互为守护',
+                              '正在同步守护圈状态…',
                               style: TextStyle(
                                 fontSize: ZaiNeFontSize.caption,
                                 color: Colors.white.withValues(alpha: 0.9),
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
-                          ],
                         ],
                       ),
                       const SizedBox(height: ZaiNeSpacing.xs),

@@ -114,7 +114,10 @@ class HealthService {
       bool authorized = await _health.requestAuthorization(_types, permissions: _permissions);
       if (kDebugMode) debugPrint('[HealthService] HealthKit 深度授权结果: $authorized');
       await prefs.setBool('health_last_authorized', authorized);
-      if (authorized) await markAuthorized(); // 【v1.97.4】授权成功 → 粘性标记
+      // 【v1.97.5 修复】iOS HealthKit 隐私模型下 requestAuthorization 的返回值并不可靠地表达
+      // read 授权状态(常返回 false)，但"授权弹窗被成功拉起且未抛异常"即代表用户已走过配对流程
+      // (设备级事实)。故只要不抛异常就写粘性标记，确保「守护中」状态恒定、不随实时探测抖动跳动。
+      await markAuthorized();
       await prefs.setString('health_last_auth_error', '');
       await prefs.setString('health_last_auth_time', DateTime.now().toIso8601String());
       return authorized;
@@ -129,7 +132,8 @@ class HealthService {
         final corePerms = core.map((_) => HealthDataAccess.READ).toList();
         final coreAuthorized = await _health.requestAuthorization(core, permissions: corePerms);
         await prefs.setBool('health_last_authorized', coreAuthorized);
-        if (coreAuthorized) await markAuthorized(); // 【v1.97.4】核心授权成功 → 粘性标记
+        // 【v1.97.5】同主分支：授权弹窗呈现(未抛异常)即写粘性标记，消除同账号跳动
+        await markAuthorized();
         await prefs.setString('health_last_auth_error', coreAuthorized ? '' : 'core_not_authorized');
         await prefs.setString('health_last_auth_time', DateTime.now().toIso8601String());
         if (kDebugMode) debugPrint('[HealthService] HealthKit 核心授权结果: $coreAuthorized');
