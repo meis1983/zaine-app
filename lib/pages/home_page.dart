@@ -805,16 +805,29 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     // 2. 本地存储 last_check_in_date（防止 Widget 重建后内存状态丢失导致重复签到）
     final guardPrefs = await SharedPreferences.getInstance();
     final guardUid = (await AuthService.getUserId()) ?? '';
-    final guardLastDateKey = guardUid.isNotEmpty ? 'last_check_in_date_$guardUid' : 'last_check_in_date';
     final guardToday = DateFormat('yyyy-MM-dd').format(DateTime.now());
-    final guardLastDate = guardPrefs.getString(guardLastDateKey);
-    final alreadyCheckedLocally = guardLastDate == guardToday;
+    // 仅用于诊断日志，不作为早退依据（prefs 残留会成为幽灵阻塞 do_checkin）
+    final guardLastDate = (guardUid.isNotEmpty
+            ? guardPrefs.getString('last_check_in_date_$guardUid')
+            : guardPrefs.getString('last_check_in_date')) ??
+        '';
 
-    if (_checkedInToday || alreadyCheckedLocally) {
-      // 【修复 v1.9.72】服务端 UTC 时间与本地 UTC+8 可能存在日期偏差
-      // 导致 _checkedInToday 被误设为 true，用户点击"签到"却无响应
-      // 改为：仍弹出庆祝弹窗，不让用户体验断掉
-      if (kDebugMode) debugPrint('[HomePage] 今日已签到（可能为时区误判），显示庆祝弹窗');
+    // 【v1.97.6 根治】不要让「本地 prefs 残留今日已签到」幽灵阻塞 do_checkin。
+    // 旧实现：仅看 prefs 的 last_check_in_date_$uid，命中就早退 → 后端永远收不到 do_checkin → 守护圈永远看不到签到。
+    // 新实现：
+    //   - 内存态 _checkedInToday 本次 session 确实走过签到路径才信任
+    //   - 本地历史包含今天才作为兜底（与 _checkedInToday 互相印证）
+    //   - 仅当历史明确含今天，才走"已签到庆祝"路径
+    //   - 其它情况（prefs 残留 / 内存不一致 / 历史没今天）一律放行 do_checkin，让后端做最终判断
+    final uidEarly = (await AuthService.getUserId()) ?? '';
+    final historyKeyEarly = uidEarly.isNotEmpty ? 'checkin_history_$uidEarly' : 'checkin_history';
+    final historyEarly = (await SharedPreferences.getInstance()).getStringList(historyKeyEarly) ?? [];
+    final todayEarly = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final historySaysChecked = historyEarly.contains(todayEarly);
+
+    if (_checkedInToday && historySaysChecked) {
+      // 内存 + 历史一致 = 真已签到，弹庆祝弹窗、不重发请求
+      if (kDebugMode) debugPrint('[HomePage] 今日已签到（内存+历史一致），显示庆祝弹窗');
       // 【修复 v1.97.2】弹窗前先与服务端对账并合并历史、重算连续天数：
       // 避免首屏后台对账尚未完成时，弹窗读到未合并的本地旧值（表现为第一次数字不准、第二次才对）。
       // 带 3s 超时与本地降级，绝不阻塞弹窗。
@@ -839,6 +852,11 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         if (kDebugMode) debugPrint(stack.toString());
       }
       return;
+    }
+
+    // 否则（prefs 残留 / 内存不一致 / 历史没今天）一律放行 do_checkin，让服务端做最终判断
+    if (kDebugMode) {
+      debugPrint('[HomePage] 放行 do_checkin：_checkedInToday=$_checkedInToday, historySaysChecked=$historySaysChecked, prefsLastDate=$guardLastDate');
     }
 
     // ✅ 立即更新 UI —— 让用户第一时间看到已签到
