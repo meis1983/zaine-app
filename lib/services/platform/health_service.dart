@@ -14,6 +14,7 @@ import '../safety/safety_signal_engine.dart';
 import '../database/circle_event_dao.dart';
 import '../../config/app_config.dart';
 import '../../utils/streak_util.dart';
+import '../debug_log.dart'; // [191] 双通道日志（心跳签到透明化，文件兜底可事后取回）
 
 /// 健康数据服务 (Apple Watch / HealthKit 集成)
 /// 实现「多维度生命体征监测」的核心逻辑
@@ -1103,10 +1104,25 @@ class HealthService {
 
     // ====== 新增：检查来自 Watch App 的主动签到信号 ======
     final prefs = await SharedPreferences.getInstance();
+
+    // 【v1.97.3+191 克制规则】当天已通过任意方式签到 → 自动心跳/信号签到静默跳过，
+    // 不再重复 do_checkin、不再重复弹💓横幅，从源头消除「无缘无故滴一下滴一下」的困惑。
+    // 仅「用户在 Watch 上明确手动点击(fromWatch)」仍放行（用户主动意图，服务端会返回 already_done）。
+    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final uid = prefs.getString('user_id') ?? '';
+    final lastDateKey = uid.isNotEmpty ? 'last_check_in_date_$uid' : 'last_check_in_date';
+    final alreadyCheckedInToday = prefs.getString(lastDateKey) == today;
+    if (alreadyCheckedInToday && !fromWatch) {
+      await DebugLog.write('191 WB', '今日已签到，跳过自动心跳/信号签到 fromHeartbeat=$fromHeartbeat hasWatchSignal=${prefs.getBool('pending_watch_checkin') ?? false}');
+      if (kDebugMode) debugPrint('[HealthService][191 WB] 今日已签到，跳过自动心跳签到（fromHeartbeat=$fromHeartbeat）');
+      return;
+    }
+
     bool hasWatchSignal = prefs.getBool('pending_watch_checkin') ?? false;
 
     // 【P0】来自 Watch 的自动心率签到：直接执行，source='heartbeat'（弹💓横幅，不回包Watch）
     if (fromHeartbeat) {
+      await DebugLog.write('191 WB', '执行 Watch 心跳自动签到 clientId=$clientId');
       if (kDebugMode) debugPrint('[HealthService] 💓 来自 Watch 的心跳自动签到，跳过门禁直接执行 (clientId=$clientId)');
       await _executeCheckIn(prefs, source: 'heartbeat', clientId: clientId);
       return;
@@ -1162,6 +1178,7 @@ class HealthService {
       ).timeout(const Duration(seconds: 10));
     } on TimeoutException catch (e) {
       if (kDebugMode) debugPrint('[HealthService] ⚠️ Watch 签到请求超时(10s，避免永久卡死): $e');
+      await DebugLog.write('191 WB', '签到超时(10s) source=$source');
       if (source == 'watch' && clientId != null && clientId.isNotEmpty) {
         _sendWatchAck(
           clientId: clientId,
@@ -1175,6 +1192,7 @@ class HealthService {
       return;
     } catch (e) {
       if (kDebugMode) debugPrint('[HealthService] ⚠️ Watch 签到请求异常(登录失效/网络错误): $e');
+      await DebugLog.write('191 WB', '签到异常 source=$source: $e');
       // 异常兜底：让 Watch 不卡死，但诚实回包「失败」（不再假绿为已签到），
       // 手机端刷新最新状态
       if (source == 'watch' && clientId != null && clientId.isNotEmpty) {
@@ -1192,6 +1210,7 @@ class HealthService {
 
     if (res['success'] == true) {
       if (kDebugMode) debugPrint('[HealthService] ✅ 签到成功 (source=$source)');
+      await DebugLog.write('191 WB', '签到成功 source=$source uid=$uid');
       final lastDateKey = uid.isNotEmpty ? 'last_check_in_date_$uid' : 'last_check_in_date';
       // 【v1.97.2 彻底修复】以「本地签到历史」为单一真相源重算连续天数，
       // 不再直接信任后端易错的 streak 字段（曾导致手表签到后手机首屏显示 6 而非真实 3，
@@ -1249,6 +1268,7 @@ class HealthService {
       }
     } else {
       if (kDebugMode) debugPrint('[HealthService] ⚠️ 签到返回未成功: ${res['error']}');
+      await DebugLog.write('191 WB', '签到未成功(服务端) source=$source: ${res['error']}');
       // 即使服务端返回未成功(例如已签到)，也尝试回包让 Watch 显示已签到状态
       if (source == 'watch' && clientId != null && clientId.isNotEmpty) {
         _sendWatchAck(clientId: clientId, streak: StreakUtil.readStreak(prefs, uid), total: prefs.getInt(totalKey) ?? 0, alreadyDone: true);

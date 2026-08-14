@@ -1,13 +1,15 @@
 #!/bin/bash
-# 在呢+ 出包脚本（v1.97.3 + build 180）
-# 180 第一性原理根因修复（179 实测仍顽固，本次从根因层彻底解决）：
-#   ① 健康卡授权态：登出改为「只清健康数据镜像、保留设备级授权粘性标记」，
-#      根除「切账号→守护卡先闪未检测→再回守护中」的跳动（HealthKit 授权是设备级，与账号无关）
-#   ② 签到不同步（根因在后端）：last_signin_at 由 aware(+8) 改为 UTC naive 写入，
-#      MySQL DATETIME 字面量存储 + get_china_date(naive→UTC→+8) 读取一致，
-#      修正下午/晚上签到 checked_in_today 恒 false → 守护圈「未签到」/「待激活」
-#   ③ 切换账号串号：logout / quickLogin / silentLogin 三处统一清 contact_* 联系人缓存，
-#      杜绝旧账号的签到/激活/头像态串到新账号
+# 在呢+ 出包脚本（v1.97.3 + build 184）
+# 184 根除签到幽灵早退(Bug2 真正根因)：
+#   FC 日志铁证：4 个成员点「签到」后端 0 条 do_checkin 记录。
+#   根因：home_page._handleCheckIn 入口用本地 prefs 的 last_check_in_date_$uid
+#   早退，一旦残留「今天」标记，do_checkin 永远发不出去 → 4 个成员 last_signin_at
+#   仍停 5~6 月、守护圈永远显示未签到。后端 d29adcb 的 checkin_history 真相源
+#   修不了客户端幽灵。
+#   修复：早退条件由「_checkedInToday || alreadyCheckedLocally」改为
+#   「_checkedInToday && historySaysChecked」，其他一律放行 do_checkin 让后端做
+#   最终判断（后端 already_checked_in 拦截真重复）。
+# 配合 183（守护态根除跳动）— 通过即收口。
 # 双击本文件会用 macOS 系统 Terminal 运行，自动注入版本号并调用 build_ipa.sh
 # 注意：本脚本写死 flutter 绝对路径，不依赖 ~/.zshrc，解决之前出包失败问题
 
@@ -22,13 +24,13 @@ cd /Users/meixulin/Desktop/zaine-app/zaine_app || {
 }
 
 echo "========================================="
-echo "  在呢+ 出包 v1.97.3 (build 180)"
-echo "  180 修：健康卡登出保留标记 + 后端签到时区 + 切换账号清联系人缓存"
+echo "  在呢+ 出包 v1.97.3 (build 184)"
+echo "  184 修：根除签到幽灵早退(FC 日志铁证：4 成员点签到 0 条 do_checkin)"
 echo "  PATH 已注入: $(command -v flutter)"
 echo "========================================="
 echo ""
 
-ZAI_VERSION_NAME=1.97.3 ZAI_BUILD_NUMBER=180 bash build_ipa.sh
+ZAI_VERSION_NAME=1.97.3 ZAI_BUILD_NUMBER=184 bash build_ipa.sh
 
 echo ""
 echo "========================================="

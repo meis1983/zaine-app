@@ -13,6 +13,8 @@ import '../data/app_constants.dart';
 import '../widgets/developer_mode.dart';
 import '../utils/avatar_helper.dart';
 import '../services/api_service.dart';
+import '../services/api/sync_service.dart'; // [191] 头像同步成功后强制拉取，保证守护圈即时刷新
+import 'dart:async'; // unawaited
 import 'redeem_card_page.dart';
 import 'settings_page.dart';
 import 'safety_settings_page.dart';
@@ -241,18 +243,19 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
       if (!mounted) return;
       setState(() => _avatarPath = savedPath);
 
+      // 【修复 v1.9.78 + 191】选择头像后自动同步到后端；结果须如实反馈，不再盲目显示「成功」。
+      // 失败重试一次，成功则强制 pullFromServer 让守护圈即时刷新。
+      bool avatarOk = await _syncAvatarToBackend(prefs, savedPath);
+      if (!avatarOk && mounted) avatarOk = await _syncAvatarToBackend(prefs, savedPath); // 重试一次
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('头像更新成功 ✓'),
-            backgroundColor: Colors.green,
+          SnackBar(
+            content: Text(avatarOk ? '头像已同步到云端 ✓' : '头像同步失败，请稍后重试'),
+            backgroundColor: avatarOk ? Colors.green : Colors.red,
           ),
         );
       }
-
-      // 【修复 v1.9.78】选择头像后自动同步到后端
-      // 根因：之前只保存本地，没有发到后端，导致重装/换设备后头像丢失
-      await _syncAvatarToBackend(prefs, savedPath);
+      if (avatarOk) unawaited(SyncService.pullFromServer());
     } catch (e) {
       debugPrint('[Profile] 头像保存异常: $e');
       if (mounted) {
@@ -308,12 +311,13 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
   }
 
   /// 同步头像到后端（被 _pickAvatar 和 _saveProfile 共用）
-  Future<void> _syncAvatarToBackend(SharedPreferences prefs, String avatarPath) async {
+  /// 返回 true=成功，false=失败（调用方负责如实提示用户，不再静默吞掉）。
+  Future<bool> _syncAvatarToBackend(SharedPreferences prefs, String avatarPath) async {
     try {
       final file = File(avatarPath);
       if (!await file.exists()) {
         debugPrint('[Profile] ⚠️ 头像文件不存在，无法同步: $avatarPath');
-        return;
+        return false;
       }
       final bytes = await file.readAsBytes();
       final avatarBase64 = base64Encode(bytes);
@@ -322,11 +326,14 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
       debugPrint('[Profile] 头像同步响应: $res');
       if (res['success'] == true) {
         debugPrint('[Profile] ✅ 头像已同步到后端');
+        return true;
       } else {
         debugPrint('[Profile] ⚠️ 头像同步失败: ${res['error']}');
+        return false;
       }
     } catch (e) {
       debugPrint('[Profile] ⚠️ 头像同步异常: $e');
+      return false;
     }
   }
 
@@ -386,7 +393,10 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
       // 2. 单独同步头像
       final avatarPath = await AvatarHelper.getPath(prefs);
       if (avatarPath != null && avatarPath.isNotEmpty) {
-        await _syncAvatarToBackend(prefs, avatarPath);
+        bool avatarOk = await _syncAvatarToBackend(prefs, avatarPath);
+        if (!avatarOk) avatarOk = await _syncAvatarToBackend(prefs, avatarPath); // 重试一次
+        if (!avatarOk) syncOk = false; // 头像同步失败如实反映到保存结果提示
+        if (avatarOk) unawaited(SyncService.pullFromServer());
       }
     } catch (e) {
       syncOk = false;

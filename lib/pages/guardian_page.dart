@@ -454,9 +454,12 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
           checkedInToday = true;
         }
 
-        if (avatarBase64.isNotEmpty && foundUserId != null) {
+        // 【v1.97.3+191 修复】无条件以 batchLookup 返回值为准覆盖本地缓存：
+        // 服务端已是成员最新头像的真相源，空值表示用户未设头像（UI 回退默认首字母），
+        // 不再因本地旧值残留导致「几个月前的头像」一直显示。
+        await prefs.setString('contact_avatar_phone_$phone', avatarBase64);
+        if (foundUserId != null) {
           await prefs.setString('contact_avatar_$foundUserId', avatarBase64);
-          await prefs.setString('contact_avatar_phone_$phone', avatarBase64);
         }
         await prefs.setBool('contact_checked_in_today_phone_$phone', checkedInToday);
         await prefs.setInt('contact_today_mood_phone_$phone', todayMood ?? 0);  // 0 表示未签到

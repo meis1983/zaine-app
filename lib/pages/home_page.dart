@@ -390,6 +390,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     if (state == AppLifecycleState.resumed) {
       if (kDebugMode) debugPrint('[HomePage] App resumed, triggering health sync...');
       _syncHealthData();
+      // 【v1.97.3+191】回到前台即重载平安确认请求，避免切后台后请求横幅丢失
+      _loadPendingPeaceRequests();
       // 【修复 ③】热启动：App 在后台被 DeepLink 唤起后回到前台，补查守护仪式
       _checkAndShowGuardianRituals();
     }
@@ -802,18 +804,9 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   }
 
   Future<void> _handleCheckIn() async {
-    // ===== [190] 双通道入口日志（放在第一个 await 之前，确保即使后续 SharedPreferences/网络抛异常也能看到入口）=====
+    // ===== [191] 双通道入口日志（收口：删除侵入式 SnackBar，保留文件/控制台通道）=====
     const _entryTag = '190 SIGN';
     final _entryMsg = '$_entryTag 入口 _isLoggedIn=$_isLoggedIn _checkedInToday=$_checkedInToday';
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(_entryMsg),
-          duration: const Duration(seconds: 4),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    }
     await DebugLog.write(_entryTag, '入口 _isLoggedIn=$_isLoggedIn _checkedInToday=$_checkedInToday');
     developer.log(_entryMsg, name: 'zaine.sign');
 
@@ -1215,17 +1208,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                 continuousDays: _continuousDays,
                 checkedInToday: _checkedInToday,
                 onTap: () {
-                  // [190] onTap wrapper：先于 _handleCheckIn 打「触发」日志，区分「按钮没被点」vs「函数内早退」
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('190 TAP 触发'),
-                        duration: Duration(seconds: 2),
-                        behavior: SnackBarBehavior.floating,
-                      ),
-                    );
-                  }
-                  DebugLog.write('190 TAP', '签到按钮 onTap 触发');
+                  // [191] 收口：移除临时 TAP 诊断 SnackBar，仅保留文件日志（_handleCheckIn 内已含）
                   _handleCheckIn();
                 },
                 scaleAnimation: _scaleAnimation,

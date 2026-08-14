@@ -1,13 +1,11 @@
 #!/bin/bash
-# 在呢+ 出包脚本（v1.97.3 + build 180）
-# 180 第一性原理根因修复（179 实测仍顽固，本次从根因层彻底解决）：
-#   ① 健康卡授权态：登出改为「只清健康数据镜像、保留设备级授权粘性标记」，
-#      根除「切账号→守护卡先闪未检测→再回守护中」的跳动（HealthKit 授权是设备级，与账号无关）
-#   ② 签到不同步（根因在后端）：last_signin_at 由 aware(+8) 改为 UTC naive 写入，
-#      MySQL DATETIME 字面量存储 + get_china_date(naive→UTC→+8) 读取一致，
-#      修正下午/晚上签到 checked_in_today 恒 false → 守护圈「未签到」/「待激活」
-#   ③ 切换账号串号：logout / quickLogin / silentLogin 三处统一清 contact_* 联系人缓存，
-#      杜绝旧账号的签到/激活/头像态串到新账号
+# 在呢+ 出包脚本（v1.97.3 + build 183）
+# 183 守护态跳动根本性收口（第一性原理 + git 回归考古）：
+#   Bug1 经 git 考古确认回归点：v1.97.4 误判 hasPermissions「iOS 永远 false」，
+#   催生 179 用 prefs 标记取代 172 稳定版「直接读 HealthKit 真实权限态」方案。
+#   182 仅「点上按钮才写标记」仍不够——若 requestAuthorization 在设备上报异常两次则标记永不写。
+#   修复：markAuthorized() 置于 requestPermissions 的 finally 中，用户点「开启生命体征守护」
+#   即设备级配对意图，无论返回值/异常恒定写标记 → 切界面/切账号回来恒为「守护中」。
 # 双击本文件会用 macOS 系统 Terminal 运行，自动注入版本号并调用 build_ipa.sh
 # 注意：本脚本写死 flutter 绝对路径，不依赖 ~/.zshrc，解决之前出包失败问题
 
@@ -22,13 +20,13 @@ cd /Users/meixulin/Desktop/zaine-app/zaine_app || {
 }
 
 echo "========================================="
-echo "  在呢+ 出包 v1.97.3 (build 180)"
-echo "  180 修：健康卡登出保留标记 + 后端签到时区 + 切换账号清联系人缓存"
+echo "  在呢+ 出包 v1.97.3 (build 183)"
+echo "  183 修：守护态必然写标记(根除守护中↔尚未检测跳动)"
 echo "  PATH 已注入: $(command -v flutter)"
 echo "========================================="
 echo ""
 
-ZAI_VERSION_NAME=1.97.3 ZAI_BUILD_NUMBER=180 bash build_ipa.sh
+ZAI_VERSION_NAME=1.97.3 ZAI_BUILD_NUMBER=183 bash build_ipa.sh
 
 echo ""
 echo "========================================="
