@@ -13,6 +13,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../services/membership_service.dart';
 import '../pages/subscription_page.dart';
 import '../widgets/checkin_milestone_dialog.dart';
+import '../services/debug_log.dart'; // [190] 双通道调试日志（屏幕 SnackBar + 文件兜底）
 import '../services/api/checkin_service.dart';
 import '../services/api/peace_service.dart';
 import '../services/api/card_service.dart';
@@ -801,6 +802,21 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   }
 
   Future<void> _handleCheckIn() async {
+    // ===== [190] 双通道入口日志（放在第一个 await 之前，确保即使后续 SharedPreferences/网络抛异常也能看到入口）=====
+    const _entryTag = '190 SIGN';
+    final _entryMsg = '$_entryTag 入口 _isLoggedIn=$_isLoggedIn _checkedInToday=$_checkedInToday';
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_entryMsg),
+          duration: const Duration(seconds: 4),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+    await DebugLog.write(_entryTag, '入口 _isLoggedIn=$_isLoggedIn _checkedInToday=$_checkedInToday');
+    developer.log(_entryMsg, name: 'zaine.sign');
+
     // 🔴【v1.97.7 根治，185 落地】不要让任何本地状态/prefs 残留/_isLoggedIn 假阴 阻塞 do_checkin。
     // FC 日志铁证：用户装 184 后仍是 0 条 do_checkin。说明仅靠 184 的 _checkedInToday && historySaysChecked
     // 还没覆盖全部场景：可能 _isLoggedIn=false 命中 line 908 if 跳过、或异常走入离线队列。
@@ -811,26 +827,26 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     final dbgUid0 = (await AuthService.getUserId()) ?? '';
     final dbgLastKey0 = dbgUid0.isNotEmpty ? 'last_check_in_date_$dbgUid0' : 'last_check_in_date';
     final dbgHistKey0 = dbgUid0.isNotEmpty ? 'checkin_history_$dbgUid0' : 'checkin_history';
-    developer.log('[187 _handleCheckIn] 入口 _isLoggedIn=$_isLoggedIn _checkedInToday=$_checkedInToday lastDate=${dbgPrefs0.getString(dbgLastKey0)} historyLen=${(dbgPrefs0.getStringList(dbgHistKey0) ?? const []).length}');
+    developer.log('[190 SIGN] 入口 _isLoggedIn=$_isLoggedIn _checkedInToday=$_checkedInToday lastDate=${dbgPrefs0.getString(dbgLastKey0)} historyLen=${(dbgPrefs0.getStringList(dbgHistKey0) ?? const []).length}');
 
     // 若 _isLoggedIn=false，先尝试从 prefs 紧急重读 login 状态（避免状态滞后导致跳过）
     if (!_isLoggedIn) {
-      developer.log('[187 _handleCheckIn] ⚠️ _isLoggedIn=false，尝试从 prefs 重读 is_logged_in...');
+      developer.log('[190 SIGN] ⚠️ _isLoggedIn=false，尝试从 prefs 重读 is_logged_in...');
       try {
         final reloadPrefs = await SharedPreferences.getInstance();
         final reloadLoggedIn = reloadPrefs.getBool('is_logged_in') ?? false;
         if (reloadLoggedIn && mounted) {
           setState(() { _isLoggedIn = true; });
         }
-        developer.log('[187 _handleCheckIn] 重读后 _isLoggedIn=$_isLoggedIn');
+        developer.log('[190 SIGN] 重读后 _isLoggedIn=$_isLoggedIn');
       } catch (e) {
-        developer.log('[187 _handleCheckIn] 重读 prefs 异常: $e');
+        developer.log('[190 SIGN] 重读 prefs 异常: $e');
       }
     }
 
     // 仍未登录：弹提示并 return
     if (!_isLoggedIn) {
-      developer.log('[187 _handleCheckIn] ❌ 仍未登录，do_checkin 跳过');
+      developer.log('[190 SIGN] ❌ 仍未登录，do_checkin 跳过');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -877,13 +893,13 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     // 持久化逻辑已移至下方 success 分支。
 
     // 📨 调用 do_checkin（**唯一真相源**）—— 不再做 if (_isLoggedIn) 包裹
-    developer.log('[187 _handleCheckIn] 📨 调用 do_checkin date=$today uid=$uid');
+    developer.log('[190 SIGN] 📨 调用 do_checkin date=$today uid=$uid');
     try {
       final res = await CheckinService.checkIn(date: today, mood: -1);
-      developer.log('[187 _handleCheckIn] 📨 do_checkin 响应: $res');
+      developer.log('[190 SIGN] 📨 do_checkin 响应: $res');
 
       if (res['success'] == true) {
-        developer.log('[187 _handleCheckIn] ✅ do_checkin 成功');
+        developer.log('[190 SIGN] ✅ do_checkin 成功');
         // 【187 修复】服务端确认后才更新 UI + 持久化（替代原本地乐观更新）
         if (mounted) setState(() {
           _checkedInToday = true;
@@ -918,7 +934,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         }
       } else {
         final errorMsg = res['error']?.toString() ?? res['message']?.toString() ?? '';
-        developer.log('[187 _handleCheckIn] ⚠️ do_checkin 业务错误: $errorMsg');
+        developer.log('[190 SIGN] ⚠️ do_checkin 业务错误: $errorMsg');
         if (errorMsg.contains('already_checked_in')) {
           // 服务端确认今日已签到，正常
           if (mounted) {
@@ -946,14 +962,14 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         }
       }
     } catch (e, stack) {
-      developer.log('[187 _handleCheckIn] ❌ do_checkin 异常: $e');
+      developer.log('[190 SIGN] ❌ do_checkin 异常: $e');
       developer.log(stack.toString(), name: 'zaine');
       // 【P0 修复 v1.93.9】签到失败时保存到离线队列
       try {
         await CheckinService.saveToOfflineQueue(date: today, mood: -1);
-        developer.log('[187 _handleCheckIn] ✅ 已保存到离线队列');
+        developer.log('[190 SIGN] ✅ 已保存到离线队列');
       } catch (queueError) {
-        developer.log('[187 _handleCheckIn] ⚠️ 离线队列保存失败: $queueError');
+        developer.log('[190 SIGN] ⚠️ 离线队列保存失败: $queueError');
       }
 
       if (mounted) {
@@ -1005,7 +1021,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         );
       }
     } catch (e) {
-      developer.log('[187 _handleCheckIn] 弹窗异常: $e');
+      developer.log('[190 SIGN] 弹窗异常: $e');
     }
   }
 
@@ -1198,7 +1214,20 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
               CheckInButtonWidget(
                 continuousDays: _continuousDays,
                 checkedInToday: _checkedInToday,
-                onTap: _handleCheckIn,
+                onTap: () {
+                  // [190] onTap wrapper：先于 _handleCheckIn 打「触发」日志，区分「按钮没被点」vs「函数内早退」
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('190 TAP 触发'),
+                        duration: Duration(seconds: 2),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }
+                  DebugLog.write('190 TAP', '签到按钮 onTap 触发');
+                  _handleCheckIn();
+                },
                 scaleAnimation: _scaleAnimation,
                 isDataReady: _isCheckinDataReady,
               ),
