@@ -876,6 +876,23 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     final historyKey = uid.isNotEmpty ? 'checkin_history_$uid' : 'checkin_history';
     final lastDateKey = uid.isNotEmpty ? 'last_check_in_date_$uid' : 'last_check_in_date';
 
+    // [194 S] 解码 token，看后端会认成哪个 uid —— 直接戳穿多账号 token 错乱
+    String _tokenUid = '未知';
+    try {
+      final _tk = await AuthService.getToken();
+      if (_tk != null && _tk.contains('.')) {
+        String _b = _tk.split('.')[1];
+        while (_b.length % 4 != 0) _b += '=';
+        final _p = jsonDecode(utf8.decode(base64Url.decode(_b))) as Map<String, dynamic>;
+        _tokenUid = _p['user_id']?.toString() ?? '无user_id';
+      } else {
+        _tokenUid = '无token';
+      }
+    } catch (e) {
+      _tokenUid = '解码异常:$e';
+    }
+    await DebugLog.write('194 S', '签到前 uid(本地)=${uid.isNotEmpty ? uid : "空"} tokenUid(后端将认)=$_tokenUid');
+
     int newTotal = _totalDays + 1;
     final historyList = List<String>.from(prefs.getStringList(historyKey) ?? []);
     if (!historyList.contains(today)) historyList.add(today);
@@ -887,12 +904,15 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
 
     // 📨 调用 do_checkin（**唯一真相源**）—— 不再做 if (_isLoggedIn) 包裹
     developer.log('[190 SIGN] 📨 调用 do_checkin date=$today uid=$uid');
+    await DebugLog.write('194 S', '调用 do_checkin date=$today uid=$uid');
     try {
       final res = await CheckinService.checkIn(date: today, mood: -1);
       developer.log('[190 SIGN] 📨 do_checkin 响应: $res');
+      await DebugLog.write('194 S', 'do_checkin 响应: $res');
 
       if (res['success'] == true) {
         developer.log('[190 SIGN] ✅ do_checkin 成功');
+        await DebugLog.write('194 S', 'do_checkin 成功 res=$res');
         // 【187 修复】服务端确认后才更新 UI + 持久化（替代原本地乐观更新）
         if (mounted) setState(() {
           _checkedInToday = true;
@@ -928,6 +948,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       } else {
         final errorMsg = res['error']?.toString() ?? res['message']?.toString() ?? '';
         developer.log('[190 SIGN] ⚠️ do_checkin 业务错误: $errorMsg');
+        await DebugLog.write('194 S', '业务错误: $errorMsg');
         if (errorMsg.contains('already_checked_in')) {
           // 服务端确认今日已签到，正常
           if (mounted) {
@@ -956,6 +977,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       }
     } catch (e, stack) {
       developer.log('[190 SIGN] ❌ do_checkin 异常: $e');
+      await DebugLog.write('194 S', '异常: $e');
       developer.log(stack.toString(), name: 'zaine');
       // 【P0 修复 v1.93.9】签到失败时保存到离线队列
       try {
