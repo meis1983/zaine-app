@@ -1113,8 +1113,17 @@ class HealthService {
     final lastDateKey = uid.isNotEmpty ? 'last_check_in_date_$uid' : 'last_check_in_date';
     final alreadyCheckedInToday = prefs.getString(lastDateKey) == today;
     if (alreadyCheckedInToday && !fromWatch) {
-      await DebugLog.write('191 WB', '今日已签到，跳过自动心跳/信号签到 fromHeartbeat=$fromHeartbeat hasWatchSignal=${prefs.getBool('pending_watch_checkin') ?? false}');
-      if (kDebugMode) debugPrint('[HealthService][191 WB] 今日已签到，跳过自动心跳签到（fromHeartbeat=$fromHeartbeat）');
+      // 【v1.97.3+192 修正 191 回归】克制只跳过「重复签到 + 💓横幅」，**绝不能跳过健康数据同步**——
+      // 手表健康速览依赖本函数内部的 syncHealthData()(见 _executeCheckIn L1155) 把体征
+      // pushHealthSummary 到手表。191 初版在此直接 return 导致手表健康速览空白。
+      // 现改为：跳过签到，但仍同步健康数据到手表。
+      await DebugLog.write('191 WB', '今日已签到，跳过自动签到(仍同步健康数据到手表) fromHeartbeat=$fromHeartbeat hasWatchSignal=${prefs.getBool('pending_watch_checkin') ?? false}');
+      if (kDebugMode) debugPrint('[HealthService][191 WB] 今日已签到，跳过自动签到，但仍同步健康数据到手表');
+      try {
+        await syncHealthData();
+      } catch (e) {
+        if (kDebugMode) debugPrint('[HealthService][191 WB] 同步健康数据到手表失败(不影响): $e');
+      }
       return;
     }
 

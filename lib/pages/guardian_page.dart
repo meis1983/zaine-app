@@ -26,6 +26,7 @@ import '../config/app_config.dart';
 import '../services/platform/health_service.dart';
 import '../services/safety/safety_signal_engine.dart';
 import '../services/database/circle_event_dao.dart';
+import '../services/debug_log.dart'; // [192] 守护圈同步诊断（双通道，文件兜底）
 
 /// 蓝色调：用于「我守护的人」专区，与橙色「守护我的人」严格区分
 const Color _kGuardedBlue = Color(0xFF3F7CFF);
@@ -256,6 +257,10 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
     WidgetsBinding.instance.addObserver(this);
     _loadGuardians();
     _loadTodayFeed();
+    // 【v1.97.3+192 修复】进页面即加载生命体征守护状态：此前仅在 batchLookup 失败兜底分支
+    // 才调 _loadSafetyStatus，成功路径(532 行提前 return)直接跳过 → 进页面恒显「未监测」，
+    // 必须手动点刷新(_refreshHealthAuth)才显示「守护中」。这里保证每次进页都加载。
+    unawaited(_loadSafetyStatus());
     // 【v1.95.0】定期刷新缩短为 30 秒，确保守护圈状态以服务端为准、及时纠正偶发错乱
     _refreshTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
       if (mounted) _loadGuardians(isSilent: true);
@@ -524,6 +529,17 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
             _guardians = updatedGuardians;
           });
         }
+        // 【v1.97.3+192 诊断】记录 batchLookup 实际返回的签到/头像，确认守护圈同步是否到位
+        try {
+          final sb = StringBuffer();
+          for (final g in updatedGuardians) {
+            final ph = (g['phone'] ?? '').toString();
+            final ci = g['checkedInToday'] == true;
+            final av = (g['avatarBase64']?.toString() ?? '').length;
+            sb.write('$ph:签到=$ci,头像=$av; ');
+          }
+          await DebugLog.write('192 G', 'batchLookup 成功，守护者状态: $sb');
+        } catch (_) {}
         _loadTodayFeed();
         // 【v1.97.3+168 修复】batchLookup 主路径也需重算互相守护（与 fallback 路径 L612-615 对齐）
         _recomputeMutual();
@@ -533,6 +549,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
       }
     } catch (e) {
       if (kDebugMode) debugPrint('[GuardianPage] 批量状态查询异常: $e');
+      await DebugLog.write('192 G', 'batchLookup 异常(走兜底): $e');
     }
 
     // 兜底方案：如果批量查询失败，使用原有的并行单点查询逻辑（保持鲁棒性）
