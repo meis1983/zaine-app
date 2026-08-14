@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:async';
+import 'dart:convert';
 import 'theme/theme_helper.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -127,6 +128,29 @@ Future<void> _migrateSensitiveDataToKeychain() async {
         if (kDebugMode) debugPrint('[Main] ✅ 迁移 user_phone 到 Keychain');
       }
       // 注意：暂时保留 SP 中的 user_phone（为了兼容性，后续版本将移除）
+    }
+
+    // 【修复 v1.97.x 多账号串号自修复】确保 Keychain/SP 的 user_id 与 token 解析出的 user_id 一致。
+    // 历史版本静默登录漏写 user_id，导致 token 身份(A) 与 user_id 身份(B) 分叉；已装旧版的设备
+    // 即使升级后 Keychain 仍残留旧 user_id。此处以 token 为真相源重新对齐，无需手动登出重登即可自愈。
+    try {
+      final _t = await secureStorage.read(key: 'auth_token');
+      if (_t != null && _t.isNotEmpty && _t.split('.').length == 3) {
+        String _p = _t.split('.')[1];
+        while (_p.length % 4 != 0) _p += '=';
+        final _m = jsonDecode(utf8.decode(base64Url.decode(_p))) as Map<String, dynamic>;
+        final _uid = _m['user_id']?.toString();
+        if (_uid != null && _uid.isNotEmpty) {
+          final _kcUid = await secureStorage.read(key: 'user_id');
+          if (_kcUid != _uid) {
+            await secureStorage.write(key: 'user_id', value: _uid);
+            await prefs.setString('user_id', _uid);
+            if (kDebugMode) debugPrint('[Main] ✅ 按 token 重新对齐 user_id=$_uid (旧=$_kcUid)');
+          }
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) debugPrint('[Main] ⚠️ user_id 对齐失败: $e');
     }
 
     if (kDebugMode) debugPrint('[Main] ✅ 敏感信息迁移完成');

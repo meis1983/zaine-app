@@ -114,7 +114,28 @@ class SilentLoginService {
     } catch (_) {}
 
     await _secureStorage.write(key: 'auth_token', value: token);
-    await prefs.setString('user_phone', (phone ?? '').replaceAll(RegExp(r'[^\d]'), ''));
+
+    // 【修复 v1.97.x 多账号串号根因】静默登录必须把 token 解析出的 user_id 一并持久化。
+    // 原逻辑只写了 auth_token，没写 user_id → token 身份(A) 与本地 user_id 身份(B) 分叉：
+    // 签到/头像等写请求按 token 发往 A 账号，但 App 本地 user_id 停在旧账号 B，
+    // 且 isLoggedIn() 会因"token 在但 user_id 缺失"误判未登录。单设备频繁切账号即触发。
+    String? _uidFromToken;
+    try {
+      final _parts = token.split('.');
+      if (_parts.length == 3) {
+        String _payload = _parts[1];
+        while (_payload.length % 4 != 0) _payload += '=';
+        final _map = jsonDecode(utf8.decode(base64Url.decode(_payload))) as Map<String, dynamic>;
+        _uidFromToken = _map['user_id']?.toString();
+      }
+    } catch (_) {}
+    final _effectivePhone = (phone ?? '').replaceAll(RegExp(r'[^\d]'), '');
+    if (_uidFromToken != null && _uidFromToken.isNotEmpty) {
+      await _secureStorage.write(key: 'user_id', value: _uidFromToken); // Keychain 主存储
+      await prefs.setString('user_id', _uidFromToken); // SP 双写（兼容 40+ 处读取）
+    }
+    await _secureStorage.write(key: 'user_phone', value: _effectivePhone);
+    await prefs.setString('user_phone', _effectivePhone);
     await prefs.setBool('is_logged_in', true);
     await prefs.setBool('onboarding_completed', true); // 跳过引导页
 
