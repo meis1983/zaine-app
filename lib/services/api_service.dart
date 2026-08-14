@@ -3,6 +3,7 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:developer' as developer;
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
@@ -44,6 +45,7 @@ class ApiService {
     String method,
     String path,
   ) async {
+    developer.log('[187 NET OUT] $method $path', name: 'zaine.net');
     Exception? lastException;
     for (int attempt = 0; attempt <= _maxRetries; attempt++) {
       try {
@@ -51,6 +53,7 @@ class ApiService {
           debugPrint('[ApiService] 🔄 $method $path 第${attempt + 1}次尝试（冷启动重试）...');
         }
         final result = await request();
+        developer.log('[187 NET IN] $method $path => success=${result['success']}', name: 'zaine.net');
         // 【优化 v1.96.x】429 限流：退避重试，消除并发请求触发 0.5req/s 限流的雪崩
         if (result['success'] == false &&
             result['statusCode'] == 429 &&
@@ -69,6 +72,7 @@ class ApiService {
         return result;
       } on TimeoutException catch (e) {
         lastException = e;
+        developer.log('[187 NET ERR] $method $path TimeoutException: $e', name: 'zaine.net', error: e);
         if (attempt < _maxRetries) {
           final delay = _retryDelayFor(attempt);
           if (kDebugMode) debugPrint('[ApiService] ⏳ $method $path 超时，${delay.inMilliseconds}ms 后重试');
@@ -78,6 +82,7 @@ class ApiService {
         break;
       } on SocketException catch (e) {
         lastException = e;
+        developer.log('[187 NET ERR] $method $path SocketException: $e', name: 'zaine.net', error: e);
         if (attempt < _maxRetries) {
           final delay = _retryDelayFor(attempt);
           if (kDebugMode) debugPrint('[ApiService] 🌐 $method $path 网络连接失败，重试中...');
@@ -87,6 +92,7 @@ class ApiService {
         break;
       } on Exception catch (e) {
         lastException = e;
+        developer.log('[187 NET ERR] $method $path Exception: $e', name: 'zaine.net', error: e);
         final errorStr = e.toString().toLowerCase();
         final isTimeout = errorStr.contains('timeout') ||
             errorStr.contains('deadline exceeded') ||
@@ -100,7 +106,7 @@ class ApiService {
         break;
       }
     }
-    if (kDebugMode) debugPrint('[ApiService] $method $path error: $lastException');
+    developer.log('[187 NET ERR] $method $path 最终离线, error=$lastException', name: 'zaine.net', error: lastException);
     return {'success': false, 'error': lastException.toString(), 'offline': true};
   }
 
