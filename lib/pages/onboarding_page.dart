@@ -1214,7 +1214,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
     // 【v1.97.4 / 188 修复】登录前强制重置全局串行请求队列，
     // 打断任何可能残留的挂起链，避免"登录中"永久转。
     ApiService.resetRequestChain();
-    developer.log('[188 LOGIN] 入口: phone=$phone', name: 'zaine.login');
+    developer.log('[189 LOGIN] 入口: phone=$phone', name: 'zaine.login');
 
     try {
       HapticFeedback.mediumImpact();
@@ -1242,7 +1242,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
       if (kDebugMode) debugPrint('[Onboarding] quickLogin: $phone, cardCode=$_pendingCardCode, invitePhone=$pendingInvitePhone, enableBidirectional=$enableBidirectional');
 
       // 包含冷启动重试
-      developer.log('[188 LOGIN] 调用 AuthService.quickLogin 前', name: 'zaine.login');
+      developer.log('[189 LOGIN] 调用 AuthService.quickLogin 前', name: 'zaine.login');
       final res = await AuthService.quickLogin(
         phone,
         cardId: _pendingCardCode,
@@ -1250,10 +1250,10 @@ class _OnboardingPageState extends State<OnboardingPage> {
         enableBidirectional: enableBidirectional,
       )
           .timeout(const Duration(seconds: 30), onTimeout: () {
-        developer.log('[188 LOGIN] quickLogin 30s 超时, 返回网络错误', name: 'zaine.login');
+        developer.log('[189 LOGIN] quickLogin 30s 超时, 返回网络错误', name: 'zaine.login');
         return {'success': false, 'error': '网络连接超时，请检查网络后重试'};
       });
-      developer.log('[188 LOGIN] quickLogin 返回: success=${res['success']}, hasToken=${res['token'] != null}', name: 'zaine.login');
+      developer.log('[189 LOGIN] quickLogin 返回: success=${res['success']}, hasToken=${res['token'] != null}', name: 'zaine.login');
 
       if (res['success'] == true) {
         if (kDebugMode) debugPrint('[Onboarding] quickLogin 成功, userId=${res['userId']}');
@@ -1271,11 +1271,11 @@ class _OnboardingPageState extends State<OnboardingPage> {
           if (kDebugMode) debugPrint('[Onboarding] 展示守护礼动画（来自登录返回）');
 
           // 先执行拉取数据，让背景静默准备
-          developer.log('[188 LOGIN] 开始 pullFromServer (场景A)', name: 'zaine.login');
+          developer.log('[189 LOGIN] 开始 pullFromServer (场景A)', name: 'zaine.login');
           await SyncService.pullFromServer().timeout(
             const Duration(seconds: 25),
             onTimeout: () {
-              developer.log('[188 LOGIN] pullFromServer 25s 超时, 降级跳过', name: 'zaine.login');
+              developer.log('[189 LOGIN] pullFromServer 25s 超时, 降级跳过', name: 'zaine.login');
               return;
             },
           );
@@ -1313,11 +1313,11 @@ class _OnboardingPageState extends State<OnboardingPage> {
             final cardData = cardRes;
             if (kDebugMode) debugPrint('[Onboarding] 展示守护礼动画（来自DeepLink）');
 
-            developer.log('[188 LOGIN] 开始 pullFromServer (场景B)', name: 'zaine.login');
+            developer.log('[189 LOGIN] 开始 pullFromServer (场景B)', name: 'zaine.login');
             await SyncService.pullFromServer().timeout(
               const Duration(seconds: 25),
               onTimeout: () {
-                developer.log('[188 LOGIN] pullFromServer 25s 超时, 降级跳过', name: 'zaine.login');
+                developer.log('[189 LOGIN] pullFromServer 25s 超时, 降级跳过', name: 'zaine.login');
                 return;
               },
             );
@@ -1350,11 +1350,11 @@ class _OnboardingPageState extends State<OnboardingPage> {
         }
       } else {
         // 普通登录，直接拉取数据
-        developer.log('[188 LOGIN] 开始 pullFromServer (普通登录)', name: 'zaine.login');
+        developer.log('[189 LOGIN] 开始 pullFromServer (普通登录)', name: 'zaine.login');
         await SyncService.pullFromServer().timeout(
           const Duration(seconds: 25),
           onTimeout: () {
-            developer.log('[188 LOGIN] pullFromServer 25s 超时, 降级跳过', name: 'zaine.login');
+            developer.log('[189 LOGIN] pullFromServer 25s 超时, 降级跳过', name: 'zaine.login');
             return;
           },
         );
@@ -1362,15 +1362,15 @@ class _OnboardingPageState extends State<OnboardingPage> {
 
         if (mounted) {
           _loginCompleted = true;
-          developer.log('[188 LOGIN] 调用 _completeOnboarding (位置权限等)', name: 'zaine.login');
+          developer.log('[189 LOGIN] 调用 _completeOnboarding (位置权限等)', name: 'zaine.login');
           await _completeOnboarding().timeout(
             const Duration(seconds: 15),
             onTimeout: () {
-              developer.log('[188 LOGIN] _completeOnboarding 15s 超时, 降级跳过', name: 'zaine.login');
+              developer.log('[189 LOGIN] _completeOnboarding 15s 超时, 降级跳过', name: 'zaine.login');
               return;
             },
           );
-          developer.log('[188 LOGIN] _completeOnboarding 完成', name: 'zaine.login');
+          developer.log('[189 LOGIN] _completeOnboarding 完成', name: 'zaine.login');
         }
       } else {
         if (_loginCompleted) return;

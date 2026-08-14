@@ -45,7 +45,7 @@ class ApiService {
     String method,
     String path,
   ) async {
-    developer.log('[188 NET OUT] $method $path', name: 'zaine.net');
+    developer.log('[189 NET OUT] $method $path', name: 'zaine.net');
     Exception? lastException;
     for (int attempt = 0; attempt <= _maxRetries; attempt++) {
       try {
@@ -53,7 +53,7 @@ class ApiService {
           debugPrint('[ApiService] 🔄 $method $path 第${attempt + 1}次尝试（冷启动重试）...');
         }
         final result = await request();
-        developer.log('[188 NET IN] $method $path => success=${result['success']}', name: 'zaine.net');
+        developer.log('[189 NET IN] $method $path => success=${result['success']}', name: 'zaine.net');
         // 【优化 v1.96.x】429 限流：退避重试，消除并发请求触发 0.5req/s 限流的雪崩
         if (result['success'] == false &&
             result['statusCode'] == 429 &&
@@ -72,7 +72,7 @@ class ApiService {
         return result;
       } on TimeoutException catch (e) {
         lastException = e;
-        developer.log('[188 NET ERR] $method $path TimeoutException: $e', name: 'zaine.net', error: e);
+        developer.log('[189 NET ERR] $method $path TimeoutException: $e', name: 'zaine.net', error: e);
         if (attempt < _maxRetries) {
           final delay = _retryDelayFor(attempt);
           if (kDebugMode) debugPrint('[ApiService] ⏳ $method $path 超时，${delay.inMilliseconds}ms 后重试');
@@ -82,7 +82,7 @@ class ApiService {
         break;
       } on SocketException catch (e) {
         lastException = e;
-        developer.log('[188 NET ERR] $method $path SocketException: $e', name: 'zaine.net', error: e);
+        developer.log('[189 NET ERR] $method $path SocketException: $e', name: 'zaine.net', error: e);
         if (attempt < _maxRetries) {
           final delay = _retryDelayFor(attempt);
           if (kDebugMode) debugPrint('[ApiService] 🌐 $method $path 网络连接失败，重试中...');
@@ -92,7 +92,7 @@ class ApiService {
         break;
       } on Exception catch (e) {
         lastException = e;
-        developer.log('[188 NET ERR] $method $path Exception: $e', name: 'zaine.net', error: e);
+        developer.log('[189 NET ERR] $method $path Exception: $e', name: 'zaine.net', error: e);
         final errorStr = e.toString().toLowerCase();
         final isTimeout = errorStr.contains('timeout') ||
             errorStr.contains('deadline exceeded') ||
@@ -106,7 +106,7 @@ class ApiService {
         break;
       }
     }
-    developer.log('[188 NET ERR] $method $path 最终离线, error=$lastException', name: 'zaine.net', error: lastException);
+    developer.log('[189 NET ERR] $method $path 最终离线, error=$lastException', name: 'zaine.net', error: lastException);
     return {'success': false, 'error': lastException.toString(), 'offline': true};
   }
 
@@ -124,7 +124,7 @@ class ApiService {
   static void resetRequestChain() {
     _requestChain = Future<Map<String, dynamic>>.value(<String, dynamic>{});
     _lastRequestStart = DateTime.fromMillisecondsSinceEpoch(0);
-    developer.log('[188 NET] resetRequestChain 已重置', name: 'zaine.net');
+    developer.log('[189 NET] resetRequestChain 已重置', name: 'zaine.net');
   }
 
   /// 将请求串行化并限速整形后执行
@@ -138,7 +138,7 @@ class ApiService {
       try {
         await prev;
       } catch (_) {
-        developer.log('[188 NET] 前序请求异常已隔离, 不阻塞新请求', name: 'zaine.net');
+        developer.log('[189 NET] 前序请求异常已隔离, 不阻塞新请求', name: 'zaine.net');
       }
       // 2) 限速整形：保证与上一次请求至少间隔 _minRequestInterval
       final elapsed = DateTime.now().difference(_lastRequestStart);
@@ -146,7 +146,7 @@ class ApiService {
         await Future.delayed(_minRequestInterval - elapsed);
       }
       _lastRequestStart = DateTime.now();
-      developer.log('[188 NET] 开始执行新请求任务', name: 'zaine.net');
+      developer.log('[189 NET] 开始执行新请求任务', name: 'zaine.net');
       return task();
     });
     return _requestChain;

@@ -1556,6 +1556,11 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
             Text('• 登录状态'),
             Text('• 主题偏好设置'),
             SizedBox(height: ZaiNeSpacing.md),
+            Text('注意：仅清除本机数据，云端账号与服务器数据不受影响。',
+                style: TextStyle(color: Colors.orange, fontSize: 12)),
+            Text('如需彻底删除云端账号与所有数据，请使用下方「删除账号」。',
+                style: TextStyle(color: Colors.orange, fontSize: 12)),
+            SizedBox(height: ZaiNeSpacing.md),
             Text('此操作不可恢复！',
                 style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
           ],
@@ -1587,6 +1592,13 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
       for (final key in prefs.getKeys()) {
         await prefs.remove(key);
       }
+
+      // 【A 修复 188→189】清除 Keychain 登录凭证，避免旧 token 残留被自动登录恢复
+      // （SharedPreferences 不包含 Keychain，之前漏清导致重置后重新登录又拉回服务端数据）
+      const secureStorage = FlutterSecureStorage();
+      await secureStorage.delete(key: 'auth_token');
+      await secureStorage.delete(key: 'user_id');
+      await secureStorage.delete(key: 'user_phone');
 
       // 【P2修复 v1.9.83】清除本地头像文件，避免残留占用存储
       try {
