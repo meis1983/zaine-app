@@ -431,6 +431,8 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
     // 第3步：批量查询所有联系人的状态（v2.0 性能优化，消除 N+1 请求）
     try {
       final List<String> phones = contacts.map((c) => (c['phone'] ?? '').toString()).toList();
+      // 【v1.97.3+193】记录实际发往后端的 phone 列表，避免「手机号格式归一化」一类无声问题
+      try { await DebugLog.write('193 G', 'batchLookup REQ phones=$phones'); } catch (_) {}
       final batchRes = await UserService.batchLookup(phones);
       
       if (batchRes['success'] == true && batchRes['results'] != null) {
@@ -529,17 +531,23 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
             _guardians = updatedGuardians;
           });
         }
-        // 【v1.97.3+192 诊断】记录 batchLookup 实际返回的签到/头像，确认守护圈同步是否到位
+        // 【v1.97.3+192 诊断】记录 batchLookup 实际返回的签到/头像/活跃，确认守护圈同步是否到位
         try {
           final sb = StringBuffer();
           for (final g in updatedGuardians) {
             final ph = (g['phone'] ?? '').toString();
             final ci = g['checkedInToday'] == true;
             final av = (g['avatarBase64']?.toString() ?? '').length;
-            sb.write('$ph:签到=$ci,头像=$av; ');
+            // 【v1.97.3+193】额外记录 lastSigninAt 与 isActive，供「待激活」一类故障定位
+            final la = (g['lastSigninAt']?.toString() ?? '');
+            sb.write('$ph:签到=$ci,头像=$av,lastSignin=${la.isEmpty ? "空" : la},isActive=${g['isActive']}; ');
           }
-          await DebugLog.write('192 G', 'batchLookup 成功，守护者状态: $sb');
-        } catch (_) {}
+          await DebugLog.write('193 G', 'batchLookup RAW_RESULTS_KEYS=${(batchRes['results'] as Map?)?.keys.toList()} | 守护者: $sb');
+          // 【v1.97.3+193】原始 response.body 在 ApiService 层可能未暴露，这里从 batchRes 全 dump 一份（含 statusCode/raw 字段）
+          await DebugLog.write('193 G', 'batchRes full=${batchRes.toString()}');
+        } catch (e) {
+          await DebugLog.write('193 G', 'dump异常: $e');
+        }
         _loadTodayFeed();
         // 【v1.97.3+168 修复】batchLookup 主路径也需重算互相守护（与 fallback 路径 L612-615 对齐）
         _recomputeMutual();
@@ -549,7 +557,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
       }
     } catch (e) {
       if (kDebugMode) debugPrint('[GuardianPage] 批量状态查询异常: $e');
-      await DebugLog.write('192 G', 'batchLookup 异常(走兜底): $e');
+      try { await DebugLog.write('193 G', 'batchLookup 异常(走兜底): $e'); } catch (_) {}
     }
 
     // 兜底方案：如果批量查询失败，使用原有的并行单点查询逻辑（保持鲁棒性）
@@ -568,6 +576,8 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
 
       try {
         final lookupRes = await UserService.lookupByPhone(phone);
+        // 【v1.97.3+193】dump 兜底 lookup 原始返回（含 last_signin_at / avatar_base64 长度）
+        try { await DebugLog.write('193 G', 'FALLBACK lookupByPhone($phone): found=${lookupRes['found']}, user_id=${lookupRes['user_id']}, avatar_len=${lookupRes['avatar_base64']?.toString().length ?? 0}, last_signin=${lookupRes['last_signin_at']}, raw=${lookupRes.toString()}'); } catch (_) {}
         if (lookupRes['success'] == true && lookupRes['found'] == true) {
           isRegistered = true;
           foundUserId = lookupRes['user_id'] as int?;
@@ -599,6 +609,8 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
       if (isRegistered && foundUserId != null) {
         try {
           final checkinRes = await UserService.queryCheckinStatus(foundUserId);
+          // 【v1.97.3+193】dump 兜底 queryCheckinStatus 原始返回
+          try { await DebugLog.write('193 G', 'FALLBACK queryCheckinStatus($foundUserId): success=${checkinRes['success']}, checked_in_today=${checkinRes['checked_in_today']}, raw=${checkinRes.toString()}'); } catch (_) {}
           if (checkinRes['success'] == true) {
             checkedInToday = checkinRes['checked_in_today'] == true;
           }
