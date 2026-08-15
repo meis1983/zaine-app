@@ -451,7 +451,7 @@ class SafetyService {
 
       // 检查是否到达提醒时间
       if (currentConfig.reminderHours.contains(now.hour) && now.minute == 0) {
-        _triggerReminder();
+        unawaited(_triggerReminder());
       }
 
       // 检查是否错过提醒
@@ -469,13 +469,30 @@ class SafetyService {
     _reminderTimer = null;
   }
 
-  void _triggerReminder() {
+  /// 【修复 v1.97.x】当天是否已签到（签到即已报平安，作为定时确认/漏签判断的前置闸门）
+  ///
+  /// 判断依据与签到按钮、Watch 心跳同一真相源：`last_check_in_date_$uid`（按账号隔离）。
+  Future<bool> _isCheckedInToday() async {
+    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final prefs = await SharedPreferences.getInstance();
+    final uid = prefs.getString('user_id') ?? '';
+    final lastDateKey = uid.isNotEmpty ? 'last_check_in_date_$uid' : 'last_check_in_date';
+    return prefs.getString(lastDateKey) == today;
+  }
+
+  Future<void> _triggerReminder() async {
+    // 【修复 v1.97.x】当天已签到则跳过定时确认提醒（签到即已报平安，避免重复打扰）
+    if (await _isCheckedInToday()) {
+      if (kDebugMode) debugPrint('[SafetyService] 当天已签到，跳过定时确认提醒');
+      return;
+    }
+
     if (kDebugMode) debugPrint('[SafetyService] 触发定时确认提醒');
     
     // 【v1.90.2】Apple Watch 辅助确认：检查 Watch 近期活动
-    _tryWatchAuxiliaryCheckin();
+    unawaited(_tryWatchAuxiliaryCheckin());
     
-    _showReminderNotification();
+    unawaited(_showReminderNotification());
     onReminderDue?.call(const _CheckInReminderImpl(enabled: true, status: CheckInReminderStatus.daily));
   }
 
@@ -510,6 +527,17 @@ class SafetyService {
   }
 
   Future<void> _handleMissedReminder(CheckInReminder config) async {
+    // 【修复 v1.97.x】当天已签到则不算漏签（签到即已报平安，推进到下一次提醒，不再累计漏签/通知）
+    if (await _isCheckedInToday()) {
+      final now = DateTime.now();
+      final next = _calculateNextReminder(now, config.reminderHours);
+      await saveReminderConfig(config.copyWith(nextReminder: next));
+      if (kDebugMode) {
+        debugPrint('[SafetyService] 当天已签到，跳过漏签判断（下次提醒推进到: $next）');
+      }
+      return;
+    }
+
     final updated = config.copyWith(missedCount: config.missedCount + 1);
     await saveReminderConfig(updated);
 
