@@ -17,6 +17,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider/path_provider.dart';
 import '../api_service.dart';
 import '../deep_link_service.dart';
+import '../silent_login_service.dart';
 import '../membership_service.dart';
 import '../guardian_card_service.dart';
 import '../platform/health_service.dart';
@@ -140,6 +141,9 @@ class AuthService {
       if (kDebugMode) debugPrint('[AuthService] ${isSameUser ? "同一用户重新登录，保留本地数据" : "切换账号，已清除旧数据"}');
 
         await _saveToken(res['token']);
+        // 【修复 v1.97.x 多账号串号根因】登录成功后清除残留的静默登录凭证(pending_token)，
+        // 防止下次启动时静默登录用陈旧 token 覆盖本次刚登录的正确 token（切账号后才坏的真凶）。
+        await SilentLoginService.clearPendingLogin();
         // 【修复 v1.94.x】手机号归一化为纯数字（去除 +、空格、横线），避免 SOS 短信出现 ++
         final normalizedPhone = phone.replaceAll(RegExp(r'[^\d]'), '');
         // 【修复 v1.77.0】敏感信息存储到 Keychain（安全，主存储）
@@ -246,6 +250,8 @@ class AuthService {
       }
 
       await _saveToken(res['token']);
+      // 【修复 v1.97.x 多账号串号根因】验证登录成功同样清除残留静默登录凭证
+      await SilentLoginService.clearPendingLogin();
       // 【修复 v1.77.0】敏感信息存储到 Keychain（安全，主存储）
       await _secureStorage.write(key: 'user_id', value: res['userId'] ?? '');
       await _secureStorage.write(key: 'user_phone', value: phone);
@@ -336,6 +342,8 @@ class AuthService {
     await prefs.remove('user_id');
     await prefs.remove('user_phone');
     await _deleteToken();
+    // 【修复 v1.97.x 多账号串号根因】退出登录也清除残留静默登录凭证，杜绝陈旧 token 复活
+    await SilentLoginService.clearPendingLogin();
     // 【修复 v1.77.0】从 Keychain 中删除敏感信息
     await _secureStorage.delete(key: 'user_id');
     await _secureStorage.delete(key: 'user_phone');
@@ -437,6 +445,8 @@ class AuthService {
         // 保存 token 和 user_id
         if (res['token'] != null) {
           await _saveToken(res['token']);
+          // 【修复 v1.97.x 多账号串号根因】Apple 登录同样清除残留静默登录凭证
+          await SilentLoginService.clearPendingLogin();
         }
         if (res['userId'] != null) {
           await _secureStorage.write(key: 'user_id', value: res['userId']);
