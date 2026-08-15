@@ -1198,7 +1198,12 @@ class _OnboardingPageState extends State<OnboardingPage> {
     _loginCompleted = false;
     _loginError = ''; // 清除之前的错误提示
 
-    final phone = _phoneController.text.trim();
+    var phone = _phoneController.text.trim().replaceAll(RegExp(r'[^0-9]'), '');
+    // 【v1.97.x 防幽灵账号】剥离 +86 国际前缀，与后端 normalize_phone 对齐，
+    // 避免带空格/+86 的手机号被 quick_login 当成新账号静默创建
+    if (phone.length == 13 && phone.startsWith('86')) {
+      phone = phone.substring(2);
+    }
     // 【v1.9.78】支持国际手机号（最少6位，最长15位）
     if (phone.isEmpty || phone.replaceAll(RegExp(r'[^0-9]'), '').length < 6) {
       ScaffoldMessenger.of(context).showSnackBar(
