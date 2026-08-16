@@ -34,6 +34,7 @@ import '../widgets/check_in_button_widget.dart';
 import '../services/api/auth_service.dart';
 import '../services/api/sync_service.dart';
 import '../utils/streak_util.dart';
+import '../services/checkin_reminder_service.dart'; // 【v1.97.1+157】签到后撤销/启动重排提醒
 import '../config/app_config.dart';
 import '../services/social/guardian_message_service.dart';
 
@@ -101,6 +102,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     // 【v1.94.0 新增】监听 Watch 签到酷炫确认横幅
     HealthService.watchCheckinCelebration.addListener(_onWatchCheckinCelebration);
     _initialize();
+    // 【v1.97.1+157】App 冷启动即按当前签到状态重排提醒（已签到→撤销，未签到→排程）
+    unawaited(_rescheduleCheckInReminders());
   }
 
   /// 【v1.93.1 修复】Watch 签到完成后刷新 UI
@@ -400,6 +403,30 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       _loadPendingPeaceRequests();
       // 【修复 ③】热启动：App 在后台被 DeepLink 唤起后回到前台，补查守护仪式
       _checkAndShowGuardianRituals();
+      // 【v1.97.1+157】回到前台按当前签到状态重排提醒（已签到→撤销，未签到→续排）
+      unawaited(_rescheduleCheckInReminders());
+    }
+  }
+
+  /// 【v1.97.1+157】App 启动/回到前台时重排签到提醒：
+  ///   - 提醒关闭 → 撤销 id=0/id=3
+  ///   - 已签到今日 → 撤销（防止「已签到仍提醒」）
+  ///   - 未签到 → 重新单次排程（保证次日继续提醒）
+  Future<void> _rescheduleCheckInReminders() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final reminderEnabled = prefs.getBool('reminder_enabled') ?? true;
+      if (!reminderEnabled) {
+        await CheckInReminderService.cancelReminders();
+        return;
+      }
+      final systemReminderEnabled = prefs.getBool('system_reminder_enabled') ?? true;
+      await CheckInReminderService.scheduleReminders(
+        prefs,
+        systemReminderEnabled: systemReminderEnabled,
+      );
+    } catch (e) {
+      if (kDebugMode) debugPrint('[HomePage] 重排签到提醒失败: $e');
     }
   }
 
@@ -664,6 +691,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           if (_checkedInToday) {
             await prefs.setString(lastDateKey, today);
             await prefs.setString('last_check_in_date', today);
+            // 【v1.97.1+157】服务端对账确认今日已签到 → 撤销当日 id=0/id=3 提醒
+            await CheckInReminderService.cancelReminders();
           }
           if (kDebugMode) debugPrint('[HomePage] 服务器签到状态: totalDays=$_totalDays, daysSinceLastCheckin=$_daysSinceLastCheckin, checkedInToday=$_checkedInToday');
         }
@@ -939,6 +968,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         });
         await prefs.setString(lastDateKey, today);
         await prefs.setString('last_check_in_date', today);
+        // 【v1.97.1+157】签到成功 → 即时撤销当日 id=0/id=3 提醒（防「已签到仍提醒」）
+        await CheckInReminderService.cancelReminders();
         // 【v1.97.1+155】手机签到成功后，同步签到状态到 Watch（修手表仍显示"可打卡"）
         unawaited(WatchDataService().pushCheckinStatus(checkedInToday: true, checkinDate: today));
         await prefs.setInt(streakKey, newDays);
@@ -978,6 +1009,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
             // 必须补全写入，否则定时确认闸门读不到 → 已签到仍重复提醒(问题1根因之一)。
             await prefs.setString(lastDateKey, today);
             await prefs.setString('last_check_in_date', today);
+            // 【v1.97.1+157】服务端确认已签到 → 即时撤销当日 id=0/id=3 提醒
+            await CheckInReminderService.cancelReminders();
             // 【v1.97.1+155】同步签到状态到 Watch
             unawaited(WatchDataService().pushCheckinStatus(checkedInToday: true, checkinDate: today));
             ScaffoldMessenger.of(context).showSnackBar(

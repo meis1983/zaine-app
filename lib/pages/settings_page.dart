@@ -11,6 +11,7 @@ import '../main.dart';
 import '../theme/theme_helper.dart';
 import '../data/app_constants.dart';
 import '../services/membership_service.dart';
+import '../services/checkin_reminder_service.dart'; // 【v1.97.1+157】id=0/id=3 提醒排程（含签到闸门）
 import '../widgets/developer_mode.dart';
 import '../config/feature_flags.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -179,6 +180,8 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
   }
 
   /// 调度每日签到提醒通知（v2.0 增加断签预警）
+  /// 【v1.97.1+157 修复】id=0(主提醒)/id=3(系统提醒) 改由 CheckInReminderService 统一排程，
+  ///   已实现「今日已签到则跳过 + 单次排程 + App 启动/前台重排」，根除「已签到仍收到定时提醒」。
   Future<void> _scheduleNotification(SharedPreferences prefs) async {
     // 先检查/请求通知权限
     final status = await Permission.notification.status;
@@ -197,75 +200,15 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
 
     await _initNotifications();
 
-    final hour = prefs.getInt('reminder_hour') ?? 20;
-    final minute = prefs.getInt('reminder_minute') ?? 0;
-
-    // 取消旧的通知（避免重复）
-    await _notifications.cancel(0);
+    // 取消旧的断签预警通知（id=0/id=3 由 CheckInReminderService 内部统一 cancel+排程）
     await _notifications.cancel(1);
     await _notifications.cancel(2);
-    await _notifications.cancel(3); // 系统提醒
 
-    const androidDetails = AndroidNotificationDetails(
-      'checkin_reminder',
-      '每日签到提醒',
-      channelDescription: '提醒您完成每日签到，让守护者知道您平安',
-      importance: Importance.high,
-      priority: Priority.high,
-      showWhen: true,
-      icon: '@mipmap/ic_launcher',
+    // ====== 主提醒(id=0) + 系统提醒(id=3)：委托 CheckInReminderService（含签到闸门）======
+    await CheckInReminderService.scheduleReminders(
+      prefs,
+      systemReminderEnabled: _systemReminderEnabled,
     );
-    const iosDetails = DarwinNotificationDetails();
-    const details = NotificationDetails(android: androidDetails, iOS: iosDetails);
-
-    // ====== 主提醒：每天固定时间 ======
-    var scheduledTime = DateTime.now().copyWith(hour: hour, minute: minute, second: 0);
-    if (scheduledTime.isBefore(DateTime.now())) {
-      scheduledTime = scheduledTime.add(const Duration(days: 1));
-    }
-    final tzScheduledTime = tz.TZDateTime.from(scheduledTime, tz.local);
-
-    await _notifications.zonedSchedule(
-      0, // id
-      '该签到啦 🏠',
-      '点击打开「在呢」，完成今日签到，让守护者放心 ❤️',
-      tzScheduledTime,
-      details,
-      uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
-      matchDateTimeComponents: DateTimeComponents.time,
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-    );
-
-    // ====== 系统提醒（id=3）—— 主提醒后2小时，未签到时额外提醒 ======
-    if (_systemReminderEnabled) {
-      var systemTime = scheduledTime.add(const Duration(hours: 2));
-      if (systemTime.isBefore(DateTime.now())) {
-        systemTime = systemTime.add(const Duration(days: 1));
-      }
-      final tzSystemTime = tz.TZDateTime.from(systemTime, tz.local);
-
-      const systemAndroidDetails = AndroidNotificationDetails(
-        'checkin_system_reminder',
-        '系统提醒',
-        channelDescription: '当天未签到时的额外提醒',
-        importance: Importance.defaultImportance,
-        priority: Priority.defaultPriority,
-        showWhen: true,
-        icon: '@mipmap/ic_launcher',
-      );
-      const systemDetails = NotificationDetails(android: systemAndroidDetails, iOS: iosDetails);
-
-      await _notifications.zonedSchedule(
-        3, // id
-        '别忘了签到哦 💙',
-        '今天还没签到呢，花3秒报个平安，让守护者放心',
-        tzSystemTime,
-        systemDetails,
-        uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
-        matchDateTimeComponents: DateTimeComponents.time,
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      );
-    }
 
     // ====== 断签预警通知（id=1,2）—— 根据上次签到时间动态调度 ======
     await _scheduleMissedCheckInAlerts(prefs);
