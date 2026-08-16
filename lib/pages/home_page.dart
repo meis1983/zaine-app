@@ -57,6 +57,10 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   /// 引入这个标志位：在本地无缓存且服务端未返回前，签到数字区域显示占位 skeleton。
   bool _isCheckinDataReady = false;
   bool _isLoggedIn = false;
+  /// 【v1.97.1+156 修复】签到防连点锁。用户快速连点签到按钮会多次进入 _handleCheckIn，
+  /// 各自基于过时的内存 _totalDays 计算 newTotal → 统计数字跳动(9:58/9:59 不一致)。
+  /// 锁在点击瞬间置 true、按钮 disabled，全流程 await 完成才置 false，从根本上消除竞态。
+  bool _isSigning = false;
   String? _userName;
   int _guardianCount = 0;
   int _totalRegistered = 0; // 新增：已成功邀请并注册的人数
@@ -812,6 +816,14 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     await DebugLog.write(_entryTag, '入口 _isLoggedIn=$_isLoggedIn _checkedInToday=$_checkedInToday');
     developer.log(_entryMsg, name: 'zaine.sign');
 
+    // 【v1.97.1+156 修复】防连点：锁未释放直接 return，避免多次 do_checkin + 内存竞态导致统计跳动
+    if (_isSigning) {
+      developer.log('[190 SIGN] ⚠️ 签到进行中(_isSigning=true)，忽略重复点击');
+      return;
+    }
+    _isSigning = true;
+    if (mounted) setState(() {});
+
     // 🔴【v1.97.7 根治，185 落地】不要让任何本地状态/prefs 残留/_isLoggedIn 假阴 阻塞 do_checkin。
     // FC 日志铁证：用户装 184 后仍是 0 条 do_checkin。说明仅靠 184 的 _checkedInToday && historySaysChecked
     // 还没覆盖全部场景：可能 _isLoggedIn=false 命中 line 908 if 跳过、或异常走入离线队列。
@@ -895,10 +907,13 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     }
     await DebugLog.write('194 S', '签到前 uid(本地)=${uid.isNotEmpty ? uid : "空"} tokenUid(后端将认)=$_tokenUid');
 
-    int newTotal = _totalDays + 1;
+    // 【v1.97.1+156 修复】累计天数以「本地签到历史条数」为单一真相源(与 Watch 端 _executeCheckIn 对齐)，
+    // 不再用内存 _totalDays+1(连点/后台重算期间 _totalDays 会被刷新成不同值 → 统计数字跳动)。
+    // historyList 已并入 today，条数即真实累计天数，天然抗竞态(连点也只会 +1 一次)。
     final historyList = List<String>.from(prefs.getStringList(historyKey) ?? []);
     if (!historyList.contains(today)) historyList.add(today);
     final newDays = StreakUtil.calculateStreak(historyList);
+    final newTotal = historyList.length;
 
     // 【187 修复】不再本地乐观更新 UI / 不再提前持久化：
     // UI 与本地存储仅以服务端 do_checkin 响应为准，避免"本地显示已签到但云端没收到"的假象。
@@ -931,7 +946,9 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         await prefs.setStringList(historyKey, historyList);
         final serverTotal = res['total_days'] as int?;
         final serverStreak = res['streak'] as int? ?? res['continuous_days'] as int?;
-        if (serverTotal != null && serverTotal > _totalDays) {
+        // 【v1.97.1+156 修复】跨设备历史(today 之外的历史)只能来自服务端，故 serverTotal 可能 > 本地条数。
+        // 仅当服务端累计严格大于本地历史条数时才采纳(取大值，只增不减)，避免覆盖本地真实值。
+        if (serverTotal != null && serverTotal > newTotal) {
           await prefs.setInt(totalKey, serverTotal);
           if (mounted) setState(() => _totalDays = serverTotal);
         }
@@ -957,6 +974,10 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           // 服务端确认今日已签到，正常
           if (mounted) {
             setState(() => _checkedInToday = true);
+            // 【v1.97.1+156 修复】服务端确认已签到，但本地 key 可能缺失(重装/清缓存)，
+            // 必须补全写入，否则定时确认闸门读不到 → 已签到仍重复提醒(问题1根因之一)。
+            await prefs.setString(lastDateKey, today);
+            await prefs.setString('last_check_in_date', today);
             // 【v1.97.1+155】同步签到状态到 Watch
             unawaited(WatchDataService().pushCheckinStatus(checkedInToday: true, checkinDate: today));
             ScaffoldMessenger.of(context).showSnackBar(
@@ -1044,6 +1065,10 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     } catch (e) {
       developer.log('[190 SIGN] 弹窗异常: $e');
     }
+
+    // 【v1.97.1+156 修复】解锁签到锁：无论成功/失败/异常，全流程结束才释放，允许下次点击
+    _isSigning = false;
+    if (mounted) setState(() {});
   }
 
   void _openHelp() {
@@ -1241,6 +1266,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                 },
                 scaleAnimation: _scaleAnimation,
                 isDataReady: _isCheckinDataReady,
+                isSigning: _isSigning,
               ),
 
               const SizedBox(height: ZaiNeSpacing.xl),

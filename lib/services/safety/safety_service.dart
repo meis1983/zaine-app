@@ -273,6 +273,14 @@ class SafetyService {
   final FlutterLocalNotificationsPlugin _notifications = FlutterLocalNotificationsPlugin();
   bool _isInitialized = false;
 
+  /// 【v1.97.1+156 修复】服务端今日已签到状态缓存(按天)。
+  /// 根因：本地 SP key 在「重装 App / 清缓存」后为空，但 Keychain uid 仍在 →
+  /// _isCheckedInToday 读 SP 得空 → 误判"没签到" → 已签到仍重复提醒。
+  /// 而 _loadCheckInStatus 启动时已向服务端拉过 checked_in_today，此处复用服务端真相源兜底。
+  /// 仅在本地 key 缺失时查一次(当天缓存)，避免定时器每分钟打网络。
+  bool? _serverCheckedInTodayCache;
+  String? _serverCheckedInDateCache;
+
   // 回调函数
   Function(CheckInReminder)? onReminderDue;
   Function(FallEvent)? onFallDetected;
@@ -485,9 +493,30 @@ class SafetyService {
     final globalDate = prefs.getString('last_check_in_date');
     final uid = await AuthService.getUserId() ?? '';
     final perUidDate = uid.isNotEmpty ? prefs.getString('last_check_in_date_$uid') : null;
-    final checkedIn = globalDate == today || perUidDate == today;
-    await DebugLog.write('155 C', '定时判断已签到: 全局=$globalDate uid($uid)=$perUidDate today=$today => $checkedIn');
-    return checkedIn;
+    final localChecked = globalDate == today || perUidDate == today;
+    if (localChecked) {
+      await DebugLog.write('155 C', '定时判断已签到: 全局=$globalDate uid($uid)=$perUidDate today=$today => true(本地命中)');
+      return true;
+    }
+
+    // 【v1.97.1+156 修复】本地 key 缺失(重装/清缓存) → 用服务端 checked_in_today 兜底，
+    // 避免已签到仍重复提醒。当天已查过则直接复用缓存，不重复打网络。
+    if (_serverCheckedInDateCache == today && _serverCheckedInTodayCache != null) {
+      await DebugLog.write('156 C', '定时判断已签到: 本地未命中，用服务端缓存 => $_serverCheckedInTodayCache (today=$today)');
+      return _serverCheckedInTodayCache!;
+    }
+    try {
+      final res = await CheckinService.getTodayStatus();
+      final serverChecked = res['success'] == true && (res['checked_in_today'] == true);
+      _serverCheckedInDateCache = today;
+      _serverCheckedInTodayCache = serverChecked;
+      await DebugLog.write('156 C', '定时判断已签到: 本地未命中，查服务端 checked_in_today=$serverChecked (today=$today) res=$res');
+      return serverChecked;
+    } catch (e) {
+      // 网络失败：保守回退本地判断(false)，不静默吞；下次整点再查
+      await DebugLog.write('156 C', '定时判断已签到: 服务端查询异常($e)，回退本地=false');
+      return false;
+    }
   }
 
   Future<void> _triggerReminder() async {

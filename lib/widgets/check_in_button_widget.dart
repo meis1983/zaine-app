@@ -16,6 +16,8 @@ class CheckInButtonWidget extends StatelessWidget {
   final Animation<double> scaleAnimation;
   /// 【修复 v1.91.0】数据是否已就绪（首次启动无本地缓存时显示骨架屏，避免 "连续 0 天" 视觉错）
   final bool isDataReady;
+  /// 【v1.97.1+156】签到进行中(防连点锁激活) → 禁用点击，避免连点导致统计跳动
+  final bool isSigning;
 
   const CheckInButtonWidget({
     super.key,
@@ -24,6 +26,7 @@ class CheckInButtonWidget extends StatelessWidget {
     required this.onTap,
     required this.scaleAnimation,
     this.isDataReady = true,
+    this.isSigning = false,
   });
 
   @override
@@ -36,8 +39,8 @@ class CheckInButtonWidget extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(90),
-          onTap: onTap,
-          onTapDown: (_) => HapticFeedback.lightImpact(),
+          onTap: isSigning ? null : onTap,
+          onTapDown: isSigning ? null : (_) => HapticFeedback.lightImpact(),
           child: AnimatedBuilder(
             animation: scaleAnimation,
             builder: (context, child) {
