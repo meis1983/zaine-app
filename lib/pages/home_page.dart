@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:io';
 import 'dart:convert';
+import 'dart:async'; // unawaited
 import 'dart:developer' as developer; // 【186】诊断日志改用 developer.log 保证进 iOS OSLog（release 包 print 被吞）
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
@@ -14,6 +15,7 @@ import '../services/membership_service.dart';
 import '../pages/subscription_page.dart';
 import '../widgets/checkin_milestone_dialog.dart';
 import '../services/debug_log.dart'; // [190] 双通道调试日志（屏幕 SnackBar + 文件兜底）
+import '../services/platform/watch_data_service.dart'; // [155] 签到状态同步到 Watch
 import '../services/api/checkin_service.dart';
 import '../services/api/peace_service.dart';
 import '../services/api/card_service.dart';
@@ -922,6 +924,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         });
         await prefs.setString(lastDateKey, today);
         await prefs.setString('last_check_in_date', today);
+        // 【v1.97.1+155】手机签到成功后，同步签到状态到 Watch（修手表仍显示"可打卡"）
+        unawaited(WatchDataService().pushCheckinStatus(checkedInToday: true, checkinDate: today));
         await prefs.setInt(streakKey, newDays);
         await prefs.setInt(totalKey, newTotal);
         await prefs.setStringList(historyKey, historyList);
@@ -953,6 +957,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           // 服务端确认今日已签到，正常
           if (mounted) {
             setState(() => _checkedInToday = true);
+            // 【v1.97.1+155】同步签到状态到 Watch
+            unawaited(WatchDataService().pushCheckinStatus(checkedInToday: true, checkinDate: today));
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 content: Text('☀️ 今日已签到'),

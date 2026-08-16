@@ -473,6 +473,17 @@ class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
     func session(_ session: WCSession, didReceiveApplicationContext applicationContext: [String : Any]) {
         DispatchQueue.main.async {
             print("[Watch] 📥 收到 ApplicationContext: \(applicationContext)")
+            // 【v1.97.1+155 修复】不可达时签到状态经 updateApplicationContext 到达
+            if let action = applicationContext["action"] as? String, action == "checkin_status" {
+                if applicationContext["checked_in_today"] as? Bool == true {
+                    self.markCheckedInToday()
+                    self.checkInAlreadyDone = true
+                    if let last = applicationContext["last_check_in"] as? String, !last.isEmpty {
+                        self.lastCheckIn = last
+                    }
+                }
+                return
+            }
             self.applyHealthData(applicationContext)
         }
     }
@@ -482,6 +493,18 @@ class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
         print("[Watch] 📥 收到来自 iPhone 的消息: \(message)")
         if let action = message["action"] as? String, action == "status_query_ack" {
             setCheckInStats(streak: message["streak"] as? Int ?? 0, total: message["total"] as? Int ?? 0)
+            replyHandler(["received": true])
+            return
+        }
+        // 【v1.97.1+155 修复】手机端主动签到后推送 checkin_status，让手表「已签到」状态实时一致
+        if let action = message["action"] as? String, action == "checkin_status" {
+            if message["checked_in_today"] as? Bool == true {
+                self.markCheckedInToday()
+                self.checkInAlreadyDone = true
+                if let last = message["last_check_in"] as? String, !last.isEmpty {
+                    self.lastCheckIn = last
+                }
+            }
             replyHandler(["received": true])
             return
         }

@@ -364,6 +364,38 @@ class WatchDataService {
     if (kDebugMode) debugPrint('[WatchData] Widget timelines 刷新请求已发送');
   }
 
+  /// 推送签到状态到 Watch（手机端主动签到后同步，让手表「已签到」状态实时一致）
+  ///
+  /// 【v1.97.1+155 修复】此前手机端签到成功后没有任何 push 给 Watch，
+  /// 手表仍显示「可打卡」（因手表 hasCheckedInToday 只在自己发起签到收到 checkin_ack 时才更新）。
+  /// 现手机签到后立即推送 checkin_status，Watch 端收到后 markCheckedInToday()。
+  Future<bool> pushCheckinStatus({
+    required bool checkedInToday,
+    String? checkinDate,
+  }) async {
+    if (!_isSupported || !_isPaired) return false;
+
+    try {
+      final data = <String, dynamic>{
+        'action': 'checkin_status',
+        'checked_in_today': checkedInToday,
+        'last_check_in': checkinDate ?? '',
+        'push_timestamp': DateTime.now().millisecondsSinceEpoch,
+      };
+
+      if (_isReachable) {
+        await _wc.sendMessage(data);
+      } else {
+        await _wc.updateApplicationContext(data);
+      }
+      if (kDebugMode) debugPrint('[WatchData] 签到状态已推送: checkedInToday=$checkedInToday');
+      return true;
+    } catch (e) {
+      if (kDebugMode) debugPrint('[WatchData] 推送签到状态失败: $e');
+      return false;
+    }
+  }
+
   /// 推送订阅状态到 Watch
   Future<bool> pushSubscriptionStatus({
     required String level,

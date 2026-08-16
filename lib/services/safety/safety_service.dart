@@ -13,6 +13,8 @@ import 'package:permission_handler/permission_handler.dart';
 import '../api_service.dart';
 import '../api/notify_service.dart';
 import '../api/checkin_service.dart';
+import '../api/auth_service.dart';
+import '../debug_log.dart';
 import '../../services/platform/health_service.dart';
 import 'geofence_service.dart';
 import '../../config/app_config.dart';
@@ -471,13 +473,21 @@ class SafetyService {
 
   /// 【修复 v1.97.x】当天是否已签到（签到即已报平安，作为定时确认/漏签判断的前置闸门）
   ///
-  /// 判断依据与签到按钮、Watch 心跳同一真相源：`last_check_in_date_$uid`（按账号隔离）。
+  /// 【v1.97.1+155 修复】之前用 `prefs.getString('user_id')`（SP）拼 key，与签到写入
+  /// home_page:873 用的 `AuthService.getUserId()`（Keychain）来源不一致，多账号切换后
+  /// 会读错 key → 误判"没签到"→ 已签到仍重复提醒。现改为：
+  ///   1. 优先读全局 `last_check_in_date`（签到 success 分支 home_page:924 无条件写）；
+  ///   2. 兜底读 Keychain uid 的 `last_check_in_date_$uid`（与签到写入同源）；
+  ///   任一命中即已签到，并写 [155 C] 诊断日志。
   Future<bool> _isCheckedInToday() async {
     final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
     final prefs = await SharedPreferences.getInstance();
-    final uid = prefs.getString('user_id') ?? '';
-    final lastDateKey = uid.isNotEmpty ? 'last_check_in_date_$uid' : 'last_check_in_date';
-    return prefs.getString(lastDateKey) == today;
+    final globalDate = prefs.getString('last_check_in_date');
+    final uid = await AuthService.getUserId() ?? '';
+    final perUidDate = uid.isNotEmpty ? prefs.getString('last_check_in_date_$uid') : null;
+    final checkedIn = globalDate == today || perUidDate == today;
+    await DebugLog.write('155 C', '定时判断已签到: 全局=$globalDate uid($uid)=$perUidDate today=$today => $checkedIn');
+    return checkedIn;
   }
 
   Future<void> _triggerReminder() async {
