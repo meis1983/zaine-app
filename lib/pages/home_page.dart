@@ -1079,6 +1079,25 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       }
     }
 
+    // 【v1.97.5+199 修复】弹窗前用本地真相源兜底刷新连续天数
+    // 根因：already_checked_in / 异常分支未更新 _continuousDays，且 already_checked_in 分支未把 today
+    // 写回 checkin_history，导致重算漏 today（曾见「连点第一次 0 天、第二次 2 天」的窗口期不一致）。
+    // 此处先把 today 幂等并入本地历史，再重算 streak，保证弹窗与首页大圆环同源且最新。
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final uid = (await AuthService.getUserId()) ?? '';
+      final historyKey = uid.isNotEmpty ? 'checkin_history_$uid' : 'checkin_history';
+      final hist = (prefs.getStringList(historyKey) ?? []).toSet();
+      if (!hist.contains(today)) {
+        hist.add(today);
+        await prefs.setStringList(historyKey, hist.toList());
+      }
+      final fresh = StreakUtil.calculateStreak(hist.toList());
+      if (mounted) setState(() => _continuousDays = fresh);
+    } catch (_) {
+      // 兜底失败不影响弹窗展示
+    }
+
     // 弹出签到成功弹窗（断签回归时传 isReturnCheckin）
     try {
       if (mounted) {
