@@ -9,7 +9,6 @@
 /* Begin PBXBuildFile section */
 		1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */ = {isa = PBXBuildFile; fileRef = 1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */; };
 		1A3865BA2FB4477900A0A32D /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1A3865B92FB4477900A0A32D /* StoreKit.framework */; };
-		1AF9BD002FBF0CC000BE1710 /* ZaineWatch Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 1AF9BCF62FBF0CBE00BE1710 /* ZaineWatch Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		1B67D64EEF7C08EE218DCBEA /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53B074022F2619537F33B5A9 /* SceneDelegate.swift */; };
 		331C808B294A63AB00263BE5 /* RunnerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 331C807B294A618700263BE5 /* RunnerTests.swift */; };
 		3B3967161E833CAA004F5970 /* AppFrameworkInfo.plist in Resources */ = {isa = PBXBuildFile; fileRef = 3B3967151E833CAA004F5970 /* AppFrameworkInfo.plist */; };
@@ -23,13 +22,6 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
-		1AF9BCFE2FBF0CC000BE1710 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 97C146E61CF9000F007C117D /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 1AF9BCF52FBF0CBE00BE1710;
-			remoteInfo = "ZaineWatch Watch App";
-		};
 		331C8085294A63A400263BE5 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 97C146E61CF9000F007C117D /* Project object */;
@@ -37,20 +29,16 @@
 			remoteGlobalIDString = 97C146ED1CF9000F007C117D;
 			remoteInfo = Runner;
 		};
+		AA0821082108210821082103 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 97C146E61CF9000F007C117D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 1AF9BCF52FBF0CBE00BE1710;
+			remoteInfo = "ZaineWatch Watch App";
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
-		1AF9BD012FBF0CC000BE1710 /* Embed Watch Content */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
-			dstSubfolderSpec = 16;
-			files = (
-				1AF9BD002FBF0CC000BE1710 /* ZaineWatch Watch App.app in Embed Watch Content */,
-			);
-			name = "Embed Watch Content";
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		9705A1C41CF9048500538489 /* Embed Frameworks */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -60,6 +48,24 @@
 			);
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AA0821082108210821082105 /* Embed Watch Content (conditional) */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Embed Watch Content (conditional)";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# Conditionally embed ZaineWatch app — real-device builds only.\nif [ \"$PLATFORM_NAME\" = \"iphoneos\" ]; then\n  PARENT_DIR=\"$(dirname \"$BUILT_PRODUCTS_DIR\")\"\n  WATCH_APP=\"$BUILT_PRODUCTS_DIR/ZaineWatch Watch App.app\"\n  if [ ! -d \"$WATCH_APP\" ]; then WATCH_APP=\"$PARENT_DIR/Release-watchos/ZaineWatch Watch App.app\"; fi\n  if [ ! -d \"$WATCH_APP\" ]; then WATCH_APP=\"$PARENT_DIR/Debug-watchos/ZaineWatch Watch App.app\"; fi\n  if [ -d \"$WATCH_APP\" ]; then\n    mkdir -p \"$TARGET_BUILD_DIR/$WRAPPER_NAME/Watch\"\n    rm -rf \"$TARGET_BUILD_DIR/$WRAPPER_NAME/Watch/ZaineWatch Watch App.app\"\n    cp -R \"$WATCH_APP\" \"$TARGET_BUILD_DIR/$WRAPPER_NAME/Watch/\"\n    echo \"note: ZaineWatch embedded from $WATCH_APP\"\n  else\n    echo \"error: ZaineWatch Watch App.app NOT FOUND. 请在 Xcode 给 Runner target 添加 ZaineWatch Watch App 的 Target Dependency（菜单栏 Editor -> Add Target Dependency）。已搜索: $BUILT_PRODUCTS_DIR 及同级 Release-watchos / Debug-watchos\"\n    exit 1\n  fi\nfi\n";
 		};
 /* End PBXCopyFilesBuildPhase section */
 
@@ -254,14 +260,14 @@
 				97C146EB1CF9000F007C117D /* Frameworks */,
 				97C146EC1CF9000F007C117D /* Resources */,
 				9705A1C41CF9048500538489 /* Embed Frameworks */,
-				1AF9BD012FBF0CC000BE1710 /* Embed Watch Content */,
+				AA0821082108210821082105 /* Embed Watch Content (conditional) */,
 				3B06AD1E1E4923F5004D2608 /* Thin Binary */,
 				2118F44722A71FE2DBA91475 /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
 			dependencies = (
-				1AF9BCFF2FBF0CC000BE1710 /* PBXTargetDependency */,
+				AA0821082108210821082104 /* PBXTargetDependency */,
 			);
 			name = Runner;
 			packageProductDependencies = (
@@ -449,15 +455,16 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-		1AF9BCFF2FBF0CC000BE1710 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 1AF9BCF52FBF0CBE00BE1710 /* ZaineWatch Watch App */;
-			targetProxy = 1AF9BCFE2FBF0CC000BE1710 /* PBXContainerItemProxy */;
-		};
 		331C8086294A63A400263BE5 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 97C146ED1CF9000F007C117D /* Runner */;
 			targetProxy = 331C8085294A63A400263BE5 /* PBXContainerItemProxy */;
+		};
+		AA0821082108210821082104 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			platformFilter = ios;
+			target = 1AF9BCF52FBF0CBE00BE1710 /* ZaineWatch Watch App */;
+			targetProxy = AA0821082108210821082103 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
