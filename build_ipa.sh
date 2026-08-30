@@ -24,10 +24,22 @@ EXPORT_PATH="$PROJECT_DIR/build/ios/ipa"
 # ----------------------------------------------------------
 PBXPROJ="$PROJECT_DIR/ios/Runner.xcodeproj/project.pbxproj"
 INFOPLIST="$PROJECT_DIR/ios/Runner/Info.plist"
+# 安全中心导航 active 文件（方案 A 文件 swap）：CN 构建前整体替换为 stub，构建后 trap 还原
+NAV_ACTIVE="$PROJECT_DIR/lib/pages/safety_settings_navigator.dart"
+NAV_CN="$PROJECT_DIR/lib/pages/safety_settings_navigator_stub.dart"
 if [ "$ZAI_REGION" = "cn" ]; then
   echo "ℹ️  cn 区域：将工程 Bundle ID 切换为 com.zaine.app.cn，并改写位置/健康权限文案（去除守护/报平安等监控暗示）"
   cp "$PBXPROJ" "$PBXPROJ.bak"
   sed -i '' 's/com\.zaine\.app/com.zaine.app.cn/g' "$PBXPROJ"
+  # 中国合规版：Watch App 健康权限文案 CN 化（去掉"感应签到"等自动行为暗示）
+  #   背景：Watch target 用 GENERATE_INFOPLIST_FILE=YES，其 Info.plist 由 build settings 生成，
+  #         文案存在 project.pbxproj 的 503/553/599 三处（Debug/Release/Profile），
+  #         不走 ios/Runner/Info.plist 文件 → 下方 INFOPLIST 的 sed 完全够不到，必须单独处理。
+  #   风险：原文案"需要读取您的心率数据以实现感应签到功能"= dead-man switch 的书面自认
+  #         （与 164 驳回判语同源），审核员读 plist 直接可见，比扫二进制更致命。
+  sed -i '' 's|需要读取您的心率数据以实现感应签到功能|用于在手表上查看您的心率等健康数据|g' "$PBXPROJ"
+  sed -i '' 's|暂不使用写入功能，保留权限以便未来扩展|暂不使用健康数据写入功能|g' "$PBXPROJ"
+  echo "[i] 已将 Watch 健康权限文案 CN 化（感应签到 -> 查看心率）"
   # 中国合规版：位置 / 健康权限描述去掉“始终 / 守护人 / 守护 / 报平安”等监控暗示，避免触发死开关判定
   cp "$INFOPLIST" "$INFOPLIST.zai_bak"
   sed -i '' 's|在呢需要始终获取您的位置，以便在您发起求助时向您的守护人发送位置信息。|在呢会在您主动使用位置相关功能时获取您的位置信息。|g' "$INFOPLIST"
@@ -35,6 +47,23 @@ if [ "$ZAI_REGION" = "cn" ]; then
   sed -i '' 's|在呢需要同步您的健康数据（心率、血氧、睡眠、经期等），以实现生命体征守护功能。|在呢需要同步您的健康数据（心率、血氧、睡眠、经期等），用于为您生成本人的健康日记与趋势记录。|g' "$INFOPLIST"
   sed -i '' 's|在呢需要读取您的健康数据，以实现每日签到报平安和经期跟踪功能。|在呢需要读取您的健康数据，用于记录您的每日签到与经期跟踪。|g' "$INFOPLIST"
   sed -i '' 's|在呢需要发送通知提醒您定时报平安。|在呢需要发送通知提醒您每日签到。|g' "$INFOPLIST"
+  # 中国合规版：保留 NSLocationAlwaysAndWhenInUseUsageDescription key
+  #   原因：iOS 静态校验 / ITMS-90683 要求 binary 链接 CLLocationManager 时 Info.plist 必须有此 key；删了 Transporter 拒传（163 翻车已回滚）。
+  #   性质：key 是"声明文本"（Apple 要求印在盒子上的标签），不是触发器。
+  #         真正弹"始终允许"对话框的触发条件是代码调用 requestAlwaysAuthorization——
+  #         本项目从未调过该方法（location_service.dart:137 仅 Geolocator.requestPermission → CLLocationManager.requestWhenInUseAuthorization），
+  #         所以保留 key ≠ 用户会看到"始终允许"选项。
+  # 实际打包文案：当前 Info.plist:58 = "在呢需要在您发起紧急求助时获取您的位置，用于向紧急联系人提供您的位置信息。"
+  #   - 已无"始终/守护人/报平安"等监控暗示，描述与代码行为一致（仅在用户主动点 SOS/求助按钮时获取一次位置）。
+  #   - 注：上方 sed 第 1 行的 old-string 是上一版文案（"在呢需要始终获取..."），与当前 Info.plist 不匹配，sed 为空操作；
+  #         安全无害，留作回滚锚点；如要重写文案，直接改 Info.plist:58 即可（无需动 sed）。
+  # CN 合规（方案 A 文件 swap）：编译前把"安全中心"导航 active 文件整体替换为 stub，
+  #   使 CN 编译单元根本不 import SafetySettingsPage → 100% 物理剥离（苹果类级判定扫不到）。
+  if [ -f "$NAV_ACTIVE" ] && [ -f "$NAV_CN" ]; then
+    cp "$NAV_ACTIVE" "$NAV_ACTIVE.zai_bak"
+    cp "$NAV_CN" "$NAV_ACTIVE"
+    echo "[i] 已用 CN stub 替换安全中心导航文件（物理剥离 SafetySettingsPage）"
+  fi
   cleanup_cn() {
     if [ -f "$PBXPROJ.bak" ]; then
       mv "$PBXPROJ.bak" "$PBXPROJ"
@@ -43,6 +72,10 @@ if [ "$ZAI_REGION" = "cn" ]; then
     if [ -f "$INFOPLIST.zai_bak" ]; then
       mv "$INFOPLIST.zai_bak" "$INFOPLIST"
       echo "ℹ️  已还原 Info.plist 位置权限文案"
+    fi
+    if [ -f "$NAV_ACTIVE.zai_bak" ]; then
+      mv "$NAV_ACTIVE.zai_bak" "$NAV_ACTIVE"
+      echo "[i] 已还原安全中心导航文件"
     fi
   }
   trap cleanup_cn EXIT
@@ -95,6 +128,16 @@ if [ -n "$ZAI_REGION" ]; then
     echo "ℹ️  区域开关: ZAI_REGION=$ZAI_REGION"
 fi
 
+# 原生编译宏（仅 cn）：向 Xcode 注入 ZAI_REGION_CN，使 Watch 心跳自动签到
+# （dead-man switch 核心之一）在 CN 构建被编译期物理剔除（表里如一）。
+# 用 \$(inherited) 追加，避免覆盖工程既有 preprocessor 定义（如 COCOAPODS=1）。
+NATIVE_REGION_ARGS=()
+if [ "$ZAI_REGION" = "cn" ]; then
+  NATIVE_REGION_ARGS+=(SWIFT_ACTIVE_COMPILATION_CONDITIONS='$(inherited) ZAI_REGION_CN')
+  NATIVE_REGION_ARGS+=(GCC_PREPROCESSOR_DEFINITIONS='$(inherited) ZAI_REGION_CN=1')
+  echo "ℹ️  原生编译宏: ZAI_REGION_CN 已注入（Watch 心跳自动签到将被编译期剔除）"
+fi
+
 # IAP 签名密钥：与后端 _MVP_SIGN_SECRET 保持一致，可通过环境变量覆盖
 SIGN_ARGS="--dart-define=ZAINE_SIGN_SECRET=${ZAINE_SIGN_SECRET:-zaine-storekit-mvp-v1}"
 echo "ℹ️  IAP 签名密钥已注入"
@@ -112,7 +155,8 @@ xcodebuild -workspace Runner.xcworkspace \
   -archivePath "$ARCHIVE_PATH" \
   archive \
   ONLY_ACTIVE_ARCH=NO \
-  -allowProvisioningUpdates
+  -allowProvisioningUpdates \
+  "${NATIVE_REGION_ARGS[@]}"
 
 echo ""
 echo "===== Step 4: 导出 IPA ====="
