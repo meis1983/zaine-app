@@ -4,6 +4,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import '../theme/theme_helper.dart';
+import '../l10n/i18n.dart';
 
 /// 展示升级成功的庆祝动画
 /// 调用方式：UpgradeCelebration.show(context);
@@ -191,8 +192,8 @@ class _UpgradeCelebrationState extends State<UpgradeCelebration>
             style: TextStyle(fontSize: 28),
           ),
           const SizedBox(height: ZaiNeSpacing.md),
-          const Text(
-            '智能版已激活！',
+          Text(
+            tr.z0760,
             style: TextStyle(
               fontSize: ZaiNeFontSize.title,
               fontWeight: FontWeight.bold,
@@ -201,7 +202,7 @@ class _UpgradeCelebrationState extends State<UpgradeCelebration>
           ),
           const SizedBox(height: ZaiNeSpacing.md),
           Text(
-            '现在可同时通知3位守护人',
+            tr.z0761,
             style: TextStyle(
               fontSize: ZaiNeFontSize.body,
               color: Colors.grey[500],

@@ -10,6 +10,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:watch_connectivity/watch_connectivity.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../l10n/i18n.dart';
 
 class WatchDataService {
   static final WatchDataService _instance = WatchDataService._();
@@ -112,7 +113,7 @@ class WatchDataService {
       }
       if (kDebugMode) {
         debugPrint('[WatchData] 健康数据推送跳过：Watch 未配对'
-            '（${allowRetry ? "已安排 5s 重试" : "重试后仍不配对"}）');
+            + tr.z0321(allowRetry ? "已安排 5s 重试" : "重试后仍不配对"));
       }
       return false;
     }
@@ -166,7 +167,7 @@ class WatchDataService {
         if (v != null) watchData['sleep'] = v.toStringAsFixed(1);
       }
       if (summary.containsKey('has_menstruation')) {
-        watchData['menstrual'] = (summary['has_menstruation'] == true) ? '经期中' : '未记录';
+        watchData['menstrual'] = (summary['has_menstruation'] == true) ? tr.s815 : tr.z0322;
       } else if (summary.containsKey('menstrual')) {
         watchData['menstrual'] = summary['menstrual'].toString();
       }

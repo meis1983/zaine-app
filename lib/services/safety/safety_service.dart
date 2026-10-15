@@ -16,9 +16,10 @@ import '../api/checkin_service.dart';
 import '../api/auth_service.dart';
 import '../debug_log.dart';
 import '../../services/platform/health_service.dart';
-import 'geofence_service.dart';
+import 'safe_zone_service.dart';
 import '../../config/app_config.dart';
 import 'package:intl/intl.dart';
+import '../../l10n/i18n.dart';
 
 /// 定时确认状态
 enum CheckInReminderStatus {
@@ -177,7 +178,7 @@ enum LocationActivityType {
 }
 
 /// 跌倒事件数据模型
-class FallEvent {
+class MotionEvent {
   final String id;
   final DateTime timestamp;
   final double latitude;
@@ -189,7 +190,7 @@ class FallEvent {
   final bool guardianNotified; // 【v1.92.0】是否已通知守护者
   final String source; // 【v1.92.0】检测来源: 'watch' / 'phone'
 
-  const FallEvent({
+  const MotionEvent({
     required this.id,
     required this.timestamp,
     required this.latitude,
@@ -205,7 +206,7 @@ class FallEvent {
   /// 是否来自手机端检测
   bool get isPhoneSource => source == 'phone';
 
-  FallEvent copyWith({
+  MotionEvent copyWith({
     String? id,
     DateTime? timestamp,
     double? latitude,
@@ -217,7 +218,7 @@ class FallEvent {
     bool? guardianNotified,
     String? source,
   }) {
-    return FallEvent(
+    return MotionEvent(
       id: id ?? this.id,
       timestamp: timestamp ?? this.timestamp,
       latitude: latitude ?? this.latitude,
@@ -244,8 +245,8 @@ class FallEvent {
         'source': source,
       };
 
-  factory FallEvent.fromJson(Map<String, dynamic> json) {
-    return FallEvent(
+  factory MotionEvent.fromJson(Map<String, dynamic> json) {
+    return MotionEvent(
       id: json['id'] as String,
       timestamp: DateTime.parse(json['timestamp'] as String),
       latitude: (json['latitude'] as num).toDouble(),
@@ -283,7 +284,7 @@ class SafetyService {
 
   // 回调函数
   Function(CheckInReminder)? onReminderDue;
-  Function(FallEvent)? onFallDetected;
+  Function(MotionEvent)? onMotionDetected;
   Function(LocationRecord)? onLocationUpdate;
 
   /// 【P3】场景化确认桥接：由 health_service（Watch 心跳签到）调用
@@ -316,8 +317,8 @@ class SafetyService {
     // 【P3】注册场景化确认桥接
     // 1) Watch 心跳签到 → 由 health_service 在 _executeCheckIn(source:'heartbeat') 触发
     onSceneCheckIn = _applySceneCheckIn;
-    // 2) 离开安全围栏 → 由 geofence_service.checkAllFences 触发（全局回调，避免实例差异）
-    GeoFenceService.onFenceExitedGlobal = (fence) {
+    // 2) 离开安全区域 → 由 SafeZoneService.checkAllFences 触发（全局回调，避免实例差异）
+    SafeZoneMonitor.onZoneExitedGlobal = (fence) {
       onSceneCheckIn?.call('location', fenceName: fence.name);
     };
 
@@ -495,14 +496,14 @@ class SafetyService {
     final perUidDate = uid.isNotEmpty ? prefs.getString('last_check_in_date_$uid') : null;
     final localChecked = globalDate == today || perUidDate == today;
     if (localChecked) {
-      await DebugLog.write('155 C', '定时判断已签到: 全局=$globalDate uid($uid)=$perUidDate today=$today => true(本地命中)');
+      await DebugLog.write('155 C', tr.z0333(globalDate, uid, perUidDate, today));
       return true;
     }
 
     // 【v1.97.1+156 修复】本地 key 缺失(重装/清缓存) → 用服务端 checked_in_today 兜底，
     // 避免已签到仍重复提醒。当天已查过则直接复用缓存，不重复打网络。
     if (_serverCheckedInDateCache == today && _serverCheckedInTodayCache != null) {
-      await DebugLog.write('156 C', '定时判断已签到: 本地未命中，用服务端缓存 => $_serverCheckedInTodayCache (today=$today)');
+      await DebugLog.write('156 C', tr.z0334(_serverCheckedInTodayCache, today));
       return _serverCheckedInTodayCache!;
     }
     try {
@@ -510,11 +511,11 @@ class SafetyService {
       final serverChecked = res['success'] == true && (res['checked_in_today'] == true);
       _serverCheckedInDateCache = today;
       _serverCheckedInTodayCache = serverChecked;
-      await DebugLog.write('156 C', '定时判断已签到: 本地未命中，查服务端 checked_in_today=$serverChecked (today=$today) res=$res');
+      await DebugLog.write('156 C', tr.z0335(serverChecked, today, res));
       return serverChecked;
     } catch (e) {
       // 网络失败：保守回退本地判断(false)，不静默吞；下次整点再查
-      await DebugLog.write('156 C', '定时判断已签到: 服务端查询异常($e)，回退本地=false');
+      await DebugLog.write('156 C', tr.z0336(e));
       return false;
     }
   }
@@ -544,8 +545,8 @@ class SafetyService {
       // 仅本地提示，绝不自动代操作
       await _showLocalPrompt(
         1004,
-        '手表检测到你 💓',
-        '是否已平安？点开 App 即可一键确认',
+        tr.z0337,
+        tr.z0338,
       );
       if (kDebugMode) {
         debugPrint('[SafetyService][CN] 手表检测本地提醒（未自动签到）');
@@ -587,12 +588,12 @@ class SafetyService {
         // 改为仅本地提醒用户本人，由用户手动确认后再通知守护人
         await _showLocalPrompt(
           1003,
-          '已连续 ${updated.missedCount} 次未确认平安',
-          '如需让守护人知道，请打开 App 手动通知守护人',
+          tr.z0339(updated.missedCount),
+          tr.z0340,
         );
         if (kDebugMode) {
-          debugPrint('[SafetyService][CN] 漏签本地提醒（未自动通知守护人）: '
-              '${updated.missedCount} 次');
+          debugPrint('[SafetyService][CN] 漏签本地提醒（未自动通知守护人）: ' +
+              tr.z0341(updated.missedCount));
         }
       } else {
         await NotifyService.notifyGuardiansAboutMissedCheckIn(updated.missedCount);
@@ -602,10 +603,10 @@ class SafetyService {
 
   /// 【中国合规版】统一本地提醒用户本人（不自动外发、不自动代操作）
   Future<void> _showLocalPrompt(int id, String title, String body) async {
-    const androidDetails = AndroidNotificationDetails(
+    final androidDetails = AndroidNotificationDetails(
       'checkin_reminder',
-      '定时确认提醒',
-      channelDescription: '提醒您进行平安确认',
+      tr.z0006,
+      channelDescription: tr.z0007,
       importance: Importance.high,
       priority: Priority.high,
     );
@@ -614,7 +615,7 @@ class SafetyService {
       presentBadge: true,
       presentSound: true,
     );
-    const details = NotificationDetails(android: androidDetails, iOS: iosDetails);
+    final details = NotificationDetails(android: androidDetails, iOS: iosDetails);
     await _notifications.show(id, title, body, details);
   }
 
@@ -626,10 +627,10 @@ class SafetyService {
   }
 
   Future<void> _showReminderNotification() async {
-    const androidDetails = AndroidNotificationDetails(
+    final androidDetails = AndroidNotificationDetails(
       'checkin_reminder',
-      '定时确认提醒',
-      channelDescription: '提醒您进行平安确认',
+      tr.z0006,
+      channelDescription: tr.z0007,
       importance: Importance.high,
       priority: Priority.high,
     );
@@ -638,15 +639,15 @@ class SafetyService {
       presentBadge: true,
       presentSound: true,
     );
-    const details = NotificationDetails(
+    final details = NotificationDetails(
       android: androidDetails,
       iOS: iosDetails,
     );
 
     await _notifications.show(
       1001,
-      '平安确认提醒 💚',
-      '您今天还没有确认平安，点击这里进行签到',
+      tr.z0342,
+      tr.z0343,
       details,
     );
   }
@@ -665,10 +666,10 @@ class SafetyService {
     // 【中国合规版整改】关闭"传感器/场景自动代操作"（dead-man switch 核心之一）：
     // cn 区不自动签到，仅本地提醒用户本人，由用户手动确认平安。
     if (AppConfig.isChinaRegion) {
-      final title = source == 'location' ? '已离开${fenceName ?? '安全区'}' : '手表检测到你';
+      final title = source == 'location' ? tr.z0344(fenceName ?? '安全区') : tr.z0345;
       final body = source == 'location'
-          ? '你已离开「${fenceName ?? '安全区'}」，请打开 App 确认平安'
-          : '检测到你的心跳，请打开 App 确认平安';
+          ? tr.z0346(fenceName ?? '安全区')
+          : tr.z0347;
       await _showLocalPrompt(1005, title, body);
       if (kDebugMode) {
         debugPrint('[SafetyService][CN] 场景化确认本地提醒（未自动签到）: source=$source');
@@ -704,10 +705,10 @@ class SafetyService {
 
   /// 场景化确认本地通知
   Future<void> _showSceneCheckInNotification(String source, {String? fenceName}) async {
-    const androidDetails = AndroidNotificationDetails(
+    final androidDetails = AndroidNotificationDetails(
       'checkin_reminder',
-      '定时确认提醒',
-      channelDescription: '提醒您进行平安确认',
+      tr.z0006,
+      channelDescription: tr.z0007,
       importance: Importance.high,
       priority: Priority.high,
     );
@@ -716,20 +717,20 @@ class SafetyService {
       presentBadge: true,
       presentSound: true,
     );
-    const details = NotificationDetails(android: androidDetails, iOS: iosDetails);
+    final details = NotificationDetails(android: androidDetails, iOS: iosDetails);
 
     if (source == 'location') {
       await _notifications.show(
         1002,
-        '已离开安全区，自动确认平安 🛡️',
-        '离开「${fenceName ?? '安全区'}」，已自动为你签到平安',
+        tr.z0348,
+        tr.z0349(fenceName ?? '安全区'),
         details,
       );
     } else {
       await _notifications.show(
         1002,
-        '手表检测到你，自动确认平安 💓',
-        '检测到你的心跳，已自动为你签到平安',
+        tr.z0350,
+        tr.z0351,
         details,
       );
     }
@@ -1086,7 +1087,7 @@ class SafetyService {
   // ==================== 跌倒检测功能 ====================
 
   /// 获取跌倒事件列表
-  Future<List<FallEvent>> getFallEvents() async {
+  Future<List<MotionEvent>> getMotionEvents() async {
     await _ensureInitialized();
     final jsonStr = _prefs!.getString(_fallEventsKey);
     if (jsonStr == null) return [];
@@ -1094,7 +1095,7 @@ class SafetyService {
     try {
       final list = jsonDecode(jsonStr) as List<dynamic>;
       return list
-          .map((json) => FallEvent.fromJson(json as Map<String, dynamic>))
+          .map((json) => MotionEvent.fromJson(json as Map<String, dynamic>))
           .toList()
         ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
     } catch (e) {
@@ -1108,9 +1109,9 @@ class SafetyService {
   /// [notifyGuardians] — 【v1.93.0】控制是否立即通知守护者。
   ///   手端跌倒检测设为 false，等用户确认或超时后再通知；
   ///   Apple Watch 端检测保持 true 立即通知。
-  Future<void> recordFallEvent(FallEvent event, {bool notifyGuardians = true}) async {
+  Future<void> recordMotionEvent(MotionEvent event, {bool notifyGuardians = true}) async {
     await _ensureInitialized();
-    final events = await getFallEvents();
+    final events = await getMotionEvents();
     events.insert(0, event);
 
     await _prefs!.setString(
@@ -1119,11 +1120,11 @@ class SafetyService {
     );
 
     if (kDebugMode) debugPrint('[SafetyService] 跌倒事件已记录: ${event.id}');
-    onFallDetected?.call(event);
+    onMotionDetected?.call(event);
 
     // 【中国合规版整改】关闭"自动通知第三方亲友"（dead-man switch 核心之一）：
     // 任何自动外发（含 Watch 立即通知）在 cn 区均改为本地记录，
-    // 由用户手动确认（见 notifyGuardiansAboutFallManually）后才通知守护人。
+    // 由用户手动确认（见 notifyGuardiansAboutMotionManually）后才通知守护人。
     final shouldAutoNotify = notifyGuardians && !AppConfig.isChinaRegion;
     if (shouldAutoNotify) {
       try {
@@ -1137,8 +1138,8 @@ class SafetyService {
       }
     } else {
       if (kDebugMode) {
-        debugPrint('[SafetyService] 跌倒事件已记录'
-            '${AppConfig.isChinaRegion ? '[CN] 等待用户手动确认后再通知守护者' : ''}');
+        debugPrint('[SafetyService] 跌倒事件已记录' +
+            tr.z0352(AppConfig.isChinaRegion ? '[CN] 等待用户手动确认后再通知守护者' : ''));
       }
     }
   }
@@ -1146,7 +1147,7 @@ class SafetyService {
   /// 【中国合规版】用户手动确认跌倒需要帮助后，主动通知守护人
   ///
   /// UI（跌倒确认弹窗"需要帮助"按钮）在用户明确确认时调用，守护人才可见。
-  Future<void> notifyGuardiansAboutFallManually({
+  Future<void> notifyGuardiansAboutMotionManually({
     required DateTime timestamp,
     String? latitude,
     String? longitude,
@@ -1161,9 +1162,9 @@ class SafetyService {
   }
 
   /// 确认跌倒事件
-  Future<void> acknowledgeFallEvent(String eventId, {String? notes}) async {
+  Future<void> acknowledgeMotionEvent(String eventId, {String? notes}) async {
     await _ensureInitialized();
-    final events = await getFallEvents();
+    final events = await getMotionEvents();
     final index = events.indexWhere((e) => e.id == eventId);
     
     if (index != -1) {
@@ -1182,13 +1183,13 @@ class SafetyService {
   }
 
   /// 获取未确认的跌倒事件
-  Future<List<FallEvent>> getUnacknowledgedFallEvents() async {
-    final events = await getFallEvents();
+  Future<List<MotionEvent>> getUnacknowledgedMotionEvents() async {
+    final events = await getMotionEvents();
     return events.where((e) => !e.acknowledged).toList();
   }
 
   /// 清除跌倒事件历史
-  Future<void> clearFallEvents() async {
+  Future<void> clearMotionEvents() async {
     await _ensureInitialized();
     await _prefs!.remove(_fallEventsKey);
     if (kDebugMode) debugPrint('[SafetyService] 跌倒事件历史已清除');

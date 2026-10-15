@@ -10,6 +10,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/app_constants.dart';
+import '../../l10n/i18n.dart';
 
 class LocationService {
   static const String _diagProviderKey = 'geocode_last_provider';
@@ -31,14 +32,14 @@ class LocationService {
       final hasPerm = await hasPermission();
       if (!hasPerm) {
         if (kDebugMode) debugPrint('[LocationService] 位置权限未授权，无法获取位置');
-        return LocationResult.error('位置权限未开启，请先在求助页面开启位置权限');
+        return LocationResult.error(tr.z0300);
       }
 
       // 检查定位服务
       final serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
         if (kDebugMode) debugPrint('[LocationService] 定位服务未开启');
-        return LocationResult.error('定位服务未开启，请在系统设置中开启');
+        return LocationResult.error(tr.z0301);
       }
 
       if (kDebugMode) debugPrint('[LocationService] 权限已授权，获取位置中...');
@@ -82,7 +83,7 @@ class LocationService {
       );
     } catch (e) {
       if (kDebugMode) debugPrint('[LocationService] 位置获取失败: $e');
-      return LocationResult.error('位置获取失败，请手动告知位置');
+      return LocationResult.error(tr.z0302);
     }
   }
 

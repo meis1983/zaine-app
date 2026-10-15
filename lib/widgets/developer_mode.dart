@@ -14,6 +14,7 @@ import '../services/api/auth_service.dart';
 import '../services/platform/health_service.dart';
 import '../services/api/sync_service.dart';
 import '../pages/onboarding_page.dart';
+import '../l10n/i18n.dart';
 
 /// 开发者模式 Mixin
 /// 封装版本号连击检测 + 开发者菜单 + 重置签到逻辑
@@ -83,11 +84,11 @@ mixin DeveloperMode<T extends StatefulWidget> on State<T> {
                 ),
                 const SizedBox(height: 16),
                 // 标题
-                const Padding(
+                Padding(
                   padding: EdgeInsets.symmetric(horizontal: 24),
                   child: Row(
                     children: [
-                      Text('开发者模式 v2.0', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.red)),
+                      Text(tr.z0776, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.red)),
                       Spacer(),
                       Text('DEV', style: TextStyle(fontSize: 10, color: Colors.purple, fontWeight: FontWeight.bold)),
                     ],
@@ -101,8 +102,8 @@ mixin DeveloperMode<T extends StatefulWidget> on State<T> {
                     decoration: BoxDecoration(color: Colors.purple.shade50, borderRadius: BorderRadius.circular(ZaiNeRadius.input)),
                     child: Icon(Icons.videocam_rounded, color: Colors.purple.shade700, size: 20),
                   ),
-                  title: const Text('3D 宣传录制模式', style: TextStyle(fontWeight: FontWeight.w600)),
-                  subtitle: const Text('进入电影感动画秀，用于录制宣传视频'),
+                  title: Text(tr.z0777, style: TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: Text(tr.z0778),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
                     Navigator.pop(ctx);
@@ -118,8 +119,8 @@ mixin DeveloperMode<T extends StatefulWidget> on State<T> {
                     decoration: BoxDecoration(color: Colors.amber.shade50, borderRadius: BorderRadius.circular(10)),
                     child: Icon(Icons.science_rounded, color: Colors.amber.shade700, size: 20),
                   ),
-                  title: const Text('签到模拟器', style: TextStyle(fontWeight: FontWeight.w600)),
-                  subtitle: const Text('设置连续签到天数，测试徽章和里程碑弹窗'),
+                  title: Text(tr.s212, style: TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: Text(tr.s213),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () { Navigator.pop(ctx); showCheckInSimulator(); },
                   contentPadding: const EdgeInsets.symmetric(horizontal: 24),
@@ -132,8 +133,8 @@ mixin DeveloperMode<T extends StatefulWidget> on State<T> {
                     decoration: BoxDecoration(color: Colors.teal.shade50, borderRadius: BorderRadius.circular(10)),
                     child: Icon(Icons.refresh, color: Colors.teal.shade700, size: 20),
                   ),
-                  title: const Text('重置今日签到', style: TextStyle(fontWeight: FontWeight.w600)),
-                  subtitle: const Text('清除今天的签到记录，可重新签到'),
+                  title: Text(tr.z0779, style: TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: Text(tr.z0780),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () async { Navigator.pop(ctx); await resetTodayCheckIn(); },
                   contentPadding: const EdgeInsets.symmetric(horizontal: 24),
@@ -146,8 +147,8 @@ mixin DeveloperMode<T extends StatefulWidget> on State<T> {
                     decoration: BoxDecoration(color: Colors.pink.shade50, borderRadius: BorderRadius.circular(10)),
                     child: Icon(Icons.card_giftcard, color: Colors.pink.shade700, size: 20),
                   ),
-                  title: const Text('重置守护卡', style: TextStyle(fontWeight: FontWeight.w600)),
-                  subtitle: const Text('恢复为初始3张卡状态'),
+                  title: Text(tr.s214, style: TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: Text(tr.z0781),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () async { Navigator.pop(ctx); await resetGuardianCard(); },
                   contentPadding: const EdgeInsets.symmetric(horizontal: 24),
@@ -160,8 +161,8 @@ mixin DeveloperMode<T extends StatefulWidget> on State<T> {
                     decoration: BoxDecoration(color: Colors.orange.shade50, borderRadius: BorderRadius.circular(10)),
                     child: Icon(Icons.workspace_premium_rounded, color: Colors.orange.shade700, size: 20),
                   ),
-                  title: const Text('切换会员等级', style: TextStyle(fontWeight: FontWeight.w600)),
-                  subtitle: const Text('体验版 ↔ 智能版'),
+                  title: Text(tr.s222, style: TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: Text(tr.z0782),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () { Navigator.pop(ctx); showMembershipSwitchDialog(); },
                   contentPadding: const EdgeInsets.symmetric(horizontal: 24),
@@ -174,8 +175,8 @@ mixin DeveloperMode<T extends StatefulWidget> on State<T> {
                     decoration: BoxDecoration(color: Colors.red.shade50, borderRadius: BorderRadius.circular(10)),
                     child: Icon(Icons.timer_off_rounded, color: Colors.red.shade400, size: 20),
                   ),
-                  title: const Text('模拟会员过期降级', style: TextStyle(fontWeight: FontWeight.w600)),
-                  subtitle: const Text('测试智能版过期后自动降级为体验版'),
+                  title: Text(tr.s224, style: TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: Text(tr.z0783),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () { Navigator.pop(ctx); showMembershipExpiryDialog(); },
                   contentPadding: const EdgeInsets.symmetric(horizontal: 24),
@@ -187,8 +188,8 @@ mixin DeveloperMode<T extends StatefulWidget> on State<T> {
                     decoration: BoxDecoration(color: Colors.green.shade50, borderRadius: BorderRadius.circular(10)),
                     child: Icon(Icons.location_searching_rounded, color: Colors.green.shade700, size: 20),
                   ),
-                  title: const Text('逆地理诊断', style: TextStyle(fontWeight: FontWeight.w600)),
-                  subtitle: const Text('查看本次地址来源（高德/系统）及错误码'),
+                  title: Text(tr.z0032, style: TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: Text(tr.z0784),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () { Navigator.pop(ctx); showGeocodeDiagnostics(); },
                   contentPadding: const EdgeInsets.symmetric(horizontal: 24),
@@ -200,8 +201,8 @@ mixin DeveloperMode<T extends StatefulWidget> on State<T> {
                     decoration: BoxDecoration(color: Colors.indigo.shade50, borderRadius: BorderRadius.circular(10)),
                     child: Icon(Icons.watch_rounded, color: Colors.indigo.shade700, size: 20),
                   ),
-                  title: const Text('Apple Watch 测试', style: TextStyle(fontWeight: FontWeight.w600)),
-                  subtitle: const Text('查看 Watch 信号 & 触发一次静默签到'),
+                  title: Text(tr.z0033, style: TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: Text(tr.z0785),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () { Navigator.pop(ctx); showWatchDiagnostics(); },
                   contentPadding: const EdgeInsets.symmetric(horizontal: 24),
@@ -213,8 +214,8 @@ mixin DeveloperMode<T extends StatefulWidget> on State<T> {
                     decoration: BoxDecoration(color: Colors.green.shade50, borderRadius: BorderRadius.circular(10)),
                     child: Icon(Icons.favorite_rounded, color: Colors.green.shade700, size: 20),
                   ),
-                  title: const Text('HealthKit 诊断', style: TextStyle(fontWeight: FontWeight.w600)),
-                  subtitle: const Text('查看授权/错误/最近一次拉取，并可一键触发读取'),
+                  title: Text(tr.z0034, style: TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: Text(tr.z0786),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () { Navigator.pop(ctx); showHealthDiagnostics(); },
                   contentPadding: const EdgeInsets.symmetric(horizontal: 24),
@@ -226,8 +227,8 @@ mixin DeveloperMode<T extends StatefulWidget> on State<T> {
                     decoration: BoxDecoration(color: Colors.blueGrey.shade50, borderRadius: BorderRadius.circular(10)),
                     child: Icon(Icons.storage_rounded, color: Colors.blueGrey.shade700, size: 20),
                   ),
-                  title: const Text('导出工作记忆 / 切换账号', style: TextStyle(fontWeight: FontWeight.w600)),
-                  subtitle: const Text('导出本机调试数据（不含token）并退出登录'),
+                  title: Text(tr.z0787, style: TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: Text(tr.z0788),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () { Navigator.pop(ctx); showWorkMemoryExport(); },
                   contentPadding: const EdgeInsets.symmetric(horizontal: 24),
@@ -240,16 +241,16 @@ mixin DeveloperMode<T extends StatefulWidget> on State<T> {
                     decoration: BoxDecoration(color: Colors.blue.shade50, borderRadius: BorderRadius.circular(10)),
                     child: Icon(Icons.replay_rounded, color: Colors.blue.shade700, size: 20),
                   ),
-                  title: const Text('重新显示引导页', style: TextStyle(fontWeight: FontWeight.w600)),
-                  subtitle: const Text('下次启动App时再次显示开机引导'),
+                  title: Text(tr.s216, style: TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: Text(tr.s217),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () async {
                     final prefs = await SharedPreferences.getInstance();
                     await prefs.setBool('onboarding_completed', false);
                     if (!mounted || !ctx.mounted) return;
                     Navigator.pop(ctx);
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                      content: Text('已设置，下次启动将显示引导页 ✓'),
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                      content: Text(tr.s218),
                       backgroundColor: Colors.purple,
                       behavior: SnackBarBehavior.floating,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(10))),
@@ -280,20 +281,20 @@ mixin DeveloperMode<T extends StatefulWidget> on State<T> {
       builder: (ctx) {
         return AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text('逆地理诊断'),
+          title: Text(tr.z0032),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('来源：$provider'),
+              Text(tr.z0789(provider)),
               const SizedBox(height: 6),
-              Text('时间：${time.isEmpty ? "无" : time}'),
+              Text(tr.z0790(time.isEmpty ? "无" : time)),
               const SizedBox(height: 6),
-              Text('地址：${address.isEmpty ? "无" : address}'),
+              Text(tr.z0791(address.isEmpty ? "无" : address)),
               const SizedBox(height: 12),
-              Text('高德 info：${amapInfo.isEmpty ? "无" : amapInfo}'),
+              Text(tr.z0792(amapInfo.isEmpty ? "无" : amapInfo)),
               const SizedBox(height: 6),
-              Text('高德 infocode：${amapInfoCode.isEmpty ? "无" : amapInfoCode}'),
+              Text(tr.z0793(amapInfoCode.isEmpty ? "无" : amapInfoCode)),
             ],
           ),
           actions: [
@@ -303,13 +304,13 @@ mixin DeveloperMode<T extends StatefulWidget> on State<T> {
                 await Clipboard.setData(ClipboardData(text: text));
                 if (ctx.mounted) Navigator.pop(ctx);
                 if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                    content: Text('诊断信息已复制'),
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    content: Text(tr.z0794),
                     behavior: SnackBarBehavior.floating,
                   ));
                 }
               },
-              child: const Text('复制'),
+              child: Text(tr.s210),
             ),
             TextButton(
               onPressed: () async {
@@ -320,11 +321,11 @@ mixin DeveloperMode<T extends StatefulWidget> on State<T> {
                 await prefs.remove('geocode_last_amap_infocode');
                 if (ctx.mounted) Navigator.pop(ctx);
               },
-              child: const Text('清除'),
+              child: Text(tr.s100),
             ),
             ElevatedButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('关闭'),
+              child: Text(tr.s048),
             ),
           ],
         );
@@ -347,18 +348,18 @@ mixin DeveloperMode<T extends StatefulWidget> on State<T> {
       builder: (ctx) {
         return AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text('Apple Watch 测试'),
+          title: Text(tr.z0033),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('pending_watch_checkin：${pending ? "true" : "false"}'),
               const SizedBox(height: 6),
-              Text('最后一次 Watch action：${lastAction.isEmpty ? "无" : lastAction}'),
+              Text(tr.z0795(lastAction.isEmpty ? "无" : lastAction)),
               const SizedBox(height: 6),
-              Text('最后一次 Watch 时间：${lastTime.isEmpty ? "无" : lastTime}'),
+              Text(tr.z0796(lastTime.isEmpty ? "无" : lastTime)),
               const SizedBox(height: 12),
-              const Text('提示：健康数据读取不依赖 Watch App，Apple Watch 佩戴数据会自动写入 iPhone 健康。'),
+              Text(tr.z0797),
             ],
           ),
           actions: [
@@ -367,13 +368,13 @@ mixin DeveloperMode<T extends StatefulWidget> on State<T> {
                 await prefs.setBool('pending_watch_checkin', true);
                 if (ctx.mounted) Navigator.pop(ctx);
                 if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                    content: Text('已写入 Watch 签到信号（pending_watch_checkin=true）'),
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    content: Text(tr.z0798),
                     behavior: SnackBarBehavior.floating,
                   ));
                 }
               },
-              child: const Text('模拟信号'),
+              child: Text(tr.z0799),
             ),
             TextButton(
               onPressed: () async {
@@ -381,11 +382,11 @@ mixin DeveloperMode<T extends StatefulWidget> on State<T> {
                 unawaited(SyncService.pullFromServer());
                 if (ctx.mounted) Navigator.pop(ctx);
               },
-              child: const Text('触发静默签到'),
+              child: Text(tr.z0800),
             ),
             ElevatedButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('关闭'),
+              child: Text(tr.s048),
             ),
           ],
         );
@@ -410,27 +411,27 @@ mixin DeveloperMode<T extends StatefulWidget> on State<T> {
       builder: (ctx) {
         return AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text('HealthKit 诊断'),
+          title: Text(tr.z0034),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('最近授权：${authorized == null ? "未知" : (authorized ? "true" : "false")}'),
+                Text(tr.z0801(authorized == null ? "未知" : (authorized ? "true" : "false"))),
                 const SizedBox(height: 6),
-                Text('授权时间：${authTime.isEmpty ? "无" : authTime}'),
+                Text(tr.z0802(authTime.isEmpty ? "无" : authTime)),
                 const SizedBox(height: 6),
-                Text('授权错误：${authErr.isEmpty ? "无" : authErr}'),
+                Text(tr.z0803(authErr.isEmpty ? "无" : authErr)),
                 const SizedBox(height: 12),
-                Text('最近拉取条数：${fetchCount == null ? "未知" : fetchCount.toString()}'),
+                Text(tr.z0804(fetchCount == null ? "未知" : fetchCount.toString())),
                 const SizedBox(height: 6),
-                Text('拉取时间：${fetchTime.isEmpty ? "无" : fetchTime}'),
+                Text(tr.z0805(fetchTime.isEmpty ? "无" : fetchTime)),
                 const SizedBox(height: 6),
-                Text('拉取错误：${fetchErr.isEmpty ? "无" : fetchErr}'),
+                Text(tr.z0806(fetchErr.isEmpty ? "无" : fetchErr)),
                 const SizedBox(height: 12),
-                Text('按类型条数：${typeCounts.isEmpty ? "无" : typeCounts}', style: const TextStyle(fontSize: 12)),
+                Text(tr.z0807(typeCounts.isEmpty ? "无" : typeCounts), style: const TextStyle(fontSize: 12)),
                 const SizedBox(height: 6),
-                Text('按类型错误：${typeErrors.isEmpty ? "无" : typeErrors}', style: const TextStyle(fontSize: 12)),
+                Text(tr.z0808(typeErrors.isEmpty ? "无" : typeErrors), style: const TextStyle(fontSize: 12)),
               ],
             ),
           ),
@@ -440,18 +441,18 @@ mixin DeveloperMode<T extends StatefulWidget> on State<T> {
                 await HealthService.requestPermissions();
                 if (ctx.mounted) Navigator.pop(ctx);
               },
-              child: const Text('重新授权'),
+              child: Text(tr.z0809),
             ),
             TextButton(
               onPressed: () async {
                 await HealthService.getHealthSummary();
                 if (ctx.mounted) Navigator.pop(ctx);
               },
-              child: const Text('触发读取'),
+              child: Text(tr.z0810),
             ),
             ElevatedButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('关闭'),
+              child: Text(tr.s048),
             ),
           ],
         );
@@ -513,7 +514,7 @@ mixin DeveloperMode<T extends StatefulWidget> on State<T> {
       builder: (ctx) {
         return AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text('导出工作记忆'),
+          title: Text(tr.z0811),
           content: SingleChildScrollView(
             child: Text(
               text,
@@ -526,13 +527,13 @@ mixin DeveloperMode<T extends StatefulWidget> on State<T> {
                 await Clipboard.setData(ClipboardData(text: text));
                 if (ctx.mounted) Navigator.pop(ctx);
                 if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                    content: Text('已复制工作记忆（不含token）'),
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    content: Text(tr.z0812),
                     behavior: SnackBarBehavior.floating,
                   ));
                 }
               },
-              child: const Text('复制'),
+              child: Text(tr.s210),
             ),
             TextButton(
               onPressed: () async {
@@ -543,11 +544,11 @@ mixin DeveloperMode<T extends StatefulWidget> on State<T> {
                   (route) => false,
                 );
               },
-              child: const Text('退出登录'),
+              child: Text(tr.s014),
             ),
             ElevatedButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('关闭'),
+              child: Text(tr.s048),
             ),
           ],
         );
@@ -563,33 +564,33 @@ mixin DeveloperMode<T extends StatefulWidget> on State<T> {
 
     // 预设快捷按钮对应的天数和标签
     final quickOptions = [
-      (1, '第1天'),
-      (6, '第6天'),
-      (7, '第7天'),
-      (29, '第29天'),
-      (30, '第30天'),
-      (99, '第99天'),
-      (100, '第100天'),
-      (364, '第364天'),
-      (365, '第365天'),
-      (1825, '第1825天'),
+      (1, tr.z0813),
+      (6, tr.z0814),
+      (7, tr.z0815),
+      (29, tr.z0816),
+      (30, tr.z0817),
+      (99, tr.z0818),
+      (100, tr.z0819),
+      (364, tr.z0820),
+      (365, tr.z0821),
+      (1825, tr.z0822),
     ];
 
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Row(children: [
+        title: Row(children: [
           Icon(Icons.science_rounded, color: Colors.amber),
           SizedBox(width: 8),
-          Text('签到模拟器'),
+          Text(tr.s212),
         ]),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('设置连续签到天数，然后点击"模拟签到"。',
+              Text(tr.z0823,
                   style: TextStyle(fontSize: 13, color: Colors.grey)),
               const SizedBox(height: 16),
               TextField(
@@ -597,8 +598,8 @@ mixin DeveloperMode<T extends StatefulWidget> on State<T> {
                 keyboardType: TextInputType.number,
                 autofocus: true,
                 decoration: InputDecoration(
-                  labelText: '连续签到天数',
-                  hintText: '输入 1-1825 之间的天数',
+                  labelText: tr.z0824,
+                  hintText: tr.z0825,
                   prefixIcon: const Icon(Icons.calendar_today, size: 20),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -608,7 +609,7 @@ mixin DeveloperMode<T extends StatefulWidget> on State<T> {
                 ),
               ),
               const SizedBox(height: 12),
-              const Text('快捷选择：',
+              Text(tr.z0826,
                   style: TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w600)),
               const SizedBox(height: 8),
               Wrap(
@@ -644,13 +645,13 @@ mixin DeveloperMode<T extends StatefulWidget> on State<T> {
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('取消')),
+              child: Text(tr.s016)),
           ElevatedButton(
             onPressed: () async {
               final days = int.tryParse(daysController.text.trim());
               if (days == null || days < 1 || days > 1825) {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                  content: Text('请输入 1-1825 之间的有效天数'),
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                  content: Text(tr.z0827),
                   backgroundColor: Colors.orange,
                   behavior: SnackBarBehavior.floating,
                 ));
@@ -660,7 +661,7 @@ mixin DeveloperMode<T extends StatefulWidget> on State<T> {
               await applySimulatedCheckIn(days);
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.amber.shade700),
-            child: const Text('模拟签到'),
+            child: Text(tr.z0828),
           ),
         ],
       ),
@@ -712,7 +713,7 @@ mixin DeveloperMode<T extends StatefulWidget> on State<T> {
     if (!mounted) return;
     HapticFeedback.heavyImpact();
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text('已模拟连续签到 $days 天 ✓'),
+      content: Text(tr.z0829(days)),
       backgroundColor: Colors.amber.shade700,
       behavior: SnackBarBehavior.floating,
       shape: const RoundedRectangleBorder(
@@ -741,7 +742,7 @@ mixin DeveloperMode<T extends StatefulWidget> on State<T> {
     }
     userName ??= prefs.getString('user_name');
     userName ??= prefs.getString('user_phone');
-    final displayName = userName ?? '在呢用户';
+    final displayName = userName ?? tr.s057;
     // 【修复 v1.9.8】等待底部弹窗关闭动画完成，避免 context 层级冲突
     await Future.delayed(const Duration(milliseconds: 300));
     if (!mounted) return;
@@ -764,7 +765,7 @@ mixin DeveloperMode<T extends StatefulWidget> on State<T> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('弹窗显示失败: $e'),
+            content: Text(tr.z0830(e)),
             backgroundColor: Colors.red,
             behavior: SnackBarBehavior.floating,
           ),
@@ -780,18 +781,18 @@ mixin DeveloperMode<T extends StatefulWidget> on State<T> {
       builder: (context) => AlertDialog(
         shape:
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Row(children: [
+        title: Row(children: [
           Icon(Icons.warning_amber_rounded, color: Colors.orange),
           SizedBox(width: 8),
-          Text('重置签到'),
+          Text(tr.z0831),
         ]),
-        content: const SingleChildScrollView(
+        content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('这将清除今天的签到记录，你可以重新签到。'),
+              Text(tr.z0832),
               SizedBox(height: 8),
-              Text('连续天数不会受影响。',
+              Text(tr.z0833,
                   style: TextStyle(fontSize: 12, color: Colors.grey)),
             ],
           ),
@@ -799,11 +800,11 @@ mixin DeveloperMode<T extends StatefulWidget> on State<T> {
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('取消')),
+              child: Text(tr.s016)),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(backgroundColor: Colors.teal),
-            child: const Text('确认重置'),
+            child: Text(tr.s110),
           ),
         ],
       ),
@@ -818,8 +819,8 @@ mixin DeveloperMode<T extends StatefulWidget> on State<T> {
       await prefs.setStringList('checkin_history', history);
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('今日签到已重置 ✓'),
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(tr.z0834),
         backgroundColor: Colors.teal,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
@@ -837,25 +838,25 @@ mixin DeveloperMode<T extends StatefulWidget> on State<T> {
       builder: (context) => AlertDialog(
         shape:
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Row(children: [
+        title: Row(children: [
           Icon(Icons.card_giftcard, color: Colors.pink),
           SizedBox(width: 8),
-          Text('重置守护卡'),
+          Text(tr.s214),
         ]),
-        content: const SingleChildScrollView(
+        content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('这将重置守护卡为初始状态：'),
+              Text(tr.z0835),
               SizedBox(height: 8),
-              Text('• 后端配额重置为 3 张（30天有效期）',
+              Text(tr.z0836,
                   style: TextStyle(fontSize: 12, color: Colors.grey)),
-              Text('• 清除本地所有守护卡缓存数据',
+              Text(tr.z0837,
                   style: TextStyle(fontSize: 12, color: Colors.grey)),
-              Text('• 重置首次发卡日期',
+              Text(tr.z0838,
                   style: TextStyle(fontSize: 12, color: Colors.grey)),
               SizedBox(height: 8),
-              Text('后端已发出的卡片不受影响，仍可被注册',
+              Text(tr.z0839,
                   style: TextStyle(fontSize: 11, color: Colors.orange)),
             ],
           ),
@@ -863,11 +864,11 @@ mixin DeveloperMode<T extends StatefulWidget> on State<T> {
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('取消')),
+              child: Text(tr.s016)),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(backgroundColor: Colors.pink),
-            child: const Text('确认重置'),
+            child: Text(tr.s110),
           ),
         ],
       ),
@@ -925,8 +926,8 @@ mixin DeveloperMode<T extends StatefulWidget> on State<T> {
       if (!mounted) return;
       HapticFeedback.mediumImpact();
       final msg = backendOk
-          ? '守护卡已重置为初始状态 ✓（3张，30天有效）'
-          : '本地守护卡已重置 ✓（后端未登录未重置）';
+          ? tr.z0840
+          : tr.z0841;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(msg),
         backgroundColor: Colors.pink,
@@ -942,8 +943,8 @@ mixin DeveloperMode<T extends StatefulWidget> on State<T> {
     final isSmart = MembershipService.isSmartMember();
 
     if (!isSmart) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('请先切换为智能版，再测试过期降级'),
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(tr.z0842),
         backgroundColor: Colors.orange,
         behavior: SnackBarBehavior.floating,
       ));
@@ -954,28 +955,28 @@ mixin DeveloperMode<T extends StatefulWidget> on State<T> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Row(children: [
+        title: Row(children: [
           Icon(Icons.timer_off_rounded, color: Colors.red),
           SizedBox(width: 8),
-          Text('模拟会员过期'),
+          Text(tr.z0843),
         ]),
-        content: const SingleChildScrollView(
+        content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('模拟智能版过期后自动降级为体验版：'),
+              Text(tr.z0844),
               SizedBox(height: 8),
-              Text('• 紧急求助快捷拨打上限：3位 → 1位',
+              Text(tr.z0845,
                   style: TextStyle(fontSize: 12, color: Colors.grey)),
-              Text('• 联系人上限：10位 → 5位',
+              Text(tr.z0846,
                   style: TextStyle(fontSize: 12, color: Colors.grey)),
-              Text('• 超出限制的联系人显示锁定图标',
+              Text(tr.z0847,
                   style: TextStyle(fontSize: 12, color: Colors.grey)),
-              Text('• 已添加的联系人数据保留',
+              Text(tr.z0848,
                   style: TextStyle(fontSize: 12, color: Colors.grey)),
               SizedBox(height: 8),
-              Text('⚠️ 仅开发测试用，不影响后端数据',
+              Text(tr.z0035,
                   style: TextStyle(fontSize: 11, color: Colors.orange)),
             ],
           ),
@@ -983,7 +984,7 @@ mixin DeveloperMode<T extends StatefulWidget> on State<T> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('取消'),
+            child: Text(tr.s016),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -1000,8 +1001,8 @@ mixin DeveloperMode<T extends StatefulWidget> on State<T> {
               Navigator.pop(ctx);
               if (!mounted) return;
               HapticFeedback.heavyImpact();
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                content: Text('已模拟会员过期降级 → 体验版 ✓'),
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text(tr.z0849),
                 backgroundColor: Colors.red,
                 behavior: SnackBarBehavior.floating,
                 shape: RoundedRectangleBorder(
@@ -1010,7 +1011,7 @@ mixin DeveloperMode<T extends StatefulWidget> on State<T> {
               ));
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red.shade400),
-            child: const Text('模拟过期'),
+            child: Text(tr.z0850),
           ),
         ],
       ),
@@ -1021,34 +1022,34 @@ mixin DeveloperMode<T extends StatefulWidget> on State<T> {
   void showMembershipSwitchDialog() {
     final isSmart = MembershipService.isSmartMember();
     final targetLevel = isSmart ? MembershipService.levelFree : MembershipService.levelSmart;
-    final targetLabel = isSmart ? '体验版（免费）' : '智能版（¥9/月）';
+    final targetLabel = isSmart ? tr.z0851 : tr.z0852;
     final targetDesc = isSmart
-        ? '紧急求助快捷拨打 1 位 · 最多 5 位联系人'
-        : '紧急求助快捷拨打 3 位 · 最多 10 位联系人';
+        ? tr.z0853
+        : tr.z0854;
 
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Row(children: [
+        title: Row(children: [
           Icon(Icons.workspace_premium_rounded, color: Colors.orange),
           SizedBox(width: 8),
-          Text('切换会员等级'),
+          Text(tr.s222),
         ]),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('当前：${isSmart ? '智能版' : '体验版'}'),
+              Text(tr.z0855(isSmart ? '智能版' : '体验版')),
               const SizedBox(height: 4),
-              Text('切换为：$targetLabel',
+              Text(tr.z0856(targetLabel),
                   style: TextStyle(fontWeight: FontWeight.w600,
                       color: isSmart ? Colors.grey.shade800 : Colors.orange.shade800)),
               const SizedBox(height: 4),
               Text(targetDesc, style: const TextStyle(fontSize: 12, color: Colors.grey)),
               const SizedBox(height: 8),
-              Text('⚠️ 仅开发测试用，不影响后端数据',
+              Text(tr.z0035,
                   style: TextStyle(fontSize: 11, color: Colors.orange.shade700)),
             ],
           ),
@@ -1056,7 +1057,7 @@ mixin DeveloperMode<T extends StatefulWidget> on State<T> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('取消'),
+            child: Text(tr.s016),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -1066,7 +1067,7 @@ mixin DeveloperMode<T extends StatefulWidget> on State<T> {
               if (!mounted) return;
               HapticFeedback.mediumImpact();
               ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                content: Text('已切换为 $targetLabel ✓'),
+                content: Text(tr.z0857(targetLabel)),
                 backgroundColor: isSmart ? Colors.grey.shade700 : Colors.orange.shade700,
                 behavior: SnackBarBehavior.floating,
                 shape: const RoundedRectangleBorder(
@@ -1077,7 +1078,7 @@ mixin DeveloperMode<T extends StatefulWidget> on State<T> {
             style: ElevatedButton.styleFrom(
               backgroundColor: isSmart ? Colors.grey : Colors.orange.shade700,
             ),
-            child: const Text('确认切换'),
+            child: Text(tr.z0858),
           ),
         ],
       ),

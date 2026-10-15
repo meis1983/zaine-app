@@ -16,12 +16,18 @@ import '../services/api_service.dart';
 import '../services/api/sync_service.dart'; // [191] 头像同步成功后强制拉取，保证守护圈即时刷新
 import 'dart:async'; // unawaited
 import 'redeem_card_page.dart';
+import 'my_guardian_code_page.dart';
 import 'settings_page.dart';
-import 'safety_settings_page.dart';
+// 【CN 165 合规整改 · 方案 A（文件 swap）】
+// profile_page 无条件 import 此 active 文件；海外构建时它就是完整海外实现（含 SafetySettingsPage 跳转）。
+// CN 构建由 build_ipa.sh 在编译前把本文件整体替换为 safety_settings_navigator_stub.dart
+//   （无 SafetySettingsPage import），trap 在构建结束后还原 → CN 二进制物理不含安全中心类符号。
+import 'safety_settings_navigator.dart';
 import '../config/app_config.dart';
 import 'statistics_page.dart';
 import '../widgets/guardian_achievement_badge.dart';
 import '../services/social/guardian_message_service.dart';
+import '../l10n/i18n.dart';
 
 class ProfilePage extends StatefulWidget {
   /// 是否为 push 模式（需要返回按钮）
@@ -48,8 +54,8 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _ageController = TextEditingController();
-  String _gender = '男';
-  String _bloodType = '未知';
+  String _gender = tr.s179;
+  String _bloodType = tr.s013;
   final _allergyController = TextEditingController();
 
   // 健康档案 - 选填
@@ -137,12 +143,12 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
       final profile = jsonDecode(profileJson);
       _nameController.text = profile['name'] ?? '';
       _ageController.text = profile['age']?.toString() ?? '';
-      _gender = profile['gender'] ?? '男';
+      _gender = profile['gender'] ?? tr.s179;
       
       // 【修复 v2.0】校验血型初始值，防止 DropdownButton 断言红屏
-      final savedBloodType = profile['bloodType'] ?? '未知';
-      const allowedBloodTypes = ['未知', 'A型', 'B型', 'O型', 'AB型', '其他'];
-      _bloodType = allowedBloodTypes.contains(savedBloodType) ? savedBloodType : '未知';
+      final savedBloodType = profile['bloodType'] ?? tr.s013;
+      final allowedBloodTypes = [tr.s013, tr.s180, tr.s181, tr.s182, tr.s183, tr.s184];
+      _bloodType = allowedBloodTypes.contains(savedBloodType) ? savedBloodType : tr.s013;
       
       _allergyController.text = profile['allergy'] ?? '';
       _diseaseController.text = profile['disease'] ?? '';
@@ -220,7 +226,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
         debugPrint('[Profile] ⚠️ 头像文件保存失败！路径: $savedPath');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('头像保存失败，请重试'), backgroundColor: Colors.red),
+             SnackBar(content: Text(tr.s185), backgroundColor: Colors.red),
           );
         }
         return;
@@ -250,7 +256,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(avatarOk ? '头像已同步到云端 ✓' : '头像同步失败，请稍后重试'),
+            content: Text(avatarOk ? tr.s186 : tr.s187),
             backgroundColor: avatarOk ? Colors.green : Colors.red,
           ),
         );
@@ -260,7 +266,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
       debugPrint('[Profile] 头像保存异常: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('头像保存失败: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text(tr.s188(e)), backgroundColor: Colors.red),
         );
       }
     }
@@ -341,7 +347,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
     if (!_formKey.currentState!.validate()) return;
     if (_isSaving) return; // 【修复 v1.9.95】防止重复点击
 
-    setState(() => _isSaving = true); // 【修复 v1.9.95】明确 loading 反馈，消除"点了没反应"
+    setState(() => _isSaving = true); // 【修复 v1.9.95】明确 loading 反馈，消除tr.z0293
 
     final prefs = await SharedPreferences.getInstance();
     if (_isDisposed || !mounted) {
@@ -418,8 +424,8 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
                   color: Colors.white),
               const SizedBox(width: ZaiNeSpacing.md),
               Text(syncOk
-                  ? '健康档案保存成功！'
-                  : '本地保存成功，云端同步失败，请检查网络'),
+                  ? tr.s189
+                  : tr.s190),
             ],
           ),
           backgroundColor: syncOk ? Colors.green : Colors.orange,
@@ -441,20 +447,20 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
   /// 主题选择
   void _showThemeSelector() {
     final themes = [
-      {'name': '浅色', 'mode': ZaiNeThemeMode.light, 'icon': Icons.light_mode, 'color': Colors.orange},
-      {'name': '深色', 'mode': ZaiNeThemeMode.dark, 'icon': Icons.dark_mode, 'color': Colors.indigo},
-      {'name': '柔光', 'mode': ZaiNeThemeMode.soft, 'icon': Icons.auto_awesome, 'color': Colors.pink},
+      {'name': tr.s055, 'mode': ZaiNeThemeMode.light, 'icon': Icons.light_mode, 'color': Colors.orange},
+      {'name': tr.s053, 'mode': ZaiNeThemeMode.dark, 'icon': Icons.dark_mode, 'color': Colors.indigo},
+      {'name': tr.s054, 'mode': ZaiNeThemeMode.soft, 'icon': Icons.auto_awesome, 'color': Colors.pink},
     ];
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.pill)),
-        title: const Row(
+        title:  Row(
           children: [
             Icon(Icons.palette, color: ZaiNeColors.brandOrange),
             SizedBox(width: ZaiNeSpacing.sm),
-            Text('主题设置'),
+            Text(tr.s191),
           ],
         ),
         content: Column(
@@ -490,18 +496,18 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.pill)),
-        title: const Row(
+        title:  Row(
           children: [
             Icon(Icons.feedback, color: ZaiNeColors.brandOrange),
             SizedBox(width: ZaiNeSpacing.sm),
-            Text('问题反馈'),
+            Text(tr.s192),
           ],
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
-              '您的反馈对我们非常重要，我们会尽快处理。',
+             Text(
+              tr.s193,
               style: TextStyle(fontSize: 13, color: Colors.grey),
             ),
             const SizedBox(height: ZaiNeSpacing.lg),
@@ -509,7 +515,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
               controller: controller,
               maxLines: 4,
               decoration: InputDecoration(
-                hintText: '请描述您遇到的问题或建议...',
+                hintText: tr.s194,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(ZaiNeRadius.small),
                 ),
@@ -521,7 +527,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('取消'),
+            child:  Text(tr.s016),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -543,8 +549,8 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
               if (!context.mounted) return;
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('感谢您的反馈，我们会尽快处理！✓'),
+                 SnackBar(
+                  content: Text(tr.s195),
                   backgroundColor: ZaiNeColors.brandOrange,
                   behavior: SnackBarBehavior.floating,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(10))),
@@ -554,7 +560,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
             style: ElevatedButton.styleFrom(
               backgroundColor: ZaiNeColors.brandOrange,
             ),
-            child: const Text('提交反馈'),
+            child:  Text(tr.s196),
           ),
         ],
       ),
@@ -566,8 +572,8 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
     final prefs = await SharedPreferences.getInstance();
     final rawList = prefs.getStringList('feedback_list') ?? [];
     if (rawList.isEmpty && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('暂无反馈记录'),
+      ScaffoldMessenger.of(context).showSnackBar( SnackBar(
+        content: Text(tr.s197),
         backgroundColor: Colors.grey,
       ));
       return;
@@ -599,7 +605,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
                 children: [
                   Icon(Icons.feedback_outlined, color: Colors.orange.shade700),
                   const SizedBox(width: ZaiNeSpacing.sm),
-                  Text('用户反馈 (${rawList.length}条)',
+                  Text(tr.s198(rawList.length),
                       style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   const Spacer(),
                   // 一键清空按钮
@@ -608,14 +614,14 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
                       final confirm = await showDialog<bool>(
                         context: context,
                         builder: (c) => AlertDialog(
-                          title: const Text('确认清空'),
-                          content: const Text('确定要删除所有反馈记录吗？此操作不可恢复。'),
+                          title:  Text(tr.s199),
+                          content:  Text(tr.s200),
                           actions: [
-                            TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('取消')),
+                            TextButton(onPressed: () => Navigator.pop(c, false), child:  Text(tr.s016)),
                             ElevatedButton(
                               onPressed: () => Navigator.pop(c, true),
                               style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                              child: const Text('确认删除', style: TextStyle(color: Colors.white)),
+                              child:  Text(tr.s034, style: TextStyle(color: Colors.white)),
                             ),
                           ],
                         ),
@@ -624,15 +630,15 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
                         final p = await SharedPreferences.getInstance();
                         await p.remove('feedback_list');
                         if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                            content: Text('反馈记录已清空'),
+                          ScaffoldMessenger.of(context).showSnackBar( SnackBar(
+                            content: Text(tr.s201),
                             backgroundColor: Colors.red,
                           ));
                         }
                       }
                     },
                     icon: const Icon(Icons.delete_outline, size: 16),
-                    label: const Text('清空', style: TextStyle(color: Colors.red, fontSize: 12)),
+                    label:  Text(tr.s202, style: TextStyle(color: Colors.red, fontSize: 12)),
                   ),
                 ],
               ),
@@ -644,7 +650,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
                 itemCount: rawList.length,
                 itemBuilder: (context, index) {
                   final item = jsonDecode(rawList[index]);
-                  final timeStr = DateTime.tryParse(item['time'] ?? '')?.toString().substring(0, 19) ?? '未知时间';
+                  final timeStr = DateTime.tryParse(item['time'] ?? '')?.toString().substring(0, 19) ?? tr.s203;
                   return Card(
                     margin: const EdgeInsets.only(bottom: ZaiNeSpacing.cardXs),
                     elevation: 0,
@@ -705,18 +711,18 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
               children: [
                 Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(ZaiNeRadius.tiny)))),
                 const SizedBox(height: ZaiNeSpacing.lg),
-                const Row(children: [
-                  const Icon(Icons.shield, color: ZaiNeColors.brandOrange),
-                  const SizedBox(width: ZaiNeSpacing.sm),
-                  const Text('守护关系', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                 Row(children: [
+                   Icon(Icons.shield, color: ZaiNeColors.brandOrange),
+                   SizedBox(width: ZaiNeSpacing.sm),
+                   Text(tr.s204, style:  TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 ]),
                 const SizedBox(height: ZaiNeSpacing.section),
 
                 // 输入守护码
                 ListTile(
                   leading: Container(width: 40, height: 40, decoration: BoxDecoration(color: ZaiNeColors.brandOrangeLight, borderRadius: BorderRadius.circular(ZaiNeRadius.input)), child: const Icon(Icons.vpn_key, color: ZaiNeColors.brandOrange, size: 20)),
-                  title: const Text('输入守护码', style: TextStyle(fontWeight: FontWeight.w600)),
-                  subtitle: const Text('手动输入安全码，接受他人的守护卡'),
+                  title:  Text(tr.s205, style: TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle:  Text(tr.s206),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
                     Navigator.pop(context);
@@ -729,7 +735,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
                 const SizedBox(height: ZaiNeSpacing.xl),
                 Row(children: [
                   Icon(Icons.code_rounded, color: Colors.purple.shade700), const SizedBox(width: ZaiNeSpacing.sm),
-                  const Text('开发者模式', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                   Text(tr.s207, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   const Spacer(),
                   Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3), decoration: BoxDecoration(color: Colors.purple.shade100, borderRadius: BorderRadius.circular(ZaiNeRadius.input)), child: const Text('DEV', style: TextStyle(fontSize: 10, color: Colors.purple, fontWeight: FontWeight.bold))),
                 ]),
@@ -741,7 +747,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
               builder: (ctx, snap) {
                 if (!snap.hasData) return const SizedBox.shrink();
                 final prefs = snap.data!;
-                final uid = prefs.getString('user_id') ?? '未登录';
+                final uid = prefs.getString('user_id') ?? tr.s208;
                 final uidShort = uid.length > 12 ? '${uid.substring(0, 6)}...${uid.substring(uid.length - 6)}' : uid;
 
                 // 1. profile JSON里的avatar字段（后端返回的是"avatar"）
@@ -779,12 +785,12 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
                           const SizedBox(width: ZaiNeSpacing.tight),
                           Text('USER-ID: $uidShort', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.purple.shade700)),
                           const Spacer(),
-                          if (uid != '未登录')
+                          if (uid != tr.s208)
                             GestureDetector(
                               onTap: () {
                                 Clipboard.setData(ClipboardData(text: uid));
-                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                                  content: Text('USER-ID 已复制到剪贴板'),
+                                ScaffoldMessenger.of(context).showSnackBar( SnackBar(
+                                  content: Text(tr.s209),
                                   backgroundColor: Colors.purple,
                                   behavior: SnackBarBehavior.floating,
                                   duration: Duration(seconds: 2),
@@ -793,15 +799,15 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
                               child: Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                 decoration: BoxDecoration(color: Colors.purple.shade50, borderRadius: BorderRadius.circular(ZaiNeRadius.button)),
-                                child: Text('复制', style: TextStyle(fontSize: 11, color: Colors.purple.shade600, fontWeight: FontWeight.w500)),
+                                child: Text(tr.s210, style: TextStyle(fontSize: 11, color: Colors.purple.shade600, fontWeight: FontWeight.w500)),
                               ),
                             ),
                         ],
                       ),
                       const SizedBox(height: ZaiNeSpacing.sm),
-                      _buildDebugRow(Icons.image, 'profile.avatar', profileAvatar != null && profileAvatar.isNotEmpty ? '${profileAvatar.substring(0, profileAvatar.length > 40 ? 40 : profileAvatar.length)}...' : '无'),
-                      _buildDebugRow(Icons.data_array, 'avatar_base64', base64Len > 0 ? '$base64Len chars' : '无'),
-                      _buildDebugRow(Icons.folder, 'avatar_path', pathVal ?? '无'),
+                      _buildDebugRow(Icons.image, 'profile.avatar', profileAvatar != null && profileAvatar.isNotEmpty ? '${profileAvatar.substring(0, profileAvatar.length > 40 ? 40 : profileAvatar.length)}...' : tr.s211),
+                      _buildDebugRow(Icons.data_array, 'avatar_base64', base64Len > 0 ? '$base64Len chars' : tr.s211),
+                      _buildDebugRow(Icons.folder, 'avatar_path', pathVal ?? tr.s211),
                     ],
                   ),
                 );
@@ -812,8 +818,8 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
             // 签到模拟器
             ListTile(
               leading: Container(width: 40, height: 40, decoration: BoxDecoration(color: Colors.amber.shade50, borderRadius: BorderRadius.circular(ZaiNeRadius.input)), child: Icon(Icons.science_rounded, color: Colors.amber.shade700, size: 20)),
-              title: const Text('签到模拟器', style: TextStyle(fontWeight: FontWeight.w600)),
-              subtitle: const Text('设置连续签到天数，测试徽章和里程碑弹窗'),
+              title:  Text(tr.s212, style: TextStyle(fontWeight: FontWeight.w600)),
+              subtitle:  Text(tr.s213),
               trailing: const Icon(Icons.chevron_right),
               onTap: () { Navigator.pop(context); showCheckInSimulator(); },
             ),
@@ -821,8 +827,8 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
             // 重置守护卡（完整链路测试）
             ListTile(
               leading: Container(width: 40, height: 40, decoration: BoxDecoration(color: Colors.pink.shade50, borderRadius: BorderRadius.circular(ZaiNeRadius.input)), child: Icon(Icons.card_giftcard, color: Colors.pink.shade700, size: 20)),
-              title: const Text('重置守护卡', style: TextStyle(fontWeight: FontWeight.w600)),
-              subtitle: const Text('恢复为初始3张卡状态，方便测试发卡全链路'),
+              title:  Text(tr.s214, style: TextStyle(fontWeight: FontWeight.w600)),
+              subtitle:  Text(tr.s215),
               trailing: const Icon(Icons.chevron_right),
               onTap: () async { Navigator.pop(context); await resetGuardianCard(); },
             ),
@@ -830,23 +836,23 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
             // 清除引导标记
             ListTile(
               leading: Container(width: 40, height: 40, decoration: BoxDecoration(color: Colors.blue.shade50, borderRadius: BorderRadius.circular(ZaiNeRadius.input)), child: Icon(Icons.replay_rounded, color: Colors.blue.shade700, size: 20)),
-              title: const Text('重新显示引导页', style: TextStyle(fontWeight: FontWeight.w600)),
-              subtitle: const Text('下次启动App时再次显示开机引导'),
+              title:  Text(tr.s216, style: TextStyle(fontWeight: FontWeight.w600)),
+              subtitle:  Text(tr.s217),
               trailing: const Icon(Icons.chevron_right),
               onTap: () async {
                 final prefs = await SharedPreferences.getInstance();
                 await prefs.setBool('onboarding_completed', false);
                 if (!mounted) return;
                 Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('已设置，下次启动将显示引导页 ✓'), backgroundColor: Colors.purple, behavior: SnackBarBehavior.floating, shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(10)))));
+                ScaffoldMessenger.of(context).showSnackBar( SnackBar(content: Text(tr.s218), backgroundColor: Colors.purple, behavior: SnackBarBehavior.floating, shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(10)))));
               },
             ),
 
             // 【新增 v1.9.5】重置新手任务
             ListTile(
               leading: Container(width: 40, height: 40, decoration: BoxDecoration(color: Colors.pink.shade50, borderRadius: BorderRadius.circular(ZaiNeRadius.input)), child: Icon(Icons.task_alt, color: Colors.pink.shade700, size: 20)),
-              title: const Text('重置新手任务', style: TextStyle(fontWeight: FontWeight.w600)),
-              subtitle: const Text('清除新手任务完成状态，重新体验5步引导'),
+              title:  Text(tr.s219, style: TextStyle(fontWeight: FontWeight.w600)),
+              subtitle:  Text(tr.s220),
               trailing: const Icon(Icons.chevron_right),
               onTap: () async {
                 final prefs = await SharedPreferences.getInstance();
@@ -856,15 +862,15 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
                 await prefs.remove('newbie_task_location');
                 if (!mounted) return;
                 Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('新手任务已重置，返回首页即可重新体验 ✓'), backgroundColor: Colors.purple, behavior: SnackBarBehavior.floating, shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(10)))));
+                ScaffoldMessenger.of(context).showSnackBar( SnackBar(content: Text(tr.s221), backgroundColor: Colors.purple, behavior: SnackBarBehavior.floating, shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(10)))));
               },
             ),
 
             // 切换会员等级（测试用）
             ListTile(
               leading: Container(width: 40, height: 40, decoration: BoxDecoration(color: Colors.orange.shade50, borderRadius: BorderRadius.circular(ZaiNeRadius.input)), child: const Icon(Icons.workspace_premium_rounded, color: Colors.orange, size: 20)),
-              title: const Text('切换会员等级', style: TextStyle(fontWeight: FontWeight.w600)),
-              subtitle: const Text('体验版 ↔ 智能版，测试会员权益差异'),
+              title:  Text(tr.s222, style: TextStyle(fontWeight: FontWeight.w600)),
+              subtitle:  Text(tr.s223),
               trailing: const Icon(Icons.chevron_right),
               onTap: () {
                 Navigator.pop(context);
@@ -875,8 +881,8 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
             // 模拟会员过期降级（测试用）
             ListTile(
               leading: Container(width: 40, height: 40, decoration: BoxDecoration(color: Colors.red.shade50, borderRadius: BorderRadius.circular(ZaiNeRadius.input)), child: Icon(Icons.timer_off_rounded, color: Colors.red.shade400, size: 20)),
-              title: const Text('模拟会员过期降级', style: TextStyle(fontWeight: FontWeight.w600)),
-              subtitle: const Text('智能版 → 体验版，联系人保留但锁定'),
+              title:  Text(tr.s224, style: TextStyle(fontWeight: FontWeight.w600)),
+              subtitle:  Text(tr.s225),
               trailing: const Icon(Icons.chevron_right),
               onTap: () {
                 Navigator.pop(context);
@@ -887,8 +893,8 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
             // 查看用户反馈（profile 独有）
             ListTile(
                 leading: Container(width: 40, height: 40, decoration: BoxDecoration(color: Colors.orange.shade50, borderRadius: BorderRadius.circular(ZaiNeRadius.input)), child: Icon(Icons.feedback_outlined, color: Colors.orange.shade700, size: 20)),
-                title: const Text('查看用户反馈', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: const Text('查看所有已提交的反馈内容'),
+                title:  Text(tr.s226, style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle:  Text(tr.s227),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () { Navigator.pop(context); _viewFeedbackList(); },
               ),
@@ -924,7 +930,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
               )
             : null,
         title: Text(
-          '健康档案',
+          tr.s228,
           style: TextStyle(color: ZaiNeColors.textPrimary(), fontWeight: FontWeight.w600),
         ),
         centerTitle: true,
@@ -959,17 +965,13 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
 
                   const SizedBox(height: ZaiNeSpacing.sm),
 
-                  // ====== 2.5 安全中心入口（仅海外版；CN 合规版按监管要求隐藏） ======
-                  if (!AppConfig.isChinaRegion) ...[
-                    _buildSafetyCenterEntry(isDark),
-                    const SizedBox(height: ZaiNeSpacing.sm),
-                  ],
+                  // ====== 2.5 安全中心入口（CN 走 stub 返 SizedBox.shrink 不渲染） ======
+                  buildSafetyCenterEntry(isDark),
+                  const SizedBox(height: ZaiNeSpacing.sm),
 
-                  // ====== 2.55 成长与记录（仅海外版：数据统计 + 我的成就） ======
-                  if (!AppConfig.isChinaRegion) ...[
-                    _buildGrowthSection(isDark),
-                    const SizedBox(height: ZaiNeSpacing.sm),
-                  ],
+                  // ====== 2.55 成长与记录（数据统计 + 我的成就；CN 合规版保留以促活签到） ======
+                  _buildGrowthSection(isDark),
+                  const SizedBox(height: ZaiNeSpacing.sm),
 
                   // ====== 2.6 医疗急救卡引导（iOS 原生功能） ======
                   _buildMedicalIDGuide(isDark),
@@ -1073,7 +1075,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
           ),
           const SizedBox(height: ZaiNeSpacing.cardXs),
           Text(
-            _nameController.text.isNotEmpty ? _nameController.text : '点击头像设置',
+            _nameController.text.isNotEmpty ? _nameController.text : tr.s229,
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -1081,7 +1083,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
             ),
           ),
           if (_avatarPath != null)
-            Text('点击头像更换照片', style: TextStyle(fontSize: 12, color: Colors.grey.shade400)),
+            Text(tr.s230, style: TextStyle(fontSize: 12, color: Colors.grey.shade400)),
 
           const SizedBox(height: ZaiNeSpacing.lg),
 
@@ -1125,12 +1127,12 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        _isProfileComplete ? '档案已完善' : '请完善健康档案',
+                        _isProfileComplete ? tr.s231 : tr.s232,
                         style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: ZaiNeSpacing.xxs),
                       Text(
-                        _isProfileComplete ? '求助功能已解锁，保护自己从现在开始' : '紧急求助需要您的健康信息',
+                        _isProfileComplete ? tr.s233 : tr.s234,
                         style: TextStyle(color: Colors.white.withValues(alpha: 217), fontSize: 12),
                       ),
                     ],
@@ -1147,69 +1149,13 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
   }
 
   // ==================== 快捷功能 ====================
-  /// 安全中心入口卡片（从底部Tab降级至此）
-  Widget _buildSafetyCenterEntry(bool isDark) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: ZaiNeColors.cardBg(),
-        borderRadius: BorderRadius.circular(ZaiNeRadius.card),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha(((isDark ? 0.12 : 0.04) * 255).round()),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: InkWell(
-        onTap: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const SafetySettingsPage()),
-          );
-        },
-        borderRadius: BorderRadius.circular(ZaiNeRadius.card),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-          child: Row(
-            children: [
-              // 左侧图标
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Colors.blue.shade400, Colors.blue.shade600],
-                  ),
-                  borderRadius: BorderRadius.circular(ZaiNeRadius.small),
-                ),
-                child: const Icon(Icons.security_rounded, color: Colors.white, size: 22),
-              ),
-              const SizedBox(width: ZaiNeSpacing.cardSm),
-              // 中间文字
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('安全中心', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: ZaiNeColors.textPrimary())),
-                    const SizedBox(height: 3),
-                    Text(
-                      '定时平安确认 · 位置共享 · 跌倒检测',
-                      style: TextStyle(fontSize: 12, color: ZaiNeColors.textSecondary()),
-                    ),
-                  ],
-                ),
-              ),
-              // 右侧箭头
-              Icon(Icons.chevron_right_rounded, color: ZaiNeColors.textSecondary(), size: 22),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+  // 【CN 165 合规整改】原 _buildSafetyCenterEntry 函数体已整体搬迁至
+  //   pages/safety_settings_navigator_global.dart（海外）+ stub（CN）。
+  //   跳转入口：openSafetySettings(context)。
+  //   本文件不再 import safety_settings_page.dart，CN 构建下 SafetySettingsPage
+  //   类符号从二进制物理消失（Dart AOT tree-shaking 消除）。
 
-  // ==================== 成长与记录（仅海外版：数据统计 + 我的成就） ====================
+  // ==================== 成长与记录（数据统计 + 我的成就） ====================
   Widget _buildGrowthSection(bool isDark) {
     return Column(
       children: [
@@ -1252,9 +1198,9 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('数据统计', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: ZaiNeColors.textPrimary())),
+                        Text(tr.s237, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: ZaiNeColors.textPrimary())),
                         const SizedBox(height: 3),
-                        Text('签到日历 · 健康趋势 · 经期周期', style: TextStyle(fontSize: 12, color: ZaiNeColors.textSecondary())),
+                        Text(tr.s238, style: TextStyle(fontSize: 12, color: ZaiNeColors.textSecondary())),
                       ],
                     ),
                   ),
@@ -1312,9 +1258,9 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('我的成就', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: ZaiNeColors.textPrimary())),
+                        Text(tr.s239, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: ZaiNeColors.textPrimary())),
                         const SizedBox(height: 3),
-                        Text('连续签到 · 关怀 · 里程碑', style: TextStyle(fontSize: 12, color: ZaiNeColors.textSecondary())),
+                        Text(tr.s240, style: TextStyle(fontSize: 12, color: ZaiNeColors.textSecondary())),
                       ],
                     ),
                   ),
@@ -1345,7 +1291,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
                 Icon(Icons.check_circle, color: Colors.green.shade500, size: 16),
                 const SizedBox(width: 6),
                 Text(
-                  '医疗急救卡 ✓ 已设置',
+                  tr.s241,
                   style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                 ),
                 const SizedBox(width: 4),
@@ -1404,7 +1350,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
                     Row(
                       children: [
                         Text(
-                          '医疗急救卡',
+                          tr.s242,
                           style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w600,
@@ -1419,7 +1365,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
-                            'iOS 原生',
+                            tr.s243,
                             style: TextStyle(
                               fontSize: 10,
                               color: Colors.white,
@@ -1431,7 +1377,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
                     ),
                     const SizedBox(height: 3), // 与安全中心一致
                     Text(
-                      '锁屏可查看 · 无需解锁手机',
+                      tr.s244,
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.red.shade600,
@@ -1459,7 +1405,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
           children: [
             Icon(Icons.medical_services_rounded, color: Colors.red.shade600, size: 28),
             const SizedBox(width: ZaiNeSpacing.md),
-            const Text('医疗急救卡设置引导', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+             Text(tr.s245, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           ],
         ),
         content: SingleChildScrollView(
@@ -1478,7 +1424,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '什么是医疗急救卡？',
+                      tr.s246,
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
@@ -1487,7 +1433,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
                     ),
                     const SizedBox(height: ZaiNeSpacing.sm),
                     Text(
-                      '医疗急救卡是 iPhone 系统级功能，在锁屏状态下，任何人都可以查看你的紧急医疗信息，而无需解锁手机。',
+                      tr.s247,
                       style: TextStyle(
                         fontSize: 13,
                         color: Colors.red.shade700,
@@ -1502,7 +1448,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
 
               // 设置步骤
               Text(
-                '设置步骤（共 4 步）',
+                tr.s248,
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
@@ -1514,29 +1460,29 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
 
               _buildGuideStep(
                 step: 1,
-                title: '打开"健康" App',
-                description: '在 iPhone 上找到并打开"健康"App（绿色心形图标）',
+                title: tr.s249,
+                description: tr.s250,
                 icon: Icons.favorite,
               ),
 
               _buildGuideStep(
                 step: 2,
-                title: '点击右上角头像',
-                description: '在"摘要"页面，点击右上角的头像进入个人资料',
+                title: tr.s251,
+                description: tr.s252,
                 icon: Icons.person,
               ),
 
               _buildGuideStep(
                 step: 3,
-                title: '选择"医疗急救卡"',
-                description: '向下滑动，找到"医疗急救卡"选项，点击进入',
+                title: tr.s253,
+                description: tr.s254,
                 icon: Icons.medical_services,
               ),
 
               _buildGuideStep(
                 step: 4,
-                title: '填写并保存',
-                description: '填写姓名、血型、过敏信息、紧急联系人等，完成后点击"完成"',
+                title: tr.s255,
+                description: tr.s256,
                 icon: Icons.check_circle,
               ),
 
@@ -1556,7 +1502,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
                     const SizedBox(width: ZaiNeSpacing.sm),
                     Expanded(
                       child: Text(
-                        '提示：设置完成后，在锁屏界面点击"紧急"→"医疗急救卡"即可查看',
+                        tr.s257,
                         style: TextStyle(
                           fontSize: 12,
                           color: Colors.blue.shade700,
@@ -1583,7 +1529,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
     actions.add(
       TextButton(
         onPressed: () => Navigator.pop(context),
-        child: Text('关闭', style: TextStyle(color: Colors.grey.shade600)),
+        child: Text(tr.s048, style: TextStyle(color: Colors.grey.shade600)),
       ),
     );
 
@@ -1593,7 +1539,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
         TextButton.icon(
           onPressed: () => _confirmMedicalIDSetup(),
           icon: Icon(Icons.check, size: 18),
-          label: const Text('我已完成设置'),
+          label:  Text(tr.s258),
           style: TextButton.styleFrom(foregroundColor: Colors.green.shade700),
         ),
       );
@@ -1613,7 +1559,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: const Text('请在 iPhone 上手动打开"健康"App 进行设置'),
+                        content:  Text(tr.s259),
                         backgroundColor: Colors.blue.shade700,
                         behavior: SnackBarBehavior.floating,
                       ),
@@ -1625,7 +1571,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('无法打开健康App，请手动查找：$e'),
+                    content: Text(tr.s260(e)),
                     backgroundColor: Colors.orange.shade700,
                     behavior: SnackBarBehavior.floating,
                   ),
@@ -1634,7 +1580,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
             }
           },
           icon: Icon(Icons.open_in_new, size: 18),
-          label: const Text('去健康App设置'),
+          label:  Text(tr.s261),
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.red.shade600,
             foregroundColor: Colors.white,
@@ -1656,7 +1602,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: const Text('请在 iPhone 上手动打开"健康"App 进行修改'),
+                      content:  Text(tr.s262),
                       backgroundColor: Colors.blue.shade700,
                       behavior: SnackBarBehavior.floating,
                     ),
@@ -1667,7 +1613,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('无法打开健康App：$e'),
+                    content: Text(tr.s263(e)),
                     backgroundColor: Colors.orange.shade700,
                     behavior: SnackBarBehavior.floating,
                   ),
@@ -1676,7 +1622,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
             }
           },
           icon: Icon(Icons.edit, size: 18),
-          label: const Text('去健康App修改'),
+          label:  Text(tr.s264),
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.blue.shade600,
             foregroundColor: Colors.white,
@@ -1699,15 +1645,15 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
           children: [
             Icon(Icons.help_outline, color: Colors.orange.shade600, size: 28),
             const SizedBox(width: ZaiNeSpacing.md),
-            const Text('确认完成设置', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+             Text(tr.s265, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           ],
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              '你确定已经在 iPhone "健康" App 中完成了医疗急救卡的填写和保存吗？',
+             Text(
+              tr.s266,
               style: TextStyle(fontSize: 14, height: 1.5),
             ),
             const SizedBox(height: ZaiNeSpacing.md),
@@ -1724,7 +1670,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
                   const SizedBox(width: ZaiNeSpacing.sm),
                   Expanded(
                     child: Text(
-                      '设置后可在锁屏界面通过"紧急"→"医疗急救卡"查看你的信息',
+                      tr.s267,
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.orange.shade800,
@@ -1740,7 +1686,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('再检查一下', style: TextStyle(color: Colors.grey.shade600)),
+            child: Text(tr.s268, style: TextStyle(color: Colors.grey.shade600)),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -1755,7 +1701,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
                 setState(() => _medicalIDSetupDone = true);
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: const Text('✅ 医疗急救卡已标记为完成！'),
+                    content:  Text(tr.s269),
                     backgroundColor: Colors.green.shade700,
                     behavior: SnackBarBehavior.floating,
                   ),
@@ -1766,7 +1712,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
               backgroundColor: Colors.green.shade600,
               foregroundColor: Colors.white,
             ),
-            child: const Text('✅ 确定已完成'),
+            child:  Text(tr.s270),
           ),
         ],
       ),
@@ -1860,7 +1806,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
         children: [
           _buildQuickActionItem(
             icon: Icons.palette_rounded,
-            label: '主题颜色',
+            label: tr.s271,
             value: _getThemeName(),
             iconBgColor: Colors.purple.shade100,
             iconColor: Colors.purple.shade600,
@@ -1869,8 +1815,8 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
           Container(width: 1, height: 36, color: isDark ? Colors.white.withValues(alpha: 20) : Colors.grey.shade200),
           _buildQuickActionItem(
             icon: Icons.key_rounded,
-            label: '安全码',
-            value: '绑定守护卡',
+            label: tr.s272,
+            value: tr.s273,
             iconBgColor: Colors.teal.shade100,
             iconColor: Colors.teal.shade600,
             onTap: () {
@@ -1879,11 +1825,28 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
               );
             },
           ),
+          // 【CN 合规】守护卡被移除后，恢复 App 内「我的守护码」发卡端（仅 CN 显示）。
+          // 与全球版 GuardianCardPage（分享卡）不同：仅出示配对码/二维码，无分享面板、无奖励。
+          if (kIsChinaBuild) ...[
+            Container(width: 1, height: 36, color: isDark ? Colors.white.withValues(alpha: 0.2) : Colors.grey.shade200),
+            _buildQuickActionItem(
+              icon: Icons.qr_code_rounded,
+              label: '我的守护码',
+              value: '出示给亲友',
+              iconBgColor: Colors.blue.shade100,
+              iconColor: Colors.blue.shade600,
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const MyGuardianCodePage()),
+                );
+              },
+            ),
+          ],
           Container(width: 1, height: 36, color: isDark ? Colors.white.withValues(alpha: 20) : Colors.grey.shade200),
           _buildQuickActionItem(
             icon: Icons.feedback_rounded,
-            label: '问题反馈',
-            value: '告诉我们',
+            label: tr.s192,
+            value: tr.s274,
             iconBgColor: Colors.orange.shade100,
             iconColor: Colors.orange.shade600,
             onTap: _showFeedback,
@@ -1966,9 +1929,9 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
                   ),
                 ),
                 const SizedBox(width: ZaiNeSpacing.sm),
-                Text('基本信息', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: ZaiNeColors.textPrimary())),
+                Text(tr.s275, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: ZaiNeColors.textPrimary())),
                 const SizedBox(width: ZaiNeSpacing.tight),
-                Text('必填', style: TextStyle(fontSize: 11, color: Colors.red.shade400, fontWeight: FontWeight.w500)),
+                Text(tr.s276, style: TextStyle(fontSize: 11, color: Colors.red.shade400, fontWeight: FontWeight.w500)),
               ],
             ),
           ),
@@ -1982,26 +1945,26 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
               children: [
                 _buildModernField(
                   controller: _nameController,
-                  label: '姓名',
-                  hint: '请输入您的姓名',
+                  label: tr.s277,
+                  hint: tr.s278,
                   icon: Icons.badge_outlined,
                   iconColor: ZaiNeColors.brandOrange,
                   fieldBg: fieldBg,
-                  validator: (v) => (v == null || v.isEmpty) ? '请输入姓名' : null,
+                  validator: (v) => (v == null || v.isEmpty) ? tr.s279 : null,
                 ),
                 const SizedBox(height: ZaiNeSpacing.md),
                 _buildModernField(
                   controller: _ageController,
-                  label: '年龄',
-                  hint: '请输入年龄',
+                  label: tr.s280,
+                  hint: tr.s281,
                   icon: Icons.cake_outlined,
                   iconColor: Colors.blue.shade500,
                   fieldBg: fieldBg,
                   keyboardType: TextInputType.number,
                   validator: (v) {
-                    if (v == null || v.isEmpty) return '请输入年龄';
+                    if (v == null || v.isEmpty) return tr.s281;
                     final age = int.tryParse(v);
-                    if (age == null || age < 1 || age > 120) return '请输入有效年龄';
+                    if (age == null || age < 1 || age > 120) return tr.s282;
                     return null;
                   },
                 ),
@@ -2024,11 +1987,11 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
                           children: [
                             Icon(Icons.wc_outlined, size: 16, color: Colors.pink.shade400),
                             const SizedBox(width: ZaiNeSpacing.sm),
-                            Text('性别', style: TextStyle(fontSize: 13, color: labelColor)),
+                            Text(tr.s283, style: TextStyle(fontSize: 13, color: labelColor)),
                             const Spacer(),
-                            _buildGenderChip('男'),
+                            _buildGenderChip(tr.s179),
                             const SizedBox(width: ZaiNeSpacing.xs),
-                            _buildGenderChip('女'),
+                            _buildGenderChip(tr.s284),
                           ],
                         ),
                       ),
@@ -2049,7 +2012,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
                             value: _bloodType,
                             isExpanded: true,
                             icon: Icon(Icons.arrow_drop_down, size: 18, color: labelColor),
-                            items: ['未知', 'A型', 'B型', 'O型', 'AB型', '其他']
+                            items: [tr.s013, tr.s180, tr.s181, tr.s182, tr.s183, tr.s184]
                                 .map((t) => DropdownMenuItem(value: t, child: Text(t, style: TextStyle(fontSize: 13, color: ZaiNeColors.textPrimary()))))
                                 .toList(),
                             onChanged: (v) => setState(() => _bloodType = v!),
@@ -2062,13 +2025,13 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
                 const SizedBox(height: ZaiNeSpacing.md),
                 _buildModernField(
                   controller: _allergyController,
-                  label: '过敏史',
-                  hint: '如：青霉素、芒果、海鲜（无则填"无"）',
+                  label: tr.s285,
+                  hint: tr.s286,
                   icon: Icons.warning_amber_outlined,
                   iconColor: Colors.amber.shade600,
                   fieldBg: fieldBg,
                   maxLines: 2,
-                  validator: (v) => (v == null || v.isEmpty) ? '请填写过敏史' : null,
+                  validator: (v) => (v == null || v.isEmpty) ? tr.s287 : null,
                 ),
 
                 // --- 选填区域 ---
@@ -2087,17 +2050,17 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
                         ),
                       ),
                       const SizedBox(width: ZaiNeSpacing.sm),
-                      Text('健康信息', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: ZaiNeColors.textPrimary())),
+                      Text(tr.s288, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: ZaiNeColors.textPrimary())),
                       const SizedBox(width: ZaiNeSpacing.tight),
-                      Text('选填', style: TextStyle(fontSize: 11, color: Colors.grey.shade400)),
+                      Text(tr.s289, style: TextStyle(fontSize: 11, color: Colors.grey.shade400)),
                     ],
                   ),
                 ),
 
                 _buildModernField(
                   controller: _diseaseController,
-                  label: '既往病史',
-                  hint: '如：高血压、糖尿病等',
+                  label: tr.s290,
+                  hint: tr.s291,
                   icon: Icons.history_outlined,
                   iconColor: Colors.red.shade400,
                   fieldBg: fieldBg,
@@ -2106,8 +2069,8 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
                 const SizedBox(height: ZaiNeSpacing.md),
                 _buildModernField(
                   controller: _medicineController,
-                  label: '常用药物',
-                  hint: '如：降压药、胰岛素等',
+                  label: tr.s292,
+                  hint: tr.s293,
                   icon: Icons.medication_outlined,
                   iconColor: Colors.green.shade500,
                   fieldBg: fieldBg,
@@ -2116,8 +2079,8 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
                 const SizedBox(height: ZaiNeSpacing.md),
                 _buildModernField(
                   controller: _emergencyNoteController,
-                  label: '紧急备注',
-                  hint: '救援人员需要知道的信息',
+                  label: tr.s294,
+                  hint: tr.s295,
                   icon: Icons.note_alt_outlined,
                   iconColor: Colors.indigo.shade400,
                   fieldBg: fieldBg,
@@ -2245,7 +2208,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
                 Icon(_isLoggedIn ? Icons.check_rounded : Icons.shield_rounded, size: 20),
                 const SizedBox(width: ZaiNeSpacing.sm),
                 Text(
-                  _isLoggedIn ? '更新档案' : '保存并启用求助',
+                  _isLoggedIn ? tr.s296 : tr.s297,
                   style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
                 ),
               ],
@@ -2288,9 +2251,9 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
               children: [
                 Icon(Icons.shield_outlined, color: Colors.blue.shade600, size: 18),
                 const SizedBox(width: ZaiNeSpacing.cardXs),
-                const Expanded(
+                 Expanded(
                   child: Text(
-                    '您的健康档案和紧急联系人信息已加密同步到云端，换设备登录后数据不会丢失。我们严格保护您的隐私安全。',
+                    tr.s298,
                     style: TextStyle(fontSize: 12, color: Color(0xFF666666), height: 1.5),
                   ),
                 ),
@@ -2304,9 +2267,9 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
 
   String _getThemeName() {
     switch (themeNotifier.mode) {
-      case ZaiNeThemeMode.dark: return '深色';
-      case ZaiNeThemeMode.soft: return '柔光';
-      default: return '浅色';
+      case ZaiNeThemeMode.dark: return tr.s053;
+      case ZaiNeThemeMode.soft: return tr.s054;
+      default: return tr.s055;
     }
   }
 }

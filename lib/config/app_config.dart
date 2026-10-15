@@ -14,3 +14,13 @@ class AppConfig {
   static const bool isChinaRegion =
       String.fromEnvironment('ZAI_REGION', defaultValue: 'global') == 'cn';
 }
+
+/// 顶层编译期中国版开关。
+///
+/// 用途：供 **条件导入**（`import 'x.dart' if (kIsChinaBuild) 'y.dart'`）判断。
+/// 注意：`AppConfig.isChinaRegion` 是 `static const`，Dart 不允许它出现在条件导入
+/// 的 `if()` 表达式中，因此必须额外提供一个 **顶层 const**。
+///
+/// 本常量与 `isChinaRegion` 同源（`ZAI_REGION` 环境变量），语义一致。
+const bool kIsChinaBuild =
+    String.fromEnvironment('ZAI_REGION', defaultValue: 'global') == 'cn';

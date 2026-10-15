@@ -14,9 +14,10 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:geolocator/geolocator.dart';
 import '../services/safety/safety_service.dart';
-import '../services/safety/geofence_service.dart';
+import '../services/safety/safe_zone_service.dart';
 import 'location_history_page.dart';
 import '../theme/theme_helper.dart';
+import '../l10n/i18n.dart';
 
 class LocationMapPage extends StatefulWidget {
   final DateTime? day;
@@ -29,9 +30,9 @@ class LocationMapPage extends StatefulWidget {
 class _LocationMapPageState extends State<LocationMapPage>
     with SingleTickerProviderStateMixin {
   final SafetyService _safety = SafetyService();
-  final GeoFenceService _geo = GeoFenceService();
+  final SafeZoneMonitor? _geo = getSafeZoneService();
   List<LocationRecord> _records = [];
-  List<GeoFence> _fences = [];
+  List<SafeZone> _fences = [];
   bool _loading = true;
   late DateTime _selectedDay;
   late AnimationController _pulseController;
@@ -55,9 +56,9 @@ class _LocationMapPageState extends State<LocationMapPage>
   Future<void> _load() async {
     setState(() => _loading = true);
     await _safety.initialize();
-    await _geo.init();
+    await _geo?.init();
     final records = await _safety.getLocationTrackForDay(_selectedDay);
-    final fences = await _geo.getAllFences();
+    final fences = await _geo?.getAllFences() ?? [];
     _computeStats(records, fences);
     if (mounted) {
       setState(() {
@@ -68,7 +69,7 @@ class _LocationMapPageState extends State<LocationMapPage>
     }
   }
 
-  void _computeStats(List<LocationRecord> records, List<GeoFence> fences) {
+  void _computeStats(List<LocationRecord> records, List<SafeZone> fences) {
     _totalDistance = 0;
     _activityDiameter = 0;
     _fenceDurations.clear();
@@ -142,7 +143,7 @@ class _LocationMapPageState extends State<LocationMapPage>
     return Scaffold(
       backgroundColor: ZaiNeColors.scaffoldBg(),
       appBar: AppBar(
-        title: const Text('今日轨迹'),
+        title:  Text(tr.s907),
         backgroundColor: ZaiNeColors.cardBg(),
         foregroundColor: ZaiNeColors.textPrimary(),
         elevation: 0,
@@ -150,7 +151,7 @@ class _LocationMapPageState extends State<LocationMapPage>
           IconButton(
             icon: const Icon(Icons.calendar_today),
             onPressed: _pickDay,
-            tooltip: '选择日期',
+            tooltip: tr.s892,
           ),
           IconButton(
             icon: const Icon(Icons.list_alt),
@@ -160,7 +161,7 @@ class _LocationMapPageState extends State<LocationMapPage>
                 builder: (context) => LocationHistoryPage(day: _selectedDay),
               ),
             ),
-            tooltip: '轨迹列表',
+            tooltip: tr.s908,
           ),
           IconButton(icon: const Icon(Icons.refresh), onPressed: _load),
         ],
@@ -179,7 +180,7 @@ class _LocationMapPageState extends State<LocationMapPage>
                     size: 15, color: isDark ? Colors.indigo.shade200 : Colors.blue.shade400),
                 const SizedBox(width: 8),
                 Text(
-                  DateFormat('yyyy年MM月dd日').format(_selectedDay),
+                  DateFormat(tr.s893).format(_selectedDay),
                   style: TextStyle(
                     fontSize: ZaiNeFontSize.body,
                     fontWeight: FontWeight.w600,
@@ -194,7 +195,7 @@ class _LocationMapPageState extends State<LocationMapPage>
                     minimumSize: Size.zero,
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
-                  child: const Text('切换', style: TextStyle(fontSize: ZaiNeFontSize.caption)),
+                  child:  Text(tr.s894, style: TextStyle(fontSize: ZaiNeFontSize.caption)),
                 ),
               ],
             ),
@@ -239,10 +240,10 @@ class _LocationMapPageState extends State<LocationMapPage>
         children: [
           Icon(Icons.map_outlined, size: 64, color: ZaiNeColors.textHint()),
           const SizedBox(height: 12),
-          Text('今日暂无轨迹记录',
+          Text(tr.s909,
               style: TextStyle(fontSize: ZaiNeFontSize.body, color: ZaiNeColors.textSecondary())),
           const SizedBox(height: 6),
-          Text('开启位置共享后，这里会显示你的活动地图',
+          Text(tr.s910,
               style: TextStyle(fontSize: ZaiNeFontSize.caption, color: ZaiNeColors.textHint())),
         ],
       ),
@@ -258,14 +259,14 @@ class _LocationMapPageState extends State<LocationMapPage>
             icon: Icons.route,
             color: Colors.blue,
             value: _formatDistance(_totalDistance),
-            label: '今日移动',
+            label: tr.s911,
           ),
           const SizedBox(width: 12),
           _StatItem(
             icon: Icons.open_with,
             color: Colors.purple,
             value: _formatDistance(_activityDiameter),
-            label: '活动范围',
+            label: tr.s912,
           ),
           const SizedBox(width: 12),
           _StatItem(
@@ -273,8 +274,8 @@ class _LocationMapPageState extends State<LocationMapPage>
             color: Colors.green,
             value: _fenceDurations.isNotEmpty
                 ? _formatDuration(_fenceDurations.values.reduce((a, b) => a + b))
-                : '0分',
-            label: '围栏内停留',
+                : tr.s913,
+            label: tr.s914,
           ),
         ],
       ),
@@ -290,9 +291,9 @@ class _LocationMapPageState extends State<LocationMapPage>
     final min = (seconds / 60).floor();
     if (min >= 60) {
       final h = (min / 60).floor();
-      return '${h}时${min % 60}分';
+      return tr.s915(h, min % 60);
     }
-    return '${min}分';
+    return tr.s916(min);
   }
 }
 
@@ -336,7 +337,7 @@ class _StatItem extends StatelessWidget {
 /// 地图风格轨迹绘制
 class TrackMapPainter extends CustomPainter {
   final List<LocationRecord> records;
-  final List<GeoFence> fences;
+  final List<SafeZone> fences;
   final bool isDark;
   final Animation<double> pulse;
 
@@ -520,13 +521,13 @@ class TrackMapPainter extends CustomPainter {
     canvas.drawCircle(start, 4.5, Paint()..color = Colors.green);
   }
 
-  Color _fenceColor(GeoFenceType type) {
+  Color _fenceColor(SafeZoneType type) {
     switch (type) {
-      case GeoFenceType.home:
+      case SafeZoneType.home:
         return Colors.purple;
-      case GeoFenceType.work:
+      case SafeZoneType.work:
         return Colors.blue;
-      case GeoFenceType.custom:
+      case SafeZoneType.custom:
         return Colors.teal;
     }
   }

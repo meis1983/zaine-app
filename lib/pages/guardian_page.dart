@@ -24,8 +24,9 @@ import '../data/app_constants.dart';
 import '../utils/wechat_helper.dart';
 import '../config/app_config.dart';
 import '../services/platform/health_service.dart';
-import '../services/safety/safety_signal_engine.dart';
+import '../services/safety/vitals_assessment.dart';
 import '../services/database/circle_event_dao.dart';
+import '../l10n/i18n.dart';
 import '../services/debug_log.dart'; // [192] 守护圈同步诊断（双通道，文件兜底）
 
 /// 蓝色调：用于「我守护的人」专区，与橙色「守护我的人」严格区分
@@ -57,7 +58,8 @@ class _GuardedByMeManagerSheet extends StatefulWidget {
   final String Function(Map<String, dynamic>) displayName;
   final Widget Function(Map<String, dynamic>) avatarBuilder;
   final Future<void> Function(int, String) onEditRemark;
-  final Future<void> Function(Map<String, dynamic>) onReinvite;
+  /// 【CN合规】可为 null：CN 版传 null 以彻底移除"重新邀请"入口（主动拉人=鼓励传播）
+  final Future<void> Function(Map<String, dynamic>)? onReinvite;
 
   const _GuardedByMeManagerSheet({
     required this.people,
@@ -87,18 +89,18 @@ class _GuardedByMeManagerSheetState extends State<_GuardedByMeManagerSheet> {
     final result = await showDialog<String>(
       context: context,
       builder: (dctx) => AlertDialog(
-        title: const Text('修改备注名'),
+        title:  Text(tr.s364),
         content: TextField(
           controller: controller,
-          decoration: const InputDecoration(hintText: '输入在「我守护的人」中显示的名字'),
+          decoration:  InputDecoration(hintText: tr.s365),
           autofocus: true,
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.of(dctx).pop(), child: const Text('取消')),
+              onPressed: () => Navigator.of(dctx).pop(), child:  Text(tr.s016)),
           TextButton(
               onPressed: () => Navigator.of(dctx).pop(controller.text.trim()),
-              child: const Text('保存')),
+              child:  Text(tr.s366)),
         ],
       ),
     );
@@ -134,10 +136,10 @@ class _GuardedByMeManagerSheetState extends State<_GuardedByMeManagerSheet> {
           Row(children: [
             Icon(Icons.favorite_rounded, color: color),
             const SizedBox(width: 8),
-            const Text('我守护的人',
+             Text(tr.s367,
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
             const Spacer(),
-            Text('${widget.people.length} 位',
+            Text(tr.s540(widget.people.length),
                 style: TextStyle(color: Colors.grey[500])),
           ]),
           const SizedBox(height: 12),
@@ -172,8 +174,8 @@ class _GuardedByMeManagerSheetState extends State<_GuardedByMeManagerSheet> {
                     const SizedBox(width: 4),
                     Text(
                       isPending
-                          ? '待激活'
-                          : (checkedIn ? '今日已签到' : '今日未签到'),
+                          ? tr.s369
+                          : (checkedIn ? tr.signInButtonCheckedIn : tr.s370),
                       style: TextStyle(
                         fontSize: 12,
                         color: isPending
@@ -185,16 +187,16 @@ class _GuardedByMeManagerSheetState extends State<_GuardedByMeManagerSheet> {
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      if (isPending)
+                      if (isPending && widget.onReinvite != null)
                         TextButton(
-                          onPressed: () => widget.onReinvite(p),
+                          onPressed: () => widget.onReinvite!(p),
                           style: TextButton.styleFrom(
                             padding: const EdgeInsets.symmetric(horizontal: 8),
                             minimumSize: Size.zero,
                             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                           ),
-                          child: const Text(
-                            '重新邀请',
+                          child:  Text(
+                            tr.s371,
                             style: TextStyle(fontSize: 13, color: Color(0xFF667EEA)),
                           ),
                         ),
@@ -231,14 +233,20 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
   Map<int, String> _guardedRemarks = {};
   // 【v1.97.3+166 双向视觉】互相守护的用户 id 集合（「守护我的人」userId 与「我守护的人」receiver_id 的交集）
   Set<String> _mutualUserIds = {};
+  // 【C4 方案C合并版】守护人端平安确认响应状态：receiver_id(string) -> status(0待确认/1已确认/2需要帮助)
+  Map<String, int> _peaceStatusByReceiver = {};
+  // 【方案三 v1.97.1+160】receiver_id -> 最新 request_id（「已联系」标记已处理用）
+  Map<String, int> _peaceRequestIdByReceiver = {};
+  // 【留言功能 v1】receiver_id -> 「需要帮助」时附带的选填留言（status=2 且非空时展示）
+  Map<String, String> _peaceMessageByReceiver = {};
   Timer? _refreshTimer; // 定期刷新定时器
 
   // 【v1.97.4 状态引擎上提】生命体征守护状态卡数据
-  SafetySignal? _safetySignal;
+  VitalsAssessment? _safetySignal;
   Map<String, dynamic>? _healthSummary;
   bool _healthAuthorized = false;
   // 【v1.97.3+176 诊断】最近一次 HealthKit 授权检测结论（应用内直接可见，免开控制台）
-  String _healthAuthDiag = '尚未检测';
+  String _healthAuthDiag = tr.s372;
   bool _autoAlertEnabled = true;
   // 【v1.97.3+169】最近一次体征同步时间戳(ms)，用于卡片显示「同步 X 分钟前」
   int _lastHealthSyncAt = 0;
@@ -304,6 +312,8 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
   }
 
   Future<void> _loadGuardians({bool isSilent = false}) async {
+    // 【C4】非阻塞拉取平安确认响应状态（守护人端看被守护人回复），独立于联系人加载
+    unawaited(_loadPeaceStatus());
     final prefs = await SharedPreferences.getInstance();
     if (!mounted) return;
 
@@ -318,9 +328,9 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
     // 已有缓存数据 → 立即渲染（从缓存恢复状态，避免硬编码 false）
     if (contacts.isNotEmpty && mounted) {
       final initialGuardians = contacts.map((c) {
-        final name = (c['name'] ?? '未命名').toString();
+        final name = (c['name'] ?? tr.s373).toString();
         final phone = (c['phone'] ?? '').toString();
-        final relation = (c['relation'] == null || c['relation'].toString().isEmpty) ? '守护者' : c['relation'].toString();
+        final relation = (c['relation'] == null || c['relation'].toString().isEmpty) ? tr.s374 : c['relation'].toString();
 
         final cachedAvatar = prefs.getString('contact_avatar_phone_$phone') ?? '';
         final cachedCheckedIn =
@@ -360,7 +370,10 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
       // 并行加载联系人列表、邀请统计、以及「我守护的人」列表（议题B，无上限）
       final results = await Future.wait([
         ContactService.getContacts(),
-        CardService.getInviteStats(),
+        // 【CN合规】CN 版不拉取邀请（裂变）统计，去除传播相关基础设施调用
+        kIsChinaBuild
+            ? Future<Map<String, dynamic>>.value(<String, dynamic>{'success': false})
+            : CardService.getInviteStats(),
         CardService.getGuardedByMe(),
       ]);
 
@@ -440,8 +453,8 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
         final updatedGuardians = <Map<String, dynamic>>[];
         for (final c in contacts) {
           final phone = (c['phone'] ?? '').toString();
-          final name = (c['name'] ?? '未命名').toString();
-          final relation = (c['relation'] == null || c['relation'].toString().isEmpty) ? '守护者' : c['relation'].toString();
+          final name = (c['name'] ?? tr.s373).toString();
+          final relation = (c['relation'] == null || c['relation'].toString().isEmpty) ? tr.s374 : c['relation'].toString();
 
       final status = resultsMap[phone];
       if (status != null && status['found'] == true) {
@@ -540,13 +553,13 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
             final av = (g['avatarBase64']?.toString() ?? '').length;
             // 【v1.97.3+193】额外记录 lastSigninAt 与 isActive，供「待激活」一类故障定位
             final la = (g['lastSigninAt']?.toString() ?? '');
-            sb.write('$ph:签到=$ci,头像=$av,lastSignin=${la.isEmpty ? "空" : la},isActive=${g['isActive']}; ');
+            sb.write(tr.s541(ph, ci, av, la.isEmpty ? "空" : la, g['isActive']));
           }
-          await DebugLog.write('193 G', 'batchLookup RAW_RESULTS_KEYS=${(batchRes['results'] as Map?)?.keys.toList()} | 守护者: $sb');
+          await DebugLog.write('193 G', tr.s542((batchRes['results'] as Map?)?.keys.toList(), sb));
           // 【v1.97.3+193】原始 response.body 在 ApiService 层可能未暴露，这里从 batchRes 全 dump 一份（含 statusCode/raw 字段）
           await DebugLog.write('193 G', 'batchRes full=${batchRes.toString()}');
         } catch (e) {
-          await DebugLog.write('193 G', 'dump异常: $e');
+          await DebugLog.write('193 G', tr.s543(e));
         }
         _loadTodayFeed();
         // 【v1.97.3+168 修复】batchLookup 主路径也需重算互相守护（与 fallback 路径 L612-615 对齐）
@@ -557,15 +570,15 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
       }
     } catch (e) {
       if (kDebugMode) debugPrint('[GuardianPage] 批量状态查询异常: $e');
-      try { await DebugLog.write('193 G', 'batchLookup 异常(走兜底): $e'); } catch (_) {}
+      try { await DebugLog.write('193 G', tr.s544(e)); } catch (_) {}
     }
 
     // 兜底方案：如果批量查询失败，使用原有的并行单点查询逻辑（保持鲁棒性）
     // 第4步：并行查询所有联系人的注册状态 + 签到状态
     final statusFutures = contacts.map((c) async {
-      final name = (c['name'] ?? '未命名').toString();
+      final name = (c['name'] ?? tr.s373).toString();
       final phone = (c['phone'] ?? '').toString();
-      final relation = (c['relation'] ?? '守护者').toString();
+      final relation = (c['relation'] ?? tr.s374).toString();
       bool isRegistered = false;
       int? foundUserId;
       bool checkedInToday = false;
@@ -599,10 +612,10 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
           await prefs.setBool('contact_is_registered_phone_$phone', false);
           await prefs.remove('contact_user_id_phone_$phone');
         } else if (lookupRes['offline'] == true) {
-          statusError = '网络异常';
+          statusError = tr.s379;
         }
       } catch (e) {
-        statusError = '查询失败';
+        statusError = tr.s380;
         if (kDebugMode) debugPrint('[GuardianPage] lookupByPhone($phone) 异常: $e');
       }
 
@@ -711,7 +724,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
 
     if (!sticky) {
       _healthAuthorized = false;
-      _healthAuthDiag = '未连接（点击开启生命体征守护 · $ts）';
+      _healthAuthDiag = tr.s545(ts);
       debugPrint('[GuardianPage] _loadSafetyStatus → 未授权, diag=$_healthAuthDiag');
       if (mounted) setState(() {
         _safetySignal = null;
@@ -728,7 +741,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
       if (!mounted) return;
       final hr = summary['heart_rate']?.toString() ?? '--';
       final bo = summary['blood_oxygen']?.toString() ?? '--';
-      final signal = SafetySignalEngine.evaluate(summary);
+      final signal = evaluateVitals(summary);
       _lastHealthSyncAt = DateTime.now().millisecondsSinceEpoch; // v1.97.3+169 同步时间反馈
       if (kDebugMode) {
         debugPrint('[GuardianPage] getHealthSummary 成功，summary keys: ${summary?.keys.toList()}');
@@ -736,12 +749,12 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
       if (mounted) setState(() {
         _healthSummary = summary;
         _safetySignal = signal;
-        _healthAuthDiag = '已连接（心率$hr/血氧$bo · $ts）';
+        _healthAuthDiag = tr.s546(hr, bo, ts);
       });
     } catch (e) {
       if (kDebugMode) debugPrint('[GuardianPage] 安全信号加载失败(不影响守护中状态): $e');
       if (mounted) setState(() {
-        _healthAuthDiag = '已连接 · 数据同步中（$ts）';
+        _healthAuthDiag = tr.s547(ts);
       });
     }
   }
@@ -833,8 +846,8 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
         for (final item in decoded) {
           if (item is Map<String, dynamic>) {
             // 【v1.93.1 修复】迁移旧关系"兄弟姐妹" → "家人"
-            if (item['relation'] == '兄弟姐妹') {
-              item['relation'] = '家人';
+            if (item['relation'] == tr.s307) {
+              item['relation'] = tr.s299;
               hasMigration = true;
             }
             final name = (item['name'] ?? '').toString().trim();
@@ -842,8 +855,8 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
             if (name.isNotEmpty && phone.isNotEmpty) contacts.add(item);
           } else if (item is Map) {
             final map = Map<String, dynamic>.from(item);
-            if (map['relation'] == '兄弟姐妹') {
-              map['relation'] = '家人';
+            if (map['relation'] == tr.s307) {
+              map['relation'] = tr.s299;
               hasMigration = true;
             }
             final name = (map['name'] ?? '').toString().trim();
@@ -871,14 +884,14 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
   void _openSocialPage({int tab = 0}) async {
     final prefs = await SharedPreferences.getInstance();
     final userId = prefs.getString('user_id') ?? 'guest';
-    String userName = '我';
+    String userName = tr.s320;
     final profileJson = prefs.getString('user_profile');
     if (profileJson != null) {
       try {
         final profile = jsonDecode(profileJson);
         userName = (profile['name'] as String?)?.isNotEmpty == true
             ? profile['name'] as String
-            : '我';
+            : tr.s320;
       } catch (_) {}
     }
 
@@ -957,7 +970,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
             decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.grey),
           ),
           const SizedBox(width: ZaiNeSpacing.xs),
-          Text('未注册', style: TextStyle(fontSize: ZaiNeFontSize.micro, color: Colors.grey[500])),
+          Text(tr.s384, style: TextStyle(fontSize: ZaiNeFontSize.micro, color: Colors.grey[500])),
         ],
       );
     }
@@ -971,7 +984,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
             decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.grey.shade400),
           ),
           const SizedBox(width: ZaiNeSpacing.xs),
-          Text('待激活', style: TextStyle(fontSize: ZaiNeFontSize.micro, color: ZaiNeColors.textSecondary(), fontWeight: FontWeight.w500)),
+          Text(tr.s369, style: TextStyle(fontSize: ZaiNeFontSize.micro, color: ZaiNeColors.textSecondary(), fontWeight: FontWeight.w500)),
         ],
       );
     }
@@ -995,7 +1008,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
             decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.green),
           ),
           const SizedBox(width: ZaiNeSpacing.xs),
-          Text('今日已签到${emoji.isNotEmpty ? ' $emoji' : ''}', style: TextStyle(fontSize: ZaiNeFontSize.micro, color: Colors.green.shade700, fontWeight: FontWeight.w500)),
+          Text(tr.s548(emoji.isNotEmpty ? ' $emoji' : ''), style: TextStyle(fontSize: ZaiNeFontSize.micro, color: Colors.green.shade700, fontWeight: FontWeight.w500)),
         ],
       );
     }
@@ -1006,7 +1019,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
           decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.orange),
         ),
         const SizedBox(width: ZaiNeSpacing.xs),
-        Text('今日未签到', style: TextStyle(fontSize: ZaiNeFontSize.micro, color: Colors.orange.shade700, fontWeight: FontWeight.w500)),
+        Text(tr.s370, style: TextStyle(fontSize: ZaiNeFontSize.micro, color: Colors.orange.shade700, fontWeight: FontWeight.w500)),
       ],
     );
   }
@@ -1015,7 +1028,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
   /// 【修复 v1.9.77】创建免费守护卡，让对方注册后能互为守护人
   Future<void> _inviteToRegister(Map<String, dynamic> guardian) async {
     final phone = guardian['phone']?.toString() ?? '';
-    final name = guardian['name']?.toString() ?? '朋友';
+    final name = guardian['name']?.toString() ?? tr.s300;
     if (phone.isEmpty) return;
 
     // 先创建免费守护卡，并取回卡专属落地页链接（含 card_code）
@@ -1031,18 +1044,18 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
         final su = freeRes['share_url']?.toString();
         if (su != null && su.isNotEmpty) shareUrl = su;
       } else {
-        failureReason = freeRes['message']?.toString() ?? '创建免费守护卡失败';
+        failureReason = freeRes['message']?.toString() ?? tr.s386;
       }
     } catch (e) {
       if (kDebugMode) debugPrint('[GuardianPage] 创建免费守护卡失败: $e');
-      failureReason = '网络异常，请稍后重试';
+      failureReason = tr.s387;
     }
 
     if (shareUrl == null || shareUrl.isEmpty) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(failureReason ?? '无法生成专属邀请链接'),
+            content: Text(failureReason ?? tr.s388),
             backgroundColor: Colors.orange,
             behavior: SnackBarBehavior.floating,
           ),
@@ -1084,7 +1097,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
     }
     final landingUrl = inviteUrl;
 
-    final message = '【在呢】$safeName 邀你一起守护 🛡️ 我在用「在呢」App每天报平安，独处时也安心。\n点链接，注册就能和我互相守护：\n$landingUrl';
+    final message = tr.s549(safeName, landingUrl);
     // 【修复 2026-07-12】Uri(queryParameters) 会把空格编码成「+」，iOS 短信可能原样显示成「+」号。
     // 统一把「+」还原为 %20，iOS 必能解码为空格，且不影响链接识别（链接本身无空格/+）。
     final smsUri = Uri(scheme: 'sms', path: phone, queryParameters: {'body': message});
@@ -1097,8 +1110,8 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
         await Clipboard.setData(ClipboardData(text: message));
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('短信已打开，完整链接已复制。若对方收不到链接可长按粘贴补发'),
+             SnackBar(
+              content: Text(tr.s390),
               duration: Duration(seconds: 4),
             ),
           );
@@ -1118,13 +1131,13 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
       if (!mounted) return;
       if (res['success'] == true) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('已提醒 $name 下载并签到 ✅'),
+          content: Text(tr.s550(name)),
           backgroundColor: Colors.green,
           behavior: SnackBarBehavior.floating,
         ));
       } else {
         final error = res['error']?.toString() ?? '';
-        final msg = res['message']?.toString() ?? '提醒失败';
+        final msg = res['message']?.toString() ?? tr.s392;
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(msg),
           backgroundColor: error == 'RATE_LIMITED' ? Colors.orange : Colors.red,
@@ -1134,7 +1147,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('提醒发送失败: $e'),
+        content: Text(tr.s551(e)),
         backgroundColor: Colors.red,
         behavior: SnackBarBehavior.floating,
       ));
@@ -1186,8 +1199,8 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        '我的守护圈',
+                       Text(
+                        tr.s394,
                         style: TextStyle(
                           fontSize: ZaiNeFontSize.title,
                           fontWeight: FontWeight.bold,
@@ -1200,8 +1213,8 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                           if (_headerReady) ...[
                             Text(
                               _guardians.isNotEmpty
-                                  ? '${_guardians.length} 位守护者'
-                                  : '暂无守护者',
+                                  ? tr.s552(_guardians.length)
+                                  : tr.s396,
                               style: TextStyle(
                                 fontSize: ZaiNeFontSize.caption,
                                 color: Colors.white.withValues(alpha: 0.9),
@@ -1216,7 +1229,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                                 color: Colors.white.withValues(alpha: 0.3),
                               ),
                               Text(
-                                '已成功守护 ${_guardedByMe.length} 位朋友',
+                                tr.s553(_guardedByMe.length),
                                 style: TextStyle(
                                   fontSize: ZaiNeFontSize.caption,
                                   color: Colors.white.withValues(alpha: 0.9),
@@ -1232,7 +1245,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                                 color: Colors.white.withValues(alpha: 0.3),
                               ),
                               Text(
-                                '与 ${_mutualUserIds.length} 位互为守护',
+                                tr.s554(_mutualUserIds.length),
                                 style: TextStyle(
                                   fontSize: ZaiNeFontSize.caption,
                                   color: Colors.white.withValues(alpha: 0.9),
@@ -1242,7 +1255,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                             ],
                           ] else
                             Text(
-                              '正在同步守护圈状态…',
+                              tr.s399,
                               style: TextStyle(
                                 fontSize: ZaiNeFontSize.caption,
                                 color: Colors.white.withValues(alpha: 0.9),
@@ -1254,8 +1267,8 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                       const SizedBox(height: ZaiNeSpacing.xs),
                       Text(
                         _guardians.isNotEmpty
-                            ? '紧急联系人自动成为你的守护者'
-                            : '添加紧急联系人，让他们守护你',
+                            ? tr.s400
+                            : tr.s401,
                         style: TextStyle(
                           fontSize: ZaiNeFontSize.caption,
                           color: Colors.white.withValues(alpha: 0.7),
@@ -1269,7 +1282,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                           Expanded(
                             child: _buildSocialQuickAction(
                               icon: Icons.chat_bubble_outline,
-                              label: '消息',
+                              label: tr.s402,
                               color: Colors.white,
                               onTap: () => _openSocialPage(),
                             ),
@@ -1278,7 +1291,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                           Expanded(
                             child: _buildSocialQuickAction(
                               icon: Icons.emoji_emotions_outlined,
-                              label: '表情',
+                              label: tr.s403,
                               color: Colors.white,
                               onTap: () => _openSocialPage(tab: 1),
                             ),
@@ -1287,7 +1300,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                           Expanded(
                             child: _buildSocialQuickAction(
                               icon: Icons.emoji_events_outlined,
-                              label: '成就',
+                              label: tr.s404,
                               color: Colors.white,
                               onTap: () => _openSocialPage(tab: 2),
                             ),
@@ -1301,6 +1314,9 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
               ),
 
               // ====== 发送守护卡引导卡片（醒目 CTA） ======
+              // 【CN 合规】守护卡本身就是"facilitates 邀请建立守护关系"的传播机制，
+              // CN 下从入口处隐藏（不渲染入口卡片）。
+              if (!kIsChinaBuild)
               SliverToBoxAdapter(
                 child: Transform.translate(
                   offset: const Offset(0, -16),
@@ -1357,8 +1373,8 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text(
-                                    '💌 发送守护卡',
+                                   Text(
+                                    tr.s405,
                                     style: TextStyle(
                                       fontSize: ZaiNeFontSize.subtitle,
                                       fontWeight: FontWeight.w700,
@@ -1367,7 +1383,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                                   ),
                                   const SizedBox(height: ZaiNeSpacing.xs),
                                   Text(
-                                    '邀请在乎的人，让他们也受到保护',
+                                    tr.s406,
                                     style: TextStyle(
                                       fontSize: ZaiNeFontSize.caption,
                                       color: Colors.white.withValues(alpha: 0.85),
@@ -1428,24 +1444,24 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                           children: [
                             _buildStatItem(
                               icon: Icons.local_fire_department,
-                              value: '${prefs != null ? StreakUtil.readStreak(prefs, uid) : 0} 天',
-                              label: '连续守护',
+                              value: tr.s555(prefs != null ? StreakUtil.readStreak(prefs, uid) : 0),
+                              label: tr.s408,
                               color: Colors.orange,
                               bgColor: Colors.orange.shade50,
                             ),
                             const SizedBox(width: ZaiNeSpacing.md),
                             _buildStatItem(
                               icon: isCheckedInToday ? Icons.check_circle : Icons.radio_button_unchecked,
-                              value: isCheckedInToday ? '已签到' : '未签到',
-                              label: '今日状态',
+                              value: isCheckedInToday ? tr.s409 : tr.s410,
+                              label: tr.s411,
                               color: isCheckedInToday ? Colors.green : Colors.grey,
                               bgColor: isCheckedInToday ? Colors.green.shade50 : Colors.grey.shade100,
                             ),
                             const SizedBox(width: ZaiNeSpacing.md),
                             _buildStatItem(
                               icon: Icons.calendar_today,
-                              value: '${prefs != null ? prefs.getInt(totalKey) ?? 0 : 0} 天',
-                              label: '累计签到',
+                              value: tr.s556(prefs != null ? prefs.getInt(totalKey) ?? 0 : 0),
+                              label: tr.s413,
                               color: Colors.blue,
                               bgColor: Colors.blue.shade50,
                             ),
@@ -1482,7 +1498,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                               size: 48, color: Colors.grey[300]),
                           const SizedBox(height: ZaiNeSpacing.md),
                           Text(
-                            '还没有守护者',
+                            tr.s414,
                             style: TextStyle(
                               fontSize: ZaiNeFontSize.body,
                               color: Colors.grey[500],
@@ -1490,7 +1506,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                           ),
                           const SizedBox(height: ZaiNeSpacing.sm),
                           Text(
-                            '添加紧急联系人\n让他们成为你的守护者',
+                            tr.s415,
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               fontSize: ZaiNeFontSize.caption,
@@ -1507,7 +1523,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                               ).then((_) => _loadGuardians());
                             },
                             icon: const Icon(Icons.person_add, size: 18),
-                            label: const Text('添加守护者'),
+                            label:  Text(tr.s416),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFF7C4DFF),
                               foregroundColor: Colors.white,
@@ -1544,7 +1560,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
                   child: Text(
-                    '常用功能',
+                    tr.s417,
                     style: TextStyle(
                       fontSize: ZaiNeFontSize.body,
                       fontWeight: FontWeight.w700,
@@ -1560,8 +1576,8 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                     children: [
                       _buildFunctionEntry(
                         icon: Icons.person_add_rounded,
-                        title: '紧急联系人管理',
-                        subtitle: '添加、修改、排序你的守护者（最多 10 位）',
+                        title: tr.s418,
+                        subtitle: tr.s419,
                         color: ZaiNeColors.brandOrange,
                         onTap: () {
                           Navigator.of(context).push(
@@ -1573,18 +1589,18 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                       const SizedBox(height: ZaiNeSpacing.md),
                       _buildFunctionEntry(
                         icon: Icons.favorite_rounded,
-                        title: '我守护的人',
+                        title: tr.s367,
                         subtitle: _guardedByMe.isEmpty
-                            ? '查看与编辑你发出的守护卡'
-                            : '管理 ${_guardedByMe.length} 位你守护的人',
+                            ? tr.s420
+                            : tr.s557(_guardedByMe.length),
                         color: _kGuardedBlue,
                         onTap: () => _showGuardedByMeManager(),
                       ),
                       const SizedBox(height: ZaiNeSpacing.md),
                       _buildFunctionEntry(
                         icon: Icons.check_circle_outline,
-                        title: '平安确认',
-                        subtitle: '让守护者知道你一切平安',
+                        title: tr.s422,
+                        subtitle: tr.s423,
                         color: Colors.green,
                         onTap: () {
                           _showPeaceConfirmation();
@@ -1593,8 +1609,8 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                       const SizedBox(height: ZaiNeSpacing.md),
                       _buildFunctionEntry(
                         icon: Icons.help_outline,
-                        title: '什么是守护圈',
-                        subtitle: '了解守护圈的工作原理',
+                        title: tr.s424,
+                        subtitle: tr.s425,
                         color: Colors.blue,
                         onTap: () {
                           _showGuardianInfo();
@@ -1686,8 +1702,8 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
       if (checkedInToday) {
         items.add(_FeedItem(
           type: 'checkin_me',
-          title: '你 今日签到',
-          subtitle: '已经完成今天的报到，一切安好',
+          title: tr.s426,
+          subtitle: tr.s427,
           ts: DateTime.now(),
           icon: Icons.check_circle_rounded,
           accent: const Color(0xFF4CAF50),
@@ -1697,11 +1713,11 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
       // ② 守护者 今日签到（依赖已加载的 _guardians 缓存）
       for (final g in _guardians) {
         if (g['checkedInToday'] != true) continue;
-        final name = (g['name'] ?? '守护者').toString();
+        final name = (g['name'] ?? tr.s374).toString();
         items.add(_FeedItem(
           type: 'checkin_guardian',
-          title: '$name 今日签到',
-          subtitle: '你的守护者已报平安',
+          title: tr.s558(name),
+          subtitle: tr.s429,
           ts: _parseSigninTs(g['lastSigninAt']),
           icon: Icons.verified_user_rounded,
           accent: _kGuardedBlue,
@@ -1765,8 +1781,8 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
   String _formatFeedTime(DateTime ts) {
     final now = DateTime.now();
     final diff = now.difference(ts);
-    if (diff.inMinutes < 1) return '刚刚';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}分钟前';
+    if (diff.inMinutes < 1) return tr.s430;
+    if (diff.inMinutes < 60) return tr.s559(diff.inMinutes);
     if (ts.year == now.year && ts.month == now.month && ts.day == now.day) {
       return DateFormat('HH:mm').format(ts);
     }
@@ -1808,13 +1824,13 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                         color: Color(0xFF7C4DFF), size: 18),
                   ),
                   const SizedBox(width: 10),
-                  Text('今天',
+                  Text(tr.s164,
                       style: TextStyle(
                           fontSize: ZaiNeFontSize.subtitle,
                           fontWeight: FontWeight.bold,
                           color: ZaiNeColors.textPrimary())),
                   const SizedBox(width: 6),
-                  Text('圈内动态',
+                  Text(tr.s432,
                       style: TextStyle(
                           fontSize: ZaiNeFontSize.caption,
                           color: ZaiNeColors.textSecondary())),
@@ -1905,13 +1921,13 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
           Icon(Icons.auto_awesome_outlined,
               size: 32, color: Colors.grey),
           const SizedBox(height: ZaiNeSpacing.sm),
-          Text('今天圈内还静悄悄的',
+          Text(tr.s433,
               style: TextStyle(
                   fontSize: ZaiNeFontSize.body,
                   color: ZaiNeColors.textSecondary(),
                   fontWeight: FontWeight.w500)),
           const SizedBox(height: 4),
-          Text('签到或报个平安，让守护圈看见你',
+          Text(tr.s434,
               style: TextStyle(
                   fontSize: ZaiNeFontSize.caption,
                   color: ZaiNeColors.textHint())),
@@ -1957,14 +1973,14 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('开启生命体征守护',
+                         Text(tr.s435,
                             style: TextStyle(fontSize: ZaiNeFontSize.subtitle, fontWeight: FontWeight.w500)),
                         const SizedBox(height: ZaiNeSpacing.xs),
-                        const Text('同步 Apple Watch 心率、血氧与睡眠',
+                         Text(tr.s436,
                             style: TextStyle(fontSize: ZaiNeFontSize.caption, color: Colors.grey)),
                         // 【v1.97.3+176 诊断】直接显示 HealthKit 检测结论，免开控制台
                         const SizedBox(height: ZaiNeSpacing.xs),
-                        Text('诊断：$_healthAuthDiag',
+                        Text(tr.s560(_healthAuthDiag),
                             style: TextStyle(fontSize: ZaiNeFontSize.micro, color: Colors.grey[500])),
                       ],
                     ),
@@ -2018,15 +2034,15 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                   ),
                   child: const Center(child: CircularProgressIndicator(strokeWidth: 2, color: Colors.green)),
                 ),
-                const SizedBox(width: ZaiNeSpacing.md),
+                 SizedBox(width: ZaiNeSpacing.md),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text('守护就绪 · 数据收集中',
+                    children:  [
+                      Text(tr.s438,
                           style: TextStyle(fontSize: ZaiNeFontSize.subtitle, fontWeight: FontWeight.w500)),
                       SizedBox(height: ZaiNeSpacing.xs),
-                      Text('已开启生命体征守护，正在同步 Apple Watch 数据',
+                      Text(tr.s439,
                           style: TextStyle(fontSize: ZaiNeFontSize.caption, color: Colors.grey)),
                     ],
                   ),
@@ -2043,39 +2059,39 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
     final metrics = <Map<String, String>>[];
     if (summary != null) {
       final hr = summary['heart_rate'];
-      if (hr != null) metrics.add({'心率': '$hr bpm'});
+      if (hr != null) metrics.add({tr.s440: '$hr bpm'});
       final spo2 = summary['blood_oxygen'];
       if (spo2 != null) {
         final spo2v = spo2 is num ? spo2.round() : spo2;
-        metrics.add({'血氧': '$spo2v%'});
+        metrics.add({tr.s441: '$spo2v%'});
       }
       final sleepMin = summary['sleep_total'];
       if (sleepMin != null) {
         final mins = (sleepMin is num)
             ? sleepMin.toDouble()
             : double.tryParse(sleepMin.toString()) ?? 0;
-        if (mins > 0) metrics.add({'睡眠': '${(mins / 60).toStringAsFixed(1)} h'});
+        if (mins > 0) metrics.add({tr.s442: '${(mins / 60).toStringAsFixed(1)} h'});
       }
     }
 
     final isCN = AppConfig.isChinaRegion;
     final actionHint = isCN
-        ? '点按查看完整体征'
+        ? tr.s443
         : (_autoAlertEnabled
-            ? '自动守护中 · 点按查看完整体征'
-            : '自动守护已关闭 · 点按查看完整体征');
+            ? tr.s444
+            : tr.s445);
 
     // 【v1.97.3+169】同步时间反馈：根据最近一次体征同步时间显示「同步 X 分钟前」
-    String syncHint = '刚刚同步';
+    String syncHint = tr.s446;
     if (_lastHealthSyncAt > 0) {
       final diffMin = (DateTime.now().millisecondsSinceEpoch - _lastHealthSyncAt) ~/ 60000;
       if (diffMin < 1) {
-        syncHint = '刚刚同步';
+        syncHint = tr.s446;
       } else if (diffMin < 60) {
-        syncHint = '同步于 $diffMin 分钟前';
+        syncHint = tr.s561(diffMin);
       } else {
         final diffH = diffMin ~/ 60;
-        syncHint = '同步于 $diffH 小时前';
+        syncHint = tr.s562(diffH);
       }
     }
 
@@ -2130,12 +2146,12 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                                   color: Colors.green,
                                   borderRadius: BorderRadius.circular(ZaiNeRadius.small),
                                 ),
-                                child: const Row(
+                                child:  Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Icon(Icons.verified_rounded, color: Colors.white, size: 12),
                                     SizedBox(width: 3),
-                                    Text('守护中',
+                                    Text(tr.s449,
                                         style: TextStyle(
                                           fontSize: ZaiNeFontSize.micro,
                                           color: Colors.white,
@@ -2230,7 +2246,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
     }
     final nick = (person['nickname']?.toString() ?? '').trim();
     final recv = (person['receiver_name']?.toString() ?? '').trim();
-    return nick.isNotEmpty ? nick : (recv.isNotEmpty ? recv : '未命名');
+    return nick.isNotEmpty ? nick : (recv.isNotEmpty ? recv : tr.s373);
   }
 
   Future<void> _editGuardedRemark(int receiverId, String remark) async {
@@ -2250,9 +2266,9 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
     final name = _guardedDisplayName(person);
     final url = AppConstants.guardianInviteUrl;
     final message =
-        '$name，我在「在呢」给你发了一张守护卡，还没激活哦~\n\n'
-        '下载 App 登录后，我们就能互相报平安、遇到事情第一时间找到彼此。\n\n'
-        '点下面链接立即激活守护关系：\n$url';
+        tr.z0289(name) +
+        tr.z0290 +
+        tr.z0291(url);
     // 先关闭管理弹窗，避免遮挡 SnackBar
     if (mounted && Navigator.of(context).canPop()) {
       Navigator.of(context).pop();
@@ -2283,9 +2299,52 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
           _kGuardedBlue,
         ),
         onEditRemark: _editGuardedRemark,
-        onReinvite: _reinviteGuarded,
+        onReinvite: kIsChinaBuild ? null : _reinviteGuarded,
       ),
     ).then((_) => _loadGuardians());
+  }
+
+  /// 【C4 方案C合并版】平安确认响应状态小标签
+  /// status: 0=待确认(平安确认中) / 1=已确认(已报平安) / 2=需要帮助
+  Widget _buildPeaceStatusChip(int status) {
+    IconData icon;
+    Color color;
+    String label;
+    if (status == 2) {
+      icon = Icons.warning_amber_rounded;
+      color = Colors.red;
+      label = tr.z0904; // 需要帮助
+    } else if (status == 1) {
+      icon = Icons.verified_user_rounded;
+      color = Colors.green;
+      label = tr.z0909; // 已报平安
+    } else {
+      icon = Icons.hourglass_empty_rounded;
+      color = const Color(0xFF757575); // grey 600
+      label = tr.z0908; // 平安确认中
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: color),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: ZaiNeFontSize.micro,
+              color: color,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildGuardedByMeSection() {
@@ -2314,7 +2373,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '我守护的人',
+                        tr.s367,
                         style: TextStyle(
                           fontSize: ZaiNeFontSize.body,
                           fontWeight: FontWeight.w700,
@@ -2322,7 +2381,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                         ),
                       ),
                       Text(
-                        '我发出的守护卡 · 已与你互为守护（人数不限）',
+                        tr.s450,
                         style: TextStyle(
                           fontSize: ZaiNeFontSize.micro,
                           color: Colors.grey[500],
@@ -2349,7 +2408,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                     Icon(Icons.favorite_outline, size: 32, color: Colors.grey[300]),
                     const SizedBox(height: 8),
                     Text(
-                      '还没有守护的人',
+                      tr.s451,
                       style: TextStyle(
                         fontSize: ZaiNeFontSize.caption,
                         color: Colors.grey[500],
@@ -2357,7 +2416,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '发出守护卡，对方注册后就会出现在列表里',
+                      tr.s452,
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: ZaiNeFontSize.micro,
@@ -2375,6 +2434,10 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                 final boundAt = person['bound_at']?.toString() ?? '';
                 final rid = person['receiver_id']?.toString() ?? '';
                 final isMutual = _mutualUserIds.contains(rid);
+                // 【留言功能 v1】该被守护人「需要帮助」时附带的选填留言（有则展示）
+                final peaceMsg = _peaceMessageByReceiver[rid];
+                // 【C4】该被守护人对我发起的平安确认的响应状态（0待确认/1已确认/2需要帮助）
+                final peaceStatus = _peaceStatusByReceiver[rid];
                 return Container(
                   margin: const EdgeInsets.only(bottom: ZaiNeSpacing.cardXs),
                   padding: const EdgeInsets.all(ZaiNeSpacing.lg),
@@ -2428,9 +2491,16 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                                 ),
                                 const SizedBox(width: ZaiNeSpacing.xs),
                                 _buildMutualBadge(isMutual),
+                                // 【方案A v1.97.1+160】chip 挪到名字行末尾，避免被 Row 末尾挤截
+                                // 【方案三 v1.97.1+160】status=0（待确认/已处理归零）不渲染 chip，处理完更"安静"
+                                if (peaceStatus != null && peaceStatus != 0) ...[
+                                  const SizedBox(width: 8),
+                                  _buildPeaceStatusChip(peaceStatus),
+                                ],
                               ],
                             ),
                             const SizedBox(height: 4),
+                            // 状态行：仅签到态（chip 已挪走、boundAt 下移独立行）
                             Row(
                               children: [
                                 Icon(
@@ -2447,8 +2517,8 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                                 const SizedBox(width: 4),
                                 Text(
                                   isPending
-                                      ? '待激活'
-                                      : (checkedIn ? '今日已签到' : '今日未签到'),
+                                      ? tr.s369
+                                      : (checkedIn ? tr.signInButtonCheckedIn : tr.s370),
                                   style: TextStyle(
                                     fontSize: ZaiNeFontSize.micro,
                                     color: isPending
@@ -2457,17 +2527,147 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
-                                if (boundAt.isNotEmpty) ...[
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    '· $boundAt 绑定',
-                                    style: TextStyle(
-                                      fontSize: ZaiNeFontSize.micro,
-                                      color: Colors.grey[400],
-                                    ),
-                                  ),
-                                ],
                               ],
+                            ),
+                            // 绑定日期独立行（小字灰，避免与签到态挤一行）
+                            if (boundAt.isNotEmpty) ...[
+                              const SizedBox(height: 2),
+                              Text(
+                                tr.s563(boundAt),
+                                style: TextStyle(
+                                  fontSize: ZaiNeFontSize.micro,
+                                  color: Colors.grey[400],
+                                ),
+                              ),
+                            ],
+                            // 【留言功能 v1 + V2】任一状态下含留言/轻量状态均展示气泡（仅发送给守护者，合规）
+                            // 需要帮助(status=2)用警示红；我没事/其他(status=1)用沉静蓝
+                            if (peaceMsg != null && peaceMsg.isNotEmpty) ...[
+                              const SizedBox(height: 8),
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: peaceStatus == 2
+                                      ? const Color(0xFFA32D2D).withValues(alpha: 0.08)
+                                      : Colors.blue.withValues(alpha: 0.06),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: peaceStatus == 2
+                                        ? const Color(0xFFA32D2D).withValues(alpha: 0.18)
+                                        : Colors.blue.withValues(alpha: 0.16),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      peaceStatus == 2 ? tr.z0917 : tr.z0924, // 留言 / 状态
+                                      style: TextStyle(
+                                        fontSize: ZaiNeFontSize.micro,
+                                        fontWeight: FontWeight.w600,
+                                        color: peaceStatus == 2
+                                            ? const Color(0xFFA32D2D)
+                                            : Colors.blue[700],
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      peaceMsg,
+                                      style: TextStyle(
+                                        fontSize: ZaiNeFontSize.micro,
+                                        color: Colors.grey[700],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                            // 【方案A v1.97.1+160】"请求报平安" 主按钮（向被守护人发起）
+                            // 【方案三 v1.97.1+160】status=2（需要帮助）时前置「已联系」按钮，标记已处理归零
+                            const SizedBox(height: 10),
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: Builder(builder: (context) {
+                                final rid = person['receiver_id']?.toString() ?? '';
+                                return Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    if (peaceStatus == 2) ...[
+                                      GestureDetector(
+                                        onTap: () => _acknowledgePeace(rid, name),
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 14, vertical: 6),
+                                          decoration: BoxDecoration(
+                                            color: Colors.green,
+                                            borderRadius: BorderRadius.circular(16),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              const Icon(Icons.check_circle_rounded,
+                                                  size: 14, color: Colors.white),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                tr.z0910, // 已联系
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                    ],
+                                    GestureDetector(
+                                      onTap: () {
+                                        HapticFeedback.mediumImpact();
+                                        if (rid.isEmpty) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              content: Text(tr.s471),
+                                              backgroundColor: Colors.orange,
+                                              behavior: SnackBarBehavior.floating,
+                                            ),
+                                          );
+                                          return;
+                                        }
+                                        // 【方案A】直接从我守护的人卡片发起（receiver_id 即 userId）
+                                        _doSendPeace(int.parse(rid), name);
+                                      },
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 14, vertical: 6),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF7C4DFF),
+                                          borderRadius: BorderRadius.circular(16),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            const Icon(Icons.favorite_border,
+                                                size: 14, color: Colors.white),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              tr.s456, // "平安" 文案（与原守护我的人胶囊同文案）
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              }),
                             ),
                           ],
                         ),
@@ -2491,7 +2691,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
   Widget _buildMutualBadge(bool isMutual) {
     if (!isMutual) return const SizedBox.shrink();
     return Tooltip(
-      message: '互为守护',
+      message: tr.s454,
       child: SizedBox(
         width: 28,
         height: 18,
@@ -2639,7 +2839,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                     children: [
                       Flexible(
                         child: Text(
-                          guardian['name'] ?? '未命名',
+                          guardian['name'] ?? tr.s373,
                           overflow: TextOverflow.ellipsis,
                           maxLines: 1,
                           style: const TextStyle(
@@ -2665,55 +2865,30 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                 ],
               ),
             ),
-            // 【v1.97.3+171】操作列横排+层级：电话/消息 次按钮（仅图标圆形）+ 平安/提醒/邀请 主按钮（实心紫胶囊）
+            // 【v1.97.3+171 操作列】电话/消息 次按钮（仅图标圆形）
+            // 【方案A v1.97.1+160】移除多态胶囊：平安/提醒/邀请动作统一迁到「我守护的人」卡片
+            //   原因：原设计按钮在「守护我的人」但响应 chip 在「我守护的人」，错位
+            //   「守护我的人」= 别人主动守护我，保留电话/短信即可，不需要我主动发请求
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 _buildIconOnlyButton(
                   icon: Icons.phone,
-                  tooltip: '拨打电话',
+                  tooltip: tr.s455,
                   onTap: () {
                     HapticFeedback.lightImpact();
-                    _callGuardian((guardian['name'] ?? '守护者').toString(),
+                    _callGuardian((guardian['name'] ?? tr.s374).toString(),
                         (guardian['phone'] ?? '').toString());
                   },
                 ),
                 const SizedBox(width: 6),
                 _buildIconOnlyButton(
                   icon: Icons.sms,
-                  tooltip: '发送短信',
+                  tooltip: tr.s331,
                   onTap: () {
                     HapticFeedback.mediumImpact();
-                    _sendSMSToGuardian((guardian['name'] ?? '守护者').toString(),
+                    _sendSMSToGuardian((guardian['name'] ?? tr.s374).toString(),
                         (guardian['phone'] ?? '').toString());
-                  },
-                ),
-                const SizedBox(width: 6),
-                _buildPrimaryActionPill(
-                  icon: (guardian['isRegistered'] == true && guardian['isActive'] == true)
-                      ? Icons.favorite_border
-                      : (guardian['isRegistered'] == true && guardian['isActive'] != true)
-                          ? Icons.notifications_active_outlined
-                          : Icons.person_add_alt_1,
-                  label: (guardian['isRegistered'] == true && guardian['isActive'] == true)
-                      ? '平安'
-                      : (guardian['isRegistered'] == true && guardian['isActive'] != true)
-                          ? '提醒'
-                          : '邀请',
-                  tooltip: (guardian['isRegistered'] == true && guardian['isActive'] == true)
-                      ? '请求平安确认'
-                      : (guardian['isRegistered'] == true && guardian['isActive'] != true)
-                          ? '提醒TA下载'
-                          : '邀请注册',
-                  onTap: () {
-                    HapticFeedback.mediumImpact();
-                    if (guardian['isRegistered'] == true && guardian['isActive'] == true) {
-                      _showRequestPeaceDialog(guardian);
-                    } else if (guardian['isRegistered'] == true && guardian['isActive'] != true) {
-                      _remindToDownload(guardian);
-                    } else {
-                      _inviteToRegister(guardian);
-                    }
                   },
                 ),
               ],
@@ -2792,8 +2967,8 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
   Future<void> _callGuardian(String name, String phone) async {
     if (phone.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('该守护者未设置电话号码'),
+         SnackBar(
+          content: Text(tr.s462),
           backgroundColor: Colors.orange,
           behavior: SnackBarBehavior.floating,
         ),
@@ -2809,20 +2984,20 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
             const Icon(Icons.phone, color: ZaiNeColors.brandOrange),
             const SizedBox(width: ZaiNeSpacing.sm),
             Expanded(
-              child: Text('拨打给 $name'),
+              child: Text(tr.s564(name)),
             ),
           ],
         ),
-        content: Text('即将拨打：${_maskPhone(phone)}\n\n点击确认后打开拨号界面。'),
+        content: Text(tr.s565(_maskPhone(phone))),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('取消'),
+            child:  Text(tr.s016),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(backgroundColor: ZaiNeColors.brandOrange),
-            child: const Text('拨打'),
+            child:  Text(tr.s465),
           ),
         ],
       ),
@@ -2835,8 +3010,8 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
         } else {
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('无法打开拨号界面，请手动拨打'),
+             SnackBar(
+              content: Text(tr.s466),
               backgroundColor: Colors.orange,
             ),
           );
@@ -2844,7 +3019,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
       } catch (e) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('拨号失败：$e'), backgroundColor: Colors.red),
+          SnackBar(content: Text(tr.s566(e)), backgroundColor: Colors.red),
         );
       }
     }
@@ -2854,8 +3029,8 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
   Future<void> _sendSMSToGuardian(String name, String phone) async {
     if (phone.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('该守护者未设置电话号码'),
+         SnackBar(
+          content: Text(tr.s462),
           backgroundColor: Colors.orange,
           behavior: SnackBarBehavior.floating,
         ),
@@ -2874,7 +3049,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
 
   /// 【P2】请求平安确认弹窗
   void _showRequestPeaceDialog(Map<String, dynamic> guardian) {
-    final name = guardian['name'] ?? '守护者';
+    final name = guardian['name'] ?? tr.s374;
 
     showDialog(
       context: context,
@@ -2885,17 +3060,17 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
             Icon(Icons.favorite_border, color: Colors.blue.shade600),
             const SizedBox(width: ZaiNeSpacing.sm),
             Expanded(
-              child: Text('向 $name 发平安确认请求'),
+              child: Text(tr.s567(name)),
             ),
           ],
         ),
         content: Text(
-          '将向 $name 发送一条平安确认请求，\n对方打开在呢App后可点击"平安"确认。\n\n是否继续？',
+          tr.s568(name),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('取消'),
+            child:  Text(tr.s016),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -2905,7 +3080,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.blue.shade600,
             ),
-            child: const Text('发送请求'),
+            child:  Text(tr.s470),
           ),
         ],
       ),
@@ -2915,13 +3090,13 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
   /// 发送平安确认请求
   Future<void> _sendPeaceRequest(Map<String, dynamic> guardian) async {
     final phone = guardian['phone']?.toString() ?? '';
-    final name = guardian['name']?.toString() ?? '守护者';
+    final name = guardian['name']?.toString() ?? tr.s374;
     final userId = guardian['userId'] as int?;
 
     if (phone.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('该守护者未绑定手机号，无法发送平安确认'),
+         SnackBar(
+          content: Text(tr.s471),
           backgroundColor: Colors.orange,
           behavior: SnackBarBehavior.floating,
         ),
@@ -2942,7 +3117,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('$name 尚未注册「在呢」，无法发送平安确认'),
+              content: Text(tr.s569(name)),
               backgroundColor: Colors.orange,
               behavior: SnackBarBehavior.floating,
             ),
@@ -2956,8 +3131,8 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
       if (kDebugMode) debugPrint('[GuardianPage] 平安确认失败: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('网络请求失败，请检查网络后重试'),
+           SnackBar(
+            content: Text(tr.s473),
             backgroundColor: Colors.red,
             behavior: SnackBarBehavior.floating,
           ),
@@ -2965,6 +3140,101 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
       }
     }
     _loadTodayFeed();
+  }
+
+  /// 【C4 方案C合并版】拉取「我守护的人」对平安确认的响应状态
+  /// 调用 /api/peace/sent，按 user_id 取每人最新一条请求的 status：
+  /// 0=待确认(平安确认中) / 1=已确认(已报平安) / 2=需要帮助
+  Future<void> _loadPeaceStatus() async {
+    try {
+      final res = await PeaceService.getSentRequests();
+      if (res['success'] != true) return;
+      final list = res['requests'];
+      if (list is! List) return;
+      final Map<String, int> map = {};
+      final Map<String, int> reqMap = {};
+      final Map<String, String> msgMap = {};
+      // get_sent 已按 requested_at desc，故同一 user 取最先遇到（最新）的状态
+      for (final item in list) {
+        if (item is! Map) continue;
+        final uid = item['user_id']?.toString();
+        final st = item['status'];
+        if (uid == null || st is! int) continue;
+        map.putIfAbsent(uid, () => st);
+        // 【方案三】记录最新一条的 request_id（已联系按钮用）
+        final rid = item['request_id'];
+        if (rid is int) {
+          reqMap.putIfAbsent(uid, () => rid);
+        }
+        // 【留言功能 v1】记录最新一条的留言（仅 status=2 且有内容时展示）
+        final msg = item['message'];
+        if (msg != null && msg.toString().isNotEmpty) {
+          msgMap.putIfAbsent(uid, () => msg.toString());
+        }
+      }
+      if (!mounted) return;
+      setState(() {
+        _peaceStatusByReceiver = map;
+        _peaceRequestIdByReceiver = reqMap;
+        _peaceMessageByReceiver = msgMap;
+      });
+    } catch (e) {
+      if (kDebugMode) debugPrint('[GuardianPage] 平安确认响应状态加载失败(忽略): $e');
+    }
+  }
+
+  /// 【方案三】守护者标记"需要帮助"为已处理（status 2 → 0 归零）
+  Future<void> _acknowledgePeace(String rid, String name) async {
+    final requestId = _peaceRequestIdByReceiver[rid];
+    if (requestId == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(tr.z0911),
+            backgroundColor: Colors.orange,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      return;
+    }
+    try {
+      final res = await PeaceService.acknowledgePeace(requestId);
+      if (res['success'] == true) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(tr.z0912),
+              backgroundColor: Colors.green,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+        // 归零后立即刷新，chip 从「需要帮助」恢复
+        unawaited(_loadPeaceStatus());
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(tr.z0913),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) debugPrint('[GuardianPage] 标记已处理失败: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(tr.z0913),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
   }
 
   /// 执行平安确认API调用
@@ -2975,17 +3245,19 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('已向 $name 发送平安确认请求'),
+              content: Text(tr.s570(name)),
               backgroundColor: Colors.blue,
               behavior: SnackBarBehavior.floating,
             ),
           );
         }
+        // 【C4】发送成功后立即刷新响应状态，让卡片即时显示「平安确认中」
+        unawaited(_loadPeaceStatus());
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('发送失败：${peaceRes['error'] ?? '请稍后重试'}'),
+              content: Text(tr.s571(peaceRes['error'] ?? '请稍后重试')),
               backgroundColor: Colors.red,
               behavior: SnackBarBehavior.floating,
             ),
@@ -2996,8 +3268,8 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
       if (kDebugMode) debugPrint('[GuardianPage] 平安确认API异常: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('网络请求失败，请检查网络后重试'),
+           SnackBar(
+            content: Text(tr.s473),
             backgroundColor: Colors.red,
             behavior: SnackBarBehavior.floating,
           ),
@@ -3016,7 +3288,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
 
   /// 【新增】解除守护关系确认弹窗
   void _showRemoveGuardianDialog(Map<String, dynamic> guardian) {
-    final name = guardian['name'] ?? '守护者';
+    final name = guardian['name'] ?? tr.s374;
     final phone = guardian['phone'] ?? '';
     final isRegistered = guardian['isRegistered'] == true;
 
@@ -3024,22 +3296,23 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.card)),
-        title: const Row(
+        title:  Row(
           children: [
             Icon(Icons.person_remove_outlined, color: Colors.red),
             SizedBox(width: ZaiNeSpacing.sm),
-            Text('解除守护关系'),
+            Text(tr.s476),
           ],
         ),
         content: Text(
-           isRegistered
-               ? '确定要解除与 $name ($phone) 的守护关系吗？\n\n解除后，对方将不再接收你的求助通知，你也无法再看到对方的签到状态。'
-               : '确定要将 $name ($phone) 从守护圈移除吗？',
+          (isRegistered ? tr.s572(name, phone) : tr.s573(name, phone)) +
+              // 【CN合规】明示"随时退出、退出即停"，无需对方同意
+              // （《个人信息保护法》：个人撤回同意应当便捷，且不得设置不合理条件）
+              (kIsChinaBuild ? '\n\n解除后，您与对方的信息共享将立即停止，无需对方同意。' : ''),
          ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('取消'),
+            child:  Text(tr.s016),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -3047,7 +3320,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
               await _removeGuardian(guardian);
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('解除守护'),
+            child:  Text(tr.s479),
           ),
         ],
       ),
@@ -3073,7 +3346,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
       }
 
       if (contactId == null) {
-        throw Exception('找不到该联系人的记录');
+        throw Exception(tr.s480);
       }
 
       // 2. 调用后端接口删除
@@ -3092,17 +3365,17 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('已解除与 ${guardian['name']} 的守护关系'), backgroundColor: Colors.blue),
+            SnackBar(content: Text(tr.s574(guardian['name'])), backgroundColor: Colors.blue),
           );
           _loadGuardians(isSilent: false);
         }
       } else {
-        throw Exception(res['message'] ?? '解除失败');
+        throw Exception(res['message'] ?? tr.s482);
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('操作失败: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text(tr.s575(e)), backgroundColor: Colors.red),
         );
       }
     }
@@ -3114,32 +3387,32 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.card)),
-        title: const Row(
+        title:  Row(
           children: [
             Icon(Icons.shield, color: Color(0xFF7C4DFF)),
             SizedBox(width: ZaiNeSpacing.sm),
-            Text('什么是守护圈'),
+            Text(tr.s424),
           ],
         ),
-        content: const Column(
+        content:  Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('守护圈是你的专属安全网络。'),
+            Text(tr.s484),
             SizedBox(height: ZaiNeSpacing.sm),
-            Text('🛡️ 添加信任的家人和朋友作为守护者'),
+            Text(tr.s485),
             SizedBox(height: ZaiNeSpacing.xs),
-            Text('🔔 你每天的签到状态守护者可见'),
+            Text(tr.s486),
             SizedBox(height: ZaiNeSpacing.xs),
-            Text('🆘 紧急求助触发时守护者会立即收到通知'),
+            Text(tr.s487),
             SizedBox(height: ZaiNeSpacing.xs),
-            Text('❤️ 让关心你的人安心'),
+            Text(tr.s488),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('我知道了'),
+            child:  Text(tr.s489),
           ),
         ],
       ),
@@ -3152,20 +3425,20 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.card)),
-        title: const Row(
+        title:  Row(
           children: [
             Icon(Icons.check_circle, color: Colors.green),
             SizedBox(width: ZaiNeSpacing.sm),
-            Text('平安确认'),
+            Text(tr.s422),
           ],
         ),
-        content: const Text(
-          '向你的守护者发送一条平安消息，让他们知道你一切安好。\n\n"我很好，不用担心 ❤️"',
+        content:  Text(
+          tr.s490,
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('取消'),
+            child:  Text(tr.s016),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -3175,7 +3448,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.green,
             ),
-            child: const Text('发送确认'),
+            child:  Text(tr.s491),
           ),
         ],
       ),
@@ -3192,8 +3465,8 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
     final contactsJson = prefs.getString(contactsKey);
     if (contactsJson == null || contactsJson.isEmpty) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('还没有添加守护者，请先添加紧急联系人'),
+      ScaffoldMessenger.of(context).showSnackBar( SnackBar(
+        content: Text(tr.s492),
         backgroundColor: Colors.orange,
         behavior: SnackBarBehavior.floating,
       ));
@@ -3213,8 +3486,8 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
 
     if (contacts.isEmpty) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('守护者信息异常，请重新添加联系人'),
+      ScaffoldMessenger.of(context).showSnackBar( SnackBar(
+        content: Text(tr.s493),
         backgroundColor: Colors.orange,
         behavior: SnackBarBehavior.floating,
       ));
@@ -3233,13 +3506,13 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
     if (firstPhone == null || !mounted) return;
 
     // 读取用户姓名用于短信内容
-    String senderName = '我';
+    String senderName = tr.s320;
     try {
       final prefs = await SharedPreferences.getInstance();
       final profileJson = prefs.getString('user_profile');
       if (profileJson != null) {
         final profile = jsonDecode(profileJson);
-        senderName = (profile['name'] as String?)?.isNotEmpty == true ? profile['name'] as String : '我';
+        senderName = (profile['name'] as String?)?.isNotEmpty == true ? profile['name'] as String : tr.s320;
       }
     } catch (_) {}
 
@@ -3247,7 +3520,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
       final uri = Uri(
         scheme: 'sms',
         path: firstPhone,
-        queryParameters: {'body': '【在呢】$senderName 一切平安，请放心 ❤️'},
+        queryParameters: {'body': tr.s576(senderName)},
       );
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri);
@@ -3256,8 +3529,8 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
           await CircleEventDao.insert(CircleEvent(
             type: CircleEventType.peace,
             actor: 'me',
-            summary: '你 报平安',
-            detail: '已向 ${contacts.length} 位守护者发送平安消息',
+            summary: tr.s495,
+            detail: tr.s577(contacts.length),
             ts: DateTime.now().millisecondsSinceEpoch,
           ));
         } catch (logErr) {
@@ -3265,14 +3538,14 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
         }
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('已为 ${contacts.length} 位守护者准备短信，请在短信App中发送'),
+          content: Text(tr.s578(contacts.length)),
           backgroundColor: Colors.teal,
           behavior: SnackBarBehavior.floating,
         ));
       } else {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('无法打开短信界面，请手动发送平安消息'),
+        ScaffoldMessenger.of(context).showSnackBar( SnackBar(
+          content: Text(tr.s498),
           backgroundColor: Colors.orange,
           behavior: SnackBarBehavior.floating,
         ));
@@ -3280,7 +3553,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('短信功能不可用：$e'),
+        content: Text(tr.s579(e)),
         backgroundColor: Colors.red,
         behavior: SnackBarBehavior.floating,
       ));
@@ -3367,7 +3640,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
       ),
       child: Center(
         child: Text(
-          (guardian['name'] ?? '未命名').toString().substring(0, 1),
+          (guardian['name'] ?? tr.s373).toString().substring(0, 1),
           style: TextStyle(
             fontSize: ZaiNeFontSize.title,
             fontWeight: FontWeight.bold,

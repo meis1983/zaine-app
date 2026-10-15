@@ -67,8 +67,10 @@ class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
         UserDefaults.standard.set(total, forKey: watchTotalKey)
     }
     @Published var checkInAlreadyDone = false
+    #if !ZAI_REGION_CN
     @Published var autoCheckInSuccess = false   // 【P0 心跳自动签到】独立庆祝态
     @Published var isHeartbeatGuardian = false  // 【P0 心跳守护中】状态指示
+    #endif
     @Published var lastHeartRate: Double = 0
     private var pendingClientId: String?
 
@@ -80,9 +82,11 @@ class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
         return bid.contains("zaine.app.cn")
     }()
 
+    #if !ZAI_REGION_CN
     // 【P0】HealthKit 心率监控
     private let healthStore = HKHealthStore()
     private var heartRateQuery: HKAnchoredObjectQuery?
+    #endif
 
     private override init() {
         super.init()
@@ -257,6 +261,7 @@ class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
     // MARK: - 【P0】自动心跳签到（核心酷炫功能）
     /// 由 ContentView.onAppear 调用，启动 HealthKit 心率监控
     /// 检测到有效心率后自动触发签到，用户零操作
+    #if !ZAI_REGION_CN
     func startHeartRateMonitoring() {
         // 【中国合规版整改】cn 区关闭"心率自动签到"：不启动心率监控、不自动签到
         guard !isChinaRegion else {
@@ -278,7 +283,9 @@ class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
             self.startHeartRateQuery()
         }
     }
+    #endif
 
+    #if !ZAI_REGION_CN
     private func startHeartRateQuery() {
         let hrType = HKObjectType.quantityType(forIdentifier: .heartRate)!
         let query = HKAnchoredObjectQuery(
@@ -296,7 +303,9 @@ class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
         heartRateQuery = query
         print("[Watch] 💓 心率守护监听已启动")
     }
+    #endif
 
+    #if !ZAI_REGION_CN
     private func processHeartRateSamples(_ samples: [HKSample]?) {
         guard let samples = samples as? [HKQuantitySample], !samples.isEmpty else { return }
         let today = Calendar.current.component(.day, from: Date())
@@ -323,7 +332,9 @@ class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
             }
         }
     }
+    #endif
 
+    #if !ZAI_REGION_CN
     /// 自动心跳签到：WCSession 不可达时排队 transferUserInfo（后台也能投递）
     func sendAutoCheckIn(heartRate: Double) {
         // 【中国合规版整改】cn 区绝不自动签到（双保险）
@@ -363,6 +374,7 @@ class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
         // 触觉反馈：轻触提示（不打断用户）
         WKInterfaceDevice.current().play(.success)
     }
+    #endif
 
     // MARK: - WCSessionDelegate
     func session(_ session: WCSession, activationDidCompleteWith activationState: WCSessionActivationState, error: Error?) {

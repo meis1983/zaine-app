@@ -12,6 +12,7 @@ import 'package:app_links/app_links.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
+import '../config/app_config.dart';
 import 'api/card_service.dart';
 import 'api/sync_service.dart';
 import 'silent_login_service.dart';
@@ -75,8 +76,13 @@ class DeepLinkService {
       if (code != null && code.isNotEmpty) {
         if (kDebugMode) debugPrint('[DeepLink] 发现守护卡 Scheme 链接: code=$code');
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setString(_pendingCardKey, code.trim());
-        onCardCodeReceived?.call(); // 【新增 v1.9.95】前台即时通知 UI 展示仪式
+        // 【CN合规 177】CN 版不发守护卡裂变链接，收到此类 Deep Link 不触发欢迎仪式，
+        // 避免登录后弹出「守护关系已建立」卡死（见 177 包修复）。CN 用户的守护关系
+        // 仅通过「输入守护码」手动绑定建立。
+        if (!kIsChinaBuild) {
+          await prefs.setString(_pendingCardKey, code.trim());
+          onCardCodeReceived?.call(); // 【新增 v1.9.95】前台即时通知 UI 展示仪式
+        }
         return;
       }
     }
@@ -110,9 +116,12 @@ class DeepLinkService {
     }
 
     if (kDebugMode) debugPrint('[DeepLink] 提取到 card_code: $cardCode');
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_pendingCardKey, cardCode);
-    onCardCodeReceived?.call(); // 【新增 v1.9.95】前台即时通知 UI 展示仪式
+    // 【CN合规 177】CN 版不发守护卡裂变链接，不保存待处理码、不触发欢迎仪式。
+    if (!kIsChinaBuild) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_pendingCardKey, cardCode);
+      onCardCodeReceived?.call(); // 【新增 v1.9.95】前台即时通知 UI 展示仪式
+    }
   }
 
   /// 从 URI 中提取 card_code
@@ -134,6 +143,18 @@ class DeepLinkService {
   /// 在 onboarding quickLogin 成功后调用（verifyAndDownload 流程已由后端处理，无需再调用）。
   /// 有 card_code 则调用 verify-and-link 完成绑定。
   static Future<void> processPendingCardCode(String phone) async {
+    // 【CN合规】CN 版禁止"未经单独同意的自动绑定"（《个人信息保护法》第29条：
+    // 位置等敏感个人信息需取得单独同意）。本方法在登录成功后静默建立双向守护关系，
+    // 全程无任何同意步骤，CN 版直接跳过；CN 用户仅可在「输入守护码」页面手动绑定，
+    // 且必须经独立同意弹窗确认（见 redeem_card_page.dart 的 _showConsentDialog）。
+    // 全球版（kIsChinaBuild=false）沿用原自动绑定流程。
+    if (kIsChinaBuild) {
+      if (kDebugMode) {
+        debugPrint('[DeepLink] CN版：已跳过守护卡自动绑定（需用户手动输入守护码并单独同意）');
+      }
+      return;
+    }
+
     final prefs = await SharedPreferences.getInstance();
     final cardCode = prefs.getString(_pendingCardKey) ?? prefs.getString(_pendingCardKeyCompat);
     if (cardCode == null || cardCode.isEmpty) return;

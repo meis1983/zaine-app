@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import '../l10n/i18n.dart';
 
 /// ====== 徽章数据模型 ======
 class BadgeData {
@@ -75,101 +76,101 @@ class BadgeGenerator {
   /// 根据连续签到天数获取徽章等级信息
   /// 供首页、弹窗、分享卡片统一调用
   static LevelInfo getLevel(int days) {
-    if (days >= 1825) return const LevelInfo('🌟👑🌟', '终身守护王', Color(0xFFFFD700), '5年+，守护已成为习惯');
-    if (days >= 1400) return const LevelInfo('🏆🏆🏆', '千四传奇',   Color(0xFFE91E63), '近4年，传奇永不落幕');
-    if (days >= 1100) return const LevelInfo('👑👑👑', '三冠王者',   Color(0xFF9C27B0), '3年+，王者风范');
-    if (days >= 900)  return const LevelInfo('🏆🏆', '双冠传奇',   Color(0xFF673AB7), '近3年，传奇继续');
-    if (days >= 730)  return const LevelInfo('💎💎💎', '守护之钻',   Color(0xFF7C4DFF), '2年+，你是最可靠的守护者');
-    if (days >= 650)  return const LevelInfo('👑👑', '双冠王者',   Color(0xFF3F51B5), '近2年，荣耀加倍');
-    if (days >= 550)  return const LevelInfo('💎💎', '双钻守护',   Color(0xFF2196F3), '近2年，钻石闪耀');
-    if (days >= 450)  return const LevelInfo('🏆', '年度冠军',   Color(0xFF03A9F4), '近1.5年，冠军之心');
-    if (days >= 365)  return const LevelInfo('🔥🔥', '年度烈焰',   Color(0xFFFF6B35), '1年+，你的坚持令人敬佩');
-    if (days >= 300)  return const LevelInfo('👑', '三百王者',   Color(0xFFFF9800), '近1年，王者之路');
-    if (days >= 250)  return const LevelInfo('🥇', '黄金守护',   Color(0xFFFFC107), '250天+，黄金品质');
-    if (days >= 200)  return const LevelInfo('💎', '守护宝石',   Color(0xFF7C4DFF), '200天+，宝石璀璨');
-    if (days >= 180)  return const LevelInfo('🥈', '白银守护',   Color(0xFF90A4AE), '半年+，银光闪闪');
-    if (days >= 160)  return const LevelInfo('🥉', '青铜守护',   Color(0xFFCD7F32), '近半年，青铜坚韧');
-    if (days >= 140)  return const LevelInfo('🏅', '铜质奖章',   Color(0xFFFFA726), '140天+，奖章荣耀');
-    if (days >= 120)  return const LevelInfo('🎖️', '守护勋章',   Color(0xFFEF5350), '120天+，勋章加身');
-    if (days >= 100)  return const LevelInfo('⭐', '百日守护',   Color(0xFF9C27B0), '100天+，习惯已经养成');
-    if (days >= 95)   return const LevelInfo('🎨', '艺术大师',   Color(0xFFEC407A), '95天+，大师风范');
-    if (days >= 90)   return const LevelInfo('💫', '季度闪耀',   Color(0xFFAB47BC), '一个季度，闪耀光芒');
-    if (days >= 85)   return const LevelInfo('🎭', '舞台主角',   Color(0xFF7E57C2), '85天+，主角光环');
-    if (days >= 80)   return const LevelInfo('🎪', '马戏明星',   Color(0xFF5C6BC0), '80天+，明星风采');
-    if (days >= 75)   return const LevelInfo('🏕️', '露营达人',   Color(0xFF42A5F5), '75天+，达人之路');
-    if (days >= 70)   return const LevelInfo('🏔️', '雪山巍峨',   Color(0xFF29B6F6), '70天+，巍峨如山');
-    if (days >= 65)   return const LevelInfo('🌋', '火山喷发',   Color(0xFFFF7043), '65天+，热情如火');
-    if (days >= 60)   return const LevelInfo('🔥', '双月烈焰',   Color(0xFFFF5722), '两个月，烈焰燃烧');
-    if (days >= 55)   return const LevelInfo('🌊', '海浪奔腾',   Color(0xFF26C6DA), '55天+，奔腾不息');
-    if (days >= 50)   return const LevelInfo('⚡', '五十雷霆',   Color(0xFFFFCA28), '50天+，雷霆万钧');
-    if (days >= 45)   return const LevelInfo('☁️', '云端漫步',   Color(0xFF81D4FA), '45天+，漫步云端');
-    if (days >= 40)   return const LevelInfo('🌈', '彩虹初现',   Color(0xFFFF7043), '40天+，彩虹绚烂');
-    if (days >= 35)   return const LevelInfo('🌙', '月半守护',   Color(0xFF9FA8DA), '35天+，月半圆满');
-    if (days >= 30)   return const LevelInfo('🌟', '月度之星',   Color(0xFF3F51B5), '一个月，你是真正的守护者');
-    if (days >= 28)   return const LevelInfo('🌰', '果实累累',   Color(0xFF8D6E63), '28天+，硕果累累');
-    if (days >= 26)   return const LevelInfo('🍂', '秋叶静美',   Color(0xFFA1887F), '26天+，静美如斯');
-    if (days >= 24)   return const LevelInfo('🍁', '枫叶飘红',   Color(0xFFEF5350), '24天+，枫叶正红');
-    if (days >= 22)   return const LevelInfo('🌳', '绿树成荫',   Color(0xFF66BB6A), '22天+，绿树成荫');
-    if (days >= 20)   return const LevelInfo('🌲', '青松挺拔',   Color(0xFF43A047), '20天+，青松挺拔');
-    if (days >= 18)   return const LevelInfo('🌵', '仙人掌',     Color(0xFF9CCC65), '18天+，坚韧不拔');
-    if (days >= 16)   return const LevelInfo('🌴', '棕榈挺立',   Color(0xFF7CB342), '16天+，挺立如松');
-    if (days >= 14)   return const LevelInfo('🌺', '两周绽放',   Color(0xFFFF4081), '两周，绽放光彩');
-    if (days >= 12)   return const LevelInfo('🌹', '玫瑰初绽',   Color(0xFFE91E63), '12天+，玫瑰初绽');
-    if (days >= 10)   return const LevelInfo('🌻', '向阳而生',   Color(0xFFFF9800), '10天+，向阳而生');
-    if (days >= 9)    return const LevelInfo('🌼', '雏菊绽放',   Color(0xFFFFB74D), '9天+，雏菊绽放');
-    if (days >= 8)    return const LevelInfo('🌸', '樱花初开',   Color(0xFFF48FB1), '8天+，樱花初开');
-    if (days >= 7)    return const LevelInfo('✨', '闪亮新星',   Color(0xFF2196F3), '一周，好的开始是成功的一半');
-    if (days >= 6)    return const LevelInfo('🌺', '初露锋芒',   Color(0xFF26A69A), '6天+，锋芒初露');
-    if (days >= 5)    return const LevelInfo('🌷', '含苞待放',   Color(0xFFEC407A), '5天+，含苞待放');
-    if (days >= 4)    return const LevelInfo('🌾', '幼苗成长',   Color(0xFF8BC34A), '4天+，幼苗成长');
-    if (days >= 3)    return const LevelInfo('🍀', '三叶草',     Color(0xFF4CAF50), '3天，幸运三连');
-    if (days >= 2)    return const LevelInfo('🌿', '嫩芽初绽',   Color(0xFF66BB6A), '2天，嫩芽初绽');
-    return const LevelInfo('🌱', '守护种子', Color(0xFF4CAF50), '每一个伟大都始于第一步');
+    if (days >= 1825) return LevelInfo('🌟👑🌟', tr.z0052, Color(0xFFFFD700), tr.z0053);
+    if (days >= 1400) return LevelInfo('🏆🏆🏆', tr.z0054,   Color(0xFFE91E63), tr.z0055);
+    if (days >= 1100) return LevelInfo('👑👑👑', tr.z0056,   Color(0xFF9C27B0), tr.z0057);
+    if (days >= 900)  return LevelInfo('🏆🏆', tr.z0058,   Color(0xFF673AB7), tr.z0059);
+    if (days >= 730)  return LevelInfo('💎💎💎', tr.z0060,   Color(0xFF7C4DFF), tr.z0061);
+    if (days >= 650)  return LevelInfo('👑👑', tr.z0062,   Color(0xFF3F51B5), tr.z0063);
+    if (days >= 550)  return LevelInfo('💎💎', tr.z0064,   Color(0xFF2196F3), tr.z0065);
+    if (days >= 450)  return LevelInfo('🏆', tr.z0066,   Color(0xFF03A9F4), tr.z0067);
+    if (days >= 365)  return LevelInfo('🔥🔥', tr.z0068,   Color(0xFFFF6B35), tr.z0069);
+    if (days >= 300)  return LevelInfo('👑', tr.z0070,   Color(0xFFFF9800), tr.z0071);
+    if (days >= 250)  return LevelInfo('🥇', tr.z0072,   Color(0xFFFFC107), tr.z0073);
+    if (days >= 200)  return LevelInfo('💎', tr.z0074,   Color(0xFF7C4DFF), tr.z0075);
+    if (days >= 180)  return LevelInfo('🥈', tr.z0076,   Color(0xFF90A4AE), tr.z0077);
+    if (days >= 160)  return LevelInfo('🥉', tr.z0078,   Color(0xFFCD7F32), tr.z0079);
+    if (days >= 140)  return LevelInfo('🏅', tr.z0080,   Color(0xFFFFA726), tr.z0081);
+    if (days >= 120)  return LevelInfo('🎖️', tr.z0082,   Color(0xFFEF5350), tr.z0083);
+    if (days >= 100)  return LevelInfo('⭐', tr.z0011,   Color(0xFF9C27B0), tr.z0084);
+    if (days >= 95)   return LevelInfo('🎨', tr.z0085,   Color(0xFFEC407A), tr.z0086);
+    if (days >= 90)   return LevelInfo('💫', tr.z0087,   Color(0xFFAB47BC), tr.z0088);
+    if (days >= 85)   return LevelInfo('🎭', tr.z0089,   Color(0xFF7E57C2), tr.z0090);
+    if (days >= 80)   return LevelInfo('🎪', tr.z0091,   Color(0xFF5C6BC0), tr.z0092);
+    if (days >= 75)   return LevelInfo('🏕️', tr.z0093,   Color(0xFF42A5F5), tr.z0094);
+    if (days >= 70)   return LevelInfo('🏔️', tr.z0095,   Color(0xFF29B6F6), tr.z0096);
+    if (days >= 65)   return LevelInfo('🌋', tr.z0097,   Color(0xFFFF7043), tr.z0098);
+    if (days >= 60)   return LevelInfo('🔥', tr.z0099,   Color(0xFFFF5722), tr.z0100);
+    if (days >= 55)   return LevelInfo('🌊', tr.z0101,   Color(0xFF26C6DA), tr.z0102);
+    if (days >= 50)   return LevelInfo('⚡', tr.z0103,   Color(0xFFFFCA28), tr.z0104);
+    if (days >= 45)   return LevelInfo('☁️', tr.z0105,   Color(0xFF81D4FA), tr.z0106);
+    if (days >= 40)   return LevelInfo('🌈', tr.z0107,   Color(0xFFFF7043), tr.z0108);
+    if (days >= 35)   return LevelInfo('🌙', tr.z0109,   Color(0xFF9FA8DA), tr.z0110);
+    if (days >= 30)   return LevelInfo('🌟', tr.z0012,   Color(0xFF3F51B5), tr.z0111);
+    if (days >= 28)   return LevelInfo('🌰', tr.z0112,   Color(0xFF8D6E63), tr.z0113);
+    if (days >= 26)   return LevelInfo('🍂', tr.z0114,   Color(0xFFA1887F), tr.z0115);
+    if (days >= 24)   return LevelInfo('🍁', tr.z0116,   Color(0xFFEF5350), tr.z0117);
+    if (days >= 22)   return LevelInfo('🌳', tr.z0118,   Color(0xFF66BB6A), tr.z0119);
+    if (days >= 20)   return LevelInfo('🌲', tr.z0120,   Color(0xFF43A047), tr.z0121);
+    if (days >= 18)   return LevelInfo('🌵', tr.z0122,     Color(0xFF9CCC65), tr.z0123);
+    if (days >= 16)   return LevelInfo('🌴', tr.z0124,   Color(0xFF7CB342), tr.z0125);
+    if (days >= 14)   return LevelInfo('🌺', tr.z0126,   Color(0xFFFF4081), tr.z0127);
+    if (days >= 12)   return LevelInfo('🌹', tr.z0128,   Color(0xFFE91E63), tr.z0129);
+    if (days >= 10)   return LevelInfo('🌻', tr.z0130,   Color(0xFFFF9800), tr.z0131);
+    if (days >= 9)    return LevelInfo('🌼', tr.z0132,   Color(0xFFFFB74D), tr.z0133);
+    if (days >= 8)    return LevelInfo('🌸', tr.z0134,   Color(0xFFF48FB1), tr.z0135);
+    if (days >= 7)    return LevelInfo('✨', tr.z0136,   Color(0xFF2196F3), tr.z0137);
+    if (days >= 6)    return LevelInfo('🌺', tr.z0138,   Color(0xFF26A69A), tr.z0139);
+    if (days >= 5)    return LevelInfo('🌷', tr.z0140,   Color(0xFFEC407A), tr.z0141);
+    if (days >= 4)    return LevelInfo('🌾', tr.z0142,   Color(0xFF8BC34A), tr.z0143);
+    if (days >= 3)    return LevelInfo('🍀', tr.z0144,     Color(0xFF4CAF50), tr.z0145);
+    if (days >= 2)    return LevelInfo('🌿', tr.z0146,   Color(0xFF66BB6A), tr.z0147);
+    return LevelInfo('🌱', tr.z0148, Color(0xFF4CAF50), tr.z0013);
   }
 
   // ───────── 30条日常轮换文案 ─────────
-  static const List<String> _dailyMessages = [
-    '每一个伟大都始于第一步',
-    '坚持，比完美更重要',
-    '守护自己，是你给世界最好的礼物',
-    '今天的你，比昨天更强大',
-    '独居不独心，有人在默默关注你',
-    '你比自己想象的更坚强',
-    '每一天，都是新的开始',
-    '别怕慢，怕的是停下脚步',
-    '你值得被好好对待',
-    '照顾好自己，世界才会更好',
-    '你的坚持，正在改变一切',
-    '别小看今天的自己',
-    '平安，就是最好的消息',
-    '对自己温柔一点，你也很辛苦',
-    '签到只是一秒钟，安心却是一整天',
-    '你的存在本身就很重要',
-    '先照顾好自己，再照顾世界',
-    '今天也是被在乎的一天',
-    '你认真生活的样子，真好看',
-    '小小的习惯，大大的力量',
-    '今天，也请为自己骄傲',
-    '世上最温暖的词，叫「我在」',
-    '你从来不是一个人',
-    '每一个今天，都是未来的基石',
-    '对自己说一句：今天辛苦了',
-    '把今天过好，就是最好的明天',
-    '你值得拥有平安和幸福',
-    '今天也要记得微笑',
-    '守护自己，就是守护爱着你的人',
-    '关关难过关关过，你真的很棒',
+  static List<String> _dailyMessages = [
+    tr.z0013,
+    tr.z0149,
+    tr.z0150,
+    tr.z0151,
+    tr.z0152,
+    tr.z0153,
+    tr.z0154,
+    tr.z0155,
+    tr.z0156,
+    tr.z0157,
+    tr.z0158,
+    tr.z0159,
+    tr.z0160,
+    tr.z0161,
+    tr.z0162,
+    tr.z0163,
+    tr.z0164,
+    tr.z0165,
+    tr.z0166,
+    tr.z0167,
+    tr.z0168,
+    tr.z0169,
+    tr.z0170,
+    tr.z0171,
+    tr.z0172,
+    tr.z0173,
+    tr.z0174,
+    tr.z0175,
+    tr.z0176,
+    tr.z0177,
   ];
 
   // ───────── 7级断签回归文案 ─────────
   static final List<_ReturnLevel> _returnLevels = [
-    const _ReturnLevel(0, 1,     '昨天偷了个懒？没关系，今天继续就好。'),
-    const _ReturnLevel(2, 3,     '几天不见，你还好吗？回来就好，我们继续。'),
-    const _ReturnLevel(4, 7,     '一周没见。最近在忙什么？记得有人在等你。'),
-    const _ReturnLevel(8, 14,    '快半个月没见了。欢迎回来，这里有人在想你。'),
-    const _ReturnLevel(15, 30,   '好久不见。这一个月过得怎么样？不论如何，欢迎回家。'),
-    const _ReturnLevel(31, 90,   '你终于回来了！这段时间去了哪里？我们都很想你。'),
-    const _ReturnLevel(91, 99999, '好久好久不见。感谢你还记得这里。无论离开多久，家永远为你敞开。'),
+    _ReturnLevel(0, 1,     tr.z0178),
+    _ReturnLevel(2, 3,     tr.z0179),
+    _ReturnLevel(4, 7,     tr.z0180),
+    _ReturnLevel(8, 14,    tr.z0181),
+    _ReturnLevel(15, 30,   tr.z0182),
+    _ReturnLevel(31, 90,   tr.z0183),
+    _ReturnLevel(91, 99999, tr.z0184),
   ];
 
   static String _getReturnMessage(int absentDays) {
@@ -181,23 +182,23 @@ class BadgeGenerator {
 
   // ───────── 里程碑（10个）─────────
   static final Map<int, _MilestoneInfo> _milestones = {
-    7:   const _MilestoneInfo('一周啦', '一周啦！新习惯正在养成，你比自己想象的更棒。', '🌈', Color(0xFFE91E63)),
-    10:  const _MilestoneInfo('两位数', '两位数打卡达成！继续向前。', '⭐', Color(0xFFFFD700)),
-    20:  const _MilestoneInfo('20天', '20天的坚持，你已经在悄悄变强。', '🌸', Color(0xFFFF69B4)),
-    30:  const _MilestoneInfo('月度之星', '🎉 一个月！恭喜你成为「月度之星」，守护已融入日常。', '🌟', Color(0xFF3F51B5)),
-    45:  const _MilestoneInfo('一个半月', '一个半月。你用实际行动证明，坚持并不难。', '🌙', Color(0xFF9C27B0)),
-    60:  const _MilestoneInfo('两个月', '🔥 两个月！你的守护之火正在燃烧。', '🔥', Color(0xFFFF4500)),
-    90:  const _MilestoneInfo('一个季度', '一个季度。你渡过了春夏秋冬的一个切面，了不起。', '🌿', Color(0xFF4CAF50)),
-    100: const _MilestoneInfo('百日守护', '⭐ 百日守护！你是自己的英雄。今天值得好好庆祝。', '⭐', Color(0xFF9C27B0)),
-    180: const _MilestoneInfo('半年', '半年了。这180天的坚守，是你给自己最好的礼物。', '💎', Color(0xFF7C4DFF)),
-    365: const _MilestoneInfo('一周年', '👑 一年！你做到了。守护已经成为你的本能。', '👑', Color(0xFFFFD700)),
+    7:   _MilestoneInfo(tr.z0185, tr.z0186, '🌈', Color(0xFFE91E63)),
+    10:  _MilestoneInfo(tr.z0187, tr.z0188, '⭐', Color(0xFFFFD700)),
+    20:  _MilestoneInfo(tr.z0189, tr.z0190, '🌸', Color(0xFFFF69B4)),
+    30:  _MilestoneInfo(tr.z0012, tr.z0191, '🌟', Color(0xFF3F51B5)),
+    45:  _MilestoneInfo(tr.z0192, tr.z0193, '🌙', Color(0xFF9C27B0)),
+    60:  _MilestoneInfo(tr.z0194, tr.z0195, '🔥', Color(0xFFFF4500)),
+    90:  _MilestoneInfo(tr.z0196, tr.z0197, '🌿', Color(0xFF4CAF50)),
+    100: _MilestoneInfo(tr.z0011, tr.z0198, '⭐', Color(0xFF9C27B0)),
+    180: _MilestoneInfo(tr.z0199, tr.z0200, '💎', Color(0xFF7C4DFF)),
+    365: _MilestoneInfo(tr.z0201, tr.z0202, '👑', Color(0xFFFFD700)),
   };
 
   static _MilestoneInfo? _matchMilestone(int days) {
     if (_milestones.containsKey(days)) return _milestones[days];
     // 每旬 30/60/90/120/150...
     if (days % 30 == 0 && days >= 30) {
-      return _MilestoneInfo('$days天里程碑', '第 $days 天！你的每一步坚持都在创造奇迹。', '🎯', const Color(0xFF2196F3));
+      return _MilestoneInfo(tr.z0203(days), tr.z0204(days), '🎯', const Color(0xFF2196F3));
     }
     return null;
   }
@@ -205,13 +206,13 @@ class BadgeGenerator {
   // ───────── 法定节假日（7个）─────────
   // 说明：端午、中秋等基于农历的节日此处使用「近似公历日期」，
   //       春节和除夕由 _festivalsForDate(year) 动态按农历推算，保证不偏年。
-  static const List<_SpecialDate> _festivalsStatic = [
-    _SpecialDate('元旦', '新年第一天，从这个签到开始。今年，也要好好守护自己。', '🎉', 1, 1, Color(0xFFE91E63)),
-    _SpecialDate('清明', '慎终追远，珍惜当下。好好活着，就是最好的告慰。', '🌿', 4, 5, Color(0xFF4CAF50)),
-    _SpecialDate('劳动节', '致敬每一个认真生活的你。今天，让自己歇一歇。', '🏋️', 5, 1, Color(0xFFFF9800)),
-    _SpecialDate('端午', '端午安康。系一根彩绳，也系住对自己的那份关心。', '🎋', 6, 19, Color(0xFF795548)),
-    _SpecialDate('中秋', '海上生明月，天涯共此时。你并不孤单。', '🌕', 9, 25, Color(0xFFFFD700)),
-    _SpecialDate('国庆', '普天同庆，山河远阔。别忘了，对自己好一点。', '🇨🇳', 10, 1, Color(0xFFF44336)),
+  static List<_SpecialDate> _festivalsStatic = [
+    _SpecialDate(tr.z0205, tr.z0206, '🎉', 1, 1, Color(0xFFE91E63)),
+    _SpecialDate(tr.z0207, tr.z0208, '🌿', 4, 5, Color(0xFF4CAF50)),
+    _SpecialDate(tr.z0209, tr.z0210, '🏋️', 5, 1, Color(0xFFFF9800)),
+    _SpecialDate(tr.z0211, tr.z0212, '🎋', 6, 19, Color(0xFF795548)),
+    _SpecialDate(tr.z0213, tr.z0214, '🌕', 9, 25, Color(0xFFFFD700)),
+    _SpecialDate(tr.z0215, tr.z0216, '🇨🇳', 10, 1, Color(0xFFF44336)),
   ];
 
   /// 春节（正月初一）公历日期速查表（2020-2030）。
@@ -250,13 +251,13 @@ class BadgeGenerator {
   /// 根据年份返回「春节」配置，日期自动按公历查表
   static _SpecialDate _springFestivalForYear(int year) {
     final md = _lunarNewYearDates[year] ?? _lunarNewYearDates[2026]!;
-    return _SpecialDate('春节', '新年快乐！无论在哪过年，记得有人一直在牵挂你。', '🧧', md[0], md[1], const Color(0xFFFF4500));
+    return _SpecialDate(tr.z0217, tr.z0218, '🧧', md[0], md[1], const Color(0xFFFF4500));
   }
 
   /// 根据年份返回「除夕」配置
   static _SpecialDate _newYearEveForYear(int year) {
     final md = _lunarNewYearEveDates[year] ?? _lunarNewYearEveDates[2026]!;
-    return _SpecialDate('除夕', '岁末的最后一次签到。这一年，你辛苦了。', '🎊', md[0], md[1], const Color(0xFFD32F2F));
+    return _SpecialDate(tr.z0219, tr.z0220, '🎊', md[0], md[1], const Color(0xFFD32F2F));
   }
 
   /// 根据年份返回当年的法定节日列表（春节+除夕按年动态）
@@ -270,10 +271,10 @@ class BadgeGenerator {
   /// 根据年份返回当年的传统节日列表（含除夕）
   static List<_SpecialDate> _tradFestivalsForDate(int year) {
     return [
-      const _SpecialDate('元宵', '花灯如昼，月圆人圆。愿你每一天都温暖明亮。', '🏮', 3, 3, Color(0xFFFF69B4)),
-      const _SpecialDate('龙抬头', '二月二，龙抬头。春天来了，你的好运也开始抬头。', '🐉', 3, 20, Color(0xFF4CAF50)),
-      const _SpecialDate('七夕', '今夜星河璀璨。先爱自己，再爱他人。', '💖', 8, 19, Color(0xFFE91E63)),
-      const _SpecialDate('重阳', '登高望远，天高云淡。人生不怕晚，就怕不上山。', '🏔️', 10, 18, Color(0xFFFF9800)),
+      _SpecialDate(tr.z0221, tr.z0222, '🏮', 3, 3, Color(0xFFFF69B4)),
+      _SpecialDate(tr.z0223, tr.z0224, '🐉', 3, 20, Color(0xFF4CAF50)),
+      _SpecialDate(tr.z0225, tr.z0226, '💖', 8, 19, Color(0xFFE91E63)),
+      _SpecialDate(tr.z0227, tr.z0228, '🏔️', 10, 18, Color(0xFFFF9800)),
       _newYearEveForYear(year),
     ];
   }
@@ -281,30 +282,30 @@ class BadgeGenerator {
   // ───────── 二十四节气（24个）─────────
   // 8个「四立二分二至」大节点保留emoji，其余16个普通覆盖
   static final List<_SpecialDate> _solarTerms = [
-    const _SpecialDate('小寒', '天寒地冻，照顾好自己就是最大的温暖。', '❄️', 1, 5, Color(0xFF90CAF9)),
-    const _SpecialDate('大寒', '一年中最冷的时刻，也是最靠近春天的时刻。', '🧊', 1, 20, Color(0xFF64B5F6)),
-    const _SpecialDate('立春', '春回大地。你心里的种子，要发芽了。', '🌱', 2, 4, Color(0xFF4CAF50)),
-    const _SpecialDate('雨水', '好雨知时节。今天记得带伞，也要记得吃饭。', '💧', 2, 18, Color(0xFF42A5F5)),
-    const _SpecialDate('惊蛰', '春雷乍响，万物复苏。你身体里的能量也该醒了。', '⚡', 3, 5, Color(0xFFFFCA28)),
-    const _SpecialDate('春分', '昼夜等长，阴阳平衡。今天，和自己和解。', '☯️', 3, 20, Color(0xFF8BC34A)),
-    const _SpecialDate('清明（节气）', '春和景明，万物生长。今天适合出去走走。', '🌿', 4, 4, Color(0xFF66BB6A)),
-    const _SpecialDate('谷雨', '雨生百谷。播种希望，静待收获。', '🌾', 4, 20, Color(0xFF43A047)),
-    const _SpecialDate('立夏', '夏天来了，热气腾腾地活着。', '☀️', 5, 5, Color(0xFFFF7043)),
-    const _SpecialDate('小满', '小满胜万全。凡事不必太满，刚刚好就好。', '🌻', 5, 21, Color(0xFFFFCA28)),
-    const _SpecialDate('芒种', '芒种忙种。所有付出，终将收获。', '🌾', 6, 5, Color(0xFF8D6E63)),
-    const _SpecialDate('夏至', '一年中最长的白昼。今天，要多爱自己一点。', '☀️', 6, 21, Color(0xFFFF6D00)),
-    const _SpecialDate('小暑', '暑气渐浓。心静自然凉。', '🌴', 7, 7, Color(0xFFFF8A65)),
-    const _SpecialDate('大暑', '炎炎夏日，记得给自己一杯凉白开。', '🔥', 7, 23, Color(0xFFE64A19)),
-    const _SpecialDate('立秋', '一叶知秋。有些事，该放就放。', '🍂', 8, 7, Color(0xFFFFAB40)),
-    const _SpecialDate('处暑', '暑气消退，秋意渐浓。一切都在慢慢变好。', '🌤️', 8, 23, Color(0xFF90A4AE)),
-    const _SpecialDate('白露', '白露为霜。天凉了，记得添衣。', '💧', 9, 7, Color(0xFF80DEEA)),
-    const _SpecialDate('秋分', '平分秋色。生活有一半明媚，一半从容。', '🍁', 9, 23, Color(0xFFFF8F00)),
-    const _SpecialDate('寒露', '露水渐寒。再忙，也别忘了签到。', '🍂', 10, 8, Color(0xFFA1887F)),
-    const _SpecialDate('霜降', '霜降人间。秋天最后一个节气，要好好收尾。', '❄️', 10, 23, Color(0xFF78909C)),
-    const _SpecialDate('立冬', '冬天来了。记得把温暖留一份给自己。', '🌨️', 11, 7, Color(0xFF90CAF9)),
-    const _SpecialDate('小雪', '小雪飘落。愿你心里有光，不惧严寒。', '❄️', 11, 22, Color(0xFFB3E5FC)),
-    const _SpecialDate('大雪', '大雪纷飞。在最冷的日子里，做自己的暖阳。', '☃️', 12, 7, Color(0xFFE0E0E0)),
-    const _SpecialDate('冬至', '冬至大如年。今天记得吃饺子/汤圆，也要记得签到。', '🥟', 12, 22, Color(0xFF42A5F5)),
+    _SpecialDate(tr.z0229, tr.z0230, '❄️', 1, 5, Color(0xFF90CAF9)),
+    _SpecialDate(tr.z0231, tr.z0232, '🧊', 1, 20, Color(0xFF64B5F6)),
+    _SpecialDate(tr.z0233, tr.z0234, '🌱', 2, 4, Color(0xFF4CAF50)),
+    _SpecialDate(tr.z0235, tr.z0236, '💧', 2, 18, Color(0xFF42A5F5)),
+    _SpecialDate(tr.z0237, tr.z0238, '⚡', 3, 5, Color(0xFFFFCA28)),
+    _SpecialDate(tr.z0239, tr.z0240, '☯️', 3, 20, Color(0xFF8BC34A)),
+    _SpecialDate(tr.z0241, tr.z0242, '🌿', 4, 4, Color(0xFF66BB6A)),
+    _SpecialDate(tr.z0243, tr.z0244, '🌾', 4, 20, Color(0xFF43A047)),
+    _SpecialDate(tr.z0245, tr.z0246, '☀️', 5, 5, Color(0xFFFF7043)),
+    _SpecialDate(tr.z0247, tr.z0248, '🌻', 5, 21, Color(0xFFFFCA28)),
+    _SpecialDate(tr.z0249, tr.z0250, '🌾', 6, 5, Color(0xFF8D6E63)),
+    _SpecialDate(tr.z0251, tr.z0252, '☀️', 6, 21, Color(0xFFFF6D00)),
+    _SpecialDate(tr.z0253, tr.z0254, '🌴', 7, 7, Color(0xFFFF8A65)),
+    _SpecialDate(tr.z0255, tr.z0256, '🔥', 7, 23, Color(0xFFE64A19)),
+    _SpecialDate(tr.z0257, tr.z0258, '🍂', 8, 7, Color(0xFFFFAB40)),
+    _SpecialDate(tr.z0259, tr.z0260, '🌤️', 8, 23, Color(0xFF90A4AE)),
+    _SpecialDate(tr.z0261, tr.z0262, '💧', 9, 7, Color(0xFF80DEEA)),
+    _SpecialDate(tr.z0263, tr.z0264, '🍁', 9, 23, Color(0xFFFF8F00)),
+    _SpecialDate(tr.z0265, tr.z0266, '🍂', 10, 8, Color(0xFFA1887F)),
+    _SpecialDate(tr.z0267, tr.z0268, '❄️', 10, 23, Color(0xFF78909C)),
+    _SpecialDate(tr.z0269, tr.z0270, '🌨️', 11, 7, Color(0xFF90CAF9)),
+    _SpecialDate(tr.z0271, tr.z0272, '❄️', 11, 22, Color(0xFFB3E5FC)),
+    _SpecialDate(tr.z0273, tr.z0274, '☃️', 12, 7, Color(0xFFE0E0E0)),
+    _SpecialDate(tr.z0275, tr.z0276, '🥟', 12, 22, Color(0xFF42A5F5)),
   ];
 
   /// 四立二分二至（8个大节气）保留emoji特效
@@ -395,7 +396,7 @@ class BadgeGenerator {
     if (isReturnCheckin) {
       final actualAbsentDays = absentDays > 0 ? absentDays : days; // 兜底：如果没传 absentDays，用 days 估算
       return BadgeData(
-        days: days, emoji: '🤗', title: '欢迎回来',
+        days: days, emoji: '🤗', title: tr.z0277,
         badgeColor: const Color(0xFFFF9800), message: _getReturnMessage(actualAbsentDays),
         bgStyle: bgStyle, ringStyle: ringStyle, decoType: decoType,
         hueShift: hueShift.toDouble(), particleCount: particleCount,

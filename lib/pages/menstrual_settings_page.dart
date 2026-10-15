@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/menstrual_record.dart';
 import '../services/menstrual_service.dart';
 import '../theme/theme_helper.dart';
+import '../l10n/i18n.dart';
 
 /// 经期设置页面
 class MenstrualSettingsPage extends StatefulWidget {
@@ -32,7 +33,7 @@ class _MenstrualSettingsPageState extends State<MenstrualSettingsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('经期设置'),
+        title:  Text(tr.s580),
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
@@ -42,19 +43,19 @@ class _MenstrualSettingsPageState extends State<MenstrualSettingsPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // 月经周期长度
-            _buildSectionTitle('月经周期长度'),
+            _buildSectionTitle(tr.s581),
             const SizedBox(height: ZaiNeSpacing.sm),
             _buildCycleLengthSelector(),
             const SizedBox(height: ZaiNeSpacing.lg),
 
             // 经期长度
-            _buildSectionTitle('经期长度'),
+            _buildSectionTitle(tr.s582),
             const SizedBox(height: ZaiNeSpacing.sm),
             _buildPeriodLengthSelector(),
             const SizedBox(height: ZaiNeSpacing.lg),
 
             // 提醒设置
-            _buildSectionTitle('提醒设置'),
+            _buildSectionTitle(tr.s583),
             const SizedBox(height: ZaiNeSpacing.sm),
             _buildReminderSettings(),
             const SizedBox(height: ZaiNeSpacing.xl),
@@ -72,7 +73,7 @@ class _MenstrualSettingsPageState extends State<MenstrualSettingsPage> {
                     borderRadius: BorderRadius.circular(ZaiNeRadius.small),
                   ),
                 ),
-                child: const Text('保存设置'),
+                child:  Text(tr.s584),
               ),
             ),
           ],
@@ -104,7 +105,7 @@ class _MenstrualSettingsPageState extends State<MenstrualSettingsPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '${_settings.cycleLength} 天',
+            tr.s585(_settings.cycleLength),
             style: const TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
@@ -116,7 +117,7 @@ class _MenstrualSettingsPageState extends State<MenstrualSettingsPage> {
             min: 21,
             max: 35,
             divisions: 14,
-            label: '${_settings.cycleLength} 天',
+            label: tr.s585(_settings.cycleLength),
             activeColor: Colors.pink,
             onChanged: (value) {
               setState(() {
@@ -124,8 +125,8 @@ class _MenstrualSettingsPageState extends State<MenstrualSettingsPage> {
               });
             },
           ),
-          const Text(
-            '平均月经周期长度（从本次经期第一天到下次经期第一天）',
+           Text(
+            tr.s586,
             style: TextStyle(
               fontSize: 12,
               color: Colors.grey,
@@ -148,7 +149,7 @@ class _MenstrualSettingsPageState extends State<MenstrualSettingsPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '${_settings.periodLength} 天',
+            tr.s587(_settings.periodLength),
             style: const TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
@@ -160,7 +161,7 @@ class _MenstrualSettingsPageState extends State<MenstrualSettingsPage> {
             min: 3,
             max: 7,
             divisions: 4,
-            label: '${_settings.periodLength} 天',
+            label: tr.s587(_settings.periodLength),
             activeColor: Colors.pink,
             onChanged: (value) {
               setState(() {
@@ -168,8 +169,8 @@ class _MenstrualSettingsPageState extends State<MenstrualSettingsPage> {
               });
             },
           ),
-          const Text(
-            '平均经期长度',
+           Text(
+            tr.s588,
             style: TextStyle(
               fontSize: 12,
               color: Colors.grey,
@@ -186,8 +187,8 @@ class _MenstrualSettingsPageState extends State<MenstrualSettingsPage> {
       children: [
         // 开启提醒
         SwitchListTile(
-          title: const Text('开启经期提醒'),
-          subtitle: const Text('在经期来临前提醒你'),
+          title:  Text(tr.s589),
+          subtitle:  Text(tr.s590),
           value: _settings.enableReminder,
           activeThumbColor: Colors.pink,
           onChanged: (value) {
@@ -209,7 +210,7 @@ class _MenstrualSettingsPageState extends State<MenstrualSettingsPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '提前 ${_settings.reminderDaysBefore} 天提醒',
+                  tr.s591(_settings.reminderDaysBefore),
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -221,7 +222,7 @@ class _MenstrualSettingsPageState extends State<MenstrualSettingsPage> {
                   min: 1,
                   max: 7,
                   divisions: 6,
-                  label: '${_settings.reminderDaysBefore} 天',
+                  label: tr.s592(_settings.reminderDaysBefore),
                   activeColor: Colors.pink,
                   onChanged: (value) {
                     setState(() {
@@ -238,8 +239,8 @@ class _MenstrualSettingsPageState extends State<MenstrualSettingsPage> {
 
         // 排卵期提醒
         SwitchListTile(
-          title: const Text('开启排卵期提醒'),
-          subtitle: const Text('在排卵期来临时提醒你'),
+          title:  Text(tr.s593),
+          subtitle:  Text(tr.s594),
           value: _settings.enableOvulationReminder,
           activeThumbColor: Colors.pink,
           onChanged: (value) {
@@ -259,13 +260,13 @@ class _MenstrualSettingsPageState extends State<MenstrualSettingsPage> {
     if (success) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('设置已保存')),
+         SnackBar(content: Text(tr.s595)),
       );
       Navigator.pop(context);
     } else {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('保存失败，请重试')),
+         SnackBar(content: Text(tr.s596)),
       );
     }
   }

@@ -5,6 +5,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import '../l10n/i18n.dart';
 
 /// 季节枚举
 enum Season {
@@ -26,7 +27,7 @@ class SeasonTheme {
   final Color sealColor; // 封印色
   final LinearGradient? envelopeGradient; // 信封渐变
 
-  const SeasonTheme({
+  SeasonTheme({
     required this.name,
     required this.emoji,
     required this.primaryColor,
@@ -44,8 +45,8 @@ class SeasonThemeManager {
   SeasonThemeManager._();
 
   /// 春季主题 - 樱花粉
-  static const SeasonTheme spring = SeasonTheme(
-    name: '春',
+  static final SeasonTheme spring = SeasonTheme(
+    name: tr.z0041,
     emoji: '🌸',
     primaryColor: Color(0xFFFFB7C5), // 樱花粉
     secondaryColor: Color(0xFFFFE4E9), // 浅粉
@@ -61,8 +62,8 @@ class SeasonThemeManager {
   );
 
   /// 夏季主题 - 荷叶绿
-  static const SeasonTheme summer = SeasonTheme(
-    name: '夏',
+  static final SeasonTheme summer = SeasonTheme(
+    name: tr.z0042,
     emoji: '🌻',
     primaryColor: Color(0xFF81C784), // 荷叶绿
     secondaryColor: Color(0xFFC8E6C9), // 浅绿
@@ -78,8 +79,8 @@ class SeasonThemeManager {
   );
 
   /// 秋季主题 - 枫叶橙
-  static const SeasonTheme autumn = SeasonTheme(
-    name: '秋',
+  static final SeasonTheme autumn = SeasonTheme(
+    name: tr.z0043,
     emoji: '🍂',
     primaryColor: Color(0xFFFFB74D), // 枫叶橙
     secondaryColor: Color(0xFFFFE0B2), // 浅橙
@@ -95,8 +96,8 @@ class SeasonThemeManager {
   );
 
   /// 冬季主题 - 雪花蓝
-  static const SeasonTheme winter = SeasonTheme(
-    name: '冬',
+  static final SeasonTheme winter = SeasonTheme(
+    name: tr.z0044,
     emoji: '❄️',
     primaryColor: Color(0xFF90CAF9), // 雪花蓝
     secondaryColor: Color(0xFFBBDEFB), // 浅蓝
@@ -148,24 +149,24 @@ class SeasonThemeManager {
     final hour = DateTime.now().hour;
     String timeGreeting;
     if (hour < 6) {
-      timeGreeting = '夜深了';
+      timeGreeting = tr.z0010;
     } else if (hour < 12) {
-      timeGreeting = '早安';
+      timeGreeting = tr.z0045;
     } else if (hour < 18) {
-      timeGreeting = '午安';
+      timeGreeting = tr.z0046;
     } else {
-      timeGreeting = '晚安';
+      timeGreeting = tr.z0047;
     }
 
     switch (season) {
       case Season.spring:
-        return '$timeGreeting，春暖花开';
+        return tr.z0048(timeGreeting);
       case Season.summer:
-        return '$timeGreeting，夏日清凉';
+        return tr.z0049(timeGreeting);
       case Season.autumn:
-        return '$timeGreeting，秋高气爽';
+        return tr.z0050(timeGreeting);
       case Season.winter:
-        return '$timeGreeting，冬日温暖';
+        return tr.z0051(timeGreeting);
     }
   }
 }

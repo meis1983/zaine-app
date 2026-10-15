@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../theme/theme_helper.dart';
 import '../services/social/guardian_message_service.dart';
 import 'package:intl/intl.dart';
+import '../l10n/i18n.dart';
 
 /// 守护成就页面
 ///
@@ -57,7 +58,7 @@ class _GuardianAchievementsPageState extends State<GuardianAchievementsPage>
     return Scaffold(
       backgroundColor: ZaiNeColors.scaffoldBg(),
       appBar: AppBar(
-        title: const Text('守护成就'),
+        title: Text(tr.z0859),
         backgroundColor: ZaiNeColors.cardBg(),
         foregroundColor: ZaiNeColors.textPrimary(),
         elevation: 0,
@@ -66,11 +67,11 @@ class _GuardianAchievementsPageState extends State<GuardianAchievementsPage>
           labelColor: Theme.of(context).primaryColor,
           unselectedLabelColor: ZaiNeColors.textHint(),
           indicatorColor: Theme.of(context).primaryColor,
-          tabs: const [
-            Tab(text: '全部'),
-            Tab(text: '签到'),
-            Tab(text: '关怀'),
-            Tab(text: '里程碑'),
+          tabs: [
+            Tab(text: tr.z0860),
+            Tab(text: tr.s1055),
+            Tab(text: tr.z0861),
+            Tab(text: tr.z0862),
           ],
         ),
       ),
@@ -146,7 +147,7 @@ class _GuardianAchievementsPageState extends State<GuardianAchievementsPage>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '已解锁 $_unlockedCount / $_totalCount',
+                      tr.z0863(_unlockedCount, _totalCount),
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 24,
@@ -183,11 +184,11 @@ class _GuardianAchievementsPageState extends State<GuardianAchievementsPage>
   }
 
   String _getMotivationalText() {
-    if (_unlockedCount == 0) return '开始你的守护之旅吧！';
-    if (_unlockedCount < _totalCount * 0.3) return '继续加油！';
-    if (_unlockedCount < _totalCount * 0.6) return '表现不错！';
-    if (_unlockedCount < _totalCount) return '接近目标了！';
-    return '太棒了！全部解锁！';
+    if (_unlockedCount == 0) return tr.z0864;
+    if (_unlockedCount < _totalCount * 0.3) return tr.z0865;
+    if (_unlockedCount < _totalCount * 0.6) return tr.z0866;
+    if (_unlockedCount < _totalCount) return tr.z0867;
+    return tr.z0868;
   }
 
   Widget _buildAchievementList(String? category) {
@@ -282,7 +283,7 @@ class AchievementCard extends StatelessWidget {
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
-                                  '已解锁',
+                                  tr.z0869,
                                   style: TextStyle(
                                     fontSize: 11,
                                     color: Colors.amber.shade700,
@@ -335,7 +336,7 @@ class AchievementCard extends StatelessWidget {
                     if (achievement.isUnlocked && achievement.unlockedAt != null) ...[
                       const SizedBox(height: 8),
                       Text(
-                        '解锁于 ${DateFormat('yyyy/MM/dd').format(achievement.unlockedAt!)}',
+                        tr.z0870(DateFormat('yyyy/MM/dd').format(achievement.unlockedAt!)),
                         style: TextStyle(
                           fontSize: 11,
                           color: ZaiNeColors.textHint(),
@@ -536,8 +537,8 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
               ),
               const SizedBox(height: 16),
               // 成就标题
-              const Text(
-                '成就解锁！',
+              Text(
+                tr.z0871,
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
@@ -595,7 +596,7 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
                     borderRadius: BorderRadius.circular(24),
                   ),
                 ),
-                child: const Text('太棒了！'),
+                child: Text(tr.z0872),
               ),
             ],
           ),

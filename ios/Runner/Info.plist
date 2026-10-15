@@ -37,9 +37,6 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
-	<!-- 【v1.97.2】深链跳转系统「健康」App 白名单。
-	     心电图/房颤/听力等数据 Apple 禁止第三方读取，只能引导用户到系统 App 查看。
-	     url_launcher 在 iOS 上会先调 canOpenURL，scheme 未登记会直接失败。 -->
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
 		<string>x-apple-health</string>
@@ -51,24 +48,24 @@
 		<key>NSAllowsArbitraryLoads</key>
 		<false/>
 	</dict>
-	<key>NSCameraUsageDescription</key>
-	<string>在呢需要访问相机以扫描二维码添加联系人。</string>
-	<key>NSContactsUsageDescription</key>
-	<string>在呢需要访问您的通讯录，以便添加紧急联系人。</string>
 	<key>NSHealthClinicalHealthRecordsShareUsageDescription</key>
-	<string>在呢需要读取您的健康记录（步数、心率、血氧、睡眠），以便在紧急情况下向守护人展示您的健康状况。</string>
+	<string>Zaine+ needs to read your health records (steps, heart rate, blood oxygen, sleep) to display your health status and vital guardian features.</string>
 	<key>NSHealthShareUsageDescription</key>
-	<string>在呢需要同步您的健康数据（心率、血氧、睡眠、经期等），以实现生命体征守护功能。</string>
+	<string>Zaine+ needs to sync your health data (heart rate, blood oxygen, sleep, menstrual cycle, etc.) to provide vital guardian features.</string>
 	<key>NSHealthUpdateUsageDescription</key>
-	<string>在呢需要读取您的健康数据，以实现每日签到报平安和经期跟踪功能。</string>
+	<string>Zaine+ needs to read your health data to enable daily check-in reports and menstrual cycle tracking.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>在呢需要始终获取您的位置，以便在您发起求助时向您的守护人发送位置信息。</string>
+	<string>Zaine+ needs your location when you trigger an emergency SOS so your emergency contacts can receive it.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>在呢需要获取您的位置，以便在紧急情况下向您的联系人发送您的位置信息。</string>
+	<string>Zaine+ needs your location when you trigger an emergency SOS.</string>
 	<key>NSPhoneUsageDescription</key>
-	<string>在呢需要在紧急情况下拨打您的紧急联系人。</string>
+	<string>Zaine+ needs to call your emergency contacts in urgent situations.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>在呢需要访问相册以选择联系人头像。</string>
+	<string>Zaine+ needs access to your photo library to select a contact avatar or scan a guardian code QR code.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Zaine+ needs to save images to your photo library so you can keep or share your guardian code poster.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Zaine+ needs camera access to scan another user's guardian code and establish a guardian relationship.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
@@ -108,7 +105,5 @@
 		<string>UIInterfaceOrientationPortrait</string>
 		<string>UIInterfaceOrientationPortraitUpsideDown</string>
 	</array>
-	<key>UNUserNotificationCenter</key>
-	<string>在呢需要发送通知提醒您定时报平安。</string>
 </dict>
 </plist>

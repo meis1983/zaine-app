@@ -4,18 +4,20 @@ import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../theme/theme_helper.dart';
+import '../utils/device_adapter.dart'; // 【Duo 适配】响应式列数
 import '../services/platform/health_service.dart';
 import '../services/api/user_service.dart';
-import '../services/safety/safety_signal_engine.dart';
+import '../services/safety/vitals_assessment.dart';
 import '../config/app_config.dart';
 import 'menstrual_page.dart';
 import 'menstrual_settings_page.dart';
+import '../l10n/i18n.dart';
 
 /// 生命体征守护页
 ///
 /// 【信息架构 · 三层克制原则 · 勿改】
 /// 本页**不是** Apple 健康 App 的镜像。原生桥虽已读取全部 ~70 项 HealthKit 指标，
-/// 但 UI 只展示与「安全」相关的部分，理由见 SafetySignalEngine 顶部注释。
+/// 但 UI 只展示与「安全」相关的部分，理由见 VitalsAssessment 顶部注释。
 ///
 ///   ┌ 今日状态卡  一句人话结论 + 报平安动作（差异化核心）
 ///   ├ L1 守护级   5 项常驻：异常时守护圈需要被惊动的指标
@@ -41,7 +43,7 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
   List<String> _alerts = [];
 
   /// 安全信号引擎输出：把原始指标翻译成一句人话结论
-  SafetySignal? _signal;
+  VitalsAssessment? _signal;
 
   /// L2 参考级指标是否展开（默认收起，不占首屏心智）
   bool _showMore = false;
@@ -63,7 +65,7 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
   }
 
   Future<void> _loadAutoAlertPref() async {
-    final v = await HealthService.isSafetyAutoAlertEnabled();
+    final v = await HealthService.isVitalsAutoAlertEnabled();
     if (mounted) setState(() => _autoAlert = v);
   }
 
@@ -109,7 +111,7 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
       // 3. 检查异常
       final anomalies = HealthService.checkAnomalies(_metrics);
       // 4. 安全信号引擎：把 ~70 项原始指标翻译成一句结论
-      final signal = SafetySignalEngine.evaluate(_metrics);
+      final signal = evaluateVitals(_metrics);
       setState(() {
         _alerts = anomalies != null ? List<String>.from(anomalies['alerts']) : [];
         _signal = signal;
@@ -126,7 +128,7 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
     return Scaffold(
       backgroundColor: ZaiNeColors.scaffoldBg(),
       appBar: AppBar(
-        title: const Text('生命体征守护', style: TextStyle(fontWeight: FontWeight.bold)),
+        title:  Text(tr.s776, style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: ZaiNeColors.cardBg(),
         foregroundColor: ZaiNeColors.textPrimary(),
         elevation: 0,
@@ -163,10 +165,10 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
                   // ② L1 守护级：异常时守护圈需要被惊动的 5 项
                   const SizedBox(height: ZaiNeSpacing.xl),
                   _buildSectionTitle(
-                    '守护指标',
+                    tr.s777,
                     AppConfig.isChinaRegion
-                        ? '记录今日体征，随时可主动分享'
-                        : '异常时会提醒你向守护圈报平安',
+                        ? tr.s778
+                        : tr.s779,
                   ),
                   const SizedBox(height: ZaiNeSpacing.lg),
                   _buildL1Grid(),
@@ -208,9 +210,9 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
             children: [
               Icon(Icons.health_and_safety_outlined, color: Colors.orange.shade700, size: 24),
               const SizedBox(width: ZaiNeSpacing.sm),
-              const Expanded(
+               Expanded(
                 child: Text(
-                  '请前往 iPhone 授权健康数据',
+                  tr.s780,
                   style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
                 ),
               ),
@@ -218,7 +220,7 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
           ),
           const SizedBox(height: 10),
           Text(
-            'iOS「设置 → 健康 → 数据来源与访问权限 → 在呢+ → 全部打开」，授权后本页数据会立即同步。',
+            tr.s781,
             style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
           ),
           const SizedBox(height: 10),
@@ -227,7 +229,7 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
               TextButton.icon(
                 onPressed: () => setState(() => _healthKitNotAuthorized = false),
                 icon: const Icon(Icons.check, size: 16),
-                label: const Text('我知道了'),
+                label:  Text(tr.s489),
                 style: TextButton.styleFrom(
                   foregroundColor: Colors.orange.shade700,
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -238,7 +240,7 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
               TextButton.icon(
                 onPressed: _loadHealthData,
                 icon: const Icon(Icons.refresh, size: 16),
-                label: const Text('重新检测'),
+                label:  Text(tr.s782),
                 style: TextButton.styleFrom(
                   foregroundColor: Colors.orange.shade700,
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -258,7 +260,7 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
   Widget _buildTodayStatusCard() {
     final s = _signal;
     final color = s?.color ?? const Color(0xFF8E8E93);
-    final headline = s?.headline ?? '正在读取…';
+    final headline = s?.headline ?? tr.s783;
     final detail = s?.detail ?? '';
 
     return Container(
@@ -327,7 +329,7 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
                     children: [
                       Icon(r.icon,
                           size: 16,
-                          color: r.level == SafetyLevel.alert
+                          color: r.level == VitalsLevel.alert
                               ? const Color(0xFFFF3B30)
                               : const Color(0xFFFF9500)),
                       const SizedBox(width: ZaiNeSpacing.sm),
@@ -358,7 +360,7 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
                       child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                     )
                   : const Icon(Icons.favorite, size: 18),
-              label: Text(_reporting ? '同步中…' : '同步并向守护圈报平安'),
+              label: Text(_reporting ? tr.s784 : tr.s785),
               style: ElevatedButton.styleFrom(
                 backgroundColor: ZaiNeColors.brandOrange,
                 foregroundColor: Colors.white,
@@ -372,7 +374,7 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
           ),
           const SizedBox(height: ZaiNeSpacing.sm),
           Text(
-            _lastUpdated.isNotEmpty ? '数据同步于 $_lastUpdated' : '尚未同步健康数据',
+            _lastUpdated.isNotEmpty ? tr.s786(_lastUpdated) : tr.s787,
             style: TextStyle(
               color: ZaiNeColors.textSecondary(),
               fontSize: ZaiNeFontSize.micro,
@@ -390,7 +392,7 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
       await _loadHealthData();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('同步成功，已向守护圈报平安 ❤️')),
+           SnackBar(content: Text(tr.s788)),
         );
       }
     } finally {
@@ -427,15 +429,15 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('异常时自动通知守护圈',
+                 Text(tr.s789,
                     style: TextStyle(
                         fontWeight: FontWeight.w600,
                         fontSize: ZaiNeFontSize.bodySm)),
                 const SizedBox(height: 2),
                 Text(
                   _autoAlert
-                      ? '检测到长时间无活动等异常，会自动替你报信'
-                      : '已关闭，异常只在 App 内提醒你本人',
+                      ? tr.s790
+                      : tr.s791,
                   style: TextStyle(
                       color: ZaiNeColors.textSecondary(),
                       fontSize: ZaiNeFontSize.micro),
@@ -447,12 +449,12 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
             value: _autoAlert,
             activeThumbColor: ZaiNeColors.brandOrange,
             onChanged: (v) async {
-              await HealthService.setSafetyAutoAlertEnabled(v);
+              await HealthService.setVitalsAutoAlertEnabled(v);
               if (!mounted) return;
               setState(() => _autoAlert = v);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text(v ? '已开启：异常时会自动通知守护圈' : '已关闭：异常仅在 App 内提醒你'),
+                  content: Text(v ? tr.s792 : tr.s793),
                   duration: const Duration(seconds: 2),
                 ),
               );
@@ -520,7 +522,7 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
     return GridView.count(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: 2,
+      crossAxisCount: responsiveCrossAxisCount(context, compactCount: 2, mediumCount: 3, expandedCount: 3),
       mainAxisSpacing: 16,
       crossAxisSpacing: 16,
       childAspectRatio: 1.1,
@@ -529,27 +531,27 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
         //   Apple 健康 App 永远不会做这个判定，因为它不是安全产品。
         _buildActivityCard(),
         _buildMetricCard(
-          title: '心率',
+          title: tr.s440,
           value: _metrics['heart_rate'] != null ? '${_metrics['heart_rate']} bpm' : '--',
           icon: Icons.favorite,
           color: Colors.red,
           subtitle: _hrRangeText(),
-          isAlert: _alerts.any((a) => a.contains('心率')),
+          isAlert: _alerts.any((a) => a.contains(tr.s440)),
         ),
         _buildMetricCard(
-          title: '血氧',
+          title: tr.s441,
           value: _metrics['blood_oxygen'] != null
               ? _formatSpo2(_parseValue(_metrics['blood_oxygen']))
               : '--',
           icon: Icons.bloodtype,
           color: Colors.blue,
-          subtitle: '血液含氧量',
-          isAlert: _alerts.any((a) => a.contains('血氧')),
+          subtitle: tr.s794,
+          isAlert: _alerts.any((a) => a.contains(tr.s441)),
         ),
         // Apple 官方的 Walking Steadiness 本就是为跌倒风险设计，
         // 对独居长者场景高度对口，是我们最该抓住的一项。
         _buildMetricCard(
-          title: '步行稳定性',
+          title: tr.s795,
           value: _metrics['walking_steadiness_pct'] != null
               ? '${_parseValue(_metrics['walking_steadiness_pct']).toStringAsFixed(0)}%'
               : '--',
@@ -562,14 +564,14 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
         // 血压：Apple Watch S9 本身支持，但需 iOS 26。
         // 未开通时保持展示、不置灰 —— 用户明确要求保留入口。
         _buildMetricCard(
-          title: '血压',
+          title: tr.s796,
           value: (_metrics['bp_systolic'] != null && _metrics['bp_diastolic'] != null)
               ? '${_parseValue(_metrics['bp_systolic']).toInt()}/${_parseValue(_metrics['bp_diastolic']).toInt()}'
               : '--',
           icon: Icons.speed,
           color: Colors.deepPurple,
-          subtitle: '单位: mmHg',
-          isAlert: _alerts.any((a) => a.contains('血压')),
+          subtitle: tr.s797,
+          isAlert: _alerts.any((a) => a.contains(tr.s796)),
         ),
       ],
     );
@@ -587,11 +589,11 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
     final isQuiet = _signal?.inactiveHours != null && _signal!.inactiveHours > 0;
 
     return _buildMetricCard(
-      title: '今日活动',
-      value: hasData ? '$steps 步' : '--',
+      title: tr.s798,
+      value: hasData ? tr.s799(steps) : '--',
       icon: Icons.directions_walk,
       color: Colors.green,
-      subtitle: hasData ? '运动 $exercise 分钟 · 站立 $stand 小时' : '需佩戴 Apple Watch',
+      subtitle: hasData ? tr.s800(exercise, stand) : tr.s801,
       isAlert: isQuiet,
     );
   }
@@ -599,16 +601,16 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
   String _hrRangeText() {
     final min = _parseValue(_metrics['heart_rate_min']).toInt();
     final max = _parseValue(_metrics['heart_rate_max']).toInt();
-    if (min > 0 && max > 0) return '今日 $min–$max bpm';
-    return '过去24小时';
+    if (min > 0 && max > 0) return tr.s802(min, max);
+    return tr.s803;
   }
 
   String _steadinessText() {
     final v = _parseValue(_metrics['walking_steadiness_pct']);
-    if (v <= 0) return '跌倒风险评估';
-    if (v >= 70) return '稳定 · 跌倒风险低';
-    if (v >= 50) return '尚可 · 建议留意';
-    return '偏低 · 跌倒风险高';
+    if (v <= 0) return tr.s804;
+    if (v >= 70) return tr.s805;
+    if (v >= 50) return tr.s806;
+    return tr.s807;
   }
 
   double _parseValue(dynamic val) {
@@ -619,10 +621,10 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
   /// 【2026-07-15 修复】血氧(SpO2)显示：HealthKit 可能返回 0.0–1.0 分数或 0–100 百分比，
   /// 统一归一化为百分比；超出合理区间(70%–100%)视为脏数据，显示「数据异常」，避免误导。
   String _formatSpo2(double raw) {
-    if (raw <= 0) return '数据异常';
+    if (raw <= 0) return tr.s808;
     final pct = raw <= 1.0 ? raw * 100 : raw; // 分数→百分比，或已为百分比
     if (pct >= 70 && pct <= 100) return '${pct.toStringAsFixed(0)}%';
-    return '数据异常';
+    return tr.s808;
   }
 
   Widget _buildMetricCard({
@@ -704,18 +706,18 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Row(
+               Row(
                 children: [
                   Icon(Icons.nights_stay, color: Colors.white, size: 24),
                   SizedBox(width: ZaiNeSpacing.md),
                   Text(
-                    '昨晚睡眠',
+                    tr.s809,
                     style: TextStyle(color: Colors.white, fontSize: ZaiNeFontSize.subtitle, fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
               Text(
-                totalMinutes > 0 ? '$hours小时$minutes分' : '暂无数据',
+                totalMinutes > 0 ? tr.s810(hours, minutes) : tr.s811,
                 style: const TextStyle(color: Colors.white, fontSize: ZaiNeFontSize.title, fontWeight: FontWeight.w800),
               ),
             ],
@@ -723,14 +725,14 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
           const SizedBox(height: ZaiNeSpacing.xl),
           Row(
             children: [
-              _buildSleepBit('深度睡眠', _metrics['sleep_deep'] ?? 0, Colors.blue.shade200),
+              _buildSleepBit(tr.s812, _metrics['sleep_deep'] ?? 0, Colors.blue.shade200),
               _buildSleepBit('REM', _metrics['sleep_rem'] ?? 0, Colors.purple.shade200),
-              _buildSleepBit('核心睡眠', _metrics['sleep_core'] ?? _metrics['sleep_asleep'] ?? 0, Colors.indigo.shade200),
+              _buildSleepBit(tr.s813, _metrics['sleep_core'] ?? _metrics['sleep_asleep'] ?? 0, Colors.indigo.shade200),
             ],
           ),
           const SizedBox(height: ZaiNeSpacing.sm),
           Text(
-            '数据来源：HealthKit（可能包含 iPhone 和 Apple Watch）',
+            tr.s814,
             style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: ZaiNeFontSize.micro),
           ),
         ],
@@ -762,7 +764,7 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
 
     // 经期状态颜色
     final Color statusColor = isInPeriod ? Colors.pink : Colors.grey.shade400;
-    final String statusText = isInPeriod ? '经期中' : (hasData ? '非经期' : '未开启跟踪');
+    final String statusText = isInPeriod ? tr.s815 : (hasData ? tr.s816 : tr.s817);
 
     return Container(
       padding: const EdgeInsets.all(ZaiNeSpacing.section),
@@ -805,7 +807,7 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('女性经期跟踪',
+                     Text(tr.s818,
                         style: TextStyle(fontWeight: FontWeight.bold, fontSize: ZaiNeFontSize.body)),
                     const SizedBox(height: ZaiNeSpacing.xs),
                     Text(
@@ -830,7 +832,7 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
                 
                     boxShadow: ZaiNeShadows.card,),
                   child: Text(
-                    '第$cycleDay天',
+                    tr.s819(cycleDay),
                     style: TextStyle(
                       color: statusColor,
                       fontSize: ZaiNeFontSize.caption,
@@ -853,17 +855,17 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
               child: Row(
                 children: [
                   _buildMenstruationInfoItem(
-                    label: '平均周期',
-                    value: '$avgCycle天',
+                    label: tr.s820,
+                    value: tr.s821(avgCycle),
                     icon: Icons.calendar_today,
                     color: Colors.pink.shade300,
                   ),
                   const SizedBox(width: ZaiNeSpacing.lg),
                   _buildMenstruationInfoItem(
-                    label: '预测下次',
+                    label: tr.s822,
                     value: predictedNext.isNotEmpty
                         ? _formatPredictedDate(predictedNext)
-                        : '数据不足',
+                        : tr.s823,
                     icon: Icons.event,
                     color: Colors.purple.shade300,
                   ),
@@ -886,7 +888,7 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
                   const SizedBox(width: ZaiNeSpacing.sm),
                   Expanded(
                     child: Text(
-                      '可手动记录经期日期，系统将自动计算周期并预测下次经期时间',
+                      tr.s824,
                       style: TextStyle(color: Colors.grey.shade600, fontSize: ZaiNeFontSize.micro),
                     ),
                   ),
@@ -907,7 +909,7 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
                     ).then((_) => _loadHealthData());
                   },
                   icon: const Icon(Icons.edit_calendar, size: 16),
-                  label: Text(hasData ? '记录经期' : '开始记录'),
+                  label: Text(hasData ? tr.s825 : tr.s826),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: hasData ? Colors.pink : ZaiNeColors.brandOrange,
                     side: BorderSide(color: hasData ? Colors.pink.shade200 : ZaiNeColors.brandOrange.withValues(alpha: 0.5)),
@@ -927,7 +929,7 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
                     );
                   },
                   icon: const Icon(Icons.settings, size: 16),
-                  label: const Text('设置'),
+                  label:  Text(tr.s056),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Colors.grey.shade700,
                     side: BorderSide(color: Colors.grey.shade300),
@@ -975,9 +977,9 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
       final date = DateTime.parse(dateStr);
       final now = DateTime.now();
       final diff = date.difference(DateTime(now.year, now.month, now.day)).inDays;
-      if (diff <= 0) return '今天';
-      if (diff == 1) return '明天';
-      if (diff <= 7) return '$diff天后';
+      if (diff <= 0) return tr.s164;
+      if (diff == 1) return tr.s827;
+      if (diff <= 7) return tr.s828(diff);
       return '${date.month}/${date.day}';
     } catch (_) {
       return dateStr;
@@ -1007,16 +1009,16 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
                   Icon(Icons.tune_rounded,
                       size: 20, color: ZaiNeColors.textSecondary()),
                   const SizedBox(width: ZaiNeSpacing.md),
-                  const Expanded(
+                   Expanded(
                     child: Text(
-                      '更多身体数据',
+                      tr.s829,
                       style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: ZaiNeFontSize.body),
                     ),
                   ),
                   Text(
-                    _showMore ? '收起' : '展开',
+                    _showMore ? tr.s748 : tr.s749,
                     style: TextStyle(
                         color: ZaiNeColors.textSecondary(),
                         fontSize: ZaiNeFontSize.caption),
@@ -1038,27 +1040,27 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
                   ZaiNeSpacing.section, ZaiNeSpacing.section),
               child: Column(
                 children: [
-                  _buildMiniRow('静息心率', _fmt(_metrics['resting_heart_rate'], 'bpm'),
+                  _buildMiniRow(tr.s830, _fmt(_metrics['resting_heart_rate'], 'bpm'),
                       Icons.monitor_heart_outlined, Colors.orange),
-                  _buildMiniRow('心率变异性 HRV', _fmt(_metrics['hrv'], 'ms', decimals: 0),
+                  _buildMiniRow(tr.s831, _fmt(_metrics['hrv'], 'ms', decimals: 0),
                       Icons.bolt_outlined, Colors.amber),
-                  _buildMiniRow('呼吸频率', _fmt(_metrics['respiratory_rate'], '次/分'),
+                  _buildMiniRow(tr.s832, _fmt(_metrics['respiratory_rate'], tr.s833),
                       Icons.air_rounded, Colors.teal),
                   _buildMiniRow(
-                      '手腕温度',
+                      tr.s834,
                       _metrics['wrist_temperature'] != null
                           ? '${_parseValue(_metrics['wrist_temperature']).toStringAsFixed(1)}°C'
-                          : '需佩戴过夜',
+                          : tr.s835,
                       Icons.thermostat_rounded,
                       Colors.cyan),
                   _buildMiniRow(
-                      '行走距离',
+                      tr.s836,
                       _metrics['distance_m'] != null
                           ? '${(_parseValue(_metrics['distance_m']) / 1000).toStringAsFixed(1)} km'
                           : '--',
                       Icons.straighten_rounded,
                       Colors.blue),
-                  _buildMiniRow('活跃能量', _fmt(_metrics['active_energy'], '千卡'),
+                  _buildMiniRow(tr.s837, _fmt(_metrics['active_energy'], tr.s838),
                       Icons.local_fire_department_outlined, Colors.deepOrange,
                       isLast: true),
                 ],
@@ -1138,13 +1140,13 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('心电图 · 听力 · 体能等完整数据',
+                   Text(tr.s839,
                       style: TextStyle(
                           fontWeight: FontWeight.w600,
                           fontSize: ZaiNeFontSize.bodySm)),
                   const SizedBox(height: 2),
                   Text(
-                    '这些数据 Apple 仅在系统「健康」App 中开放',
+                    tr.s840,
                     style: TextStyle(
                         color: ZaiNeColors.textSecondary(),
                         fontSize: ZaiNeFontSize.micro),
@@ -1168,14 +1170,14 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
       );
       if (!ok && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('请在 iPhone 上打开系统「健康」App 查看')),
+           SnackBar(content: Text(tr.s841)),
         );
       }
     } catch (e) {
       if (kDebugMode) debugPrint('[HealthOverview] 打开健康 App 失败: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('请在 iPhone 上打开系统「健康」App 查看')),
+           SnackBar(content: Text(tr.s841)),
         );
       }
     }
@@ -1187,7 +1189,7 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
         Icon(Icons.shield_outlined, color: ZaiNeColors.textSecondary(), size: 32),
         const SizedBox(height: ZaiNeSpacing.md),
         Text(
-          '健康数据由 Apple HealthKit 提供\n仅供参考，不作为医疗诊断依据',
+          tr.s842,
           textAlign: TextAlign.center,
           style: TextStyle(color: ZaiNeColors.textSecondary(), fontSize: ZaiNeFontSize.caption, height: 1.5),
         ),

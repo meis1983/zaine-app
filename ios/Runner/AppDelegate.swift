@@ -80,12 +80,12 @@ import HealthKit
         }
         
         switch call.method {
-        case "requestFallDetectionAuthorization":
-            self.requestFallDetectionAuthorization(result: result)
-        case "getRecentFallEvents":
+        case "requestMotionMonitoringAuthorization":
+            self.requestMotionMonitoringAuthorization(result: result)
+        case "getRecentMotionEvents":
             let args = call.arguments as? [String: Any] ?? [:]
             let hours = args["hours"] as? Int ?? 24
-            self.getRecentFallEvents(hours: hours, result: result)
+            self.getRecentMotionEvents(hours: hours, result: result)
         case "getWristTemperature":
             self.getWristTemperature(result: result)
         case "getFullHealthSummary":
@@ -235,7 +235,7 @@ import HealthKit
       }
   }
 
-  private func requestFallDetectionAuthorization(result: @escaping FlutterResult) {
+  private func requestMotionMonitoringAuthorization(result: @escaping FlutterResult) {
     guard let healthStore = healthStore else {
         result(false)
         return
@@ -259,7 +259,7 @@ import HealthKit
     }
   }
   
-  private func getRecentFallEvents(hours: Int, result: @escaping FlutterResult) {
+  private func getRecentMotionEvents(hours: Int, result: @escaping FlutterResult) {
     guard let healthStore = healthStore else {
         result([])
         return

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/social/guardian_message_service.dart';
 import 'package:intl/intl.dart';
 import '../theme/theme_helper.dart';
+import '../l10n/i18n.dart';
 
 /// 守护圈留言板组件
 ///
@@ -115,7 +116,7 @@ class _GuardianMessageBoardState extends State<GuardianMessageBoard> {
           ),
           const SizedBox(height: 16),
           Text(
-            '还没有消息',
+            tr.z0512,
             style: TextStyle(
               fontSize: 16,
               color: ZaiNeColors.textSecondary(),
@@ -123,7 +124,7 @@ class _GuardianMessageBoardState extends State<GuardianMessageBoard> {
           ),
           const SizedBox(height: 8),
           Text(
-            '发送第一条消息吧~',
+            tr.z0513,
             style: TextStyle(
               fontSize: 14,
               color: ZaiNeColors.textHint(),
@@ -250,10 +251,10 @@ class _GuardianMessageBoardState extends State<GuardianMessageBoard> {
     final now = DateTime.now();
     final diff = now.difference(time);
 
-    if (diff.inMinutes < 1) return '刚刚';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}分钟前';
-    if (diff.inHours < 24) return '${diff.inHours}小时前';
-    if (diff.inDays < 7) return '${diff.inDays}天前';
+    if (diff.inMinutes < 1) return tr.s430;
+    if (diff.inMinutes < 60) return tr.z0001(diff.inMinutes);
+    if (diff.inHours < 24) return tr.z0002(diff.inHours);
+    if (diff.inDays < 7) return tr.z0003(diff.inDays);
     return DateFormat('MM/dd').format(time);
   }
 
@@ -292,8 +293,8 @@ class _GuardianMessageBoardState extends State<GuardianMessageBoard> {
                 ),
                 child: TextField(
                   controller: _messageController,
-                  decoration: const InputDecoration(
-                    hintText: '发送消息...',
+                  decoration: InputDecoration(
+                    hintText: tr.z0514,
                     border: InputBorder.none,
                     contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   ),
@@ -448,28 +449,28 @@ class MessageCard extends StatelessWidget {
       case MessageType.text:
         return message.senderName;
       case MessageType.emoji:
-        return '${message.senderName} 发送了表情';
+        return tr.z0515(message.senderName);
       case MessageType.checkin:
-        return '签到提醒';
+        return tr.s065;
       case MessageType.sos:
-        return '紧急求助';
+        return tr.s851;
       case MessageType.milestone:
-        return '成就解锁';
+        return tr.z0516;
     }
   }
 
   String _getTypeSubtitle() {
     switch (message.type) {
       case MessageType.text:
-        return '点击查看详情';
+        return tr.z0517;
       case MessageType.emoji:
         return message.emojiCode ?? '😊';
       case MessageType.checkin:
-        return '守护对象已签到';
+        return tr.z0518;
       case MessageType.sos:
-        return '查看详情';
+        return tr.z0022;
       case MessageType.milestone:
-        return message.content ?? '恭喜！';
+        return message.content ?? tr.z0519;
     }
   }
 

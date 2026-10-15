@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/theme_helper.dart';
+import '../l10n/i18n.dart';
 
 /// 联系人卡片 Widget（完整版）
 ///
@@ -53,7 +54,7 @@ class _ContactCardWidgetState extends State<ContactCardWidget> {
   Widget build(BuildContext context) {
     final name = (widget.contact['name'] ?? '').toString();
     final phone = (widget.contact['phone'] ?? '').toString();
-    final relation = (widget.contact['relation'] ?? '亲友').toString();
+    final relation = (widget.contact['relation'] ?? tr.z0664).toString();
     final displayPhone =
         phone.isEmpty ? '' : (_revealed ? phone : _maskPhone(phone));
 
@@ -200,14 +201,14 @@ class _ContactCardWidgetState extends State<ContactCardWidget> {
                   icon: Icon(Icons.edit, color: Colors.grey[500], size: 18),
                   onPressed: widget.onEdit,
                   visualDensity: VisualDensity.compact,
-                  tooltip: '编辑',
+                  tooltip: tr.z0665,
                 ),
                 IconButton(
                   icon: const Icon(Icons.delete_outline,
                       color: Colors.red, size: 18),
                   onPressed: widget.onDelete,
                   visualDensity: VisualDensity.compact,
-                  tooltip: '删除',
+                  tooltip: tr.s038,
                 ),
               ],
             ),

@@ -6,6 +6,7 @@
 
 import 'package:flutter/foundation.dart';
 import 'database_service.dart';
+import '../../l10n/i18n.dart';
 
 /// 事件类型常量
 class CircleEventType {
@@ -18,7 +19,7 @@ class CircleEvent {
   final int? id;
   final String type;   // 见 CircleEventType
   final String actor;  // 触发者标识（'me' / 手机号）
-  final String summary; // 主标题（如 "体征异常预警" / "你 报平安"）
+  final String summary; // 主标题（如 tr.z0014 / tr.s495）
   final String detail; // 副标题/说明
   final int ts;        // Unix 毫秒时间戳
   final String extra;  // JSON 扩展字段

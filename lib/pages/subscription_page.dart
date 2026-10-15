@@ -17,6 +17,7 @@ import '../services/api/subscription_service.dart';
 import '../services/iap_service.dart';
 import '../data/app_constants.dart';
 import '../widgets/upgrade_celebration.dart';
+import '../l10n/i18n.dart';
 
 class SubscriptionPage extends StatefulWidget {
   const SubscriptionPage({super.key});
@@ -134,13 +135,13 @@ class _SubscriptionPageState extends State<SubscriptionPage>
         if (mounted) {
           setState(() {
             _isPurchasing = false;
-            _errorMessage = '订阅产品尚未就绪，请稍后再试';
+            _errorMessage = tr.s1064;
           });
           // 用 SnackBar 让错误更明显
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('⏰ 订阅产品正在准备中\nApple 审核通过后需 2-24 小时生效'),
+               SnackBar(
+                content: Text(tr.s1065),
                 duration: Duration(seconds: 4),
                 behavior: SnackBarBehavior.floating,
               ),
@@ -156,7 +157,7 @@ class _SubscriptionPageState extends State<SubscriptionPage>
       if (mounted) {
         setState(() {
           _isPurchasing = false;
-          _errorMessage = 'App Store 购买服务不可用，请稍后再试';
+          _errorMessage = tr.s1066;
         });
       }
       return;
@@ -173,7 +174,7 @@ class _SubscriptionPageState extends State<SubscriptionPage>
       if (mounted) {
         setState(() {
           _isPurchasing = false;
-          _errorMessage = '未找到订阅产品（$productId），请稍后重试或联系客服';
+          _errorMessage = tr.s1067(productId);
         });
       }
       if (kDebugMode) debugPrint('[IAP] 未找到产品: $productId，可用产品: ${_products.map((p) => p.id).toList()}');
@@ -189,20 +190,20 @@ class _SubscriptionPageState extends State<SubscriptionPage>
           _errorMessage = error;
         });
         // 【修复 v1.85.0】网络错误时显示重试按钮 SnackBar
-        if (context.mounted && error.contains('网络')) {
+        if (context.mounted && error.contains(tr.s1068)) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: const Row(
+              content:  Row(
                 children: [
                   Icon(Icons.wifi_off, color: Colors.white, size: 20),
                   SizedBox(width: ZaiNeSpacing.md),
-                  Expanded(child: Text('购买失败：网络不稳定，请检查后重试\n（沙盒测试建议关闭 VPN）')),
+                  Expanded(child: Text(tr.s1069)),
                 ],
               ),
               duration: const Duration(seconds: 6),
               behavior: SnackBarBehavior.floating,
               action: SnackBarAction(
-                label: '重试',
+                label: tr.s699,
                 textColor: ZaiNeColors.brandOrange,
                 onPressed: () {
                   // 清除错误状态，让用户可以再次点击
@@ -255,14 +256,14 @@ class _SubscriptionPageState extends State<SubscriptionPage>
         } else {
           // ⚠️ 验证失败 → 给机会让用户手动重试
           setState(() {
-            _errorMessage = verifyResult['detail']?.toString() ?? '验证失败，请重启App重试';
+            _errorMessage = verifyResult['detail']?.toString() ?? tr.s1070;
             _isPurchasing = false;
           });
           // 不调 completePurchase，让交易保留（重启后 StoreKit 会自动重试）
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('⚠️ 支付验证失败\n请重启App自动重试，或联系客服'),
+               SnackBar(
+                content: Text(tr.s1071),
                 duration: Duration(seconds: 5),
                 behavior: SnackBarBehavior.floating,
               ),
@@ -271,14 +272,14 @@ class _SubscriptionPageState extends State<SubscriptionPage>
         }
       } catch (e) {
         setState(() {
-          _errorMessage = '验证失败：$e';
+          _errorMessage = tr.s1072(e);
           _isPurchasing = false;
         });
         // ⚠️ 异常 → 不调 completePurchase，让交易保留
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('⚠️ 网络异常，请重启App自动重试'),
+             SnackBar(
+              content: Text(tr.s1073),
               duration: Duration(seconds: 4),
               behavior: SnackBarBehavior.floating,
             ),
@@ -287,7 +288,7 @@ class _SubscriptionPageState extends State<SubscriptionPage>
       }
     } else {
       setState(() {
-        _errorMessage = result.error ?? '购买已取消';
+        _errorMessage = result.error ?? tr.s1074;
         _isPurchasing = false;
       });
     }
@@ -308,8 +309,8 @@ class _SubscriptionPageState extends State<SubscriptionPage>
       await _loadSubscriptionStatus();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('购买记录已恢复'),
+           SnackBar(
+            content: Text(tr.s1075),
             backgroundColor: Colors.green,
           ),
         );
@@ -318,7 +319,7 @@ class _SubscriptionPageState extends State<SubscriptionPage>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(result['error']?.toString() ?? '未找到可恢复的购买记录'),
+            content: Text(result['error']?.toString() ?? tr.s1076),
             backgroundColor: ZaiNeColors.brandOrangeSwatch,
           ),
         );
@@ -331,7 +332,7 @@ class _SubscriptionPageState extends State<SubscriptionPage>
     if (dateStr == null || dateStr.isEmpty) return '';
     try {
       final dt = DateTime.parse(dateStr);
-      return DateFormat('yyyy年M月d日').format(dt);
+      return DateFormat(tr.s1077).format(dt);
     } catch (_) {
       return dateStr;
     }
@@ -344,8 +345,8 @@ class _SubscriptionPageState extends State<SubscriptionPage>
     return Scaffold(
       backgroundColor: const Color(0xFFFDF8F5), // 温暖的米白色
       appBar: AppBar(
-        title: const Text(
-          '在呢守护',
+        title:  Text(
+          tr.s1078,
           style: TextStyle(
             fontWeight: FontWeight.w600,
             letterSpacing: 0.5,
@@ -490,7 +491,7 @@ class _SubscriptionPageState extends State<SubscriptionPage>
                 ),
                 const SizedBox(height: ZaiNeSpacing.lg),
                 Text(
-                  isSmart ? '你的守护圈，已被点亮' : '点亮你的守护圈',
+                  isSmart ? tr.s1079 : tr.s1080,
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: ZaiNeFontSize.title,
@@ -504,8 +505,8 @@ class _SubscriptionPageState extends State<SubscriptionPage>
                 const SizedBox(height: ZaiNeSpacing.sm),
                 Text(
                   isSmart
-                      ? '那些在乎你的人，此刻更安心了'
-                      : '让在乎你的人，时刻知道你在',
+                      ? tr.s1081
+                      : tr.s1082,
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: ZaiNeFontSize.bodySm,
@@ -530,7 +531,7 @@ class _SubscriptionPageState extends State<SubscriptionPage>
                       ),
                     ),
                     child: Text(
-                      '守护有效期至 ${_formatDate(_expiresAt)}',
+                      tr.s1083(_formatDate(_expiresAt)),
                       style: TextStyle(
                         color: Colors.white.withValues(alpha: 0.95),
                         fontSize: ZaiNeFontSize.caption,
@@ -546,9 +547,9 @@ class _SubscriptionPageState extends State<SubscriptionPage>
                     runSpacing: 12,
                     alignment: WrapAlignment.center,
                     children: [
-                      _buildValuePill(Icons.call, '快捷拨打3人'),
-                      _buildValuePill(Icons.sms_rounded, '快捷短信3人'),
-                      _buildValuePill(Icons.people_rounded, '10位守护人'),
+                      _buildValuePill(Icons.call, tr.s1084),
+                      _buildValuePill(Icons.sms_rounded, tr.s1085),
+                      _buildValuePill(Icons.people_rounded, tr.s1086),
                     ],
                   ),
                 ],
@@ -614,7 +615,7 @@ class _SubscriptionPageState extends State<SubscriptionPage>
               Icon(Icons.format_quote_rounded, size: 16, color: ZaiNeColors.brandOrangeSwatch[300]),
               const SizedBox(width: ZaiNeSpacing.md),
               Text(
-                '一句"我在呢"，胜过千言万语',
+                tr.s1087,
                 style: TextStyle(
                   fontSize: ZaiNeFontSize.body,
                   fontWeight: FontWeight.w600,
@@ -628,8 +629,8 @@ class _SubscriptionPageState extends State<SubscriptionPage>
           ),
           const SizedBox(height: ZaiNeSpacing.md),
           Text(
-            '父母深夜等你报平安，爱人担心你独自出行，孩子希望你早点回家。'
-            '在呢，不只是App，是你和在乎的人之间，一条永远在线的守护线。',
+            tr.z0279 +
+                tr.z0280,
             style: TextStyle(
               fontSize: ZaiNeFontSize.caption,
               color: ZaiNeColors.brandOrangeSwatch[700]?.withValues(alpha: 0.8),
@@ -650,20 +651,20 @@ class _SubscriptionPageState extends State<SubscriptionPage>
       _PropItem(
         icon: Icons.health_and_safety_rounded,
         color: const Color(0xFFFF6B6B),
-        title: '紧急时刻，快捷通知3位联系人',
-        subtitle: '一键求助，快捷拨打并短信通知前3位联系人，分秒必争',
+        title: tr.s1088,
+        subtitle: tr.s1089,
       ),
       _PropItem(
         icon: Icons.family_restroom_rounded,
         color: const Color(0xFF8B5CF6),
-        title: '最多10位守护人，全家都放心',
-        subtitle: '父母、伴侣、挚友……每个重要的人，都不会被遗漏',
+        title: tr.s1090,
+        subtitle: tr.s1091,
       ),
       _PropItem(
         icon: Icons.card_giftcard_rounded,
         color: const Color(0xFFFF8A65),
-        title: '守护卡，把关心传递给更多人',
-        subtitle: '初始3张守护卡，邀请亲友加入你的守护圈，让爱流动',
+        title: tr.s1092,
+        subtitle: tr.s1093,
       ),
     ];
 
@@ -757,8 +758,8 @@ class _SubscriptionPageState extends State<SubscriptionPage>
                 ),
               ),
               const SizedBox(width: ZaiNeSpacing.sm),
-              const Text(
-                '守护力对比',
+               Text(
+                tr.s1094,
                 style: TextStyle(
                   fontSize: ZaiNeFontSize.subtitle,
                   fontWeight: FontWeight.bold,
@@ -773,7 +774,7 @@ class _SubscriptionPageState extends State<SubscriptionPage>
               Expanded(
                 flex: 2,
                 child: Text(
-                  '守护能力',
+                  tr.s1095,
                   style: TextStyle(
                     fontSize: ZaiNeFontSize.caption,
                     fontWeight: FontWeight.w600,
@@ -783,7 +784,7 @@ class _SubscriptionPageState extends State<SubscriptionPage>
               ),
               Expanded(
                 child: Text(
-                  '体验版',
+                  tr.s1096,
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: ZaiNeFontSize.caption,
@@ -792,9 +793,9 @@ class _SubscriptionPageState extends State<SubscriptionPage>
                   ),
                 ),
               ),
-              const Expanded(
+               Expanded(
                 child: Text(
-                  '智能版',
+                  tr.s1097,
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: ZaiNeFontSize.caption,
@@ -808,11 +809,11 @@ class _SubscriptionPageState extends State<SubscriptionPage>
           const SizedBox(height: ZaiNeSpacing.md),
           Container(height: 1, color: const Color(0xFFF0F0F5)),
           const SizedBox(height: ZaiNeSpacing.lg),
-          _buildComparisonRow('紧急联系人上限', '5位', '10位', highlightSmart: true),
+          _buildComparisonRow(tr.s1098, tr.s1099, tr.s1100, highlightSmart: true),
           const Divider(height: 22, color: Color(0xFFF5F5F7)),
-          _buildComparisonRow('紧急快捷拨打', '1位', '3位', highlightSmart: true),
+          _buildComparisonRow(tr.s1101, tr.s1102, tr.s1103, highlightSmart: true),
           const Divider(height: 22, color: Color(0xFFF5F5F7)),
-          _buildComparisonRow('紧急快捷短信', '1位', '3位', highlightSmart: true),
+          _buildComparisonRow(tr.s1104, tr.s1102, tr.s1103, highlightSmart: true),
         ],
       ),
     );
@@ -921,8 +922,8 @@ class _SubscriptionPageState extends State<SubscriptionPage>
                 ),
               ),
               const SizedBox(width: ZaiNeSpacing.md),
-              const Text(
-                '智能守护',
+               Text(
+                tr.s1105,
                 style: TextStyle(
                   fontSize: ZaiNeFontSize.title,
                   fontWeight: FontWeight.bold,
@@ -933,7 +934,7 @@ class _SubscriptionPageState extends State<SubscriptionPage>
           ),
           const SizedBox(height: ZaiNeSpacing.sm),
           Text(
-            '一份小小的订阅，一份大大的安心',
+            tr.s1106,
             style: TextStyle(
               fontSize: ZaiNeFontSize.bodySm,
               color: Colors.grey[500],
@@ -948,7 +949,7 @@ class _SubscriptionPageState extends State<SubscriptionPage>
           const SizedBox(height: ZaiNeSpacing.sm),
           // 锚点文案
           Text(
-            '每天仅需 ${_perDayLabel()}',
+            tr.s1107(_perDayLabel()),
             style: TextStyle(
               fontSize: ZaiNeFontSize.caption,
               color: const Color(0xFFFF7043).withValues(alpha: 0.85),
@@ -957,7 +958,7 @@ class _SubscriptionPageState extends State<SubscriptionPage>
           ),
           const SizedBox(height: ZaiNeSpacing.sm),
           Text(
-            '通过 Apple 订阅管理自动续费',
+            tr.s1108,
             style: TextStyle(
               fontSize: ZaiNeFontSize.micro,
               color: Colors.grey[400],
@@ -977,7 +978,7 @@ class _SubscriptionPageState extends State<SubscriptionPage>
                   Icon(Icons.info_outline, size: 14, color: ZaiNeColors.brandOrangeSwatch[400]),
                   const SizedBox(width: ZaiNeSpacing.xs),
                   Text(
-                    '订阅产品加载中，点击购买将自动刷新',
+                    tr.s1109,
                     style: TextStyle(
                       fontSize: ZaiNeFontSize.micro,
                       color: ZaiNeColors.brandOrangeSwatch[600],
@@ -990,7 +991,7 @@ class _SubscriptionPageState extends State<SubscriptionPage>
             Padding(
               padding: const EdgeInsets.only(top: ZaiNeSpacing.cardXs),
               child: Text(
-                '⚠ App Store 暂不可用，请稍后再试',
+                tr.s1110,
                 style: TextStyle(
                   fontSize: ZaiNeFontSize.caption,
                   color: ZaiNeColors.brandOrangeSwatch[600],
@@ -1029,7 +1030,7 @@ class _SubscriptionPageState extends State<SubscriptionPage>
           ),
           const SizedBox(width: ZaiNeSpacing.sm),
           Text(
-            '加载中...',
+            tr.s1111,
             style: TextStyle(
               fontSize: ZaiNeFontSize.body,
               color: Colors.grey[500],
@@ -1059,7 +1060,7 @@ class _SubscriptionPageState extends State<SubscriptionPage>
         Padding(
           padding: const EdgeInsets.only(bottom: ZaiNeSpacing.xxs),
           child: Text(
-            _selectedPlan == 'monthly' ? '/月' : '/年',
+            _selectedPlan == 'monthly' ? tr.s1112 : tr.s1113,
             style: TextStyle(
               fontSize: ZaiNeFontSize.body,
               color: Colors.grey[500],
@@ -1085,21 +1086,21 @@ class _SubscriptionPageState extends State<SubscriptionPage>
         children: [
           Expanded(
             child: _buildPlanTab(
-              label: '月度',
+              label: tr.s1114,
               price: '¥9',
-              unit: '/月',
+              unit: tr.s1112,
               isSelected: _selectedPlan == 'monthly',
               onTap: () => setState(() => _selectedPlan = 'monthly'),
             ),
           ),
           Expanded(
             child: _buildPlanTab(
-              label: '年度',
-              price: '${IapService().getYearlyPrice()}/年',
+              label: tr.s1115,
+              price: tr.s1116(IapService().getYearlyPrice()),
               unit: _yearlyPerMonthLabel(),
               isSelected: _selectedPlan == 'yearly',
               onTap: () => setState(() => _selectedPlan = 'yearly'),
-              badge: '省18%',
+              badge: tr.s1117,
               isRecommended: true,
             ),
           ),
@@ -1192,7 +1193,7 @@ class _SubscriptionPageState extends State<SubscriptionPage>
               style: TextStyle(
                 fontSize: ZaiNeFontSize.micro,
                 color: isSelected ? const Color(0xFFFF7043).withValues(alpha: 0.7) : const Color(0xFFBBBBCC),
-                decoration: label == '年度' && !isSelected ? TextDecoration.lineThrough : null,
+                decoration: label == tr.s1115 && !isSelected ? TextDecoration.lineThrough : null,
               ),
             ),
           ],
@@ -1256,8 +1257,8 @@ class _SubscriptionPageState extends State<SubscriptionPage>
                             const SizedBox(width: ZaiNeSpacing.sm),
                             Text(
                               _selectedPlan == 'monthly'
-                                  ? '立即开启守护'
-                                  : '立即开启守护 · 年付更省',
+                                  ? tr.s1118
+                                  : tr.s1119,
                               style: const TextStyle(
                                 fontSize: ZaiNeFontSize.subtitle,
                                 fontWeight: FontWeight.w600,
@@ -1307,8 +1308,8 @@ class _SubscriptionPageState extends State<SubscriptionPage>
                 ),
               ),
               const SizedBox(width: ZaiNeSpacing.sm),
-              const Text(
-                '你的守护已点亮',
+               Text(
+                tr.s1120,
                 style: TextStyle(
                   fontSize: ZaiNeFontSize.subtitle,
                   fontWeight: FontWeight.bold,
@@ -1321,22 +1322,22 @@ class _SubscriptionPageState extends State<SubscriptionPage>
           _buildFeatureItem(
             icon: Icons.favorite_rounded,
             gradientColors: const [Color(0xFFFF8A65), Color(0xFFFF7043)],
-            title: '紧急时刻，快捷守护3位联系人',
-            subtitle: '一键求助，快捷拨打并短信通知前3位联系人',
+            title: tr.s1121,
+            subtitle: tr.s1122,
           ),
           const SizedBox(height: ZaiNeSpacing.lg),
           _buildFeatureItem(
             icon: Icons.people_rounded,
             gradientColors: const [Color(0xFF8B5CF6), Color(0xFF6366F1)],
-            title: '最多10位守护人',
-            subtitle: '父母、伴侣、挚友，每个重要的人都不会遗漏',
+            title: tr.s1123,
+            subtitle: tr.s1124,
           ),
           const SizedBox(height: ZaiNeSpacing.lg),
           _buildFeatureItem(
             icon: Icons.card_giftcard_rounded,
             gradientColors: const [Color(0xFFEC4899), Color(0xFFFF6B6B)],
-            title: '守护卡传递关心',
-            subtitle: '邀请亲友加入守护圈，让爱流动起来',
+            title: tr.s1125,
+            subtitle: tr.s1126,
           ),
         ],
       ),
@@ -1428,7 +1429,7 @@ class _SubscriptionPageState extends State<SubscriptionPage>
               ),
               const SizedBox(width: ZaiNeSpacing.sm),
               Text(
-                '管理守护订阅',
+                tr.s1127,
                 style: TextStyle(
                   fontSize: ZaiNeFontSize.body,
                   fontWeight: FontWeight.w600,
@@ -1439,7 +1440,7 @@ class _SubscriptionPageState extends State<SubscriptionPage>
           ),
           const SizedBox(height: ZaiNeSpacing.md),
           Text(
-            '通过 Apple ID 管理你的守护订阅，可随时调整',
+            tr.s1128,
             style: TextStyle(
               fontSize: ZaiNeFontSize.caption,
               color: Colors.grey[500],
@@ -1461,11 +1462,11 @@ class _SubscriptionPageState extends State<SubscriptionPage>
                 color: const Color(0xFFF5F5F7),
                 borderRadius: BorderRadius.circular(ZaiNeRadius.small),
               ),
-              child: const Row(
+              child:  Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    '前往 Apple ID 管理',
+                    tr.s1129,
                     style: TextStyle(
                       fontSize: ZaiNeFontSize.bodySm,
                       fontWeight: FontWeight.w600,
@@ -1509,7 +1510,7 @@ class _SubscriptionPageState extends State<SubscriptionPage>
               Icon(Icons.verified_user_outlined, size: 18, color: ZaiNeColors.brandOrangeSwatch[400]),
               const SizedBox(width: ZaiNeSpacing.sm),
               Text(
-                '你的信任，我们用心守护',
+                tr.s1130,
                 style: TextStyle(
                   fontSize: ZaiNeFontSize.bodySm,
                   fontWeight: FontWeight.w600,
@@ -1522,9 +1523,9 @@ class _SubscriptionPageState extends State<SubscriptionPage>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildTrustItem(Icons.apple, 'Apple 官方支付'),
-              _buildTrustItem(Icons.cancel_outlined, '随时可取消'),
-              _buildTrustItem(Icons.privacy_tip_outlined, '隐私安全'),
+              _buildTrustItem(Icons.apple, tr.s1131),
+              _buildTrustItem(Icons.cancel_outlined, tr.s1132),
+              _buildTrustItem(Icons.privacy_tip_outlined, tr.s1133),
             ],
           ),
         ],
@@ -1556,8 +1557,8 @@ class _SubscriptionPageState extends State<SubscriptionPage>
     return Center(
       child: TextButton(
         onPressed: _restorePurchase,
-        child: const Text(
-          '恢复购买',
+        child:  Text(
+          tr.s1134,
           style: TextStyle(
             fontSize: ZaiNeFontSize.bodySm,
             color: Color(0xFF9999AA),
@@ -1603,9 +1604,9 @@ class _SubscriptionPageState extends State<SubscriptionPage>
     try {
       final p = _products.firstWhere((x) => x.id == IapService.productIdYearly);
       final perMonth = p.rawPrice / 12;
-      return '≈${p.currencyCode} ${perMonth.toStringAsFixed(2)}/月';
+      return tr.s1135(p.currencyCode, perMonth.toStringAsFixed(2));
     } catch (_) {
-      return '≈¥7.3/月';
+      return tr.s1136;
     }
   }
 
@@ -1623,7 +1624,7 @@ class _SubscriptionPageState extends State<SubscriptionPage>
           Row(
             children: [
               Text(
-                '在呢智能版',
+                tr.s075,
                 style: TextStyle(
                   fontSize: ZaiNeFontSize.caption,
                   fontWeight: FontWeight.w700,
@@ -1632,8 +1633,8 @@ class _SubscriptionPageState extends State<SubscriptionPage>
               ),
               Text(
                 _selectedPlan == 'monthly'
-                    ? ' · 月度 ${_dynamicPrice()}'
-                    : ' · 年度 ${_dynamicPrice()}',
+                    ? tr.s1137(_dynamicPrice())
+                    : tr.s1138(_dynamicPrice()),
                 style: TextStyle(
                   fontSize: ZaiNeFontSize.caption,
                   fontWeight: FontWeight.w500,
@@ -1646,11 +1647,11 @@ class _SubscriptionPageState extends State<SubscriptionPage>
 
           // ── 订阅条款详情 ──
           Text(
-            '• 订阅名称：在呢智能版\n'
-            '• 订阅时长：${_selectedPlan == 'monthly' ? '每月自动续费' : '每年自动续费'}\n'
-            '• 订阅价格：${_selectedPlan == 'monthly' ? '${_dynamicPrice()}/月（约合 ${_perDayLabel()}/天）' : '${_dynamicPrice()}/年（约合 ${_perDayLabel()}/天）'}\n'
-            '• 自动续费：当前计费周期结束前24小时自动扣款\n'
-            '• 取消方式：随时可在 Apple ID 设置中取消，取消后当前周期仍可用',
+            tr.z0281 +
+                tr.z0282(_selectedPlan == 'monthly' ? '每月自动续费' : '每年自动续费') +
+                tr.z0283(_selectedPlan == 'monthly' ? '${_dynamicPrice()}/月（约合 ${_perDayLabel()}/天）' : '${_dynamicPrice()}/年（约合 ${_perDayLabel()}/天）') +
+                tr.z0284 +
+                tr.z0285,
             style: TextStyle(
               fontSize: ZaiNeFontSize.micro,
               color: Colors.grey[600],
@@ -1677,7 +1678,7 @@ class _SubscriptionPageState extends State<SubscriptionPage>
                     GestureDetector(
                       onTap: () => _openUrl(AppConstants.privacyUrl),
                       child: Text(
-                        '查看隐私政策',
+                        tr.s1139,
                         style: TextStyle(
                           fontSize: ZaiNeFontSize.caption,
                           color: Colors.blue[700],
@@ -1698,7 +1699,7 @@ class _SubscriptionPageState extends State<SubscriptionPage>
                     GestureDetector(
                       onTap: () => _openUrl(AppConstants.termsUrl),
                       child: Text(
-                        '查看服务条款（用户协议）',
+                        tr.s1140,
                         style: TextStyle(
                           fontSize: ZaiNeFontSize.caption,
                           color: ZaiNeColors.brandOrangeSwatch[700],
@@ -1727,7 +1728,7 @@ class _SubscriptionPageState extends State<SubscriptionPage>
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('无法打开页面：$url'),
+          content: Text(tr.s1141(url)),
           backgroundColor: ZaiNeColors.brandOrangeSwatch,
         ),
       );

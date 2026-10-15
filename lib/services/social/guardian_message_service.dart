@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../utils/streak_util.dart';
 import '../api/contact_service.dart';
 import '../api/card_service.dart';
+import '../../l10n/i18n.dart';
 
 /// 留言类型
 enum MessageType {
@@ -325,22 +326,22 @@ class SocialService {
   /// 获取可发送的表情列表
   List<Map<String, String>> getAvailableEmojis() {
     return [
-      {'code': '❤️', 'name': '爱心', 'category': 'emotion'},
-      {'code': '😊', 'name': '开心', 'category': 'emotion'},
-      {'code': '🌸', 'name': '花朵', 'category': 'nature'},
-      {'code': '☀️', 'name': '阳光', 'category': 'nature'},
-      {'code': '🌙', 'name': '月亮', 'category': 'nature'},
-      {'code': '🍀', 'name': '幸运草', 'category': 'nature'},
-      {'code': '💪', 'name': '加油', 'category': 'action'},
-      {'code': '🙏', 'name': '祈福', 'category': 'action'},
-      {'code': '🎉', 'name': '庆祝', 'category': 'action'},
-      {'code': '🤗', 'name': '拥抱', 'category': 'action'},
-      {'code': '👍', 'name': '点赞', 'category': 'social'},
-      {'code': '✌️', 'name': '胜利', 'category': 'social'},
-      {'code': '🌈', 'name': '彩虹', 'category': 'nature'},
-      {'code': '🦋', 'name': '蝴蝶', 'category': 'nature'},
-      {'code': '🎵', 'name': '音乐', 'category': 'activity'},
-      {'code': '☕', 'name': '咖啡', 'category': 'activity'},
+      {'code': '❤️', 'name': tr.z0373, 'category': 'emotion'},
+      {'code': '😊', 'name': tr.z0374, 'category': 'emotion'},
+      {'code': '🌸', 'name': tr.z0375, 'category': 'nature'},
+      {'code': '☀️', 'name': tr.z0376, 'category': 'nature'},
+      {'code': '🌙', 'name': tr.z0377, 'category': 'nature'},
+      {'code': '🍀', 'name': tr.z0378, 'category': 'nature'},
+      {'code': '💪', 'name': tr.z0379, 'category': 'action'},
+      {'code': '🙏', 'name': tr.z0380, 'category': 'action'},
+      {'code': '🎉', 'name': tr.z0381, 'category': 'action'},
+      {'code': '🤗', 'name': tr.z0382, 'category': 'action'},
+      {'code': '👍', 'name': tr.z0383, 'category': 'social'},
+      {'code': '✌️', 'name': tr.z0384, 'category': 'social'},
+      {'code': '🌈', 'name': tr.z0385, 'category': 'nature'},
+      {'code': '🦋', 'name': tr.z0386, 'category': 'nature'},
+      {'code': '🎵', 'name': tr.z0387, 'category': 'activity'},
+      {'code': '☕', 'name': tr.z0388, 'category': 'activity'},
     ];
   }
 
@@ -415,24 +416,24 @@ class SocialService {
       // 签到类成就
       GuardianAchievement(
         id: 'checkin_7',
-        title: '连续7天签到',
-        description: '连续签到7天，展现你的坚持',
+        title: tr.z0389,
+        description: tr.z0390,
         icon: '🔥',
         category: 'checkin',
         requiredValue: 7,
       ),
       GuardianAchievement(
         id: 'checkin_30',
-        title: '连续30天签到',
-        description: '连续签到一个月，守护之心不变',
+        title: tr.z0391,
+        description: tr.z0392,
         icon: '💎',
         category: 'checkin',
         requiredValue: 30,
       ),
       GuardianAchievement(
         id: 'checkin_100',
-        title: '签到大师',
-        description: '累计签到100天，成为守护达人',
+        title: tr.z0393,
+        description: tr.z0394,
         icon: '👑',
         category: 'checkin',
         requiredValue: 100,
@@ -440,24 +441,24 @@ class SocialService {
       // 关怀类成就
       GuardianAchievement(
         id: 'care_first',
-        title: '初次关怀',
-        description: '第一次向守护对象发送表情',
+        title: tr.z0395,
+        description: tr.z0396,
         icon: '🌟',
         category: 'care',
         requiredValue: 1,
       ),
       GuardianAchievement(
         id: 'care_10',
-        title: '温暖传递',
-        description: '累计发送10次表情关怀',
+        title: tr.z0397,
+        description: tr.z0398,
         icon: '💝',
         category: 'care',
         requiredValue: 10,
       ),
       GuardianAchievement(
         id: 'care_50',
-        title: '爱心大使',
-        description: '累计发送50次表情关怀',
+        title: tr.z0399,
+        description: tr.z0400,
         icon: '🎀',
         category: 'care',
         requiredValue: 50,
@@ -465,16 +466,16 @@ class SocialService {
       // 紧急类成就
       GuardianAchievement(
         id: 'emergency_prepared',
-        title: '防患未然',
-        description: '设置好紧急联系人信息',
+        title: tr.z0401,
+        description: tr.z0402,
         icon: '🛡️',
         category: 'emergency',
         requiredValue: 1,
       ),
       GuardianAchievement(
         id: 'emergency_tested',
-        title: '未雨绸缪',
-        description: '测试一次SOS紧急求助功能',
+        title: tr.z0403,
+        description: tr.z0404,
         icon: '🔔',
         category: 'emergency',
         requiredValue: 1,
@@ -482,24 +483,24 @@ class SocialService {
       // 里程碑成就
       GuardianAchievement(
         id: 'milestone_guardians_3',
-        title: '三人守护',
-        description: '拥有3位守护人',
+        title: tr.z0405,
+        description: tr.z0406,
         icon: '👥',
         category: 'milestone',
         requiredValue: 3,
       ),
       GuardianAchievement(
         id: 'milestone_guardians_5',
-        title: '守护联盟',
-        description: '拥有5位守护人',
+        title: tr.z0407,
+        description: tr.z0408,
         icon: '🎖️',
         category: 'milestone',
         requiredValue: 5,
       ),
       GuardianAchievement(
         id: 'milestone_guardian_count_10',
-        title: '守护10人',
-        description: '守护10位亲友',
+        title: tr.z0409,
+        description: tr.z0410,
         icon: '🫂',
         category: 'milestone',
         requiredValue: 10,
@@ -635,7 +636,7 @@ class SocialService {
   }
 
   /// [保留旧方法以兼容潜在调用方] 仅刷新签到类
-  @Deprecated('请改用 refreshAllAchievements，一次性刷新全部 11 个成就')
+  @Deprecated('Use refreshAllAchievements() to refresh all 11 achievements at once')
   Future<List<GuardianAchievement>> refreshCheckinAchievements(String userId) async {
     return refreshAllAchievements(userId);
   }

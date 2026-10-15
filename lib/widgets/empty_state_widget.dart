@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/theme_helper.dart';
+import '../l10n/i18n.dart';
 
 /// 联系人空状态 Widget
 /// 
@@ -31,7 +32,7 @@ class EmptyStateWidget extends StatelessWidget {
             ),
             const SizedBox(height: ZaiNeSpacing.xl),
             Text(
-              '暂无紧急联系人',
+              tr.z0880,
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
@@ -40,7 +41,7 @@ class EmptyStateWidget extends StatelessWidget {
             ),
             const SizedBox(height: ZaiNeSpacing.md),
             Text(
-              '添加至少一个紧急联系人\n确保求助功能正常触发',
+              tr.z0881,
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 14,
@@ -58,9 +59,9 @@ class EmptyStateWidget extends StatelessWidget {
                 children: [
                   Icon(Icons.info_outline, color: Colors.blue.shade700),
                   const SizedBox(width: ZaiNeSpacing.md),
-                  const Expanded(
+                  Expanded(
                     child: Text(
-                      '紧急联系人将在求助时收到您的位置和健康信息\n拖动可调整优先顺序',
+                      tr.z0882,
                       style: TextStyle(fontSize: 12),
                     ),
                   ),

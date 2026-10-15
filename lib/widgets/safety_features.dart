@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import '../services/safety/safety_service.dart';
-import '../services/safety/geofence_service.dart';
+import '../services/safety/safe_zone_service.dart';
 import 'package:intl/intl.dart';
 import '../theme/theme_helper.dart';
+import '../l10n/i18n.dart';
 
 /// 定时确认设置卡片
 class CheckInReminderCard extends StatelessWidget {
@@ -10,7 +11,7 @@ class CheckInReminderCard extends StatelessWidget {
   final Function(CheckInReminder) onConfigChanged;
   final VoidCallback onPerformCheckIn;
 
-  const CheckInReminderCard({
+  CheckInReminderCard({
     super.key,
     required this.config,
     required this.onConfigChanged,
@@ -26,7 +27,7 @@ class CheckInReminderCard extends StatelessWidget {
         side: BorderSide(color: ZaiNeColors.borderColor()),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(ZaiNeSpacing.lg),
+        padding: EdgeInsets.all(ZaiNeSpacing.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -34,7 +35,7 @@ class CheckInReminderCard extends StatelessWidget {
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(ZaiNeSpacing.cardXs),
+                  padding: EdgeInsets.all(ZaiNeSpacing.cardXs),
                   decoration: BoxDecoration(
                     color: Colors.green.shade50,
                     borderRadius: BorderRadius.circular(ZaiNeRadius.small),
@@ -46,13 +47,13 @@ class CheckInReminderCard extends StatelessWidget {
                     size: 24,
                   ),
                 ),
-                const SizedBox(width: 12),
+                SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        '定时平安确认',
+                      Text(
+                        tr.z0525,
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -83,48 +84,48 @@ class CheckInReminderCard extends StatelessWidget {
             ),
 
             if (config.enabled) ...[
-              const SizedBox(height: 16),
-              const Divider(),
-              const SizedBox(height: 12),
+              SizedBox(height: 16),
+              Divider(),
+              SizedBox(height: 12),
 
               // 提醒频率选择
-              const Text(
-                '提醒频率',
+              Text(
+                tr.z0526,
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              const SizedBox(height: 8),
+              SizedBox(height: 8),
               _buildFrequencySelector(context),
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
 
               // 【P3】触发方式选择
-              const Text(
-                '触发方式',
+              Text(
+                tr.z0527,
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              const SizedBox(height: 8),
+              SizedBox(height: 8),
               _buildTriggerModeSelector(context),
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
 
               // 提醒时间选择（仅「时间定时」模式显示；其他模式展示场景说明）
               if (config.triggerMode == CheckInTriggerMode.time) ...[
-                const Text(
-                  '提醒时间',
+                Text(
+                  tr.s068,
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: 8),
                 _buildTimeChips(context),
               ] else ...[
                 Container(
-                  padding: const EdgeInsets.all(ZaiNeSpacing.md),
+                  padding: EdgeInsets.all(ZaiNeSpacing.md),
                   decoration: BoxDecoration(
                     color: Colors.green.shade50,
                     borderRadius: BorderRadius.circular(ZaiNeRadius.small),
@@ -133,12 +134,12 @@ class CheckInReminderCard extends StatelessWidget {
                   child: Row(
                     children: [
                       Icon(Icons.auto_awesome, color: Colors.green.shade400, size: 18),
-                      const SizedBox(width: 8),
+                      SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           config.triggerMode == CheckInTriggerMode.location
-                              ? '离开安全区时自动确认，无需固定时间'
-                              : '手表检测到你时自动确认，零操作守护',
+                              ? tr.z0528
+                              : tr.z0529,
                           style: TextStyle(
                             fontSize: 13,
                             color: Colors.green.shade700,
@@ -151,9 +152,9 @@ class CheckInReminderCard extends StatelessWidget {
               ],
 
               if (config.lastCheckIn != null) ...[
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 Container(
-                  padding: const EdgeInsets.all(ZaiNeSpacing.md),
+                  padding: EdgeInsets.all(ZaiNeSpacing.md),
                   decoration: BoxDecoration(
                     color: Colors.green.shade50,
                     borderRadius: BorderRadius.circular(ZaiNeRadius.small),
@@ -162,9 +163,9 @@ class CheckInReminderCard extends StatelessWidget {
                   child: Row(
                     children: [
                       Icon(Icons.check_circle, color: Colors.green.shade400, size: 20),
-                      const SizedBox(width: 8),
+                      SizedBox(width: 8),
                       Text(
-                        '上次确认: ${_formatLastCheckIn(config.lastCheckIn!)}',
+                        tr.z0530(_formatLastCheckIn(config.lastCheckIn!)),
                         style: TextStyle(
                           fontSize: 13,
                           color: Colors.green.shade700,
@@ -176,9 +177,9 @@ class CheckInReminderCard extends StatelessWidget {
               ],
 
               if (config.missedCount > 0) ...[
-                const SizedBox(height: 12),
+                SizedBox(height: 12),
                 Container(
-                  padding: const EdgeInsets.all(ZaiNeSpacing.md),
+                  padding: EdgeInsets.all(ZaiNeSpacing.md),
                   decoration: BoxDecoration(
                     color: Colors.orange.shade50,
                     borderRadius: BorderRadius.circular(ZaiNeRadius.small),
@@ -187,9 +188,9 @@ class CheckInReminderCard extends StatelessWidget {
                   child: Row(
                     children: [
                       Icon(Icons.warning_amber, color: Colors.orange.shade400, size: 20),
-                      const SizedBox(width: 8),
+                      SizedBox(width: 8),
                       Text(
-                        '连续 ${config.missedCount} 次未确认',
+                        tr.z0531(config.missedCount),
                         style: TextStyle(
                           fontSize: 13,
                           color: Colors.orange.shade700,
@@ -200,17 +201,17 @@ class CheckInReminderCard extends StatelessWidget {
                 ),
               ],
 
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
                   onPressed: onPerformCheckIn,
-                  icon: const Icon(Icons.check_circle_outline),
-                  label: const Text('立即确认平安'),
+                  icon: Icon(Icons.check_circle_outline),
+                  label: Text(tr.z0532),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.green,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    padding: EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(ZaiNeRadius.small),
                     ),
@@ -225,19 +226,19 @@ class CheckInReminderCard extends StatelessWidget {
   }
 
   String _getStatusText() {
-    if (!config.enabled) return '未开启';
+    if (!config.enabled) return tr.z0023;
     final modeText = switch (config.triggerMode) {
-      CheckInTriggerMode.time => '时间定时',
-      CheckInTriggerMode.location => '离开安全区自动确认',
-      CheckInTriggerMode.heartbeat => '手表心跳自动确认',
+      CheckInTriggerMode.time => tr.z0024,
+      CheckInTriggerMode.location => tr.z0533,
+      CheckInTriggerMode.heartbeat => tr.z0534,
     };
     switch (config.status) {
       case CheckInReminderStatus.daily:
-        return '每天提醒 · $modeText';
+        return tr.z0535(modeText);
       case CheckInReminderStatus.weekly:
-        return '每周提醒 · $modeText';
+        return tr.z0536(modeText);
       case CheckInReminderStatus.custom:
-        return '自定义时间 · $modeText';
+        return tr.z0537(modeText);
       default:
         return modeText;
     }
@@ -249,17 +250,17 @@ class CheckInReminderCard extends StatelessWidget {
       children: [
         _buildFrequencyChip(
           context,
-          '每天',
+          tr.z0538,
           CheckInReminderStatus.daily,
         ),
         _buildFrequencyChip(
           context,
-          '每周',
+          tr.z0539,
           CheckInReminderStatus.weekly,
         ),
         _buildFrequencyChip(
           context,
-          '自定义',
+          tr.z0015,
           CheckInReminderStatus.custom,
         ),
       ],
@@ -272,9 +273,9 @@ class CheckInReminderCard extends StatelessWidget {
       spacing: 8,
       runSpacing: 8,
       children: [
-        _buildTriggerModeChip(context, '时间定时', CheckInTriggerMode.time, Icons.schedule),
-        _buildTriggerModeChip(context, '离开安全区', CheckInTriggerMode.location, Icons.location_off),
-        _buildTriggerModeChip(context, '手表心跳', CheckInTriggerMode.heartbeat, Icons.favorite),
+        _buildTriggerModeChip(context, tr.z0024, CheckInTriggerMode.time, Icons.schedule),
+        _buildTriggerModeChip(context, tr.z0540, CheckInTriggerMode.location, Icons.location_off),
+        _buildTriggerModeChip(context, tr.z0541, CheckInTriggerMode.heartbeat, Icons.favorite),
       ],
     );
   }
@@ -291,7 +292,7 @@ class CheckInReminderCard extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, size: 16, color: isSelected ? Colors.green.shade700 : Colors.grey.shade600),
-          const SizedBox(width: 4),
+          SizedBox(width: 4),
           Text(label),
         ],
       ),
@@ -332,13 +333,13 @@ class CheckInReminderCard extends StatelessWidget {
   }
 
   Widget _buildTimeChips(BuildContext context) {
-    const defaultHours = {
-      7: '早7点',
-      9: '上午9点',
-      12: '中午12点',
-      18: '下午6点',
-      21: '晚9点',
-      22: '晚10点',
+    final defaultHours = {
+      7: tr.z0542,
+      9: tr.z0543,
+      12: tr.z0025,
+      18: tr.z0544,
+      21: tr.z0545,
+      22: tr.z0546,
     };
 
     // 用户自定义的时间（不在预设 6 个时段中的小时）
@@ -392,7 +393,7 @@ class CheckInReminderCard extends StatelessWidget {
         // 【v1.95.0+115 新功能】添加自定义时间：原生时间选择器
         ActionChip(
           avatar: Icon(Icons.add, size: 16, color: Colors.green.shade700),
-          label: Text('添加时间',
+          label: Text(tr.z0547,
               style: TextStyle(color: Colors.green.shade700, fontSize: 13)),
           backgroundColor: Colors.green.shade50,
           onPressed: () => _pickCustomTime(context),
@@ -406,7 +407,7 @@ class CheckInReminderCard extends StatelessWidget {
     final picked = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.now(),
-      helpText: '选择提醒时间',
+      helpText: tr.z0548,
     );
     if (picked == null) return;
     final hours = List<int>.from(config.reminderHours);
@@ -419,21 +420,21 @@ class CheckInReminderCard extends StatelessWidget {
 
   /// 将整点小时格式化为中文标签（自定义时间专用）
   String _formatHourLabel(int hour) {
-    if (hour == 0) return '凌晨0点';
-    if (hour < 6) return '凌晨$hour点';
-    if (hour < 12) return '上午$hour点';
-    if (hour == 12) return '中午12点';
-    if (hour < 18) return '下午$hour点';
-    return '晚上$hour点';
+    if (hour == 0) return tr.z0549;
+    if (hour < 6) return tr.z0550(hour);
+    if (hour < 12) return tr.z0551(hour);
+    if (hour == 12) return tr.z0025;
+    if (hour < 18) return tr.z0552(hour);
+    return tr.z0553(hour);
   }
 
   String _formatLastCheckIn(DateTime time) {
     final now = DateTime.now();
     final diff = now.difference(time);
 
-    if (diff.inMinutes < 60) return '${diff.inMinutes}分钟前';
-    if (diff.inHours < 24) return '${diff.inHours}小时前';
-    if (diff.inDays < 7) return '${diff.inDays}天前';
+    if (diff.inMinutes < 60) return tr.z0001(diff.inMinutes);
+    if (diff.inHours < 24) return tr.z0002(diff.inHours);
+    if (diff.inDays < 7) return tr.z0003(diff.inDays);
     return DateFormat('MM/dd HH:mm').format(time);
   }
 }
@@ -450,7 +451,7 @@ class LocationTrackCard extends StatefulWidget {
   final LocationTrackingMode currentMode;
   final DateTime? lastRecordTime;
 
-  const LocationTrackCard({
+  LocationTrackCard({
     super.key,
     required this.todayTrack,
     this.onViewFullMap,
@@ -476,7 +477,7 @@ class _LocationTrackCardState extends State<LocationTrackCard> {
         side: BorderSide(color: ZaiNeColors.borderColor()),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(ZaiNeSpacing.lg),
+        padding: EdgeInsets.all(ZaiNeSpacing.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -484,7 +485,7 @@ class _LocationTrackCardState extends State<LocationTrackCard> {
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(ZaiNeSpacing.cardXs),
+                  padding: EdgeInsets.all(ZaiNeSpacing.cardXs),
                   decoration: BoxDecoration(
                     color: Colors.blue.shade50,
                     borderRadius: BorderRadius.circular(ZaiNeRadius.small),
@@ -496,20 +497,20 @@ class _LocationTrackCardState extends State<LocationTrackCard> {
                     size: 24,
                   ),
                 ),
-                const SizedBox(width: 12),
+                SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        '位置共享',
+                      Text(
+                        tr.z0554,
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       Text(
-                        widget.isTracking ? _getModeDescription() : '保护您的行踪安全',
+                        widget.isTracking ? _getModeDescription() : tr.z0555,
                         style: TextStyle(
                           fontSize: 12,
                           color: ZaiNeColors.textSecondary(),
@@ -519,7 +520,7 @@ class _LocationTrackCardState extends State<LocationTrackCard> {
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: widget.isTracking ? Colors.green.shade100 : Colors.grey.shade100,
                     borderRadius: BorderRadius.circular(ZaiNeRadius.small),
@@ -536,9 +537,9 @@ class _LocationTrackCardState extends State<LocationTrackCard> {
                           color: widget.isTracking ? Colors.green : Colors.grey,
                         ),
                       ),
-                      const SizedBox(width: 6),
+                      SizedBox(width: 6),
                       Text(
-                        widget.isTracking ? '开启' : '关闭',
+                        widget.isTracking ? tr.z0556 : tr.s048,
                         style: TextStyle(
                           fontSize: 12,
                           color: widget.isTracking ? Colors.green.shade700 : Colors.grey.shade600,
@@ -550,12 +551,12 @@ class _LocationTrackCardState extends State<LocationTrackCard> {
               ],
             ),
 
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
 
             // 【v1.93.0】说明文字：守护者可见提示
             if (widget.isTracking)
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
                   color: Colors.blue.shade50,
                   borderRadius: BorderRadius.circular(ZaiNeRadius.button),
@@ -563,10 +564,10 @@ class _LocationTrackCardState extends State<LocationTrackCard> {
                 child: Row(
                   children: [
                     Icon(Icons.visibility, size: 14, color: Colors.blue.shade500),
-                    const SizedBox(width: 6),
+                    SizedBox(width: 6),
                     Expanded(
                       child: Text(
-                        '守护者可查看你的实时位置 · ${_getIntervalText()}',
+                        tr.z0557(_getIntervalText()),
                         style: TextStyle(
                           fontSize: 11,
                           color: Colors.blue.shade600,
@@ -578,7 +579,7 @@ class _LocationTrackCardState extends State<LocationTrackCard> {
                 ),
               ),
 
-            if (widget.isTracking) const SizedBox(height: 12),
+            if (widget.isTracking) SizedBox(height: 12),
 
             // 【v1.93.0】地图预览缩略图
             if (widget.todayTrack.length >= 2 && widget.isTracking)
@@ -595,9 +596,9 @@ class _LocationTrackCardState extends State<LocationTrackCard> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(Icons.map_outlined, size: 28, color: Colors.grey.shade400),
-                      const SizedBox(height: 4),
+                      SizedBox(height: 4),
                       Text(
-                        '轨迹数据收集中...',
+                        tr.z0558,
                         style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
                       ),
                     ],
@@ -605,18 +606,18 @@ class _LocationTrackCardState extends State<LocationTrackCard> {
                 ),
               ),
 
-            if (widget.isTracking && widget.todayTrack.length >= 2) const SizedBox(height: 12),
+            if (widget.isTracking && widget.todayTrack.length >= 2) SizedBox(height: 12),
 
             // 【v1.93.0】追踪模式选择（v1.94.0 修复：未追踪时也可选择）
             Row(
               children: [
-                const Text(
-                  '追踪模式',
+                Text(
+                  tr.z0559,
                   style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
                 ),
-                const SizedBox(width: ZaiNeSpacing.sm),
+                SizedBox(width: ZaiNeSpacing.sm),
                 Text(
-                  widget.isTracking ? '运行中' : '开始追踪前可选',
+                  widget.isTracking ? tr.z0560 : tr.z0561,
                   style: TextStyle(
                     fontSize: 11,
                     color: widget.isTracking ? Colors.green.shade600 : Colors.grey.shade500,
@@ -624,14 +625,14 @@ class _LocationTrackCardState extends State<LocationTrackCard> {
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: 8),
             _buildModeSelector(),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
 
             // 今日轨迹摘要
             if (widget.todayTrack.isNotEmpty) ...[
               Container(
-                padding: const EdgeInsets.all(ZaiNeSpacing.md),
+                padding: EdgeInsets.all(ZaiNeSpacing.md),
                 decoration: BoxDecoration(
                   color: Colors.blue.shade50,
                   borderRadius: BorderRadius.circular(ZaiNeRadius.small),
@@ -640,20 +641,20 @@ class _LocationTrackCardState extends State<LocationTrackCard> {
                 child: Row(
                   children: [
                     Icon(Icons.timeline, color: Colors.blue.shade400, size: 20),
-                    const SizedBox(width: 8),
+                    SizedBox(width: 8),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '今日轨迹',
+                            tr.s907,
                             style: TextStyle(
                               fontSize: 13,
                               color: Colors.blue.shade700,
                             ),
                           ),
                           Text(
-                            '${widget.todayTrack.length} 个位置记录',
+                            tr.z0562(widget.todayTrack.length),
                             style: TextStyle(
                               fontSize: 11,
                               color: Colors.blue.shade500,
@@ -664,14 +665,14 @@ class _LocationTrackCardState extends State<LocationTrackCard> {
                     ),
                     TextButton(
                       onPressed: widget.onViewFullMap,
-                      child: const Text('查看详情'),
+                      child: Text(tr.z0022),
                     ),
                   ],
                 ),
               ),
             ] else ...[
               Container(
-                padding: const EdgeInsets.all(ZaiNeSpacing.md),
+                padding: EdgeInsets.all(ZaiNeSpacing.md),
                 decoration: BoxDecoration(
                   color: Colors.grey.shade50,
                   borderRadius: BorderRadius.circular(ZaiNeRadius.small),
@@ -680,10 +681,10 @@ class _LocationTrackCardState extends State<LocationTrackCard> {
                 child: Row(
                   children: [
                     Icon(Icons.info_outline, color: ZaiNeColors.textSecondary(), size: 20),
-                    const SizedBox(width: 8),
+                    SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        '暂无今日轨迹记录',
+                        tr.z0563,
                         style: TextStyle(
                           fontSize: 13,
                           color: ZaiNeColors.textSecondary(),
@@ -696,9 +697,9 @@ class _LocationTrackCardState extends State<LocationTrackCard> {
             ],
 
             if (widget.lastRecordTime != null && widget.isTracking) ...[
-              const SizedBox(height: 12),
+              SizedBox(height: 12),
               Container(
-                padding: const EdgeInsets.all(ZaiNeSpacing.md),
+                padding: EdgeInsets.all(ZaiNeSpacing.md),
                 decoration: BoxDecoration(
                   color: Colors.green.shade50,
                   borderRadius: BorderRadius.circular(ZaiNeRadius.small),
@@ -707,13 +708,13 @@ class _LocationTrackCardState extends State<LocationTrackCard> {
                 child: Row(
                   children: [
                     Icon(Icons.access_time, color: Colors.green.shade400, size: 20),
-                    const SizedBox(width: 8),
+                    SizedBox(width: 8),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '上次记录',
+                            tr.z0564,
                             style: TextStyle(
                               fontSize: 13,
                               color: Colors.green.shade700,
@@ -734,7 +735,7 @@ class _LocationTrackCardState extends State<LocationTrackCard> {
               ),
             ],
 
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
 
             // 操作按钮
             Row(
@@ -743,13 +744,13 @@ class _LocationTrackCardState extends State<LocationTrackCard> {
                   child: OutlinedButton.icon(
                     onPressed: widget.isTracking ? widget.onStopTracking : widget.onStartTracking,
                     icon: Icon(widget.isTracking ? Icons.stop : Icons.play_arrow),
-                    label: Text(widget.isTracking ? '停止追踪' : '开始追踪'),
+                    label: Text(widget.isTracking ? tr.z0565 : tr.z0566),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: widget.isTracking ? Colors.red : Colors.blue,
                       side: BorderSide(
                         color: widget.isTracking ? Colors.red : Colors.blue,
                       ),
-                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      padding: EdgeInsets.symmetric(vertical: 10),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(ZaiNeRadius.input),
                       ),
@@ -767,30 +768,30 @@ class _LocationTrackCardState extends State<LocationTrackCard> {
   String _getModeDescription() {
     switch (widget.currentMode) {
       case LocationTrackingMode.realtime:
-        return '实时追踪中 · ⚡耗电较高';
+        return tr.z0567;
       case LocationTrackingMode.normal:
-        return '普通追踪中 · 推荐模式';
+        return tr.z0568;
       case LocationTrackingMode.powersave:
-        return '省电追踪中 · 🔋省电';
+        return tr.z0569;
     }
   }
 
   String _getIntervalText() {
     switch (widget.currentMode) {
       case LocationTrackingMode.realtime:
-        return '每30秒更新';
+        return tr.z0570;
       case LocationTrackingMode.normal:
-        return '每5分钟更新';
+        return tr.z0571;
       case LocationTrackingMode.powersave:
-        return '每15分钟更新';
+        return tr.z0572;
     }
   }
 
   Widget _buildModeSelector() {
     final modes = [
-      (LocationTrackingMode.realtime, '实时', '每30秒'),
-      (LocationTrackingMode.normal, '普通', '每5分钟'),
-      (LocationTrackingMode.powersave, '省电', '每15分钟'),
+      (LocationTrackingMode.realtime, tr.z0573, tr.z0574),
+      (LocationTrackingMode.normal, tr.z0575, tr.z0576),
+      (LocationTrackingMode.powersave, tr.z0577, tr.z0578),
     ];
 
     return SegmentedButton<LocationTrackingMode>(
@@ -800,8 +801,8 @@ class _LocationTrackCardState extends State<LocationTrackCard> {
           label: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(m.$2, style: const TextStyle(fontSize: 12)),
-              Text(m.$3, style: const TextStyle(fontSize: 10)),
+              Text(m.$2, style: TextStyle(fontSize: 12)),
+              Text(m.$3, style: TextStyle(fontSize: 10)),
             ],
           ),
         );
@@ -853,7 +854,7 @@ class _LocationTrackCardState extends State<LocationTrackCard> {
       child: Container(
         height: 120,
         decoration: BoxDecoration(
-          color: const Color(0xFFE8F0FE),
+          color: Color(0xFFE8F0FE),
           borderRadius: BorderRadius.circular(ZaiNeRadius.small),
           border: Border.all(color: Colors.blue.shade100),
         ),
@@ -877,14 +878,14 @@ class _LocationTrackCardState extends State<LocationTrackCard> {
                 bottom: 6,
                 left: 8,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
                     color: Colors.black54,
                     borderRadius: BorderRadius.circular(ZaiNeRadius.tag),
                   ),
                   child: Text(
-                    '${widget.todayTrack.length}个定位点 · 点击查看详情',
-                    style: const TextStyle(fontSize: 10, color: Colors.white),
+                    tr.z0579(widget.todayTrack.length),
+                    style: TextStyle(fontSize: 10, color: Colors.white),
                   ),
                 ),
               ),
@@ -899,10 +900,10 @@ class _LocationTrackCardState extends State<LocationTrackCard> {
     final now = DateTime.now();
     final diff = now.difference(time);
 
-    if (diff.inMinutes < 1) return '刚刚';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}分钟前';
-    if (diff.inHours < 24) return '${diff.inHours}小时前';
-    if (diff.inDays < 7) return '${diff.inDays}天前';
+    if (diff.inMinutes < 1) return tr.s430;
+    if (diff.inMinutes < 60) return tr.z0001(diff.inMinutes);
+    if (diff.inHours < 24) return tr.z0002(diff.inHours);
+    if (diff.inDays < 7) return tr.z0003(diff.inDays);
     return DateFormat('MM/dd HH:mm').format(time);
   }
 }
@@ -986,8 +987,8 @@ class _MiniMapPainter extends CustomPainter {
 
 /// 跌倒检测卡片
 /// 整合 Apple Watch 跌倒检测 + 手机端加速度传感器检测
-class FallDetectionCard extends StatelessWidget {
-  final List<FallEvent> recentFalls;
+class MotionMonitorCard extends StatelessWidget {
+  final List<MotionEvent> recentFalls;
   final bool watchPaired;
   final bool watchReachable;
   final bool phoneDetectionEnabled;
@@ -995,7 +996,7 @@ class FallDetectionCard extends StatelessWidget {
   final VoidCallback? onViewHistory;
   final VoidCallback? onTogglePhoneDetection;
 
-  const FallDetectionCard({
+  MotionMonitorCard({
     super.key,
     required this.recentFalls,
     this.watchPaired = false,
@@ -1020,7 +1021,7 @@ class FallDetectionCard extends StatelessWidget {
         side: BorderSide(color: ZaiNeColors.borderColor()),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(ZaiNeSpacing.lg),
+        padding: EdgeInsets.all(ZaiNeSpacing.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -1028,7 +1029,7 @@ class FallDetectionCard extends StatelessWidget {
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(ZaiNeSpacing.cardXs),
+                  padding: EdgeInsets.all(ZaiNeSpacing.cardXs),
                   decoration: BoxDecoration(
                     color: anyDetectionActive ? Colors.orange.shade100 : Colors.grey.shade100,
                     borderRadius: BorderRadius.circular(ZaiNeRadius.small),
@@ -1040,16 +1041,16 @@ class FallDetectionCard extends StatelessWidget {
                     size: 22,
                   ),
                 ),
-                const SizedBox(width: ZaiNeSpacing.md),
+                SizedBox(width: ZaiNeSpacing.md),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        '步行稳定性 & 跌倒检测',
+                      Text(
+                        tr.z0580,
                         style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                       ),
-                      const SizedBox(height: 2),
+                      SizedBox(height: 2),
                       Text(
                         _getStatusText(hasWatch, phoneDetectionEnabled),
                         style: TextStyle(
@@ -1076,9 +1077,9 @@ class FallDetectionCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(width: 6),
+                SizedBox(width: 6),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: anyDetectionActive
                         ? Colors.green.shade50
@@ -1087,7 +1088,7 @@ class FallDetectionCard extends StatelessWidget {
                     boxShadow: ZaiNeShadows.card,
                   ),
                   child: Text(
-                    anyDetectionActive ? '已启用' : '未启用',
+                    anyDetectionActive ? tr.s660 : tr.z0581,
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
@@ -1098,11 +1099,11 @@ class FallDetectionCard extends StatelessWidget {
               ],
             ),
 
-            const SizedBox(height: ZaiNeSpacing.lg),
+            SizedBox(height: ZaiNeSpacing.lg),
 
             // 检测状态说明
             Container(
-              padding: const EdgeInsets.all(ZaiNeSpacing.md),
+              padding: EdgeInsets.all(ZaiNeSpacing.md),
               decoration: BoxDecoration(
                 color: anyDetectionActive ? Colors.green.shade50 : Colors.grey.shade50,
                 borderRadius: BorderRadius.circular(ZaiNeRadius.small),
@@ -1114,32 +1115,32 @@ class FallDetectionCard extends StatelessWidget {
                   // isReachable 仅表示 Watch App 是否在前台，不作为检测能力判定
                   _buildDetectionStatusRow(
                     icon: Icons.watch,
-                    label: 'Apple Watch 跌倒检测',
+                    label: tr.z0582,
                     status: hasWatch
-                        ? (watchReachable ? '已连接 · 精准检测' : '已配对 · 后台守护中')
-                        : '未连接',
+                        ? (watchReachable ? tr.z0583 : tr.s625)
+                        : tr.z0584,
                     active: hasWatch,
                   ),
-                  const SizedBox(height: 8),
-                  const Divider(height: 1),
-                  const SizedBox(height: 8),
+                  SizedBox(height: 8),
+                  Divider(height: 1),
+                  SizedBox(height: 8),
                   // 手机端检测状态
                   _buildDetectionStatusRow(
                     icon: Icons.phone_android,
-                    label: '手机端跌倒检测（简化版）',
-                    status: phoneDetectionEnabled ? '已开启' : '未开启',
+                    label: tr.z0026,
+                    status: phoneDetectionEnabled ? tr.z0585 : tr.z0023,
                     active: phoneDetectionEnabled,
                   ),
                 ],
               ),
             ),
 
-            const SizedBox(height: ZaiNeSpacing.lg),
+            SizedBox(height: ZaiNeSpacing.lg),
 
             // 跌倒事件 / 功能说明
             if (hasEvents) ...[
               Container(
-                padding: const EdgeInsets.all(ZaiNeSpacing.cardSm),
+                padding: EdgeInsets.all(ZaiNeSpacing.cardSm),
                 decoration: BoxDecoration(
                   color: Colors.orange.shade50,
                   borderRadius: BorderRadius.circular(ZaiNeRadius.small),
@@ -1151,11 +1152,11 @@ class FallDetectionCard extends StatelessWidget {
                     Row(
                       children: [
                         Icon(Icons.warning_amber_rounded, size: 18, color: Colors.orange.shade700),
-                        const SizedBox(width: ZaiNeSpacing.sm),
+                        SizedBox(width: ZaiNeSpacing.sm),
                         Text(
                           unackedCount > 0
-                              ? '最近跌倒 ($unackedCount 条待确认)'
-                              : '最近跌倒记录',
+                              ? tr.z0586(unackedCount)
+                              : tr.z0587,
                           style: TextStyle(
                             fontSize: ZaiNeFontSize.caption,
                             fontWeight: FontWeight.w600,
@@ -1164,26 +1165,26 @@ class FallDetectionCard extends StatelessWidget {
                         ),
                       ],
                     ),
-                    const SizedBox(height: ZaiNeSpacing.sm),
+                    SizedBox(height: ZaiNeSpacing.sm),
                     ...recentFalls.take(3).map((event) => _buildFallItem(event)),
                   ],
                 ),
               ),
             ] else ...[
               Container(
-                padding: const EdgeInsets.all(ZaiNeSpacing.cardSm),
+                padding: EdgeInsets.all(ZaiNeSpacing.cardSm),
                 decoration: BoxDecoration(
                   color: Colors.grey.shade50,
                   borderRadius: BorderRadius.circular(ZaiNeRadius.small),
                   boxShadow: ZaiNeShadows.card,
                 ),
-                child: const Row(
+                child: Row(
                   children: [
                     Icon(Icons.check_circle_outline, size: 20, color: Colors.green),
                     SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        '暂无跌倒记录，检测系统正在运行中',
+                        tr.z0588,
                         style: TextStyle(fontSize: 13, color: Colors.grey),
                       ),
                     ),
@@ -1192,9 +1193,9 @@ class FallDetectionCard extends StatelessWidget {
               ),
             ],
 
-            const SizedBox(height: ZaiNeSpacing.md),
+            SizedBox(height: ZaiNeSpacing.md),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
                 color: Colors.grey.shade50,
                 borderRadius: BorderRadius.circular(ZaiNeRadius.button),
@@ -1202,10 +1203,10 @@ class FallDetectionCard extends StatelessWidget {
               child: Row(
                 children: [
                   Icon(Icons.privacy_tip_outlined, size: 14, color: ZaiNeColors.textSecondary()),
-                  const SizedBox(width: 6),
+                  SizedBox(width: 6),
                   Expanded(
                     child: Text(
-                      '跌倒检测数据仅用于安全参考，不作为医疗诊断依据',
+                      tr.z0589,
                       style: TextStyle(fontSize: 11, color: ZaiNeColors.textSecondary()),
                     ),
                   ),
@@ -1213,14 +1214,14 @@ class FallDetectionCard extends StatelessWidget {
               ),
             ),
 
-            const SizedBox(height: ZaiNeSpacing.lg),
+            SizedBox(height: ZaiNeSpacing.lg),
             Row(
               children: [
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: onViewHistory,
-                    icon: const Icon(Icons.history, size: 16),
-                    label: Text(hasEvents ? '查看历史 (${recentFalls.length})' : '查看历史'),
+                    icon: Icon(Icons.history, size: 16),
+                    label: Text(hasEvents ? tr.z0590(recentFalls.length) : tr.z0591),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.orange.shade700,
                       side: BorderSide(color: Colors.orange.shade200),
@@ -1231,7 +1232,7 @@ class FallDetectionCard extends StatelessWidget {
                   ),
                 ),
                 // 手机端检测开关
-                const SizedBox(width: ZaiNeSpacing.sm),
+                SizedBox(width: ZaiNeSpacing.sm),
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: onTogglePhoneDetection,
@@ -1239,7 +1240,7 @@ class FallDetectionCard extends StatelessWidget {
                       phoneDetectionEnabled ? Icons.stop : Icons.play_arrow,
                       size: 16,
                     ),
-                    label: Text(phoneDetectionEnabled ? '关闭手机检测' : '开启手机检测'),
+                    label: Text(phoneDetectionEnabled ? tr.z0592 : tr.z0593),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: phoneDetectionEnabled
                           ? Colors.red.shade600
@@ -1264,10 +1265,10 @@ class FallDetectionCard extends StatelessWidget {
   }
 
   String _getStatusText(bool hasWatch, bool phoneEnabled) {
-    if (hasWatch && watchReachable) return 'Apple Watch 精准检测中';
-    if (hasWatch) return 'Apple Watch 已配对 · 后台守护中';
-    if (phoneEnabled) return '手机端检测中 · 简化版';
-    return '需要 Apple Watch 或开启手机端检测';
+    if (hasWatch && watchReachable) return tr.z0594;
+    if (hasWatch) return tr.z0595;
+    if (phoneEnabled) return tr.z0596;
+    return tr.z0597;
   }
 
   Widget _buildDetectionStatusRow({
@@ -1283,7 +1284,7 @@ class FallDetectionCard extends StatelessWidget {
           size: 16,
           color: active ? Colors.green : Colors.grey,
         ),
-        const SizedBox(width: 8),
+        SizedBox(width: 8),
         Text(
           label,
           style: TextStyle(
@@ -1291,7 +1292,7 @@ class FallDetectionCard extends StatelessWidget {
             color: active ? Colors.green.shade700 : Colors.grey.shade600,
           ),
         ),
-        const Spacer(),
+        Spacer(),
         Container(
           width: 8,
           height: 8,
@@ -1300,7 +1301,7 @@ class FallDetectionCard extends StatelessWidget {
             color: active ? Colors.green : Colors.grey.shade400,
           ),
         ),
-        const SizedBox(width: 4),
+        SizedBox(width: 4),
         Text(
           status,
           style: TextStyle(
@@ -1313,13 +1314,13 @@ class FallDetectionCard extends StatelessWidget {
     );
   }
 
-  Widget _buildFallItem(FallEvent event) {
+  Widget _buildFallItem(MotionEvent event) {
     final timeStr = DateFormat('MM/dd HH:mm').format(event.timestamp);
     final isPhoneEvent = event.id.startsWith('phone_');
     return Padding(
-      padding: const EdgeInsets.only(top: 8),
+      padding: EdgeInsets.only(top: 8),
       child: Container(
-        padding: const EdgeInsets.all(ZaiNeSpacing.cardXs),
+        padding: EdgeInsets.all(ZaiNeSpacing.cardXs),
         decoration: BoxDecoration(
           color: event.acknowledged ? Colors.green.shade50 : Colors.white,
           borderRadius: BorderRadius.circular(ZaiNeRadius.button),
@@ -1340,17 +1341,17 @@ class FallDetectionCard extends StatelessWidget {
                     shape: BoxShape.circle,
                   ),
                 ),
-                const SizedBox(width: 6),
+                SizedBox(width: 6),
                 Text(timeStr, style: TextStyle(fontSize: 11, color: ZaiNeColors.textSecondary())),
-                const SizedBox(width: 6),
+                SizedBox(width: 6),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
                     color: isPhoneEvent ? Colors.blue.shade50 : Colors.purple.shade50,
                     borderRadius: BorderRadius.circular(ZaiNeRadius.tag),
                   ),
                   child: Text(
-                    isPhoneEvent ? '手机端' : 'Watch',
+                    isPhoneEvent ? tr.s627 : 'Watch',
                     style: TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.w600,
@@ -1358,9 +1359,9 @@ class FallDetectionCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                const Spacer(),
+                Spacer(),
                 Text(
-                  event.acknowledged ? '✓ 已确认' : '⚠ 待确认',
+                  event.acknowledged ? tr.z0598 : tr.z0599,
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
@@ -1369,11 +1370,11 @@ class FallDetectionCard extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 4),
+            SizedBox(height: 4),
             Row(
               children: [
                 Icon(Icons.location_on, size: 12, color: Colors.grey.shade500),
-                const SizedBox(width: 4),
+                SizedBox(width: 4),
                 Expanded(
                   child: Text(
                     '(${event.latitude.toStringAsFixed(4)}, ${event.longitude.toStringAsFixed(4)})',
@@ -1397,18 +1398,18 @@ class FallDetectionCard extends StatelessWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.card)),
-        title: const Row(
+        title: Row(
           children: [
             Icon(Icons.health_and_safety, color: Colors.orange, size: 24),
             SizedBox(width: 8),
-            Text('跌倒检测说明'),
+            Text(tr.s638),
           ],
         ),
-        content: const Column(
+        content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('本功能提供两种跌倒检测方式：',
+            Text(tr.z0600,
                 style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
             SizedBox(height: 12),
             // Apple Watch 检测
@@ -1421,11 +1422,11 @@ class FallDetectionCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Apple Watch 跌倒检测（精准版）',
+                      Text(tr.z0601,
                           style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
                       SizedBox(height: 4),
                       Text(
-                        '需要 Apple Watch Series 4 及以上机型。利用手表的加速度传感器和陀螺仪精确检测跌倒。检测到跌倒时，你可以在确认后通知你的守护者。',
+                        tr.z0602,
                         style: TextStyle(fontSize: 12, color: Colors.grey),
                       ),
                     ],
@@ -1444,11 +1445,11 @@ class FallDetectionCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('手机端跌倒检测（简化版）',
+                      Text(tr.z0026,
                           style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
                       SizedBox(height: 4),
                       Text(
-                        '使用手机的加速度传感器检测跌倒，精度不如 Apple Watch，但"有总比没有好"。适合没有 Apple Watch 的用户。',
+                        tr.z0603,
                         style: TextStyle(fontSize: 12, color: Colors.grey),
                       ),
                     ],
@@ -1465,7 +1466,7 @@ class FallDetectionCard extends StatelessWidget {
                 SizedBox(width: 6),
                 Expanded(
                   child: Text(
-                    '跌倒检测数据仅用于安全参考，不作为医疗诊断依据。',
+                    tr.z0604,
                     style: TextStyle(fontSize: 11, color: Colors.orange),
                   ),
                 ),
@@ -1477,7 +1478,7 @@ class FallDetectionCard extends StatelessWidget {
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             style: TextButton.styleFrom(backgroundColor: Colors.orange.shade50),
-            child: Text('知道了', style: TextStyle(color: Colors.orange.shade700)),
+            child: Text(tr.s087, style: TextStyle(color: Colors.orange.shade700)),
           ),
         ],
       ),
@@ -1487,18 +1488,18 @@ class FallDetectionCard extends StatelessWidget {
 
 /// 安全围栏卡片
 /// 【v1.93.0】在安全设置页面展示地理围栏状态
-class GeoFenceCard extends StatefulWidget {
+class SafeZoneCard extends StatefulWidget {
   final VoidCallback? onManageFences;
 
-  const GeoFenceCard({super.key, this.onManageFences});
+  SafeZoneCard({super.key, this.onManageFences});
 
   @override
-  State<GeoFenceCard> createState() => _GeoFenceCardState();
+  State<SafeZoneCard> createState() => _SafeZoneCardState();
 }
 
-class _GeoFenceCardState extends State<GeoFenceCard> {
-  final GeoFenceService _service = GeoFenceService();
-  List<GeoFence> _fences = [];
+class _SafeZoneCardState extends State<SafeZoneCard> {
+  final SafeZoneMonitor? _service = getSafeZoneService();
+  List<SafeZone> _fences = [];
 
   @override
   void initState() {
@@ -1507,8 +1508,8 @@ class _GeoFenceCardState extends State<GeoFenceCard> {
   }
 
   Future<void> _loadFences() async {
-    await _service.init();
-    final fences = await _service.getAllFences();
+    await _service?.init();
+    final fences = await _service?.getAllFences() ?? [];
     if (mounted) {
       setState(() {
         _fences = fences;
@@ -1519,8 +1520,8 @@ class _GeoFenceCardState extends State<GeoFenceCard> {
   @override
   Widget build(BuildContext context) {
     final enabledFences = _fences.where((f) => f.enabled).toList();
-    final outsideCount = enabledFences.where((f) => f.status == GeoFenceStatus.outside).length;
-    final insideCount = enabledFences.where((f) => f.status == GeoFenceStatus.inside).length;
+    final outsideCount = enabledFences.where((f) => f.status == SafeZoneStatus.outside).length;
+    final insideCount = enabledFences.where((f) => f.status == SafeZoneStatus.inside).length;
 
     return Card(
       elevation: 0,
@@ -1529,7 +1530,7 @@ class _GeoFenceCardState extends State<GeoFenceCard> {
         side: BorderSide(color: ZaiNeColors.borderColor()),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(ZaiNeSpacing.lg),
+        padding: EdgeInsets.all(ZaiNeSpacing.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -1537,7 +1538,7 @@ class _GeoFenceCardState extends State<GeoFenceCard> {
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(ZaiNeSpacing.cardXs),
+                  padding: EdgeInsets.all(ZaiNeSpacing.cardXs),
                   decoration: BoxDecoration(
                     color: _fences.isEmpty ? Colors.grey.shade100 : Colors.purple.shade50,
                     borderRadius: BorderRadius.circular(ZaiNeRadius.small),
@@ -1549,17 +1550,17 @@ class _GeoFenceCardState extends State<GeoFenceCard> {
                     size: 24,
                   ),
                 ),
-                const SizedBox(width: 12),
+                SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        '安全围栏',
+                      Text(
+                        tr.s653,
                         style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                       ),
                       Text(
-                        _fences.isEmpty ? '未设置安全区域' : '${enabledFences.length}个围栏 · $insideCount在区内',
+                        _fences.isEmpty ? tr.z0605 : tr.z0606(enabledFences.length, insideCount),
                         style: TextStyle(fontSize: 12, color: ZaiNeColors.textSecondary()),
                       ),
                     ],
@@ -1567,13 +1568,13 @@ class _GeoFenceCardState extends State<GeoFenceCard> {
                 ),
                 if (outsideCount > 0)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
                       color: Colors.orange.shade100,
                       borderRadius: BorderRadius.circular(ZaiNeRadius.input),
                     ),
                     child: Text(
-                      '$outsideCount 已离开',
+                      tr.z0607(outsideCount),
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
@@ -1585,11 +1586,11 @@ class _GeoFenceCardState extends State<GeoFenceCard> {
             ),
 
             if (_fences.isNotEmpty) ...[
-              const SizedBox(height: 12),
+              SizedBox(height: 12),
 
               // 说明文字
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
                   color: Colors.purple.shade50,
                   borderRadius: BorderRadius.circular(ZaiNeRadius.button),
@@ -1597,10 +1598,10 @@ class _GeoFenceCardState extends State<GeoFenceCard> {
                 child: Row(
                   children: [
                     Icon(Icons.info_outline, size: 14, color: Colors.purple.shade400),
-                    const SizedBox(width: 6),
+                    SizedBox(width: 6),
                     Expanded(
                       child: Text(
-                        '离开安全区域时，你可以选择通知守护者',
+                        tr.z0608,
                         style: TextStyle(fontSize: 11, color: Colors.purple.shade600),
                       ),
                     ),
@@ -1608,13 +1609,13 @@ class _GeoFenceCardState extends State<GeoFenceCard> {
                 ),
               ),
 
-              const SizedBox(height: 8),
+              SizedBox(height: 8),
 
               // 围栏列表
               ...enabledFences.map((fence) => _buildFenceRow(fence)),
             ],
 
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
 
             // 管理按钮
             SizedBox(
@@ -1623,19 +1624,19 @@ class _GeoFenceCardState extends State<GeoFenceCard> {
                 onPressed: () {
                   widget.onManageFences?.call();
                   // 返回后刷新
-                  Future.delayed(const Duration(milliseconds: 500), _loadFences);
+                  Future.delayed(Duration(milliseconds: 500), _loadFences);
                 },
                 icon: Icon(
                   _fences.isEmpty ? Icons.add : Icons.settings,
                   size: 18,
                 ),
-                label: Text(_fences.isEmpty ? '设置安全围栏' : '管理围栏'),
+                label: Text(_fences.isEmpty ? tr.z0609 : tr.z0610),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: _fences.isEmpty ? Colors.blue : Colors.purple.shade600,
                   side: BorderSide(
                     color: _fences.isEmpty ? Colors.blue.shade300 : Colors.purple.shade200,
                   ),
-                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  padding: EdgeInsets.symmetric(vertical: 10),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.input)),
                 ),
               ),
@@ -1646,12 +1647,12 @@ class _GeoFenceCardState extends State<GeoFenceCard> {
     );
   }
 
-  Widget _buildFenceRow(GeoFence fence) {
-    final isInside = fence.status == GeoFenceStatus.inside;
+  Widget _buildFenceRow(SafeZone fence) {
+    final isInside = fence.status == SafeZoneStatus.inside;
     return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
+      padding: EdgeInsets.only(bottom: 6),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           color: isInside ? Colors.green.shade50 : Colors.orange.shade50,
           borderRadius: BorderRadius.circular(ZaiNeRadius.input),
@@ -1659,18 +1660,18 @@ class _GeoFenceCardState extends State<GeoFenceCard> {
         child: Row(
           children: [
             Icon(
-              fence.type == GeoFenceType.home
+              fence.type == SafeZoneType.home
                   ? Icons.home
-                  : fence.type == GeoFenceType.work
+                  : fence.type == SafeZoneType.work
                       ? Icons.work
                       : Icons.location_on,
               size: 16,
               color: isInside ? Colors.green.shade600 : Colors.orange.shade600,
             ),
-            const SizedBox(width: 8),
+            SizedBox(width: 8),
             Expanded(
               child: Text(
-                '${fence.name} (${fence.radius.toStringAsFixed(0)}米)',
+                tr.z0611(fence.name, fence.radius.toStringAsFixed(0)),
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w500,

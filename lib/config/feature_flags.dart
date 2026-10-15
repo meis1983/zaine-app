@@ -78,9 +78,9 @@ class FeatureFlags {
   /// 定时平安确认 / 漏签（cn 首版隐藏）
   static const bool enableCheckInReminderCn = false;
 
-  /// 地理围栏 / 安全区域（cn 首版隐藏）
-  static const bool enableGeoFenceCn = false;
+  /// 安全区域（cn 首版隐藏）
+  static const bool enableSafeZoneCn = false;
 
-  /// 跌倒检测（cn 首版隐藏）
-  static const bool enableFallDetectionCn = false;
+  /// 运动监测（cn 首版隐藏）
+  static const bool enableMotionCn = false;
 }

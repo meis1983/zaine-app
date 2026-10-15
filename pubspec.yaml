@@ -11,6 +11,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
   cupertino_icons: ^1.0.6
   # 本地存储
   shared_preferences: ^2.2.2
@@ -27,7 +29,7 @@ dependencies:
   # 打电话发短信
   url_launcher: ^6.2.2
   # 日期格式化
-  intl: ^0.18.1
+  intl: ^0.20.0
   # 分享功能
   image_gallery_saver: ^2.0.3
   share_plus: ^7.2.1
@@ -36,6 +38,8 @@ dependencies:
   image_picker: ^1.0.7
   # 二维码生成
   qr_flutter: ^4.1.0
+  # 扫码（扫描对方守护码建立守护关系）【CN合规 177·P2】
+  mobile_scanner: ^7.4.0
   # HTTP 请求
   http: ^1.1.0
   # 环境变量管理
@@ -63,6 +67,15 @@ dependencies:
   intl_phone_number_input: ^0.7.0
 
   path: any
+
+# 【多语言 i18n 临时解】SDK 的 flutter_localizations 锁 intl 0.20.2，
+# 而 health ^10 锁 intl <0.20。为避免大版本升级 health（会冲击 HealthKit 集成，
+# 违反「已确认功能不可擅改」铁律），此处强制 intl 到 0.20.2 让两者共存。
+# ⚠️ 正式发版前需评估：要么把 health 升到兼容 intl 0.20 的版本（v12+/v13）并在真机验证
+# HealthKit 读数，要么保留此 override（需确认 health 在 intl 0.20 下运行无异常）。
+dependency_overrides:
+  intl: 0.20.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -70,6 +83,7 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  generate: true
   assets:
     - assets/images/
     - .env

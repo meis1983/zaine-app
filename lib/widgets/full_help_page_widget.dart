@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../theme/theme_helper.dart';
 import 'help_demo_mode.dart';
 import 'location_card_widget.dart';
+import '../l10n/i18n.dart';
 
 /// 完整求助页面 Widget
 /// 
@@ -26,7 +27,7 @@ class FullHelpPageWidget extends StatelessWidget {
   final String? locationAddress;
   final VoidCallback onLocationRefresh;
 
-  const FullHelpPageWidget({
+  FullHelpPageWidget({
     super.key,
     required this.isTriggering,
     required this.countdown,
@@ -53,38 +54,38 @@ class FullHelpPageWidget extends StatelessWidget {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: null, // tab 页面无返回按钮
-        title: Text('紧急求助', style: TextStyle(color: ZaiNeColors.textPrimary())),
+        title: Text(tr.s851, style: TextStyle(color: ZaiNeColors.textPrimary())),
         centerTitle: true,
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.xl, vertical: ZaiNeSpacing.md),
+          padding: EdgeInsets.symmetric(horizontal: ZaiNeSpacing.xl, vertical: ZaiNeSpacing.md),
           child: Column(
             children: [
               // 温和警告提示
               _buildWarningBanner(),
-              const SizedBox(height: ZaiNeSpacing.lg),
+              SizedBox(height: ZaiNeSpacing.lg),
 
               // 就绪指示器
               _buildReadyIndicator(),
-              const SizedBox(height: ZaiNeSpacing.md),
+              SizedBox(height: ZaiNeSpacing.md),
 
               // 档案预览
               _buildProfilePreview(),
-              const SizedBox(height: ZaiNeSpacing.sm),
+              SizedBox(height: ZaiNeSpacing.sm),
 
               // 手机号设置提示
               _buildPhonePrompt(),
 
-              const SizedBox(height: ZaiNeSpacing.xxl),
+              SizedBox(height: ZaiNeSpacing.xxl),
 
               // 紧急求助按钮区域
               _buildHelpButtonArea(context),
-              const SizedBox(height: ZaiNeSpacing.lg),
+              SizedBox(height: ZaiNeSpacing.lg),
 
               // 体验演示按钮
               _buildDemoButton(context),
-              const SizedBox(height: ZaiNeSpacing.xl),
+              SizedBox(height: ZaiNeSpacing.xl),
 
               // 实时定位卡片
               LocationCardWidget(
@@ -94,7 +95,7 @@ class FullHelpPageWidget extends StatelessWidget {
                 address: locationAddress,
                 onRefresh: onLocationRefresh,
               ),
-              const SizedBox(height: ZaiNeSpacing.xl),
+              SizedBox(height: ZaiNeSpacing.xl),
 
               // 底部留白
               SizedBox(height: MediaQuery.of(context).viewPadding.bottom + 16),
@@ -108,7 +109,7 @@ class FullHelpPageWidget extends StatelessWidget {
   /// 警告提示横幅
   Widget _buildWarningBanner() {
     return Container(
-      padding: const EdgeInsets.all(ZaiNeSpacing.md),
+      padding: EdgeInsets.all(ZaiNeSpacing.md),
       decoration: BoxDecoration(
         color: Colors.orange.shade50,
         borderRadius: BorderRadius.circular(12),
@@ -118,10 +119,10 @@ class FullHelpPageWidget extends StatelessWidget {
       child: Row(
         children: [
           Icon(Icons.info_outline, color: Colors.orange.shade700, size: 20),
-          const SizedBox(width: ZaiNeSpacing.sm),
+          SizedBox(width: ZaiNeSpacing.sm),
           Expanded(
             child: Text(
-              '紧急情况才使用，将联系紧急联系人并发送位置',
+              tr.z0873,
               style: TextStyle(fontSize: 13, color: Colors.orange.shade800),
             ),
           ),
@@ -133,7 +134,7 @@ class FullHelpPageWidget extends StatelessWidget {
   /// 就绪指示器
   Widget _buildReadyIndicator() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.lg, vertical: ZaiNeSpacing.sm),
+      padding: EdgeInsets.symmetric(horizontal: ZaiNeSpacing.lg, vertical: ZaiNeSpacing.sm),
       decoration: BoxDecoration(
         color: Colors.green.shade50,
         borderRadius: BorderRadius.circular(20),
@@ -143,9 +144,9 @@ class FullHelpPageWidget extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(Icons.check_circle, color: Colors.green.shade600, size: 16),
-          const SizedBox(width: ZaiNeSpacing.sm),
+          SizedBox(width: ZaiNeSpacing.sm),
           Text(
-            '档案 · 联系人 · 定位 已就绪',
+            tr.z0874,
             style: TextStyle(
               fontSize: 12,
               color: Colors.green.shade700,
@@ -160,7 +161,7 @@ class FullHelpPageWidget extends StatelessWidget {
   /// 档案预览卡片
   Widget _buildProfilePreview() {
     return Container(
-      padding: const EdgeInsets.all(ZaiNeSpacing.cardXs),
+      padding: EdgeInsets.all(ZaiNeSpacing.cardXs),
       decoration: BoxDecoration(
         color: ZaiNeColors.cardBg(),
         borderRadius: BorderRadius.circular(10),
@@ -170,10 +171,10 @@ class FullHelpPageWidget extends StatelessWidget {
       child: Row(
         children: [
           Icon(Icons.medical_information, color: Colors.blue.shade600, size: 18),
-          const SizedBox(width: ZaiNeSpacing.sm),
+          SizedBox(width: ZaiNeSpacing.sm),
           Expanded(
             child: Text(
-              '${myPhone != null && myPhone!.isNotEmpty ? "$myPhone · " : ""}$userName · $userAge岁 · $bloodType',
+              tr.z0875(myPhone != null && myPhone!.isNotEmpty ? "$myPhone · " : "", userName, userAge, bloodType),
               style: TextStyle(
                 color: Colors.blue.shade800,
                 fontSize: 13,
@@ -181,7 +182,7 @@ class FullHelpPageWidget extends StatelessWidget {
               ),
             ),
           ),
-          const Icon(Icons.check_circle, color: Colors.green, size: 16),
+          Icon(Icons.check_circle, color: Colors.green, size: 16),
         ],
       ),
     );
@@ -191,12 +192,12 @@ class FullHelpPageWidget extends StatelessWidget {
   Widget _buildPhonePrompt() {
     if (myPhone == null || myPhone!.isEmpty) {
       return Padding(
-        padding: const EdgeInsets.only(top: 8),
+        padding: EdgeInsets.only(top: 8),
         child: GestureDetector(
           onTap: onShowPhoneInput,
           child: Container(
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.md, vertical: ZaiNeSpacing.sm),
+            padding: EdgeInsets.symmetric(horizontal: ZaiNeSpacing.md, vertical: ZaiNeSpacing.sm),
             decoration: BoxDecoration(
               color: Colors.orange.shade50,
               borderRadius: BorderRadius.circular(8),
@@ -206,10 +207,10 @@ class FullHelpPageWidget extends StatelessWidget {
             child: Row(
               children: [
                 Icon(Icons.phone_android, color: Colors.orange.shade700, size: 16),
-                const SizedBox(width: ZaiNeSpacing.sm),
+                SizedBox(width: ZaiNeSpacing.sm),
                 Expanded(
                   child: Text(
-                    '手机号未设置，点击此处补充 →',
+                    tr.z0876,
                     style: TextStyle(
                       fontSize: 12,
                       color: Colors.orange.shade800,
@@ -223,7 +224,7 @@ class FullHelpPageWidget extends StatelessWidget {
         ),
       );
     }
-    return const SizedBox.shrink();
+    return SizedBox.shrink();
   }
 
   /// 求助按钮区域（触发中/未触发）
@@ -250,7 +251,7 @@ class FullHelpPageWidget extends StatelessWidget {
           child: Center(
             child: TweenAnimationBuilder<double>(
               tween: Tween(begin: 1.2, end: 1.0),
-              duration: const Duration(milliseconds: 300),
+              duration: Duration(milliseconds: 300),
               curve: Curves.easeOut,
               builder: (context, scale, child) => Transform.scale(
                 scale: scale,
@@ -267,20 +268,20 @@ class FullHelpPageWidget extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: ZaiNeSpacing.lg),
+        SizedBox(height: ZaiNeSpacing.lg),
         Text(
-          '正在发送求助...',
+          tr.z0877,
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
             color: Colors.red.shade700,
           ),
         ),
-        const SizedBox(height: ZaiNeSpacing.md),
+        SizedBox(height: ZaiNeSpacing.md),
         TextButton(
           onPressed: onCancelHelp,
           child: Text(
-            '取消',
+            tr.s016,
             style: TextStyle(fontSize: 15, color: Colors.grey.shade600),
           ),
         ),
@@ -315,17 +316,17 @@ class FullHelpPageWidget extends StatelessWidget {
                   BoxShadow(
                     color: Colors.red.withValues(alpha: 0.4),
                     blurRadius: 30,
-                    offset: const Offset(0, 15),
+                    offset: Offset(0, 15),
                   ),
                 ],
               ),
-              child: const Column(
+              child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(Icons.emergency, size: 56, color: Colors.white),
                   SizedBox(height: ZaiNeSpacing.md),
                   Text(
-                    '求助',
+                    tr.z0005,
                     style: TextStyle(
                       fontSize: 36,
                       fontWeight: FontWeight.bold,
@@ -337,9 +338,9 @@ class FullHelpPageWidget extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: ZaiNeSpacing.md),
+        SizedBox(height: ZaiNeSpacing.md),
         Text(
-          '点击触发紧急求助',
+          tr.z0878,
           style: TextStyle(fontSize: 14, color: ZaiNeColors.textSecondary()),
         ),
       ],
@@ -352,11 +353,11 @@ class FullHelpPageWidget extends StatelessWidget {
       onTap: () {
         Feedback.forTap(context);
         Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const HelpDemoMode()),
+          MaterialPageRoute(builder: (_) => HelpDemoMode()),
         );
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.xl, vertical: ZaiNeSpacing.md),
+        padding: EdgeInsets.symmetric(horizontal: ZaiNeSpacing.xl, vertical: ZaiNeSpacing.md),
         decoration: BoxDecoration(
           color: Colors.orange.shade50,
           borderRadius: BorderRadius.circular(24),
@@ -367,16 +368,16 @@ class FullHelpPageWidget extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.play_circle_outline, color: Colors.orange.shade700, size: 18),
-            const SizedBox(width: ZaiNeSpacing.sm),
+            SizedBox(width: ZaiNeSpacing.sm),
             Text(
-              '体验演示',
+              tr.z0879,
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
                 color: Colors.orange.shade700,
               ),
             ),
-            const SizedBox(width: ZaiNeSpacing.xs),
+            SizedBox(width: ZaiNeSpacing.xs),
             Icon(Icons.chevron_right, color: Colors.orange.shade400, size: 16),
           ],
         ),

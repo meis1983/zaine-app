@@ -4,6 +4,7 @@
 
 import 'package:flutter/material.dart';
 import '../theme/theme_helper.dart';
+import '../l10n/i18n.dart';
 
 /// 紧急求助卡片
 /// 点击进入求助页面
@@ -69,8 +70,8 @@ class HelpCardWidget extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    '紧急求助',
+                  Text(
+                    tr.s851,
                     style: TextStyle(
                       fontSize: ZaiNeFontSize.title,  // 20
                       fontWeight: FontWeight.bold,
@@ -79,7 +80,7 @@ class HelpCardWidget extends StatelessWidget {
                   ),
                   const SizedBox(height: ZaiNeSpacing.xs),  // 4
                   Text(
-                    isLoggedIn ? '点击发送紧急求助' : '请先完善健康档案',
+                    isLoggedIn ? tr.z0520 : tr.z0521,
                     style: TextStyle(
                       fontSize: ZaiNeFontSize.caption,  // 13
                       color: Colors.white.withValues(alpha: 0.8),

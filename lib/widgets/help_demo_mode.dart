@@ -5,6 +5,8 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../theme/theme_helper.dart';
 import '../services/social/guardian_message_service.dart';
+import '../l10n/i18n.dart';
+import '../config/app_config.dart';
 
 /// 求助演示模式 — 让用户无需真出事就能体验完整求助流程
 ///
@@ -14,7 +16,7 @@ import '../services/social/guardian_message_service.dart';
 /// - 结束后明确标注"以上为演示"，避免混淆
 /// - 底部进度条让用户知道进度
 class HelpDemoMode extends StatefulWidget {
-  const HelpDemoMode({super.key});
+  HelpDemoMode({super.key});
 
   @override
   State<HelpDemoMode> createState() => _HelpDemoModeState();
@@ -28,7 +30,7 @@ class _HelpDemoModeState extends State<HelpDemoMode> with TickerProviderStateMix
 
   // 演示阶段
   int _currentStep = 0;
-  String _statusText = '准备开始演示...';
+  String _statusText = tr.z0465;
   String _subText = '';
   bool _isRunning = false;
   double _progress = 0.0;
@@ -38,7 +40,7 @@ class _HelpDemoModeState extends State<HelpDemoMode> with TickerProviderStateMix
   bool _showCountdown = false;
 
   // 模拟数据
-  final String _demoAddress = '北京市朝阳区建国路88号SOHO现代城';
+  final String _demoAddress = tr.z0466;
 
   // 步骤完成状态
   final List<bool> _stepCompleted = [false, false, false, false, false, false];
@@ -48,18 +50,18 @@ class _HelpDemoModeState extends State<HelpDemoMode> with TickerProviderStateMix
     super.initState();
     _pulseController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1200),
+      duration: Duration(milliseconds: 1200),
     )..repeat(reverse: true);
 
     _fadeController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 400),
+      duration: Duration(milliseconds: 400),
     );
     _fadeAnim = CurvedAnimation(parent: _fadeController, curve: Curves.easeIn);
 
     // 自动开始演示
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Future.delayed(const Duration(milliseconds: 500), _startDemo);
+      Future.delayed(Duration(milliseconds: 500), _startDemo);
     });
   }
 
@@ -75,7 +77,7 @@ class _HelpDemoModeState extends State<HelpDemoMode> with TickerProviderStateMix
     setState(() => _isRunning = true);
 
     // ===== 步骤 1：触发求助 =====
-    await _setStep(0, '正在发起求救...', '用户手动触发求助', 0.0);
+    await _setStep(0, tr.z0467, tr.z0468, 0.0);
     HapticFeedback.heavyImpact();
     if (!mounted) return;
 
@@ -85,47 +87,49 @@ class _HelpDemoModeState extends State<HelpDemoMode> with TickerProviderStateMix
       if (!mounted) return;
       setState(() => _countdown = i);
       HapticFeedback.mediumImpact();
-      await Future.delayed(const Duration(seconds: 1));
+      await Future.delayed(Duration(seconds: 1));
     }
     setState(() => _showCountdown = false);
     if (!mounted) return;
 
     // ===== 步骤 3：获取位置 =====
-    await _setStep(1, '正在获取位置信息...', 'GPS 定位中', 0.17);
-    await Future.delayed(const Duration(seconds: 2));
+    await _setStep(1, tr.z0469, tr.z0470, 0.17);
+    await Future.delayed(Duration(seconds: 2));
     if (!mounted) return;
-    await _setStep(1, '✅ 位置已获取', _demoAddress, 0.25);
-    await Future.delayed(const Duration(milliseconds: 800));
+    await _setStep(1, tr.z0471, _demoAddress, 0.25);
+    await Future.delayed(Duration(milliseconds: 800));
 
     // ===== 步骤 4：发送求救短信 =====
-    await _setStep(2, '正在发送求救短信...', '通知 3 位紧急联系人', 0.35);
+    await _setStep(2, tr.z0472, tr.z0473, 0.35);
     HapticFeedback.heavyImpact();
-    await Future.delayed(const Duration(seconds: 2));
+    await Future.delayed(Duration(seconds: 2));
     if (!mounted) return;
-    await _setStep(2, '✅ 求救短信已发送', '已通知：妈妈、爸爸、李医生', 0.5);
-    await Future.delayed(const Duration(milliseconds: 800));
+    await _setStep(2, tr.z0474, tr.z0475, 0.5);
+    await Future.delayed(Duration(milliseconds: 800));
 
     // ===== 步骤 5：拨打 120 =====
-    await _setStep(3, '正在拨打 120 急救电话...', '跳转到系统拨号界面', 0.6);
+    await _setStep(3, tr.z0476, tr.z0021, 0.6);
     HapticFeedback.heavyImpact();
-    await Future.delayed(const Duration(seconds: 2));
+    await Future.delayed(Duration(seconds: 2));
     if (!mounted) return;
-    await _setStep(3, '✅ 120 拨号界面已打开', '用户可手动拨打急救电话', 0.75);
-    await Future.delayed(const Duration(milliseconds: 800));
+    await _setStep(3, tr.z0477, tr.z0478, 0.75);
+    await Future.delayed(Duration(milliseconds: 800));
 
     // ===== 步骤 6：通知紧急联系人 =====
-    await _setStep(4, '正在通知紧急联系人...', '向守护圈成员发送实时位置', 0.85);
-    await Future.delayed(const Duration(seconds: 1));
+    // 【CN 合规】演示文案去掉"实时/守护圈"等监控暗示，改为一次性"当前位置"。
+    await _setStep(4, tr.z0479,
+        kIsChinaBuild ? '向紧急联系人发送当前位置' : tr.z0480, 0.85);
+    await Future.delayed(Duration(seconds: 1));
     if (!mounted) return;
-    await _setStep(4, '✅ 所有联系人已通知', '妈妈正在赶来', 0.95);
-    await Future.delayed(const Duration(milliseconds: 800));
+    await _setStep(4, tr.z0481, tr.z0482, 0.95);
+    await Future.delayed(Duration(milliseconds: 800));
 
     // ===== 完成 =====
-    await _setStep(5, '🎉 演示完成', '', 1.0);
+    await _setStep(5, tr.z0483, '', 1.0);
     if (!mounted) return;
     setState(() {
-      _statusText = '以上为演示，未发送任何真实信息';
-      _subText = '真实求助将在您确认后联系守护人并发送位置';
+      _statusText = tr.z0484;
+      _subText = tr.z0485;
       _isRunning = false;
     });
 
@@ -163,9 +167,9 @@ class _HelpDemoModeState extends State<HelpDemoMode> with TickerProviderStateMix
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColor = isDark ? const Color(0xFF1A1A2E) : const Color(0xFFF8F9FF);
-    final cardColor = isDark ? const Color(0xFF16213E) : Colors.white;
-    final textPrimary = isDark ? Colors.white : const Color(0xFF1A1A2E);
+    final bgColor = isDark ? Color(0xFF1A1A2E) : Color(0xFFF8F9FF);
+    final cardColor = isDark ? Color(0xFF16213E) : Colors.white;
+    final textPrimary = isDark ? Colors.white : Color(0xFF1A1A2E);
     final textSecondary = isDark ? Colors.white60 : Colors.grey[600]!;
 
     return Scaffold(
@@ -175,46 +179,46 @@ class _HelpDemoModeState extends State<HelpDemoMode> with TickerProviderStateMix
           children: [
             // 顶部导航
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Row(
                 children: [
                   IconButton(
                     icon: Icon(Icons.close, color: textPrimary),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
-                  const Spacer(),
+                  Spacer(),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
                       color: Colors.orange.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(20),
                     ),
-                    child: const Text(
-                      '🎬 演示模式',
+                    child: Text(
+                      tr.z0486,
                       style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.orange),
                     ),
                   ),
-                  const Spacer(),
-                  const SizedBox(width: 48), // 平衡
+                  Spacer(),
+                  SizedBox(width: 48), // 平衡
                 ],
               ),
             ),
 
             // 进度条
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
+              padding: EdgeInsets.symmetric(horizontal: 24),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(4),
                 child: LinearProgressIndicator(
                   value: _progress,
                   minHeight: 4,
                   backgroundColor: isDark ? Colors.white10 : Colors.grey[200],
-                  valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFFF6B35)),
+                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFF6B35)),
                 ),
               ),
             ),
 
-            const SizedBox(height: 8),
+            SizedBox(height: 8),
 
             // 进度百分比
             Text(
@@ -224,13 +228,13 @@ class _HelpDemoModeState extends State<HelpDemoMode> with TickerProviderStateMix
 
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                 child: Column(
                   children: [
                     // ====== 倒计时或求助按钮动画 ======
                     if (_showCountdown)
                       Container(
-                        margin: const EdgeInsets.only(bottom: 24),
+                        margin: EdgeInsets.only(bottom: 24),
                         child: AnimatedBuilder(
                           animation: _pulseController,
                           builder: (context, child) => Transform.scale(
@@ -260,7 +264,7 @@ class _HelpDemoModeState extends State<HelpDemoMode> with TickerProviderStateMix
                       )
                     else if (_currentStep < 5)
                       Container(
-                        margin: const EdgeInsets.only(bottom: 24),
+                        margin: EdgeInsets.only(bottom: 24),
                         child: AnimatedBuilder(
                           animation: _pulseController,
                           builder: (context, child) => Transform.scale(
@@ -283,7 +287,7 @@ class _HelpDemoModeState extends State<HelpDemoMode> with TickerProviderStateMix
                                 BoxShadow(
                                   color: (_currentStep >= 5 ? Colors.green : Colors.red).withValues(alpha: 0.3),
                                   blurRadius: 20,
-                                  offset: const Offset(0, 10),
+                                  offset: Offset(0, 10),
                                 ),
                               ],
                             ),
@@ -295,10 +299,10 @@ class _HelpDemoModeState extends State<HelpDemoMode> with TickerProviderStateMix
                                   size: 40,
                                   color: Colors.white,
                                 ),
-                                const SizedBox(height: 4),
+                                SizedBox(height: 4),
                                 Text(
-                                  _currentStep >= 5 ? '完成' : '求助',
-                                  style: const TextStyle(
+                                  _currentStep >= 5 ? tr.z0487 : tr.z0005,
+                                  style: TextStyle(
                                     fontSize: 22,
                                     fontWeight: FontWeight.bold,
                                     color: Colors.white,
@@ -315,7 +319,7 @@ class _HelpDemoModeState extends State<HelpDemoMode> with TickerProviderStateMix
                       opacity: _fadeAnim,
                       child: Container(
                         width: double.infinity,
-                        padding: const EdgeInsets.all(ZaiNeSpacing.section),
+                        padding: EdgeInsets.all(ZaiNeSpacing.section),
                         decoration: BoxDecoration(
                           color: cardColor,
                           borderRadius: BorderRadius.circular(16),
@@ -323,7 +327,7 @@ class _HelpDemoModeState extends State<HelpDemoMode> with TickerProviderStateMix
                             BoxShadow(
                               color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.06),
                               blurRadius: 12,
-                              offset: const Offset(0, 4),
+                              offset: Offset(0, 4),
                             ),
                           ],
                         ),
@@ -339,7 +343,7 @@ class _HelpDemoModeState extends State<HelpDemoMode> with TickerProviderStateMix
                               textAlign: TextAlign.center,
                             ),
                             if (_subText.isNotEmpty) ...[
-                              const SizedBox(height: 8),
+                              SizedBox(height: 8),
                               Text(
                                 _subText,
                                 style: TextStyle(
@@ -356,14 +360,14 @@ class _HelpDemoModeState extends State<HelpDemoMode> with TickerProviderStateMix
                       ),
                     ),
 
-                    const SizedBox(height: 20),
+                    SizedBox(height: 20),
 
                     // ====== 步骤时间线 ======
                     _buildTimelineStep(
                       index: 0,
                       icon: Icons.touch_app,
-                      label: '触发求助',
-                      detail: '用户手动点击求助按钮发起求救',
+                      label: tr.z0488,
+                      detail: tr.z0489,
                       color: Colors.red,
                       isActive: _currentStep == 0 && _isRunning,
                       isCompleted: _stepCompleted[0],
@@ -375,8 +379,8 @@ class _HelpDemoModeState extends State<HelpDemoMode> with TickerProviderStateMix
                     _buildTimelineStep(
                       index: 1,
                       icon: Icons.gps_fixed,
-                      label: '获取位置',
-                      detail: _stepCompleted[1] ? _demoAddress : 'GPS 定位中...',
+                      label: tr.z0490,
+                      detail: _stepCompleted[1] ? _demoAddress : tr.z0491,
                       color: Colors.teal,
                       isActive: _currentStep == 1 && _isRunning,
                       isCompleted: _stepCompleted[1],
@@ -388,8 +392,8 @@ class _HelpDemoModeState extends State<HelpDemoMode> with TickerProviderStateMix
                     _buildTimelineStep(
                       index: 2,
                       icon: Icons.message,
-                      label: '发送求救短信',
-                      detail: _stepCompleted[2] ? '已通知 3 位联系人' : '通知紧急联系人',
+                      label: tr.z0492,
+                      detail: _stepCompleted[2] ? tr.z0493 : tr.z0494,
                       color: Colors.orange,
                       isActive: _currentStep == 2 && _isRunning,
                       isCompleted: _stepCompleted[2],
@@ -401,8 +405,8 @@ class _HelpDemoModeState extends State<HelpDemoMode> with TickerProviderStateMix
                     _buildTimelineStep(
                       index: 3,
                       icon: Icons.phone_in_talk,
-                      label: '拨打 120',
-                      detail: _stepCompleted[3] ? '已打开拨号界面' : '跳转到系统拨号界面',
+                      label: tr.z0495,
+                      detail: _stepCompleted[3] ? tr.z0496 : tr.z0021,
                       color: Colors.blue,
                       isActive: _currentStep == 3 && _isRunning,
                       isCompleted: _stepCompleted[3],
@@ -414,8 +418,13 @@ class _HelpDemoModeState extends State<HelpDemoMode> with TickerProviderStateMix
                     _buildTimelineStep(
                       index: 4,
                       icon: Icons.group,
-                      label: '通知守护圈',
-                      detail: _stepCompleted[4] ? '所有成员已收到通知' : '向守护圈发送实时位置',
+                      label: tr.z0497,
+                      // 【CN 合规】去掉"实时/守护圈"监控暗示，改为一次性"当前位置"。
+                      detail: _stepCompleted[4]
+                          ? tr.z0498
+                          : (kIsChinaBuild
+                              ? '向紧急联系人发送当前位置'
+                              : tr.z0499),
                       color: Colors.purple,
                       isActive: _currentStep == 4 && _isRunning,
                       isCompleted: _stepCompleted[4],
@@ -426,10 +435,10 @@ class _HelpDemoModeState extends State<HelpDemoMode> with TickerProviderStateMix
 
                     // ====== 演示提示 ======
                     if (_currentStep >= 5) ...[
-                      const SizedBox(height: 20),
+                      SizedBox(height: 20),
                       Container(
                         width: double.infinity,
-                        padding: const EdgeInsets.all(ZaiNeSpacing.lg),
+                        padding: EdgeInsets.all(ZaiNeSpacing.lg),
                         decoration: BoxDecoration(
                           color: Colors.green.shade50,
                           borderRadius: BorderRadius.circular(14),
@@ -440,9 +449,9 @@ class _HelpDemoModeState extends State<HelpDemoMode> with TickerProviderStateMix
                             Row(
                               children: [
                                 Icon(Icons.verified_user, color: Colors.green.shade700, size: 20),
-                                const SizedBox(width: 8),
-                                const Text(
-                                  '以上为演示',
+                                SizedBox(width: 8),
+                                Text(
+                                  tr.z0500,
                                   style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
@@ -451,16 +460,16 @@ class _HelpDemoModeState extends State<HelpDemoMode> with TickerProviderStateMix
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 8),
+                            SizedBox(height: 8),
                             Text(
-                              '演示过程中没有发送任何真实短信或拨打电话。\n真实求助将在您确认后联系守护人并获取您的精确位置。',
+                              tr.z0501,
                               style: TextStyle(
                                 fontSize: 13,
                                 color: Colors.green.shade800,
                                 height: 1.5,
                               ),
                             ),
-                            const SizedBox(height: 16),
+                            SizedBox(height: 16),
                             SizedBox(
                               width: double.infinity,
                               child: ElevatedButton(
@@ -468,13 +477,13 @@ class _HelpDemoModeState extends State<HelpDemoMode> with TickerProviderStateMix
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.green.shade600,
                                   foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  padding: EdgeInsets.symmetric(vertical: 14),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                 ),
-                                child: const Text(
-                                  '我已了解，返回求助页面',
+                                child: Text(
+                                  tr.z0502,
                                   style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
                                 ),
                               ),
@@ -484,7 +493,7 @@ class _HelpDemoModeState extends State<HelpDemoMode> with TickerProviderStateMix
                       ),
                     ],
 
-                    const SizedBox(height: 32),
+                    SizedBox(height: 32),
                   ],
                 ),
               ),
@@ -508,8 +517,8 @@ class _HelpDemoModeState extends State<HelpDemoMode> with TickerProviderStateMix
     required Color cardColor,
   }) {
     return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      duration: Duration(milliseconds: 300),
+      padding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: isCompleted
             ? color.withValues(alpha: 0.08)
@@ -533,10 +542,10 @@ class _HelpDemoModeState extends State<HelpDemoMode> with TickerProviderStateMix
               shape: BoxShape.circle,
             ),
             child: isCompleted
-                ? const Icon(Icons.check, color: Colors.white, size: 20)
+                ? Icon(Icons.check, color: Colors.white, size: 20)
                 : Icon(icon, color: isCompleted ? Colors.white : (isActive ? color : Colors.grey), size: 18),
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -549,7 +558,7 @@ class _HelpDemoModeState extends State<HelpDemoMode> with TickerProviderStateMix
                     color: isCompleted ? color : (isActive ? textPrimary : textSecondary),
                   ),
                 ),
-                const SizedBox(height: 2),
+                SizedBox(height: 2),
                 Text(
                   detail,
                   style: TextStyle(
@@ -576,7 +585,7 @@ class _HelpDemoModeState extends State<HelpDemoMode> with TickerProviderStateMix
   Widget _buildTimelineConnector(int stepIndex, Color color) {
     final isActive = _stepCompleted[stepIndex];
     return Padding(
-      padding: const EdgeInsets.only(left: 31),
+      padding: EdgeInsets.only(left: 31),
       child: Container(
         width: 2,
         height: 10,

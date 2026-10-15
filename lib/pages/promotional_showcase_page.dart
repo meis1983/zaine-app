@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../theme/theme_helper.dart';
+import '../utils/device_adapter.dart'; // 【Duo 适配】响应式列数
 import 'dart:math' as math;
 import '../widgets/guardian_card_envelope.dart';
+import '../l10n/i18n.dart';
 
 class PromotionalShowcasePage extends StatefulWidget {
   const PromotionalShowcasePage({super.key});
@@ -130,19 +132,19 @@ class _PromotionalShowcasePageState extends State<PromotionalShowcasePage> with 
 
   // 步骤 0: 3D 信封开启
   Widget _buildEnvelopeStep() {
-    return const Column(
+    return  Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Text(
-          '跨越距离的温情传递',
+          tr.s1002,
           style: TextStyle(color: Colors.white, fontSize: ZaiNeFontSize.title, fontWeight: FontWeight.bold, letterSpacing: 2),
         ),
         SizedBox(height: ZaiNeSpacing.xxl),
         GuardianCardEnvelope(
-          senderName: '梅先生',
-          message: '见字如面，愿你平安喜乐。',
+          senderName: tr.s1003,
+          message: tr.s1004,
           appStoreUrl: '',
-          recipientName: '亲爱的',
+          recipientName: tr.s1005,
           totalGuardians: 12,
           cardCode: 'LOVE2026',
         ),
@@ -157,13 +159,13 @@ class _PromotionalShowcasePageState extends State<PromotionalShowcasePage> with 
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Text(
-            '全天候生命体征守护',
+           Text(
+            tr.s1006,
             style: TextStyle(color: Colors.white, fontSize: ZaiNeFontSize.title, fontWeight: FontWeight.bold, letterSpacing: 2),
           ),
           const SizedBox(height: ZaiNeSpacing.md),
-          const Text(
-            '心率、血压、睡眠，一切尽在掌握',
+           Text(
+            tr.s1007,
             style: TextStyle(color: Colors.white70, fontSize: ZaiNeFontSize.bodySm),
           ),
           const SizedBox(height: ZaiNeSpacing.xxl),
@@ -177,14 +179,14 @@ class _PromotionalShowcasePageState extends State<PromotionalShowcasePage> with 
     return GridView.count(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: 2,
+      crossAxisCount: responsiveCrossAxisCount(context, compactCount: 2, mediumCount: 2, expandedCount: 4),
       mainAxisSpacing: 16,
       crossAxisSpacing: 16,
       childAspectRatio: 1.2,
       children: [
-        _buildShowcaseMetric('心率', '72 bpm', Icons.favorite, Colors.red),
-        _buildShowcaseMetric('血压', '120/80', Icons.speed, Colors.deepPurple),
-        _buildShowcaseMetric('血氧', '98%', Icons.bloodtype, Colors.blue),
+        _buildShowcaseMetric(tr.s440, '72 bpm', Icons.favorite, Colors.red),
+        _buildShowcaseMetric(tr.s796, '120/80', Icons.speed, Colors.deepPurple),
+        _buildShowcaseMetric(tr.s441, '98%', Icons.bloodtype, Colors.blue),
         _buildShowcaseMetric('HRV', '45 ms', Icons.bolt, Colors.amber),
       ],
     );
@@ -227,15 +229,15 @@ class _PromotionalShowcasePageState extends State<PromotionalShowcasePage> with 
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const Text(
-          '你的专属安全网络',
+         Text(
+          tr.s1008,
           style: TextStyle(color: Colors.white, fontSize: ZaiNeFontSize.title, fontWeight: FontWeight.bold, letterSpacing: 2),
         ),
         const SizedBox(height: ZaiNeSpacing.xxl),
         _buildGuardianCircle(),
         const SizedBox(height: ZaiNeSpacing.xxl),
-        const Text(
-          '需要时，一键通知所有守护者',
+         Text(
+          tr.s1009,
           style: TextStyle(color: Colors.white70, fontSize: ZaiNeFontSize.bodySm),
         ),
       ],

@@ -8,6 +8,7 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import '../../l10n/i18n.dart';
 
 /// 健康异常类型
 enum HealthAnomalyType {
@@ -259,25 +260,25 @@ class AIHealthAnalyzer {
     if (hr > 100) {
       anomalies.add(HealthAnomaly(
         type: HealthAnomalyType.heartRateHigh,
-        title: '心率偏高',
-        description: '当前心率 $hr bpm，高于正常静息心率范围',
+        title: tr.z0412,
+        description: tr.z0413(hr),
         detectedAt: DateTime.now(),
         severity: hr > 120 ? 0.7 : 0.4,
         relatedValue: '$hr bpm',
         threshold: '< 100 bpm',
       ));
-      recommendations.add(const HealthRecommendation(
-        title: '放松身心',
-        description: '尝试深呼吸或冥想，帮助降低心率',
+      recommendations.add(HealthRecommendation(
+        title: tr.z0414,
+        description: tr.z0415,
         category: 'heart',
         priority: 4,
-        actionText: '开始冥想',
+        actionText: tr.z0020,
       ));
     } else if (hr < 50) {
       anomalies.add(HealthAnomaly(
         type: HealthAnomalyType.heartRateLow,
-        title: '心率偏低',
-        description: '当前心率 $hr bpm，低于正常范围',
+        title: tr.z0416,
+        description: tr.z0417(hr),
         detectedAt: DateTime.now(),
         severity: hr < 45 ? 0.6 : 0.3,
         relatedValue: '$hr bpm',
@@ -285,8 +286,8 @@ class AIHealthAnalyzer {
       ));
     } else {
       insights.add(HealthInsight(
-        title: '心率正常',
-        description: '您的心率 $hr bpm 处于健康范围内',
+        title: tr.z0418,
+        description: tr.z0419(hr),
         category: 'heart',
         confidence: 0.9,
         relatedMetric: 'heart_rate',
@@ -297,9 +298,9 @@ class AIHealthAnalyzer {
     if (restingHR != null) {
       final rhr = (restingHR is num) ? restingHR.toDouble() : double.tryParse(restingHR.toString()) ?? 0;
       if (rhr < 60) {
-        insights.add(const HealthInsight(
-          title: '心肺功能优秀',
-          description: '您的静息心率较低，说明心肺功能良好',
+        insights.add(HealthInsight(
+          title: tr.z0420,
+          description: tr.z0421,
           category: 'heart',
           confidence: 0.85,
           relatedMetric: 'resting_heart_rate',
@@ -327,24 +328,24 @@ class AIHealthAnalyzer {
     if (hours < 6) {
       anomalies.add(HealthAnomaly(
         type: HealthAnomalyType.sleepInsufficient,
-        title: '睡眠不足',
-        description: '昨晚睡眠仅 ${hours.toStringAsFixed(1)} 小时，建议保证7-9小时睡眠',
+        title: tr.z0422,
+        description: tr.z0423(hours.toStringAsFixed(1)),
         detectedAt: DateTime.now(),
         severity: hours < 5 ? 0.8 : 0.5,
-        relatedValue: '${hours.toStringAsFixed(1)} 小时',
-        threshold: '7-9 小时',
+        relatedValue: tr.z0424(hours.toStringAsFixed(1)),
+        threshold: tr.z0425,
       ));
-      recommendations.add(const HealthRecommendation(
-        title: '改善睡眠',
-        description: '尝试提前30分钟上床，建立规律作息',
+      recommendations.add(HealthRecommendation(
+        title: tr.z0426,
+        description: tr.z0427,
         category: 'sleep',
         priority: 5,
-        actionText: '设置睡眠提醒',
+        actionText: tr.z0428,
       ));
     } else if (hours > 9) {
-      insights.add(const HealthInsight(
-        title: '睡眠充足',
-        description: '昨晚睡眠充足，有助于身体恢复',
+      insights.add(HealthInsight(
+        title: tr.z0429,
+        description: tr.z0430,
         category: 'sleep',
         confidence: 0.9,
         relatedMetric: 'sleep_total',
@@ -359,8 +360,8 @@ class AIHealthAnalyzer {
       if (deepPercentage < 15) {
         anomalies.add(HealthAnomaly(
           type: HealthAnomalyType.sleepQualityPoor,
-          title: '深度睡眠不足',
-          description: '深度睡眠仅占 ${deepPercentage.toStringAsFixed(1)}%，影响恢复质量',
+          title: tr.z0431,
+          description: tr.z0432(deepPercentage.toStringAsFixed(1)),
           detectedAt: DateTime.now(),
           severity: 0.5,
           relatedValue: '${deepPercentage.toStringAsFixed(1)}%',
@@ -385,25 +386,25 @@ class AIHealthAnalyzer {
     if (bo < 95) {
       anomalies.add(HealthAnomaly(
         type: HealthAnomalyType.bloodOxygenLow,
-        title: '血氧偏低',
-        description: '当前血氧 $bo%，建议关注呼吸健康',
+        title: tr.z0433,
+        description: tr.z0434(bo),
         detectedAt: DateTime.now(),
         severity: bo < 90 ? 0.9 : 0.5,
         relatedValue: '$bo%',
         threshold: '> 95%',
       ));
       if (bo < 90) {
-        recommendations.add(const HealthRecommendation(
-          title: '关注呼吸健康',
-          description: '血氧过低，建议就医检查',
+        recommendations.add(HealthRecommendation(
+          title: tr.z0435,
+          description: tr.z0436,
           category: 'general',
           priority: 5,
         ));
       }
     } else {
-      insights.add(const HealthInsight(
-        title: '血氧正常',
-        description: '血氧水平良好，呼吸系统健康',
+      insights.add(HealthInsight(
+        title: tr.z0437,
+        description: tr.z0438,
         category: 'general',
         confidence: 0.9,
         relatedMetric: 'blood_oxygen',
@@ -426,24 +427,24 @@ class AIHealthAnalyzer {
     if (hrvValue < 20) {
       anomalies.add(HealthAnomaly(
         type: HealthAnomalyType.hrvLow,
-        title: '压力较大',
-        description: '心率变异性较低，提示身体处于高压状态',
+        title: tr.z0439,
+        description: tr.z0440,
         detectedAt: DateTime.now(),
         severity: hrvValue < 15 ? 0.7 : 0.5,
         relatedValue: '${hrvValue.toStringAsFixed(1)} ms',
         threshold: '> 20 ms',
       ));
-      recommendations.add(const HealthRecommendation(
-        title: '减压放松',
-        description: '尝试深呼吸、瑜伽或冥想，帮助缓解压力',
+      recommendations.add(HealthRecommendation(
+        title: tr.z0441,
+        description: tr.z0442,
         category: 'general',
         priority: 4,
-        actionText: '开始冥想',
+        actionText: tr.z0020,
       ));
     } else if (hrvValue > 50) {
-      insights.add(const HealthInsight(
-        title: '压力管理良好',
-        description: '心率变异性良好，说明压力管理得当',
+      insights.add(HealthInsight(
+        title: tr.z0443,
+        description: tr.z0444,
         category: 'general',
         confidence: 0.85,
         relatedMetric: 'hrv_sdnn',
@@ -466,8 +467,8 @@ class AIHealthAnalyzer {
     if (isInPeriod && cycleDay != null) {
       if (cycleDay > 7) {
         insights.add(HealthInsight(
-          title: '经期较长',
-          description: '当前经期第 $cycleDay 天，如持续过长建议咨询医生',
+          title: tr.z0445,
+          description: tr.z0446(cycleDay),
           category: 'period',
           confidence: 0.7,
           relatedMetric: 'cycle_day',
@@ -476,9 +477,9 @@ class AIHealthAnalyzer {
 
       // 经期建议
       if (cycleDay <= 3) {
-        recommendations.add(const HealthRecommendation(
-          title: '经期护理',
-          description: '注意保暖，避免剧烈运动，多喝温水',
+        recommendations.add(HealthRecommendation(
+          title: tr.z0447,
+          description: tr.z0448,
           category: 'period',
           priority: 3,
         ));
@@ -489,12 +490,12 @@ class AIHealthAnalyzer {
     if (cycleLength < 21 || cycleLength > 35) {
       anomalies.add(HealthAnomaly(
         type: HealthAnomalyType.periodIrregular,
-        title: '周期不规律',
-        description: '当前周期 $cycleLength 天，不在正常范围（21-35天）',
+        title: tr.z0449,
+        description: tr.z0450(cycleLength),
         detectedAt: DateTime.now(),
         severity: 0.4,
-        relatedValue: '$cycleLength 天',
-        threshold: '21-35 天',
+        relatedValue: tr.z0451(cycleLength),
+        threshold: tr.z0452,
       ));
     }
   }
@@ -513,12 +514,12 @@ class AIHealthAnalyzer {
   ) async {
     final checkedInToday = await _hasCheckedInToday(profile);
     if (!checkedInToday) {
-      recommendations.add(const HealthRecommendation(
-        title: '今日打卡',
-        description: '今天还没有确认平安，点击签到让守护你的人放心',
+      recommendations.add(HealthRecommendation(
+        title: tr.z0453,
+        description: tr.z0454,
         category: 'general',
         priority: 3,
-        actionText: '立即签到',
+        actionText: tr.z0455,
         actionRoute: '/home',
       ));
     }
@@ -593,7 +594,7 @@ class AIHealthAnalyzer {
         'predicted_date': null,
         'confidence': 0.0,
         'fertile_window': null,
-        'message': '数据不足，需要至少2个周期记录',
+        'message': tr.z0456,
       };
     }
 
@@ -610,7 +611,7 @@ class AIHealthAnalyzer {
       return {
         'predicted_date': null,
         'confidence': 0.0,
-        'message': '周期数据异常',
+        'message': tr.z0457,
       };
     }
 
@@ -636,7 +637,7 @@ class AIHealthAnalyzer {
         'end': fertileEnd.toIso8601String(),
       },
       'ovulation_day': ovulationDay.toIso8601String(),
-      'message': '基于 ${cycles.length} 个周期预测',
+      'message': tr.z0458(cycles.length),
     };
   }
 

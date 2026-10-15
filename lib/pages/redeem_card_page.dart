@@ -1,10 +1,14 @@
 // lib/pages/redeem_card_page.dart
-// 输入守护码兑换页面 — 安全码兜底绑定方案
+// 输入守护码兑换页面 — 守护码兜底绑定方案
 
 import 'package:flutter/material.dart';
 import '../theme/theme_helper.dart';
+import '../config/app_config.dart';
 import '../services/api/card_service.dart';
 import '../services/api/sync_service.dart';
+import 'scan_guardian_code_page.dart';
+import '../l10n/i18n.dart';
+import '../widgets/guardian_consent_dialog.dart';
 
 class RedeemCardPage extends StatefulWidget {
   const RedeemCardPage({super.key});
@@ -24,14 +28,24 @@ class _RedeemCardPageState extends State<RedeemCardPage> {
     super.dispose();
   }
 
+  /// 【CN合规 177·P2】打开扫码页，扫描对方守护码后自动回填并走兑换流程
+  Future<void> _scanCode() async {
+    final result = await Navigator.of(context).push<String>(
+      MaterialPageRoute(builder: (_) => const ScanGuardianCodePage()),
+    );
+    if (!mounted || result == null || result.isEmpty) return;
+    _codeController.text = result;
+    _redeem();
+  }
+
   Future<void> _redeem() async {
     final code = _codeController.text.trim().toUpperCase();
     if (code.isEmpty) {
-      setState(() => _errorText = '请输入守护安全码');
+      setState(() => _errorText = tr.s1010);
       return;
     }
     if (code.length < 4) {
-      setState(() => _errorText = '安全码至少4位');
+      setState(() => _errorText = tr.s939);
       return;
     }
 
@@ -41,7 +55,29 @@ class _RedeemCardPageState extends State<RedeemCardPage> {
     });
 
     try {
-      final res = await CardService.redeemCard(cardCode: code);
+      // 【CN合规】被添加方"单独同意"门禁（个保法第29条：敏感个人信息需单独同意）
+      // 先查卡信息获取邀请人，展示独立同意弹窗；用户拒绝则不建立关系。
+      // 全球版（kIsChinaBuild=false）跳过此门禁，沿用原流程。
+      if (kIsChinaBuild) {
+        final check = await CardService.checkCard(code);
+        if (!mounted) return;
+        if (check['success'] != true) {
+          final message = check['message']?.toString() ?? tr.s1011;
+          setState(() => _errorText = message);
+          return;
+        }
+        final senderName = check['sender_name']?.toString() ?? 'TA';
+        // 共享合规组件，与登录页渐进披露入口同一份实现
+        final agreed = await showGuardianConsentDialog(context, senderName);
+        if (!mounted) return;
+        if (!agreed) {
+          // 用户拒绝，不建立守护关系，不调用 redeemCard
+          setState(() => _errorText = '您已拒绝，未建立守护关系');
+          return;
+        }
+      }
+
+      final res = await CardService.redeemCard(cardCode: code, oneway: kIsChinaBuild);
       if (!mounted) return;
 
       if (res['success'] == true) {
@@ -59,14 +95,14 @@ class _RedeemCardPageState extends State<RedeemCardPage> {
         // 直接弹出确认框
         _showSuccessDialog(senderName);
       } else {
-        final message = res['message']?.toString() ?? '兑换失败';
+        final message = res['message']?.toString() ?? tr.s1011;
         setState(() {
           _errorText = message;
         });
       }
     } catch (e) {
       setState(() {
-        _errorText = '网络异常，请稍后重试';
+        _errorText = tr.s387;
       });
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -94,7 +130,7 @@ class _RedeemCardPageState extends State<RedeemCardPage> {
             ),
             const SizedBox(height: ZaiNeSpacing.xl),
             Text(
-              '守护关系已建立',
+              tr.s1012,
               style: TextStyle(
                 fontSize: ZaiNeFontSize.subtitle,
                 fontWeight: FontWeight.bold,
@@ -103,7 +139,9 @@ class _RedeemCardPageState extends State<RedeemCardPage> {
             ),
             const SizedBox(height: ZaiNeSpacing.md),
             Text(
-              '你已成为 $senderName 的守护人\n你们可以互相守护彼此的安全',
+              kIsChinaBuild
+                  ? '$senderName 已成功成为您的守护者'
+                  : tr.s1013(senderName),
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: ZaiNeFontSize.bodySm,
@@ -117,7 +155,7 @@ class _RedeemCardPageState extends State<RedeemCardPage> {
               child: ElevatedButton(
                 onPressed: () async {
                   // 【新增 v1.9.78】绑定成功后刷新联系人列表
-                  // 后端 redeem 已创建双向紧急联系人，需要拉取到本地
+                  // 后端 redeem 已建立守护关系（CN 为单向 A→B），需要拉取到本地
                   try {
                     await SyncService.pullFromServer();
                   } catch (_) {
@@ -133,7 +171,7 @@ class _RedeemCardPageState extends State<RedeemCardPage> {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.small)),
                   padding: const EdgeInsets.symmetric(vertical: ZaiNeSpacing.lg),
                 ),
-                child: const Text('知道了', style: TextStyle(fontSize: ZaiNeFontSize.body, fontWeight: FontWeight.w600)),
+                child:  Text(tr.s087, style: TextStyle(fontSize: ZaiNeFontSize.body, fontWeight: FontWeight.w600)),
               ),
             ),
           ],
@@ -154,7 +192,7 @@ class _RedeemCardPageState extends State<RedeemCardPage> {
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
-          '输入守护码',
+          tr.s205,
           style: TextStyle(color: ZaiNeColors.textPrimary(), fontWeight: FontWeight.w600),
         ),
         centerTitle: true,
@@ -179,7 +217,7 @@ class _RedeemCardPageState extends State<RedeemCardPage> {
                     const SizedBox(width: ZaiNeSpacing.md),
                     Expanded(
                       child: Text(
-                        '如果有人发给你守护卡，但你无法扫码或打开链接，可以在这里输入安全码完成绑定',
+                        tr.s1014,
                         style: TextStyle(
                           fontSize: ZaiNeFontSize.caption,
                           color: Colors.grey.shade700,
@@ -190,11 +228,28 @@ class _RedeemCardPageState extends State<RedeemCardPage> {
                   ],
                 ),
               ),
+              const SizedBox(height: ZaiNeSpacing.lg),
+
+              // 【CN合规 177·P2】扫码建关系入口：扫描对方守护码，自动回填并兑换
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: _isLoading ? null : _scanCode,
+                  icon: const Icon(Icons.qr_code_scanner, size: 18),
+                  label: const Text('扫描对方的守护码'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: ZaiNeColors.brandOrange,
+                    side: BorderSide(color: ZaiNeColors.brandOrange.withValues(alpha: 0.5)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.card)),
+                    padding: const EdgeInsets.symmetric(vertical: ZaiNeSpacing.lg),
+                  ),
+                ),
+              ),
               const SizedBox(height: ZaiNeSpacing.xxl),
 
               // 输入框
               Text(
-                '守护安全码',
+                tr.s1015,
                 style: TextStyle(
                   fontSize: ZaiNeFontSize.bodySm,
                   fontWeight: FontWeight.w600,
@@ -213,7 +268,7 @@ class _RedeemCardPageState extends State<RedeemCardPage> {
                   fontFamily: 'Courier',
                 ),
                 decoration: InputDecoration(
-                  hintText: '例如: ABC123',
+                  hintText: tr.s1016,
                   hintStyle: TextStyle(
                     fontSize: ZaiNeFontSize.title,
                     color: ZaiNeColors.textHint(),
@@ -241,7 +296,7 @@ class _RedeemCardPageState extends State<RedeemCardPage> {
               ),
               const SizedBox(height: ZaiNeSpacing.sm),
               Text(
-                '安全码由发卡人提供，通常在守护卡卡片上显示',
+                tr.s1017,
                 style: TextStyle(fontSize: ZaiNeFontSize.caption, color: ZaiNeColors.textSecondary()),
               ),
 
@@ -265,8 +320,8 @@ class _RedeemCardPageState extends State<RedeemCardPage> {
                           height: 20,
                           child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                         )
-                      : const Text(
-                          '确认绑定',
+                      :  Text(
+                          tr.s1018,
                           style: TextStyle(fontSize: ZaiNeFontSize.body, fontWeight: FontWeight.w600),
                         ),
                 ),

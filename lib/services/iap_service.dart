@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 
 import '../../config/app_config.dart';
+import '../l10n/i18n.dart';
 
 class IapService {
   // 单例
@@ -106,7 +107,7 @@ class IapService {
     final available = await _iap.isAvailable();
     if (!available) {
       if (kDebugMode) debugPrint('[IAP] StoreKit 不可用，无法购买');
-      return 'StoreKit 不可用，请稍后再试';
+      return tr.s1169;
     }
 
     // StoreKit 2 统一购买接口（支持订阅/非消耗/消耗型）
@@ -131,7 +132,7 @@ class IapService {
           }
           return null; // null 表示成功发起
         } else {
-          lastError = '购买请求发起失败';
+          lastError = tr.s1170;
           if (kDebugMode) debugPrint('[IAP] 购买发起失败（返回 false），尝试: ${attempt + 1}/${maxRetries + 1}');
         }
       } catch (e) {
@@ -154,7 +155,7 @@ class IapService {
         // 网络错误且还有重试机会 → 继续循环
       }
     }
-    return '购买失败：$lastError';
+    return tr.s1171(lastError);
   }
 
   /// 【新增 v1.85.0】将原始异常转换为用户友好的错误信息（null=用户取消，不显示错误）
@@ -165,7 +166,7 @@ class IapService {
     if (errStr.contains('storekit2_failed_to_fetch_product') ||
         errStr.contains('-1200') ||
         errStr.contains('nsurlerror')) {
-      return '网络连接不稳定\n请检查网络后重试\n（沙盒测试环境可能需要关闭 VPN）';
+      return tr.s1172;
     }
 
     // 用户取消
@@ -175,14 +176,14 @@ class IapService {
 
     // 沙盒未就绪
     if (errStr.contains('cloud_service') || errStr.contains('sandbox')) {
-      return '沙盒服务暂不可用\n请稍后重试或重启 App';
+      return tr.s1173;
     }
 
     // 其他未知错误
     if (errStr.length > 80) {
-      return '购买遇到问题 (${errStr.substring(0, 60)}...)';
+      return tr.s1174(errStr.substring(0, 60));
     }
-    return '购买异常：$errStr';
+    return tr.s1175(errStr);
   }
 
   /// 恢复购买
@@ -201,7 +202,7 @@ class IapService {
   ProductDetails? getProduct(String productId) {
     return _products?.firstWhere(
       (p) => p.id == productId,
-      orElse: () => throw Exception('产品未找到: $productId'),
+      orElse: () => throw Exception(tr.s1176(productId)),
     );
   }
 
@@ -248,7 +249,7 @@ class IapService {
         // 购买失败
         _purchaseResultController.add(PurchaseResult(
           success: false,
-          error: purchaseDetails.error?.message ?? '购买失败',
+          error: purchaseDetails.error?.message ?? tr.s1177,
           productId: purchaseDetails.productID,
           transactionId: purchaseDetails.purchaseID,
           purchaseDateMs: DateTime.now().millisecondsSinceEpoch,

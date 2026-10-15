@@ -3,29 +3,30 @@
 
 import 'package:flutter/material.dart';
 import '../theme/theme_helper.dart';
+import '../l10n/i18n.dart';
 
 /// 健康小贴士卡片
 /// 每天固定显示一条（基于日期索引），点击可刷新
 class HealthTipWidget extends StatelessWidget {
-  const HealthTipWidget({super.key});
+  HealthTipWidget({super.key});
 
   @override
   Widget build(BuildContext context) {
     final tips = [
-      {'icon': Icons.water_drop, 'color': Colors.blue, 'title': '记得多喝水', 'desc': '独居容易忘记喝水，建议每小时起身喝一杯温水'},
-      {'icon': Icons.directions_walk, 'color': Colors.green, 'title': '久坐提醒', 'desc': '每45分钟起来走动5分钟，保护颈椎和腰椎'},
-      {'icon': Icons.bedtime, 'color': Colors.indigo, 'title': '规律作息', 'desc': '尽量在23:30前入睡，保证7-8小时睡眠'},
-      {'icon': Icons.favorite, 'color': Colors.red, 'title': '关注心脏', 'desc': '感到心慌胸闷时不要硬撑，及时拨打120'},
-      {'icon': Icons.restaurant, 'color': Colors.orange, 'title': '好好吃饭', 'desc': '外卖虽方便，但也要记得补充蔬菜和蛋白质'},
-      {'icon': Icons.phone_android, 'color': Colors.purple, 'title': '数字 detox', 'desc': '睡前1小时放下手机，让大脑和眼睛休息一下'},
-      {'icon': Icons.window, 'color': Colors.teal, 'title': '开窗通风', 'desc': '早晚各通风15分钟，保持室内空气新鲜'},
-      {'icon': Icons.people, 'color': Colors.deepOrange, 'title': '保持联络', 'desc': '每周至少和家人或朋友通话1次，别把自己封闭起来'},
-      {'icon': Icons.medication, 'color': Colors.amber, 'title': '按时服药', 'desc': '如果正在服药，设置闹钟提醒自己，不要漏服'},
-      {'icon': Icons.emoji_emotions, 'color': Colors.pink, 'title': '心情记录', 'desc': '情绪低落时试着写下来，倾诉是治愈的第一步'},
-      {'icon': Icons.safety_check, 'color': Colors.cyan, 'title': '检查门窗', 'desc': '睡前确认门窗已锁好，安全意识不能松懈'},
-      {'icon': Icons.flash_on, 'color': Colors.amber.shade700, 'title': '充电备用', 'desc': '保持手机电量充足，紧急时刻它就是你的生命线'},
-      {'icon': Icons.local_hospital, 'color': Colors.redAccent, 'title': '急救知识', 'desc': '花10分钟学习心肺复苏（CPR），关键时刻能派上用场'},
-      {'icon': Icons.thermostat, 'color': Colors.lightBlue, 'title': '温度调节', 'desc': '室内温度保持在22-26℃，过冷过热都影响身体状态'},
+      {'icon': Icons.water_drop, 'color': Colors.blue, 'title': tr.z0673, 'desc': tr.z0674},
+      {'icon': Icons.directions_walk, 'color': Colors.green, 'title': tr.z0675, 'desc': tr.z0676},
+      {'icon': Icons.bedtime, 'color': Colors.indigo, 'title': tr.z0677, 'desc': tr.z0678},
+      {'icon': Icons.favorite, 'color': Colors.red, 'title': tr.z0679, 'desc': tr.z0680},
+      {'icon': Icons.restaurant, 'color': Colors.orange, 'title': tr.z0681, 'desc': tr.z0682},
+      {'icon': Icons.phone_android, 'color': Colors.purple, 'title': tr.z0683, 'desc': tr.z0684},
+      {'icon': Icons.window, 'color': Colors.teal, 'title': tr.z0685, 'desc': tr.z0686},
+      {'icon': Icons.people, 'color': Colors.deepOrange, 'title': tr.z0687, 'desc': tr.z0688},
+      {'icon': Icons.medication, 'color': Colors.amber, 'title': tr.z0689, 'desc': tr.z0690},
+      {'icon': Icons.emoji_emotions, 'color': Colors.pink, 'title': tr.z0691, 'desc': tr.z0692},
+      {'icon': Icons.safety_check, 'color': Colors.cyan, 'title': tr.z0693, 'desc': tr.z0694},
+      {'icon': Icons.flash_on, 'color': Colors.amber.shade700, 'title': tr.z0695, 'desc': tr.z0696},
+      {'icon': Icons.local_hospital, 'color': Colors.redAccent, 'title': tr.z0697, 'desc': tr.z0698},
+      {'icon': Icons.thermostat, 'color': Colors.lightBlue, 'title': tr.z0699, 'desc': tr.z0700},
     ];
 
     final now = DateTime.now();
@@ -35,7 +36,7 @@ class HealthTipWidget extends StatelessWidget {
     return GestureDetector(
       onTap: () {}, // 点击反馈由父组件处理
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.lg, vertical: ZaiNeSpacing.lg),
+        padding: EdgeInsets.symmetric(horizontal: ZaiNeSpacing.lg, vertical: ZaiNeSpacing.lg),
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: [
@@ -58,7 +59,7 @@ class HealthTipWidget extends StatelessWidget {
               child: Icon(tip['icon'] as IconData,
                   size: 20, color: tip['color'] as Color),
             ),
-            const SizedBox(width: ZaiNeSpacing.md),
+            SizedBox(width: ZaiNeSpacing.md),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -71,7 +72,7 @@ class HealthTipWidget extends StatelessWidget {
                       color: ZaiNeColors.textPrimary(),
                     ),
                   ),
-                  const SizedBox(height: ZaiNeSpacing.xs),
+                  SizedBox(height: ZaiNeSpacing.xs),
                   Text(
                     tip['desc'] as String,
                     style: TextStyle(fontSize: ZaiNeFontSize.micro, color: ZaiNeColors.textSecondary()),

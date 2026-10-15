@@ -9,6 +9,7 @@ import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'help_page.dart';
 import 'profile_page.dart';
+import '../utils/device_adapter.dart'; // 【Duo 适配】响应式列数 / 窗口断点
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../services/membership_service.dart';
@@ -18,6 +19,7 @@ import '../services/debug_log.dart'; // [190] 双通道调试日志（屏幕 Sna
 import '../services/platform/watch_data_service.dart'; // [155] 签到状态同步到 Watch
 import '../services/api/checkin_service.dart';
 import '../services/api/peace_service.dart';
+import '../services/api/notify_service.dart'; // [方案C] 被守护者主动求助通知守护者
 import '../services/api/card_service.dart';
 import '../services/deep_link_service.dart';
 import '../services/platform/health_service.dart'; // 新增
@@ -37,6 +39,7 @@ import '../utils/streak_util.dart';
 import '../services/checkin_reminder_service.dart'; // 【v1.97.1+157】签到后撤销/启动重排提醒
 import '../config/app_config.dart';
 import '../services/social/guardian_message_service.dart';
+import '../l10n/i18n.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -86,10 +89,14 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    // 【修复 ③】前台收到守护卡 Deep Link 即时展示仪式
-    DeepLinkService.onCardCodeReceived = () {
-      if (mounted) _checkAndShowGuardianRituals();
-    };
+    // 【CN合规 177】CN 版不走守护卡裂变 Deep Link 即时仪式，故不注册此回调，
+    // 避免登录后被 deep link 唤醒触发「守护关系已建立」卡死弹窗。全球版保持原流程。
+    if (!kIsChinaBuild) {
+      // 【修复 ③】前台收到守护卡 Deep Link 即时展示仪式
+      DeepLinkService.onCardCodeReceived = () {
+        if (mounted) _checkAndShowGuardianRituals();
+      };
+    }
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 300),
       vsync: this,
@@ -125,11 +132,11 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     final isWatch = source == 'watch';
     final isHeartbeat = source == 'heartbeat';
     final title = isHeartbeat
-        ? '💓 手表检测到你，已自动打卡'
-        : (isWatch ? '⌚ Apple Watch 签到成功' : '签到成功');
+        ? tr.s133
+        : (isWatch ? tr.s134 : tr.s135);
     final subtitle = isHeartbeat
-        ? '零操作守护 · 连续 $streak 天'
-        : '🔥 连续 $streak 天 · 累计 $total 天';
+        ? tr.s136(streak)
+        : tr.s137(streak, total);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         behavior: SnackBarBehavior.floating,
@@ -260,6 +267,12 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   Future<void> _checkAndShowGuardianRituals() async {
     if (!_isLoggedIn || !mounted) return;
 
+    // 【CN合规 177】CN 版不展示全球版「守护卡欢迎仪式」3D 信封动画。
+    // CN 用户通过「输入守护码」手动绑定建立关系，建立成功已由 redeem_card_page
+    // 的 _showSuccessDialog 单独确认；此处跳过可避免与成功弹窗叠加（双重弹窗）
+    // 以及登录后被 DeepLink 唤起误触发（卡死）。全球版（kIsChinaBuild=false）保持原流程。
+    if (kIsChinaBuild) return;
+
     // 载入已见证集合（本地去重真相源）
     _seenRitualKeys.clear();
     _seenRitualKeys.addAll(await loadSeenRitualKeys());
@@ -273,9 +286,9 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         if (res['success'] == true) {
           _enqueueRitual({
             'cardCode': code,
-            'senderName': res['sender_name']?.toString() ?? '你的好友',
+            'senderName': res['sender_name']?.toString() ?? tr.s138,
             'senderAvatar': res['sender_avatar']?.toString(),
-            'message': res['message']?.toString() ?? '想和你建立守护关系',
+            'message': res['message']?.toString() ?? tr.s139,
             'mode': 'welcome',
             'role': 'receiver',
           });
@@ -299,9 +312,9 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
             if (gCode.isEmpty) continue;
             _enqueueRitual({
               'cardCode': gCode,
-              'senderName': gMap['peer_name']?.toString() ?? '你的好友',
+              'senderName': gMap['peer_name']?.toString() ?? tr.s138,
               'senderAvatar': gMap['peer_avatar']?.toString(),
-              'message': gMap['message']?.toString() ?? '想和你建立守护关系',
+              'message': gMap['message']?.toString() ?? tr.s139,
               'mode': role == 'sender' ? 'success' : 'welcome',
               'role': role,
             });
@@ -721,25 +734,229 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     }
   }
 
-  /// 确认平安
-  Future<void> _confirmPeace(int requestId) async {
+  /// [方案C] 响应平安确认：三按钮分支
+  /// [responseType]：'ok'(我没事) / 'checkin'(立即签到) / 'help'(需要帮助)
+  Future<void> _respondPeace(int requestId, String responseType) async {
+    // 需要帮助：二次确认（明确告知守护者，绝不自动外发）+ 选填留言
+    if (responseType == 'help') {
+      final message = await _showHelpConfirmDialog();
+      if (message == null) return; // null = 取消
+      await _doHelp(requestId, message);
+      return;
+    }
+
+    // 我没事（V2）：可选轻量状态（预设短语 + 自由补充），透传 message
+    if (responseType == 'ok') {
+      final message = await _showOkStatusDialog();
+      if (message == null) return; // null = 取消
+      await _confirmPeaceWithMessage(requestId, 'ok', message);
+      return;
+    }
+
+    // 立即签到（checkin）：直接确认请求（沿用原逻辑）
+    await _confirmPeaceWithMessage(requestId, responseType, null);
+  }
+
+  /// [V2] 我没事 → 可选轻量状态（预设短语 + 自由补充），透传 message 给 confirmPeace。
+  /// 返回：null=取消；String=已确认（空串=无状态 / 非空=状态文案）
+  Future<String?> _showOkStatusDialog() async {
+    final msgController = TextEditingController();
+    String? selectedPreset;
+    final result = await showDialog<String?>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSt) {
+          final presets = <String>[
+            tr.z0919, // 刚到家
+            tr.z0920, // 刚下班
+            tr.z0921, // 刚吃过饭
+            tr.z0922, // 准备睡了
+          ];
+          return AlertDialog(
+            title: Text(tr.z0918), // 报个平安
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(tr.z0923), // 选个状态（选填）
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: presets.map((p) {
+                    final selected = selectedPreset == p;
+                    return ChoiceChip(
+                      label: Text(p),
+                      selected: selected,
+                      onSelected: (_) {
+                        setSt(() {
+                          if (selectedPreset == p) {
+                            selectedPreset = null;
+                            msgController.clear();
+                          } else {
+                            selectedPreset = p;
+                            msgController.text = p;
+                          }
+                        });
+                      },
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: msgController,
+                  maxLength: 10,
+                  maxLines: 3,
+                  minLines: 1,
+                  onChanged: (_) {
+                    // 用户手动改了文字 → 解除预设选中（避免预设与自由文字矛盾）
+                    if (selectedPreset != null && msgController.text != selectedPreset) {
+                      setSt(() => selectedPreset = null);
+                    }
+                  },
+                  decoration: InputDecoration(
+                    hintText: tr.z0925, // 补充一句（10字内）
+                    helperText: tr.z0916, // 留言仅发送给你的守护者
+                    helperMaxLines: 2,
+                    border: const OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(null),
+                child: Text(tr.s016), // 取消
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(msgController.text.trim()),
+                child: Text(tr.s140), // 确认
+              ),
+            ],
+          );
+        },
+      ),
+    );
+    return result;
+  }
+
+  /// [V2/方案C] 通用确认平安（ok/checkin），支持选填 message（仅向守护者发送，合规）
+  Future<void> _confirmPeaceWithMessage(
+    int requestId,
+    String responseType,
+    String? message,
+  ) async {
     try {
-      final res = await PeaceService.confirmPeace(requestId);
+      final res = await PeaceService.confirmPeace(
+        requestId,
+        responseType: responseType,
+        message: message,
+      );
       if (res['success'] == true && mounted) {
         HapticFeedback.mediumImpact();
         setState(() {
           _pendingPeaceRequests.removeWhere((r) => r['request_id'] == requestId);
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('已确认平安 ❤️'),
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        if (responseType == 'checkin') {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(tr.z0903), // 立即签到
+                backgroundColor: Colors.green,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
+          _handleCheckIn();
+        } else {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(tr.s140),
+                backgroundColor: Colors.green,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
+        }
       }
     } catch (e) {
       if (kDebugMode) debugPrint('[Home] 确认平安失败: $e');
+    }
+  }
+
+  /// [方案C] 需要帮助二次确认对话框（CN 合规：用户明确触发外发）
+  /// 返回值：null = 取消；String = 已确认（可能为空的选填留言）
+  Future<String?> _showHelpConfirmDialog() async {
+    final msgController = TextEditingController();
+    final result = await showDialog<String?>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(tr.z0904), // 需要帮助
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(tr.z0905), // 确认向守护者发送求助通知？
+            const SizedBox(height: 12),
+            // 选填留言框（≤100字，自带字数计数器；内容仅发送给守护者）
+            TextField(
+              controller: msgController,
+              maxLength: 100,
+              maxLines: 3,
+              minLines: 1,
+              decoration: InputDecoration(
+                hintText: tr.z0915, // 说点什么…（选填，最多100字）
+                helperText: tr.z0916, // 留言仅发送给你的守护者
+                helperMaxLines: 2,
+                border: const OutlineInputBorder(),
+                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(null),
+            child: Text(tr.s016), // 取消
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(msgController.text.trim()),
+            child: Text(tr.z0906), // 通知守护者
+          ),
+        ],
+      ),
+    );
+    return result; // null=取消；空串=已确认无留言；非空=已确认带留言
+  }
+
+  /// [方案C] 执行求助：通知守护者 + 标记平安确认(需帮助) + 选填留言
+  Future<void> _doHelp(int requestId, [String message = '']) async {
+    try {
+      await NotifyService.notifyGuardiansAboutHelp();
+      final res = await PeaceService.confirmPeace(
+        requestId,
+        responseType: 'help',
+        message: message.isNotEmpty ? message : null,
+      );
+      if (res['success'] == true && mounted) {
+        HapticFeedback.mediumImpact();
+        setState(() {
+          _pendingPeaceRequests.removeWhere((r) => r['request_id'] == requestId);
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+             SnackBar(
+              content: Text(tr.z0907), // 已通知守护者
+              backgroundColor: Colors.orange,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) debugPrint('[Home] 求助通知失败: $e');
     }
   }
 
@@ -841,8 +1058,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   Future<void> _handleCheckIn() async {
     // ===== [191] 双通道入口日志（收口：删除侵入式 SnackBar，保留文件/控制台通道）=====
     const _entryTag = '190 SIGN';
-    final _entryMsg = '$_entryTag 入口 _isLoggedIn=$_isLoggedIn _checkedInToday=$_checkedInToday';
-    await DebugLog.write(_entryTag, '入口 _isLoggedIn=$_isLoggedIn _checkedInToday=$_checkedInToday');
+    final _entryMsg = tr.s141(_entryTag, _isLoggedIn, _checkedInToday);
+    await DebugLog.write(_entryTag, tr.s142(_isLoggedIn, _checkedInToday));
     developer.log(_entryMsg, name: 'zaine.sign');
 
     // 【v1.97.1+156 修复】防连点：锁未释放直接 return，避免多次 do_checkin + 内存竞态导致统计跳动
@@ -885,8 +1102,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       developer.log('[190 SIGN] ❌ 仍未登录，do_checkin 跳过');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('请先登录后再签到'),
+           SnackBar(
+            content: Text(tr.s143),
             backgroundColor: Colors.orange,
             duration: Duration(seconds: 3),
             behavior: SnackBarBehavior.floating,
@@ -920,21 +1137,21 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     final lastDateKey = uid.isNotEmpty ? 'last_check_in_date_$uid' : 'last_check_in_date';
 
     // [194 S] 解码 token，看后端会认成哪个 uid —— 直接戳穿多账号 token 错乱
-    String _tokenUid = '未知';
+    String _tokenUid = tr.s013;
     try {
       final _tk = await AuthService.getToken();
       if (_tk != null && _tk.contains('.')) {
         String _b = _tk.split('.')[1];
         while (_b.length % 4 != 0) _b += '=';
         final _p = jsonDecode(utf8.decode(base64Url.decode(_b))) as Map<String, dynamic>;
-        _tokenUid = _p['user_id']?.toString() ?? '无user_id';
+        _tokenUid = _p['user_id']?.toString() ?? tr.s144;
       } else {
-        _tokenUid = '无token';
+        _tokenUid = tr.s145;
       }
     } catch (e) {
-      _tokenUid = '解码异常:$e';
+      _tokenUid = tr.s146(e);
     }
-    await DebugLog.write('194 S', '签到前 uid(本地)=${uid.isNotEmpty ? uid : "空"} tokenUid(后端将认)=$_tokenUid');
+    await DebugLog.write('194 S', tr.s147(uid.isNotEmpty ? uid : "空", _tokenUid));
 
     // 【v1.97.1+156 修复】累计天数以「本地签到历史条数」为单一真相源(与 Watch 端 _executeCheckIn 对齐)，
     // 不再用内存 _totalDays+1(连点/后台重算期间 _totalDays 会被刷新成不同值 → 统计数字跳动)。
@@ -948,23 +1165,33 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     // UI 与本地存储仅以服务端 do_checkin 响应为准，避免"本地显示已签到但云端没收到"的假象。
     // 持久化逻辑已移至下方 success 分支。
 
+    // 【修复·签到回归】先捕获回归信号：下方 setState 会清零 _daysSinceLastCheckin，
+    // 若不清零前捕获，弹窗将永远读不到 isReturnCheckin → 回归欢迎文案被压制（见 badge_generator.dart）。
+    bool wasReturnCheckin = false;
+    int returnAbsentDays = 0;
+
     // 📨 调用 do_checkin（**唯一真相源**）—— 不再做 if (_isLoggedIn) 包裹
     developer.log('[190 SIGN] 📨 调用 do_checkin date=$today uid=$uid');
-    await DebugLog.write('194 S', '调用 do_checkin date=$today uid=$uid');
+    await DebugLog.write('194 S', tr.s148(today, uid));
     try {
       final res = await CheckinService.checkIn(date: today, mood: -1);
       developer.log('[190 SIGN] 📨 do_checkin 响应: $res');
-      await DebugLog.write('194 S', 'do_checkin 响应: $res');
+      await DebugLog.write('194 S', tr.s149(res));
 
       if (res['success'] == true) {
         developer.log('[190 SIGN] ✅ do_checkin 成功');
-        await DebugLog.write('194 S', 'do_checkin 成功 res=$res');
+        await DebugLog.write('194 S', tr.s150(res));
+        // 【修复·签到回归】在 setState 清零前捕获回归信号，供下方弹窗使用
+        wasReturnCheckin = _daysSinceLastCheckin > 0;
+        returnAbsentDays = _daysSinceLastCheckin;
         // 【187 修复】服务端确认后才更新 UI + 持久化（替代原本地乐观更新）
         if (mounted) setState(() {
           _checkedInToday = true;
           _continuousDays = newDays;
           _totalDays = newTotal;
           _weeklyDays++;
+          // 【Bug1 修复】签到成功后立即清零断签天数，避免回归文案误触发
+          _daysSinceLastCheckin = 0;
         });
         await prefs.setString(lastDateKey, today);
         await prefs.setString('last_check_in_date', today);
@@ -989,8 +1216,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         }
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('☀️ 签到已同步'),
+             SnackBar(
+              content: Text(tr.s151),
               backgroundColor: Colors.green,
               duration: Duration(seconds: 2),
               behavior: SnackBarBehavior.floating,
@@ -1000,11 +1227,15 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       } else {
         final errorMsg = res['error']?.toString() ?? res['message']?.toString() ?? '';
         developer.log('[190 SIGN] ⚠️ do_checkin 业务错误: $errorMsg');
-        await DebugLog.write('194 S', '业务错误: $errorMsg');
+        await DebugLog.write('194 S', tr.s152(errorMsg));
         if (errorMsg.contains('already_checked_in')) {
           // 服务端确认今日已签到，正常
           if (mounted) {
-            setState(() => _checkedInToday = true);
+            setState(() {
+              _checkedInToday = true;
+              // 【Bug1 修复】服务端确认今日已签到 → 断签天数清零
+              _daysSinceLastCheckin = 0;
+            });
             // 【v1.97.1+156 修复】服务端确认已签到，但本地 key 可能缺失(重装/清缓存)，
             // 必须补全写入，否则定时确认闸门读不到 → 已签到仍重复提醒(问题1根因之一)。
             await prefs.setString(lastDateKey, today);
@@ -1014,8 +1245,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
             // 【v1.97.1+155】同步签到状态到 Watch
             unawaited(WatchDataService().pushCheckinStatus(checkedInToday: true, checkinDate: today));
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('☀️ 今日已签到'),
+               SnackBar(
+                content: Text(tr.s153),
                 backgroundColor: Colors.green,
                 duration: Duration(seconds: 2),
                 behavior: SnackBarBehavior.floating,
@@ -1026,7 +1257,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('签到已记录，云端同步失败: $errorMsg'),
+                content: Text(tr.s154(errorMsg)),
                 backgroundColor: Colors.orange,
                 duration: const Duration(seconds: 3),
                 behavior: SnackBarBehavior.floating,
@@ -1037,7 +1268,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       }
     } catch (e, stack) {
       developer.log('[190 SIGN] ❌ do_checkin 异常: $e');
-      await DebugLog.write('194 S', '异常: $e');
+      await DebugLog.write('194 S', tr.s155(e));
       developer.log(stack.toString(), name: 'zaine');
       // 【P0 修复 v1.93.9】签到失败时保存到离线队列
       try {
@@ -1049,8 +1280,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('签到已记录，已保存到离线队列，联网后自动同步 ☁️'),
+           SnackBar(
+            content: Text(tr.s156),
             backgroundColor: Colors.orange,
             duration: Duration(seconds: 3),
             behavior: SnackBarBehavior.floating,
@@ -1108,9 +1339,9 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
             continuousDays: _continuousDays,
             totalDays: _totalDays,
             moodIndex: -1,
-            userName: _userName ?? '在呢用户',
-            isReturnCheckin: _daysSinceLastCheckin > 0,
-            absentDays: _daysSinceLastCheckin,
+            userName: _userName ?? tr.s057,
+            isReturnCheckin: wasReturnCheckin,
+            absentDays: returnAbsentDays,
           ),
         );
       }
@@ -1160,20 +1391,20 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.pill)),
-        title: const Row(
+        title:  Row(
           children: [
             Icon(Icons.login, color: ZaiNeColors.brandOrange),
             SizedBox(width: ZaiNeSpacing.sm),
-            Text('请先完善信息'),
+            Text(tr.s157),
           ],
         ),
-        content: const Text(
-          '使用紧急求助功能前，请先填写您的健康档案和紧急联系人信息。\n\n这确保在紧急情况下，救援人员能获取您的关键健康信息。',
+        content:  Text(
+          tr.s158,
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('稍后'),
+            child:  Text(tr.s159),
           ),
           ElevatedButton(
             onPressed: () {
@@ -1183,7 +1414,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
             style: ElevatedButton.styleFrom(
               backgroundColor: ZaiNeColors.brandOrange,
             ),
-            child: const Text('去填写'),
+            child:  Text(tr.s061),
           ),
         ],
       ),
@@ -1222,7 +1453,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
               // 旧代码已注释，新组件在下方
               PeaceRequestBannerWidget(
                 pendingRequests: _pendingPeaceRequests,
-                onConfirm: _confirmPeace,
+                onRespond: _respondPeace, // [方案C] 三按钮响应
                 onDismiss: (requestId) {
                   setState(() {
                     _pendingPeaceRequests.removeWhere((r) => r['request_id'] == requestId);
@@ -1362,8 +1593,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                           size: 20,
                         ),
                         const SizedBox(width: ZaiNeSpacing.sm),
-                        const Text(
-                          '升级到智能版',
+                         Text(
+                          tr.s160,
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 16,
@@ -1377,8 +1608,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                             color: Colors.white.withValues(alpha: 0.25),
                             borderRadius: BorderRadius.circular(ZaiNeRadius.input),
                           ),
-                          child: const Text(
-                            '解锁全部功能',
+                          child:  Text(
+                            tr.s161,
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 11,
@@ -1485,7 +1716,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              '${targetDate.year}年${targetDate.month}月',
+                              tr.s162(targetDate.year, targetDate.month),
                               style: TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w600,
@@ -1493,7 +1724,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                               ),
                             ),
                             Text(
-                              '$monthCheckInCount/$daysInMonth 天已签',
+                              tr.s163(monthCheckInCount, daysInMonth),
                               style: TextStyle(
                                 fontSize: 11,
                                 color: Colors.teal.shade700,
@@ -1535,7 +1766,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                                 Icon(Icons.today, size: 14, color: ZaiNeColors.brandOrange),
                                 const SizedBox(width: 4),
                                 Text(
-                                  '今天',
+                                  tr.s164,
                                   style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600,
                                       color: ZaiNeColors.brandOrange),
                                 ),
@@ -1555,7 +1786,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                               borderRadius: BorderRadius.circular(ZaiNeRadius.input),
                             ),
                             child: Text(
-                              '今月',
+                              tr.s165,
                               style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600,
                                   color: Colors.teal.shade700),
                             ),
@@ -1577,7 +1808,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                       for (int i = 0; i < 7; i++) ...[
                         Expanded(
                           child: Text(
-                            ['一', '二', '三', '四', '五', '六', '日'][i],
+                            [tr.s166, tr.s167, tr.s168, tr.s169, tr.s170, tr.s171, tr.s172][i],
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               fontSize: 11,
@@ -1602,11 +1833,11 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  _buildLegendItem('少', Colors.teal.shade100),
+                  _buildLegendItem(tr.s173, Colors.teal.shade100),
                   _buildLegendDot(Colors.teal.shade300),
                   _buildLegendDot(Colors.teal.shade500),
                   _buildLegendDot(Colors.teal.shade700),
-                  Text('  多', style: TextStyle(fontSize: 10, color: themeNotifier.mode == ZaiNeThemeMode.dark ? Colors.grey[400] : Colors.grey[500])),
+                  Text(tr.s174, style: TextStyle(fontSize: 10, color: themeNotifier.mode == ZaiNeThemeMode.dark ? Colors.grey[400] : Colors.grey[500])),
                 ],
               ),
             ],
@@ -1653,7 +1884,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                 height: 28,
                 margin: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.xs),
                 child: Tooltip(
-                  message: '$dateStr ${isCheckedIn ? "✓ 已签到" : "未签到"}',
+                  message: tr.s175(dateStr, isCheckedIn ? "✓ 已签到" : "未签到"),
                   child: Container(
                     decoration: BoxDecoration(
                       color: _getHeatmapColor(isCheckedIn),
@@ -1733,7 +1964,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: const Text('选择月份', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+          title:  Text(tr.s176, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -1747,7 +1978,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                         ? () => setDialogState(() => selectedYear--)
                         : null,
                   ),
-                  Text('$selectedYear年', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                  Text(tr.s177(selectedYear), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                   IconButton(
                     icon: const Icon(Icons.add),
                     onPressed: selectedYear < now.year + 1
@@ -1760,7 +1991,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
               // 月份选择网格
               GridView.count(
                 shrinkWrap: true,
-                crossAxisCount: 3,
+                crossAxisCount: isCompactWidth(context) ? 2 : 3,
                 childAspectRatio: 1.5,
                 children: List.generate(12, (index) {
                   final month = index + 1;
@@ -1785,7 +2016,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                       ),
                       child: Center(
                         child: Text(
-                          '$month月',
+                          tr.s178(month),
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: isSelected || isCurrentMonth ? FontWeight.w600 : FontWeight.normal,
@@ -1802,7 +2033,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('取消'),
+              child:  Text(tr.s016),
             ),
           ],
         ),

@@ -3,6 +3,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
+import '../l10n/i18n.dart';
 
 /// 【v1.97.1+157】签到提醒排程服务（单一真相源）
 ///
@@ -73,17 +74,17 @@ class CheckInReminderService {
       return;
     }
 
-    const androidDetails = AndroidNotificationDetails(
+    final androidDetails = AndroidNotificationDetails(
       'checkin_reminder',
-      '每日签到提醒',
-      channelDescription: '提醒您完成每日签到，让守护者知道您平安',
+      tr.s1162,
+      channelDescription: tr.s1163,
       importance: Importance.high,
       priority: Priority.high,
       showWhen: true,
       icon: '@mipmap/ic_launcher',
     );
     const iosDetails = DarwinNotificationDetails();
-    const details = NotificationDetails(android: androidDetails, iOS: iosDetails);
+    final details = NotificationDetails(android: androidDetails, iOS: iosDetails);
 
     // ====== 主提醒：下一次提醒时刻（今天未过则今天，已过则明天）======
     var scheduledTime =
@@ -95,8 +96,8 @@ class CheckInReminderService {
 
     await notifications.zonedSchedule(
       0, // id
-      '该签到啦 🏠',
-      '点击打开「在呢」，完成今日签到，让守护者放心 ❤️',
+      tr.s1164,
+      tr.s1165,
       tzScheduledTime,
       details,
       uiLocalNotificationDateInterpretation:
@@ -114,22 +115,22 @@ class CheckInReminderService {
       systemTime = systemTime.add(const Duration(hours: 2));
       final tzSystemTime = tz.TZDateTime.from(systemTime, tz.local);
 
-      const systemAndroidDetails = AndroidNotificationDetails(
+      final systemAndroidDetails = AndroidNotificationDetails(
         'checkin_system_reminder',
-        '系统提醒',
-        channelDescription: '当天未签到时的额外提醒',
+        tr.s069,
+        channelDescription: tr.s1166,
         importance: Importance.defaultImportance,
         priority: Priority.defaultPriority,
         showWhen: true,
         icon: '@mipmap/ic_launcher',
       );
-      const systemDetails =
+      final systemDetails =
           NotificationDetails(android: systemAndroidDetails, iOS: iosDetails);
 
       await notifications.zonedSchedule(
         3, // id
-        '别忘了签到哦 💙',
-        '今天还没签到呢，花3秒报个平安，让守护者放心',
+        tr.s1167,
+        tr.s1168,
         tzSystemTime,
         systemDetails,
         uiLocalNotificationDateInterpretation:
@@ -141,7 +142,7 @@ class CheckInReminderService {
     if (kDebugMode) {
       debugPrint(
         '[ReminderSvc] 已单次排程 id=0(主提醒)+'
-        '${systemReminderEnabled ? 'id=3(系统提醒)' : '(系统提醒关)'} @ $hour:${minute.toString().padLeft(2, '0')}',
+        + tr.z0294(systemReminderEnabled ? 'id=3(系统提醒)' : '(系统提醒关)', hour, minute.toString().padLeft(2, '0')),
       );
     }
   }

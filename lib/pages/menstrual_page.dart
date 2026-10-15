@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import '../models/menstrual_record.dart';
 import '../services/menstrual_service.dart';
 import '../theme/theme_helper.dart';
+import '../l10n/i18n.dart';
 
 /// 经期记录页面
 class MenstrualPage extends StatefulWidget {
@@ -87,13 +88,13 @@ class _MenstrualPageState extends State<MenstrualPage> {
     if (success) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('记录已保存')),
+         SnackBar(content: Text(tr.s917)),
       );
       Navigator.pop(context);
     } else {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('保存失败，请重试')),
+         SnackBar(content: Text(tr.s596)),
       );
     }
   }
@@ -102,7 +103,7 @@ class _MenstrualPageState extends State<MenstrualPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('经期记录'),
+        title:  Text(tr.s918),
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
@@ -112,46 +113,46 @@ class _MenstrualPageState extends State<MenstrualPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // 开始日期
-            _buildSectionTitle('开始日期'),
+            _buildSectionTitle(tr.s919),
             const SizedBox(height: ZaiNeSpacing.sm),
             _buildDateSelector(
               date: _startDate,
               onTap: _selectStartDate,
-              label: '选择开始日期',
+              label: tr.s920,
             ),
             const SizedBox(height: ZaiNeSpacing.lg),
 
             // 结束日期
-            _buildSectionTitle('结束日期（可选）'),
+            _buildSectionTitle(tr.s921),
             const SizedBox(height: ZaiNeSpacing.sm),
             _buildDateSelector(
               date: _endDate,
               onTap: _selectEndDate,
-              label: '选择结束日期',
+              label: tr.s922,
               isOptional: true,
             ),
             const SizedBox(height: ZaiNeSpacing.lg),
 
             // 流量级别
-            _buildSectionTitle('流量级别'),
+            _buildSectionTitle(tr.s923),
             const SizedBox(height: ZaiNeSpacing.sm),
             _buildFlowLevelSelector(),
             const SizedBox(height: ZaiNeSpacing.lg),
 
             // 症状
-            _buildSectionTitle('症状（可选）'),
+            _buildSectionTitle(tr.s924),
             const SizedBox(height: ZaiNeSpacing.sm),
             _buildSymptomsSelector(),
             const SizedBox(height: ZaiNeSpacing.lg),
 
             // 备注
-            _buildSectionTitle('备注（可选）'),
+            _buildSectionTitle(tr.s925),
             const SizedBox(height: ZaiNeSpacing.sm),
             TextField(
               controller: _notesController,
               maxLines: 3,
               decoration: InputDecoration(
-                hintText: '记录你的感受...',
+                hintText: tr.s926,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(ZaiNeRadius.small),
                 ),
@@ -172,7 +173,7 @@ class _MenstrualPageState extends State<MenstrualPage> {
                     borderRadius: BorderRadius.circular(ZaiNeRadius.small),
                   ),
                 ),
-                child: const Text('保存记录'),
+                child:  Text(tr.s927),
               ),
             ),
           ],
@@ -217,7 +218,7 @@ class _MenstrualPageState extends State<MenstrualPage> {
             const SizedBox(width: ZaiNeSpacing.md),
             Text(
               date != null
-                  ? DateFormat('yyyy年MM月dd日').format(date)
+                  ? DateFormat(tr.s893).format(date)
                   : label,
               style: TextStyle(
                 fontSize: 16,

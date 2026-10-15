@@ -4,6 +4,7 @@
 
 import 'package:flutter/material.dart';
 import '../theme/theme_helper.dart';
+import '../l10n/i18n.dart';
 
 /// 守护状态条
 /// 显示守护状态、连续天数、守护圈人数
@@ -25,14 +26,14 @@ class GuardStatusWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     // 【P2】显示历史最高连续纪录，减少断签心理落差
     String statusText = isLoggedIn
-        ? '守护已就绪 · $continuousDays 天连续守护'
-        : '请完善健康档案，开启守护';
+        ? tr.z0898(continuousDays)
+        : tr.z0899;
 
     // 【v2.0 新增】显示守护圈人数
     if (isLoggedIn && totalRegistered > 0) {
-      statusText += ' · $totalRegistered 位守护成员';
+      statusText += tr.z0900(totalRegistered);
     } else if (isLoggedIn && guardianCount > 0) {
-      statusText += ' · $guardianCount 位守护者';
+      statusText += tr.z0901(guardianCount);
     }
 
     final statusColor = isLoggedIn ? Colors.green : Colors.orange;

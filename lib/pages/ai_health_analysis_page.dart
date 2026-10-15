@@ -5,6 +5,7 @@ import '../services/ai/ai_health_analyzer.dart';
 import '../services/platform/health_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import '../l10n/i18n.dart';
 
 /// AI 健康分析页面
 ///
@@ -76,7 +77,7 @@ class _AIHealthAnalysisPageState extends State<AIHealthAnalysisPage> {
         });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('分析失败: $e'),
+            content: Text(tr.s597(e)),
             backgroundColor: Colors.red,
           ),
         );
@@ -89,7 +90,7 @@ class _AIHealthAnalysisPageState extends State<AIHealthAnalysisPage> {
     return Scaffold(
       backgroundColor: ZaiNeColors.scaffoldBg(),
       appBar: AppBar(
-        title: const Text('AI 健康分析'),
+        title:  Text(tr.s598),
         backgroundColor: ZaiNeColors.cardBg(),
         foregroundColor: ZaiNeColors.textPrimary(),
         elevation: 0,
@@ -132,7 +133,7 @@ class _AIHealthAnalysisPageState extends State<AIHealthAnalysisPage> {
           ),
           const SizedBox(height: ZaiNeSpacing.xl),
           Text(
-            '暂无分析数据',
+            tr.s599,
             style: TextStyle(
               fontSize: ZaiNeFontSize.subtitle,
               color: ZaiNeColors.textSecondary(),
@@ -143,7 +144,7 @@ class _AIHealthAnalysisPageState extends State<AIHealthAnalysisPage> {
           ElevatedButton.icon(
             onPressed: _performAnalysis,
             icon: const Icon(Icons.analytics),
-            label: const Text('开始分析'),
+            label:  Text(tr.s600),
           ),
         ],
       ),
@@ -172,7 +173,7 @@ class _AIHealthAnalysisPageState extends State<AIHealthAnalysisPage> {
 
             // 今日待办（未签到等，柔和提醒，不恐吓）
             if (todoItems.isNotEmpty) ...[
-              _buildSectionTitle('📝 今日待办', Colors.teal),
+              _buildSectionTitle(tr.s601, Colors.teal),
               const SizedBox(height: ZaiNeSpacing.md),
               ...todoItems.map((r) => _buildRecommendationCard(r)),
               const SizedBox(height: ZaiNeSpacing.xl),
@@ -180,7 +181,7 @@ class _AIHealthAnalysisPageState extends State<AIHealthAnalysisPage> {
 
             // 异常提醒
             if (result.anomalies.isNotEmpty) ...[
-              _buildSectionTitle('⚠️ 需要关注', Colors.orange),
+              _buildSectionTitle(tr.s602, Colors.orange),
               const SizedBox(height: ZaiNeSpacing.md),
               ...result.anomalies.map((a) => _buildAnomalyCard(a)),
               const SizedBox(height: ZaiNeSpacing.xl),
@@ -188,7 +189,7 @@ class _AIHealthAnalysisPageState extends State<AIHealthAnalysisPage> {
 
             // 健康洞察
             if (result.insights.isNotEmpty) ...[
-              _buildSectionTitle('💡 健康洞察', Colors.blue),
+              _buildSectionTitle(tr.s603, Colors.blue),
               const SizedBox(height: ZaiNeSpacing.md),
               ...result.insights.map((i) => _buildInsightCard(i)),
               const SizedBox(height: ZaiNeSpacing.xl),
@@ -196,7 +197,7 @@ class _AIHealthAnalysisPageState extends State<AIHealthAnalysisPage> {
 
             // 个性化建议（仅低优先级，高优先级已在今日待办展示）
             if (generalRecs.isNotEmpty) ...[
-              _buildSectionTitle('🎯 个性化建议', Colors.green),
+              _buildSectionTitle(tr.s604, Colors.green),
               const SizedBox(height: ZaiNeSpacing.md),
               ...generalRecs.map((r) => _buildRecommendationCard(r)),
               const SizedBox(height: ZaiNeSpacing.xl),
@@ -205,7 +206,7 @@ class _AIHealthAnalysisPageState extends State<AIHealthAnalysisPage> {
             // 分析时间
             Center(
               child: Text(
-                '分析时间: ${_formatTime(result.analysisTime)}',
+                tr.s605(_formatTime(result.analysisTime)),
                 style: TextStyle(
                   fontSize: ZaiNeFontSize.caption,
                   color: ZaiNeColors.textHint(),
@@ -225,15 +226,15 @@ class _AIHealthAnalysisPageState extends State<AIHealthAnalysisPage> {
 
     if (score >= 80) {
       scoreColor = Colors.green;
-      scoreLabel = '优秀';
+      scoreLabel = tr.s606;
       scoreEmoji = '🌟';
     } else if (score >= 60) {
       scoreColor = Colors.orange;
-      scoreLabel = '良好';
+      scoreLabel = tr.s607;
       scoreEmoji = '👍';
     } else {
       scoreColor = Colors.red;
-      scoreLabel = '需改善';
+      scoreLabel = tr.s608;
       scoreEmoji = '⚠️';
     }
 
@@ -260,8 +261,8 @@ class _AIHealthAnalysisPageState extends State<AIHealthAnalysisPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      '健康评分',
+                     Text(
+                      tr.s609,
                       style: TextStyle(
                         fontSize: ZaiNeFontSize.body,
                         fontWeight: FontWeight.w600,
@@ -269,7 +270,7 @@ class _AIHealthAnalysisPageState extends State<AIHealthAnalysisPage> {
                     ),
                     const SizedBox(height: ZaiNeSpacing.xs),
                     Text(
-                      '基于您的健康数据分析',
+                      tr.s610,
                       style: TextStyle(
                         fontSize: ZaiNeFontSize.caption,
                         color: ZaiNeColors.textSecondary(),
@@ -419,7 +420,7 @@ class _AIHealthAnalysisPageState extends State<AIHealthAnalysisPage> {
                 child: Row(
                   children: [
                     Text(
-                      '当前: ${anomaly.relatedValue}',
+                      tr.s611(anomaly.relatedValue),
                       style: TextStyle(
                         fontSize: ZaiNeFontSize.caption,
                         color: ZaiNeColors.textSecondary(),
@@ -427,7 +428,7 @@ class _AIHealthAnalysisPageState extends State<AIHealthAnalysisPage> {
                     ),
                     const SizedBox(width: ZaiNeSpacing.lg),
                     Text(
-                      '建议: ${anomaly.threshold}',
+                      tr.s612(anomaly.threshold),
                       style: TextStyle(
                         fontSize: ZaiNeFontSize.caption,
                         color: Colors.green.shade600,
@@ -563,19 +564,19 @@ class _AIHealthAnalysisPageState extends State<AIHealthAnalysisPage> {
     switch (priority) {
       case 5:
         color = Colors.red;
-        label = '紧急';
+        label = tr.s613;
         break;
       case 4:
         color = Colors.orange;
-        label = '重要';
+        label = tr.s614;
         break;
       case 3:
         color = Colors.blue;
-        label = '建议';
+        label = tr.s615;
         break;
       default:
         color = Colors.grey;
-        label = '提示';
+        label = tr.s616;
     }
 
     return Container(
@@ -603,18 +604,18 @@ class _AIHealthAnalysisPageState extends State<AIHealthAnalysisPage> {
   }
 
   String _getSeverityLabel(double severity) {
-    if (severity >= 0.7) return '严重';
-    if (severity >= 0.4) return '中等';
-    return '轻微';
+    if (severity >= 0.7) return tr.s617;
+    if (severity >= 0.4) return tr.s618;
+    return tr.s619;
   }
 
   String _formatTime(DateTime time) {
     final now = DateTime.now();
     final diff = now.difference(time);
 
-    if (diff.inMinutes < 1) return '刚刚';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}分钟前';
-    if (diff.inHours < 24) return '${diff.inHours}小时前';
+    if (diff.inMinutes < 1) return tr.s430;
+    if (diff.inMinutes < 60) return tr.s620(diff.inMinutes);
+    if (diff.inHours < 24) return tr.s621(diff.inHours);
     return '${time.month}/${time.day} ${time.hour}:${time.minute.toString().padLeft(2, '0')}';
   }
 }

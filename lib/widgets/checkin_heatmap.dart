@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/theme_helper.dart';
+import '../l10n/i18n.dart';
 
 /// 签到热力图组件
 ///
@@ -29,7 +30,7 @@ class CheckinHeatmap extends StatefulWidget {
   /// 方块间距
   final double cellSpacing;
 
-  const CheckinHeatmap({
+  CheckinHeatmap({
     super.key,
     required this.checkinDates,
     this.baseColor = const Color(0xFF4CAF50),
@@ -48,11 +49,11 @@ class _CheckinHeatmapState extends State<CheckinHeatmap> {
   /// 🔴【v1.97.3 (162) 修复】默认由 1年 改为 7天（用户反馈默认一年太长）
   int _selectedRange = 0;
 
-  static const _rangeOptions = [
-    {'label': '7天', 'days': 7},
-    {'label': '30天', 'days': 30},
-    {'label': '90天', 'days': 90},
-    {'label': '1年', 'days': 365},
+  static final _rangeOptions = [
+    {'label': tr.z0883, 'days': 7},
+    {'label': tr.z0884, 'days': 30},
+    {'label': tr.z0885, 'days': 90},
+    {'label': tr.z0886, 'days': 365},
   ];
 
   int get _rangeDays => _rangeOptions[_selectedRange]['days'] as int;
@@ -82,16 +83,16 @@ class _CheckinHeatmapState extends State<CheckinHeatmap> {
     if (!_isCheckedIn(date)) return 0;
     int count = 1;
     // 往前数
-    DateTime prev = date.subtract(const Duration(days: 1));
+    DateTime prev = date.subtract(Duration(days: 1));
     while (_isCheckedIn(prev) && count < 365) {
       count++;
-      prev = prev.subtract(const Duration(days: 1));
+      prev = prev.subtract(Duration(days: 1));
     }
     // 往后数
-    DateTime next = date.add(const Duration(days: 1));
+    DateTime next = date.add(Duration(days: 1));
     while (_isCheckedIn(next) && count < 365) {
       count++;
-      next = next.add(const Duration(days: 1));
+      next = next.add(Duration(days: 1));
     }
     return count;
   }
@@ -138,14 +139,14 @@ class _CheckinHeatmapState extends State<CheckinHeatmap> {
         side: BorderSide(color: Colors.grey.shade200),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(ZaiNeSpacing.lg),
+        padding: EdgeInsets.all(ZaiNeSpacing.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildHeader(stats),
-            const SizedBox(height: ZaiNeSpacing.lg),
+            SizedBox(height: ZaiNeSpacing.lg),
             if (stats['totalCheckins'] == 0) _buildEmptyState() else _buildHeatmapGrid(startDate, now),
-            const SizedBox(height: ZaiNeSpacing.md),
+            SizedBox(height: ZaiNeSpacing.md),
             _buildLegend(),
           ],
         ),
@@ -160,16 +161,16 @@ class _CheckinHeatmapState extends State<CheckinHeatmap> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                '签到热力图',
+              Text(
+                tr.z0887,
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              const SizedBox(height: ZaiNeSpacing.xxs),
+              SizedBox(height: ZaiNeSpacing.xxs),
               Text(
-                '总签到 ${stats['totalCheckins']} 天 · 连续 ${stats['currentStreak']} 天 · 最长 ${stats['maxStreak']} 天',
+                tr.z0888(stats['totalCheckins'], stats['currentStreak'], stats['maxStreak']),
                 style: TextStyle(
                   fontSize: 12,
                   color: Colors.grey.shade500,
@@ -190,7 +191,7 @@ class _CheckinHeatmapState extends State<CheckinHeatmap> {
         color: Colors.grey.shade100,
         borderRadius: BorderRadius.circular(8),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+      padding: EdgeInsets.symmetric(horizontal: 2, vertical: 2),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: List.generate(_rangeOptions.length, (index) {
@@ -198,7 +199,7 @@ class _CheckinHeatmapState extends State<CheckinHeatmap> {
           return GestureDetector(
             onTap: () => setState(() => _selectedRange = index),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
                 color: isSelected ? widget.baseColor : Colors.transparent,
                 borderRadius: BorderRadius.circular(6),
@@ -234,12 +235,12 @@ class _CheckinHeatmapState extends State<CheckinHeatmap> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (widget.showWeekdayLabels) _buildWeekdayLabels(),
-          const SizedBox(width: ZaiNeSpacing.sm),
+          SizedBox(width: ZaiNeSpacing.sm),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (widget.showMonthLabels) _buildMonthLabels(firstSunday, totalWeeks),
-              const SizedBox(height: ZaiNeSpacing.xxs),
+              SizedBox(height: ZaiNeSpacing.xxs),
               Row(
                 children: List.generate(totalWeeks, (weekIndex) {
                   return _buildWeekColumn(firstSunday, weekIndex, endDate);
@@ -253,7 +254,7 @@ class _CheckinHeatmapState extends State<CheckinHeatmap> {
   }
 
   Widget _buildWeekdayLabels() {
-    final weekdays = ['日', '一', '二', '三', '四', '五', '六'];
+    final weekdays = [tr.s172, tr.s166, tr.s167, tr.s168, tr.s169, tr.s170, tr.s171];
     final visibleIndices = [1, 3, 5]; // 一、三、五
 
     return Column(
@@ -283,7 +284,7 @@ class _CheckinHeatmapState extends State<CheckinHeatmap> {
     int? lastMonth;
 
     for (int week = 0; week < totalWeeks; week++) {
-      final middleOfWeek = current.add(const Duration(days: 3));
+      final middleOfWeek = current.add(Duration(days: 3));
 
       if (middleOfWeek.month != lastMonth) {
         lastMonth = middleOfWeek.month;
@@ -292,7 +293,7 @@ class _CheckinHeatmapState extends State<CheckinHeatmap> {
             width: (widget.cellSize + widget.cellSpacing) * 7,
             alignment: Alignment.centerLeft,
             child: Text(
-              '${middleOfWeek.month}月',
+              tr.z0889(middleOfWeek.month),
               style: TextStyle(
                 fontSize: 9,
                 color: Colors.grey.shade500,
@@ -306,7 +307,7 @@ class _CheckinHeatmapState extends State<CheckinHeatmap> {
         );
       }
 
-      current = current.add(const Duration(days: 7));
+      current = current.add(Duration(days: 7));
     }
 
     return Row(children: months);
@@ -321,7 +322,7 @@ class _CheckinHeatmapState extends State<CheckinHeatmap> {
         final isCheckedIn = _isCheckedIn(date);
         final isInRange = date.isAfter(
           endDate.subtract(Duration(days: _rangeDays)),
-        ) && date.isBefore(endDate.add(const Duration(days: 1)));
+        ) && date.isBefore(endDate.add(Duration(days: 1)));
 
         final streakLen = isCheckedIn ? _streakLength(date) : 0;
         final level = _colorLevel(streakLen);
@@ -330,10 +331,10 @@ class _CheckinHeatmapState extends State<CheckinHeatmap> {
         final showBorder = isCheckedIn && streakLen >= 3;
 
         final dateStr = '${date.month}/${date.day}';
-        final weekdayNames = ['日', '一', '二', '三', '四', '五', '六'];
+        final weekdayNames = [tr.s172, tr.s166, tr.s167, tr.s168, tr.s169, tr.s170, tr.s171];
         final tooltipMsg = isCheckedIn
-            ? '$dateStr 周${weekdayNames[date.weekday % 7]} · 已签到'
-            : (isInRange ? '$dateStr 周${weekdayNames[date.weekday % 7]} · 未签到' : '');
+            ? tr.z0890(dateStr, weekdayNames[date.weekday % 7])
+            : (isInRange ? tr.z0891(dateStr, weekdayNames[date.weekday % 7]) : '');
 
         return Tooltip(
           message: tooltipMsg,
@@ -366,27 +367,27 @@ class _CheckinHeatmapState extends State<CheckinHeatmap> {
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
         Text(
-          '少',
+          tr.s173,
           style: TextStyle(
             fontSize: 10,
             color: Colors.grey.shade400,
           ),
         ),
-        const SizedBox(width: ZaiNeSpacing.xxs),
+        SizedBox(width: ZaiNeSpacing.xxs),
         ...List.generate(5, (index) {
           return Container(
             width: 12,
             height: 12,
-            margin: const EdgeInsets.only(right: 3),
+            margin: EdgeInsets.only(right: 3),
             decoration: BoxDecoration(
               color: _levelColor(index),
               borderRadius: BorderRadius.circular(ZaiNeRadius.tiny),
             ),
           );
         }),
-        const SizedBox(width: ZaiNeSpacing.xxs),
+        SizedBox(width: ZaiNeSpacing.xxs),
         Text(
-          '多',
+          tr.z0892,
           style: TextStyle(
             fontSize: 10,
             color: Colors.grey.shade400,
@@ -400,19 +401,19 @@ class _CheckinHeatmapState extends State<CheckinHeatmap> {
   Widget _buildEmptyState() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 28),
+      padding: EdgeInsets.symmetric(vertical: 28),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(Icons.calendar_month_outlined, size: 42, color: Colors.grey.shade300),
-          const SizedBox(height: 10),
+          SizedBox(height: 10),
           Text(
-            '最近 $_rangeDays 天还没有签到记录',
+            tr.z0893(_rangeDays),
             style: TextStyle(fontSize: 13, color: Colors.grey.shade400),
           ),
-          const SizedBox(height: 4),
+          SizedBox(height: 4),
           Text(
-            '每天签到，点亮你的安全日历',
+            tr.z0894,
             style: TextStyle(fontSize: 11, color: Colors.grey.shade300),
           ),
         ],
@@ -478,7 +479,7 @@ class CheckinStatsCard extends StatelessWidget {
   final int weeklyDays;
   final Color accentColor;
 
-  const CheckinStatsCard({
+  CheckinStatsCard({
     super.key,
     required this.totalDays,
     required this.currentStreak,
@@ -496,41 +497,41 @@ class CheckinStatsCard extends StatelessWidget {
         side: BorderSide(color: Colors.grey.shade200),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(ZaiNeSpacing.lg),
+        padding: EdgeInsets.all(ZaiNeSpacing.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              '签到统计',
+            Text(
+              tr.z0895,
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(height: ZaiNeSpacing.lg),
+            SizedBox(height: ZaiNeSpacing.lg),
             Row(
               children: [
                 Expanded(
                   child: _buildStatCircle(
-                    '累计签到',
+                    tr.s413,
                     totalDays,
-                    '天',
+                    tr.z0004,
                     accentColor,
                   ),
                 ),
                 Expanded(
                   child: _buildStatCircle(
-                    '当前连续',
+                    tr.z0896,
                     currentStreak,
-                    '天',
+                    tr.z0004,
                     Colors.orange,
                   ),
                 ),
                 Expanded(
                   child: _buildStatCircle(
-                    '本周签到',
+                    tr.z0897,
                     weeklyDays,
-                    '天',
+                    tr.z0004,
                     Colors.blue,
                   ),
                 ),
@@ -579,7 +580,7 @@ class CheckinStatsCard extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: ZaiNeSpacing.sm),
+        SizedBox(height: ZaiNeSpacing.sm),
         Text(
           label,
           style: TextStyle(

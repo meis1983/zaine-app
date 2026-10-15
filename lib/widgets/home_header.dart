@@ -5,6 +5,7 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
 import '../theme/theme_helper.dart';
+import '../l10n/i18n.dart';
 
 /// 首页顶部标题栏
 /// 包含：Logo、问候语、签到状态胶囊、会员等级标签、头像
@@ -20,7 +21,7 @@ class HomeHeaderWidget extends StatelessWidget {
   final VoidCallback onTapAvatar;
   final VoidCallback onTapMembership;
 
-  const HomeHeaderWidget({
+  HomeHeaderWidget({
     super.key,
     required this.isLoggedIn,
     required this.checkedInToday,
@@ -36,18 +37,18 @@ class HomeHeaderWidget extends StatelessWidget {
 
   String _getGreeting() {
     final hour = DateTime.now().hour;
-    if (hour < 6) return '夜深了';
-    if (hour < 9) return '早上好';
-    if (hour < 12) return '上午好';
-    if (hour < 14) return '中午好';
-    if (hour < 18) return '下午好';
-    return '晚上好';
+    if (hour < 6) return tr.z0010;
+    if (hour < 9) return tr.z0771;
+    if (hour < 12) return tr.z0772;
+    if (hour < 14) return tr.z0773;
+    if (hour < 18) return tr.z0774;
+    return tr.z0775;
   }
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(
+      padding: EdgeInsets.only(
         top: ZaiNeSpacing.md,    // 12
         bottom: ZaiNeSpacing.xl,  // 24
       ),
@@ -63,7 +64,7 @@ class HomeHeaderWidget extends StatelessWidget {
               fit: BoxFit.cover,
             ),
           ),
-          const SizedBox(width: ZaiNeSpacing.sm),  // 8
+          SizedBox(width: ZaiNeSpacing.sm),  // 8
           // 问候语 + 签到状态
           Expanded(
             child: Column(
@@ -76,32 +77,32 @@ class HomeHeaderWidget extends StatelessWidget {
                     color: ZaiNeColors.textHint(),  // 辅助文字（自动适配暗黑模式）
                   ),
                 ),
-                const SizedBox(height: ZaiNeSpacing.xs),
+                SizedBox(height: ZaiNeSpacing.xs),
                 Row(
                   children: [
-                    const Text(
-                      '在呢',
+                    Text(
+                      tr.appTitle,
                       style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
                         color: ZaiNeColors.brandOrange,
                       ),
                     ),
-                    const SizedBox(width: ZaiNeSpacing.sm),  // 8
+                    SizedBox(width: ZaiNeSpacing.sm),  // 8
                     // 签到状态胶囊
                     _buildCheckInStatusCapsule(),
-                    const SizedBox(width: ZaiNeSpacing.xs),  // 4
+                    SizedBox(width: ZaiNeSpacing.xs),  // 4
                     // 会员等级标签
                     GestureDetector(
                       onTap: onTapMembership,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(
+                        padding: EdgeInsets.symmetric(
                             horizontal: ZaiNeSpacing.xs,  // 4
                             vertical: ZaiNeSpacing.xs,    // 4
                           ),
                         decoration: BoxDecoration(
                           gradient: membershipLevel == 'smart'
-                              ? const LinearGradient(
+                              ? LinearGradient(
                                   colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
@@ -127,10 +128,10 @@ class HomeHeaderWidget extends StatelessWidget {
                               size: 14,
                               color: Colors.white,
                             ),
-                            const SizedBox(width: ZaiNeSpacing.xs),  // 4
+                            SizedBox(width: ZaiNeSpacing.xs),  // 4
                             Text(
-                              membershipLevel == 'smart' ? '智能版' : '体验版',
-                              style: const TextStyle(
+                              membershipLevel == 'smart' ? tr.s1097 : tr.s1096,
+                              style: TextStyle(
                                 fontSize: ZaiNeFontSize.micro,  // 12
                                 color: Colors.white,
                                 fontWeight: FontWeight.w600,
@@ -158,7 +159,7 @@ class HomeHeaderWidget extends StatelessWidget {
   /// 签到状态胶囊
   Widget _buildCheckInStatusCapsule() {
     return Container(
-      padding: const EdgeInsets.symmetric(
+      padding: EdgeInsets.symmetric(
         horizontal: ZaiNeSpacing.xs,  // 4
         vertical: ZaiNeSpacing.xs,    // 4
       ),
@@ -177,9 +178,9 @@ class HomeHeaderWidget extends StatelessWidget {
             size: 14,
             color: checkedInToday ? Colors.green : Colors.orange,
           ),
-          const SizedBox(width: ZaiNeSpacing.xs),  // 4
+          SizedBox(width: ZaiNeSpacing.xs),  // 4
           Text(
-            checkedInToday ? '已签到' : '未签到',
+            checkedInToday ? tr.s409 : tr.s410,
             style: TextStyle(
               fontSize: ZaiNeFontSize.micro,  // 12
               color: checkedInToday ? Colors.green : Colors.orange,
@@ -202,7 +203,7 @@ class HomeHeaderWidget extends StatelessWidget {
             ? LinearGradient(
                 colors: [
                   ZaiNeColors.brandOrange.withValues(alpha: 0.2),
-                  const Color(0xFFFFB347).withValues(alpha: 0.2),
+                  Color(0xFFFFB347).withValues(alpha: 0.2),
                 ],
               )
             : null,

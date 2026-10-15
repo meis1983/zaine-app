@@ -9,6 +9,7 @@ import '../services/platform/health_service.dart';
 import 'ai_health_analysis_page.dart';
 import 'dart:convert';
 import '../utils/streak_util.dart';
+import '../l10n/i18n.dart';
 
 /// 数据统计页面
 ///
@@ -74,9 +75,9 @@ class _StatisticsPageState extends State<StatisticsPage> with SingleTickerProvid
     }
 
     await Future.wait([
-      withTimeout(_loadHealthData(), '健康'),
-      withTimeout(_loadCheckinData(), '签到'),
-      withTimeout(_loadMenstruationData(), '经期'),
+      withTimeout(_loadHealthData(), tr.s1054),
+      withTimeout(_loadCheckinData(), tr.s1055),
+      withTimeout(_loadMenstruationData(), tr.s1056),
     ]);
 
     if (mounted) setState(() => _isLoading = false);
@@ -213,8 +214,8 @@ class _StatisticsPageState extends State<StatisticsPage> with SingleTickerProvid
       final now = DateTime.now();
       final weekStart = now.subtract(Duration(days: now.weekday - 1));
       _weeklyCheckins = _checkinDates.where((date) {
-        return date.isAfter(weekStart.subtract(const Duration(days: 1))) &&
-            date.isBefore(now.add(const Duration(days: 1)));
+        return date.isAfter(weekStart.subtract( Duration(days: 1))) &&
+            date.isBefore(now.add( Duration(days: 1)));
       }).length;
     } catch (e) {
       if (kDebugMode) debugPrint('[Statistics] 加载签到数据失败: $e');
@@ -257,7 +258,7 @@ class _StatisticsPageState extends State<StatisticsPage> with SingleTickerProvid
     return Scaffold(
       backgroundColor: ZaiNeColors.scaffoldBg(),
       appBar: AppBar(
-        title: const Text('数据统计'),
+        title:  Text(tr.s237),
         backgroundColor: ZaiNeColors.cardBg(),
         foregroundColor: ZaiNeColors.textPrimary(),
         elevation: 0,
@@ -266,10 +267,10 @@ class _StatisticsPageState extends State<StatisticsPage> with SingleTickerProvid
           labelColor: Theme.of(context).primaryColor,
           unselectedLabelColor: ZaiNeColors.textHint(),
           indicatorColor: Theme.of(context).primaryColor,
-          tabs: const [
-            Tab(icon: Icon(Icons.favorite), text: '健康'),
-            Tab(icon: Icon(Icons.calendar_today), text: '签到'),
-            Tab(icon: Icon(Icons.water_drop), text: '经期'),
+          tabs:  [
+            Tab(icon: Icon(Icons.favorite), text: tr.s1054),
+            Tab(icon: Icon(Icons.calendar_today), text: tr.s1055),
+            Tab(icon: Icon(Icons.water_drop), text: tr.s1056),
           ],
         ),
         actions: [
@@ -306,7 +307,7 @@ class _StatisticsPageState extends State<StatisticsPage> with SingleTickerProvid
           // 心率趋势
           HealthTrendChart(
             data: _heartRateData,
-            title: '心率趋势',
+            title: tr.s1057,
             unit: 'bpm',
             lineColor: Colors.red,
             fillColor: Colors.red,
@@ -317,7 +318,7 @@ class _StatisticsPageState extends State<StatisticsPage> with SingleTickerProvid
           // 血氧趋势
           HealthTrendChart(
             data: _bloodOxygenData,
-            title: '血氧趋势',
+            title: tr.s1058,
             unit: '%',
             lineColor: Colors.blue,
             fillColor: Colors.blue,
@@ -328,8 +329,8 @@ class _StatisticsPageState extends State<StatisticsPage> with SingleTickerProvid
           // 睡眠趋势
           HealthTrendChart(
             data: _sleepData,
-            title: '睡眠时长',
-            unit: '分钟',
+            title: tr.s1059,
+            unit: tr.s1060,
             lineColor: Colors.indigo,
             fillColor: Colors.indigo,
             minY: 300,
@@ -387,8 +388,8 @@ class _StatisticsPageState extends State<StatisticsPage> with SingleTickerProvid
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'AI 健康分析',
+                     Text(
+                      tr.s598,
                       style: TextStyle(
                         fontSize: ZaiNeFontSize.subtitle,
                         fontWeight: FontWeight.bold,
@@ -396,7 +397,7 @@ class _StatisticsPageState extends State<StatisticsPage> with SingleTickerProvid
                     ),
                     const SizedBox(height: ZaiNeSpacing.xs),
                     Text(
-                      '智能分析您的健康数据，提供个性化建议',
+                      tr.s1061,
                       style: TextStyle(
                         fontSize: ZaiNeFontSize.caption,
                         color: Colors.grey.shade600,
@@ -438,8 +439,8 @@ class _StatisticsPageState extends State<StatisticsPage> with SingleTickerProvid
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  '请前往 iPhone 授权健康数据',
+                 Text(
+                  tr.s780,
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.bold,
@@ -448,7 +449,7 @@ class _StatisticsPageState extends State<StatisticsPage> with SingleTickerProvid
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  '设置 → 健康 → 数据来源与访问权限 → 在呢+ → 全部打开',
+                  tr.s1062,
                   style: TextStyle(
                     fontSize: 13,
                     color: Colors.grey.shade700,
@@ -465,8 +466,8 @@ class _StatisticsPageState extends State<StatisticsPage> with SingleTickerProvid
                           // 简单提示
                           if (mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('请打开 iPhone「设置 → 健康」手动授权'),
+                               SnackBar(
+                                content: Text(tr.s1063),
                                 duration: Duration(seconds: 3),
                               ),
                             );
@@ -474,7 +475,7 @@ class _StatisticsPageState extends State<StatisticsPage> with SingleTickerProvid
                         } catch (_) {}
                       },
                       icon: const Icon(Icons.settings, size: 16),
-                      label: const Text('我知道了'),
+                      label:  Text(tr.s489),
                       style: TextButton.styleFrom(
                         foregroundColor: Colors.orange.shade700,
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -485,7 +486,7 @@ class _StatisticsPageState extends State<StatisticsPage> with SingleTickerProvid
                     TextButton.icon(
                       onPressed: () => _loadData(),
                       icon: const Icon(Icons.refresh, size: 16),
-                      label: const Text('重新检测'),
+                      label:  Text(tr.s782),
                       style: TextButton.styleFrom(
                         foregroundColor: Colors.orange.shade700,
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),

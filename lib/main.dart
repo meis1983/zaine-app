@@ -19,6 +19,11 @@ import 'services/api/auth_service.dart';
 import 'services/platform/health_service.dart'; // 【v1.91.0】Watch 签到通道
 import 'services/platform/watch_data_service.dart'; // 【修复】Watch 健康数据推送初始化
 import 'data/app_constants.dart';
+import 'config/app_config.dart';
+import 'l10n/app_localizations.dart';
+import 'l10n/i18n.dart';
+import 'l10n/locale_notifier.dart';
+import 'utils/device_adapter.dart'; // 【Duo 适配】窗口宽度断点 + 铰链避让（普通设备 no-op）
 // import 'config/feature_flags.dart';  // 暂时未使用，保留以备后续功能开发
 
 // 主题模式枚举
@@ -61,6 +66,8 @@ void main() async {
     ),
   );
   await themeNotifier.load();
+  // 【多语言 i18n Stage 5】加载持久化的语言偏好（system / 显式语言）
+  await localeNotifier.load();
 
   // 【v1.91.0】初始化 Watch MethodChannel — AppDelegate 收到 Watch 签到后立即通知 Flutter
   HealthService.initWatchChannel();
@@ -134,7 +141,9 @@ Future<void> _migrateSensitiveDataToKeychain() async {
     // 历史版本静默登录漏写 user_id，导致 token 身份(A) 与 user_id 身份(B) 分叉；已装旧版的设备
     // 即使升级后 Keychain 仍残留旧 user_id。此处以 token 为真相源重新对齐，无需手动登出重登即可自愈。
     try {
-      final _t = await secureStorage.read(key: 'auth_token');
+      // 【v1.97.2 容错】同 SplashScreen，模拟器 Keychain 首次 read 偶发挂起，加 2s 超时保护。
+      final _t = await secureStorage.read(key: 'auth_token')
+          .timeout(const Duration(seconds: 2), onTimeout: () => null);
       if (_t != null && _t.isNotEmpty && _t.split('.').length == 3) {
         String _p = _t.split('.')[1];
         while (_p.length % 4 != 0) _p += '=';
@@ -171,6 +180,8 @@ class _ZaiNeAppState extends State<ZaiNeApp> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     themeNotifier.addListener(_onThemeChanged);
+    // 【多语言 i18n Stage 5】监听语言偏好变化，触发 MaterialApp 重建以切换 locale
+    localeNotifier.addListener(_onLocaleChanged);
     // 🔴【v1.97.3 (162) 修复 Bug 5】监听 App 前后台切换：回到前台时刷新 Watch 配对状态，
     // 让冷启动阶段 _isPaired 尚未就绪时，下次健康数据推送能拿到正确的配对状态。
     WidgetsBinding.instance.addObserver(this);
@@ -180,6 +191,7 @@ class _ZaiNeAppState extends State<ZaiNeApp> with WidgetsBindingObserver {
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     themeNotifier.removeListener(_onThemeChanged);
+    localeNotifier.removeListener(_onLocaleChanged);
     super.dispose();
   }
 
@@ -214,6 +226,11 @@ class _ZaiNeAppState extends State<ZaiNeApp> with WidgetsBindingObserver {
   }
 
   void _onThemeChanged() {
+    if (mounted) setState(() {});
+  }
+
+  // 【多语言 i18n Stage 5】语言偏好变化 → 重建 MaterialApp，切换 locale
+  void _onLocaleChanged() {
     if (mounted) setState(() {});
   }
 
@@ -310,11 +327,23 @@ class _ZaiNeAppState extends State<ZaiNeApp> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
+    // 【多语言 i18n】CN 合规版强制锁定简体中文，语言切换 UI 不影响它；
+    // 海外版 locale 留 null，跟随系统 + supportedLocales 回退。
+    final bool isCn = AppConfig.isChinaRegion;
     return MaterialApp(
-      title: '在呢',
+      title: tr.appTitle,
       debugShowCheckedModeBanner: false,
       theme: _buildTheme(themeNotifier.mode),
       home: const SplashScreen(),
+      // 【多语言 i18n Stage 5】CN 强制锁 zh-CN；海外版用持久化语言（null=跟随系统）
+      locale: isCn ? const Locale('zh', 'CN') : localeNotifier.locale,
+      localizationsDelegates: S.localizationsDelegates,
+      supportedLocales: S.supportedLocales,
+      builder: (context, child) {
+        // 注册全局 context，供 lib/l10n/i18n.dart 的 tr 在无 context 作用域处取词
+        registerAppContext(context);
+        return child!;
+      },
     );
   }
 }
@@ -432,7 +461,17 @@ class _SplashScreenState extends State<SplashScreen>
       final onboardingCompleted = prefs.getBool('onboarding_completed') ?? false;
       // 【修复 v1.77.0】从 Keychain 读取 token（安全，不再从 SP 读取明文 token）
       const secureStorage = FlutterSecureStorage();
-      final authToken = await secureStorage.read(key: 'auth_token');
+      // 【v1.97.2 容错】iOS 模拟器 Keychain 首次 read 偶发永久挂起**或抛异常**（真机无此问题）。
+      // 双重保护：2s 超时 + try-catch。超时或异常都返回 null，走 onboarding 流程，避免 splash 永久转圈。
+      // 真机 read 立即返回，timeout/catch 永不触发，行为零变化。
+      String? authToken;
+      try {
+        authToken = await secureStorage.read(key: 'auth_token')
+            .timeout(const Duration(seconds: 2), onTimeout: () => null);
+      } catch (e) {
+        if (kDebugMode) debugPrint('[Splash] ⚠️ Keychain read 失败（模拟器已知问题），走 onboarding: $e');
+        authToken = null;
+      }
       final isLoggedIn = prefs.getBool('is_logged_in') ?? false;
 
       // 【修复 v1.9.6】数据一致性检查：引导已完成但无有效token → 视为未登录，回到引导页
@@ -576,8 +615,8 @@ class _SplashScreenState extends State<SplashScreen>
                     child: child,
                   );
                 },
-                child: const Text(
-                  '在呢',
+                child: Text(
+                  tr.appTitle,
                   style: TextStyle(
                     fontSize: 42,
                     fontWeight: FontWeight.bold,
@@ -600,9 +639,9 @@ class _SplashScreenState extends State<SplashScreen>
             // ====== Slogan：延迟淡入 ======
             FadeTransition(
               opacity: _sloganFadeAnimation,
-              child: const Text(
-                '让在乎你的人，时刻知道你在',
-                style: TextStyle(
+              child: Text(
+                tr.splashSlogan,
+                style: const TextStyle(
                   fontSize: 16,
                   color: Color(0xCCFFFFFF),
                   letterSpacing: 1.5,
@@ -690,7 +729,9 @@ class _MainNavigationState extends State<MainNavigation> {
     }
 
     return Scaffold(
-      body: _pages[_currentIndex],
+      // 【Duo 适配】铰链安全区：普通设备无 displayFeatures，FoldSafeArea 透传零影响；
+      // 折叠屏展开时自动避开中缝。对话框由 Navigator 上层渲染，不受此包裹影响。
+      body: FoldSafeArea(child: _pages[_currentIndex]),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: navBgColor,
@@ -719,25 +760,25 @@ class _MainNavigationState extends State<MainNavigation> {
           },
           animationDuration: const Duration(milliseconds: 400),
           destinations: [
-            const NavigationDestination(
+            NavigationDestination(
               icon: Icon(Icons.home_outlined, size: 22),
               selectedIcon: Icon(Icons.home, size: 24),
-              label: '首页',
+              label: tr.z0036,
             ),
             NavigationDestination(
               icon: _buildGuardianIcon(isSelected: false),
               selectedIcon: _buildGuardianIcon(isSelected: true),
-              label: '守护圈',
+              label: tr.z0037,
             ),
             NavigationDestination(
               icon: _buildHelpIcon(isSelected: false),
               selectedIcon: _buildHelpIcon(isSelected: true),
-              label: '求助',
+              label: tr.z0005,
             ),
-            const NavigationDestination(
+            NavigationDestination(
               icon: Icon(Icons.person_outline_rounded, size: 22),
               selectedIcon: Icon(Icons.person_rounded, size: 24),
-              label: '我的',
+              label: tr.z0038,
             ),
           ],
         ),

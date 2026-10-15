@@ -10,11 +10,12 @@ import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'watch_data_service.dart';
 import '../safety/safety_service.dart';
-import '../safety/safety_signal_engine.dart';
+import '../safety/vitals_assessment.dart';
 import '../database/circle_event_dao.dart';
 import '../../config/app_config.dart';
 import '../../utils/streak_util.dart';
 import '../debug_log.dart'; // [191] 双通道日志（心跳签到透明化，文件兜底可事后取回）
+import '../../l10n/i18n.dart';
 
 /// 健康数据服务 (Apple Watch / HealthKit 集成)
 /// 实现「多维度生命体征监测」的核心逻辑
@@ -173,7 +174,7 @@ class HealthService {
   ///   health 插件 iOS 端 SwiftHealthPlugin.hasPermission() 对 READ 权限 case 0
   ///   直接 `return nil`（Apple 隐私模型），外层循环任一 type 返回 nil/false 即 result(nil)。
   ///   整段代码无任何修改能让插件在 iOS READ 上返回真值。请改用 checkRealAuthStatus()。
-  @Deprecated('iOS HealthKit 隐私模型下永远 false，请使用 checkRealAuthStatus()')
+  @Deprecated('Use checkRealAuthStatus() instead (iOS HealthKit privacy model never returns true for READ)')
   static Future<bool> hasPermissions() async {
     try {
       final core = _coreTypes();
@@ -629,7 +630,7 @@ class HealthService {
   /// ⚠️ 设计约束（勿改）：
   /// 全读 ≠ 全展示。本方法读全量是为了喂给「安全信号引擎」做异常判定
   /// （例：判断「长时间无活动」需同时看步数 / 运动时长 / 站立小时 / 心率波动），
-  /// UI 层只展示 L1 守护级指标，保持克制。详见 SafetySignalEngine。
+  /// UI 层只展示 L1 守护级指标，保持克制。详见 VitalsAssessment。
   ///
   /// 任一指标缺失 → 对应 key 不存在，调用方按 '--' 处理，绝不抛错。
   static Future<Map<String, dynamic>> getFullMirror({bool forceRefresh = false}) async {
@@ -877,7 +878,7 @@ class HealthService {
 
         // 【v1.97.2 新增】安全信号引擎判定：长时间无活动等「安全」维度异常
         // 与上方 checkAnomalies（纯生理指标越界）互补，二者独立冷静期、互不覆盖。
-        await _evaluateSafetySignal(summary);
+        await _evaluateVitalsAnomaly(summary);
 
         return true;
     } catch (e) {
@@ -889,24 +890,24 @@ class HealthService {
   // ==================== 安全信号自动守护 (v1.97.2) ====================
 
   /// 安全信号外发冷静期：同一等级 6 小时内不重复打扰守护圈
-  static const Duration _safetyAlertCooldown = Duration(hours: 6);
+  static const Duration _vitalsAlertCooldown = Duration(hours: 6);
 
   /// 用户开关键：异常时是否自动通知守护圈（仅海外版有效）
-  static const String kSafetyAutoAlertKey = 'safety_auto_alert_enabled';
+  static const String kVitalsAutoAlertKey = 'safety_auto_alert_enabled';
 
   /// 读取「异常自动通知守护圈」开关。
   /// CN 版恒为 false（合规硬闸门，不受用户设置影响）。
-  static Future<bool> isSafetyAutoAlertEnabled() async {
+  static Future<bool> isVitalsAutoAlertEnabled() async {
     if (AppConfig.isChinaRegion) return false;
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getBool(kSafetyAutoAlertKey) ?? true; // 海外版默认开启
+    return prefs.getBool(kVitalsAutoAlertKey) ?? true; // 海外版默认开启
   }
 
   /// 设置「异常自动通知守护圈」开关（CN 版调用无效）
-  static Future<void> setSafetyAutoAlertEnabled(bool v) async {
+  static Future<void> setVitalsAutoAlertEnabled(bool v) async {
     if (AppConfig.isChinaRegion) return;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(kSafetyAutoAlertKey, v);
+    await prefs.setBool(kVitalsAutoAlertKey, v);
   }
 
   /// 依据安全信号引擎结论，决定是否惊动守护圈。
@@ -919,37 +920,38 @@ class HealthService {
   /// 🔴【中国合规版红线】
   /// CN 版**绝不自动外发**，仅写入本地待确认队列 + 本机通知提醒用户本人，
   /// 由用户手动确认后守护人才可见。这正是当初被判定 dead-man switch 下架的红线。
-  static Future<void> _evaluateSafetySignal(Map<String, dynamic> summary) async {
+  static Future<void> _evaluateVitalsAnomaly(Map<String, dynamic> summary) async {
     try {
-      final signal = SafetySignalEngine.evaluate(summary);
+      final signal = evaluateVitals(summary);
 
       // 仅 alert 级别才考虑惊动守护圈；attention 级只在 App 内展示，不外发
-      if (signal.level != SafetyLevel.alert) return;
+      if (signal.level != VitalsLevel.alert) return;
 
       final prefs = await SharedPreferences.getInstance();
       final lastStr = prefs.getString('last_safety_alert_time');
       final last = lastStr != null ? DateTime.tryParse(lastStr) : null;
-      if (last != null && DateTime.now().difference(last) < _safetyAlertCooldown) {
-        if (kDebugMode) debugPrint('[SafetySignal] 处于冷静期内，跳过重复外发');
+      if (last != null && DateTime.now().difference(last) < _vitalsAlertCooldown) {
+        if (kDebugMode) debugPrint('[Vitals] 处于冷静期内，跳过重复外发');
         return;
       }
 
       final reasons = signal.reasons
-          .where((r) => r.level == SafetyLevel.alert)
+          .where((r) => r.level == VitalsLevel.alert)
           .map((r) => r.text)
           .toList();
       if (reasons.isEmpty) return;
 
       // 双重闸门：① 区域合规（CN 恒关，用户不可开）② 用户自主开关（海外版可关）
-      final autoAlertOn = await isSafetyAutoAlertEnabled();
+      final autoAlertOn = await isVitalsAutoAlertEnabled();
       if (!autoAlertOn) {
         final why = AppConfig.isChinaRegion ? '[CN 合规闸门]' : '[用户已关闭]';
-        if (kDebugMode) debugPrint('[SafetySignal] $why 拦截自动外发，转本地待确认: $reasons');
+        if (kDebugMode) debugPrint('[Vitals] $why 拦截自动外发，转本地待确认: $reasons');
         await prefs.setStringList('pending_safety_alerts', reasons);
         await prefs.setString('pending_safety_alert_time', DateTime.now().toIso8601String());
-      } else {
+      } else if (!kIsChinaBuild) {
         // 海外版且用户开启：自动通知守护圈
-        if (kDebugMode) debugPrint('[SafetySignal] 触发自动外发: $reasons');
+        // 【CN 合规】该分支在 CN 二进制中被编译期剔除（kIsChinaBuild=true → 永不可达）
+        if (kDebugMode) debugPrint('[Vitals] 触发自动外发: $reasons');
         await NotifyService.sendHealthAlert(reasons);
       }
 
@@ -960,16 +962,16 @@ class HealthService {
         await CircleEventDao.insert(CircleEvent(
           type: CircleEventType.vitalAnomaly,
           actor: 'me',
-          summary: '体征异常预警',
+          summary: tr.z0014,
           detail: reasons.join('；'),
           ts: DateTime.now().millisecondsSinceEpoch,
         ));
       } catch (logErr) {
-        if (kDebugMode) debugPrint('[SafetySignal] 写今日事件失败(忽略): $logErr');
+        if (kDebugMode) debugPrint('[Vitals] 写今日事件失败(忽略): $logErr');
       }
     } catch (e) {
       // 守护判定失败绝不影响主同步流程
-      if (kDebugMode) debugPrint('[SafetySignal] 判定异常(忽略): $e');
+      if (kDebugMode) debugPrint('[Vitals] 判定异常(忽略): $e');
     }
   }
 
@@ -980,8 +982,8 @@ class HealthService {
     // 1. 检查极端心率
     if (summary.containsKey('heart_rate')) {
       double hr = double.tryParse(summary['heart_rate'].toString()) ?? 0;
-      if (hr > 120) alerts.add('心率过快 ($hr bpm)');
-      if (hr > 0 && hr < 45) alerts.add('心率过缓 ($hr bpm)');
+      if (hr > 120) alerts.add(tr.z0304(hr));
+      if (hr > 0 && hr < 45) alerts.add(tr.z0305(hr));
     }
 
     // 2. 检查低血氧
@@ -990,7 +992,7 @@ class HealthService {
       // 【2026-07-15 修复】统一归一化为百分比：0.0-1.0 分数 → ×100；>1 视为已是百分比
       final boPct = bo <= 1.0 ? bo * 100 : bo;
       if (boPct > 0 && boPct < 90) {
-        alerts.add('血氧饱和度偏低 (${boPct.toStringAsFixed(0)}%)');
+        alerts.add(tr.z0306(boPct.toStringAsFixed(0)));
       }
     }
 
@@ -999,9 +1001,9 @@ class HealthService {
       double systolic = double.tryParse(summary['bp_systolic'].toString()) ?? 0;
       double diastolic = double.tryParse(summary['bp_diastolic']?.toString() ?? '0') ?? 0;
       if (systolic >= 140 || diastolic >= 90) {
-        alerts.add('检测到血压偏高 ($systolic/$diastolic mmHg)');
+        alerts.add(tr.z0307(systolic, diastolic));
       } else if (systolic > 0 && systolic < 90) {
-        alerts.add('检测到血压偏低 ($systolic mmHg)');
+        alerts.add(tr.z0308(systolic));
       }
     }
 
@@ -1009,9 +1011,9 @@ class HealthService {
     if (summary.containsKey('respiratory_rate')) {
       double rr = double.tryParse(summary['respiratory_rate'].toString()) ?? 0;
       if (rr > 25) {
-        alerts.add('呼吸频率异常偏快 ($rr 次/分)');
+        alerts.add(tr.z0309(rr));
       } else if (rr > 0 && rr < 8) {
-        alerts.add('呼吸频率异常偏慢 ($rr 次/分)');
+        alerts.add(tr.z0310(rr));
       }
     }
 
@@ -1019,7 +1021,7 @@ class HealthService {
     if (summary.containsKey('body_temperature')) {
       double temp = double.tryParse(summary['body_temperature'].toString()) ?? 0;
       if (temp > 38.0) {
-        alerts.add('检测到体温偏高 ($temp°C)');
+        alerts.add(tr.z0311(temp));
       }
     }
 
@@ -1029,7 +1031,7 @@ class HealthService {
       if (summary.containsKey('body_temperature')) {
         double temp = double.tryParse(summary['body_temperature'].toString()) ?? 0;
         if (temp > 37.0 && temp <= 38.0) {
-          alerts.add('经期体温偏高 ($temp°C)，注意休息');
+          alerts.add(tr.z0312(temp));
         }
       }
     }
@@ -1040,11 +1042,11 @@ class HealthService {
       int avgCycle = (summary['average_cycle_length'] as int?) ?? 28;
       // 距离预测经期还有2天内
       if (cycleDay >= avgCycle - 2 && cycleDay <= avgCycle) {
-        alerts.add('经期可能即将到来（周期第$cycleDay天）');
+        alerts.add(tr.z0313(cycleDay));
       }
       // 周期异常偏长
       if (cycleDay > avgCycle + 7) {
-        alerts.add('经期周期偏长（已第$cycleDay天，平均$avgCycle天）');
+        alerts.add(tr.z0314(cycleDay, avgCycle));
       }
     }
 
@@ -1117,7 +1119,7 @@ class HealthService {
       // 手表健康速览依赖本函数内部的 syncHealthData()(见 _executeCheckIn L1155) 把体征
       // pushHealthSummary 到手表。191 初版在此直接 return 导致手表健康速览空白。
       // 现改为：跳过签到，但仍同步健康数据到手表。
-      await DebugLog.write('191 WB', '今日已签到，跳过自动签到(仍同步健康数据到手表) fromHeartbeat=$fromHeartbeat hasWatchSignal=${prefs.getBool('pending_watch_checkin') ?? false}');
+      await DebugLog.write('191 WB', tr.z0315(fromHeartbeat, prefs.getBool('pending_watch_checkin') ?? false));
       if (kDebugMode) debugPrint('[HealthService][191 WB] 今日已签到，跳过自动签到，但仍同步健康数据到手表');
       try {
         await syncHealthData();
@@ -1131,7 +1133,7 @@ class HealthService {
 
     // 【P0】来自 Watch 的自动心率签到：直接执行，source='heartbeat'（弹💓横幅，不回包Watch）
     if (fromHeartbeat) {
-      await DebugLog.write('191 WB', '执行 Watch 心跳自动签到 clientId=$clientId');
+      await DebugLog.write('191 WB', tr.z0316(clientId));
       if (kDebugMode) debugPrint('[HealthService] 💓 来自 Watch 的心跳自动签到，跳过门禁直接执行 (clientId=$clientId)');
       await _executeCheckIn(prefs, source: 'heartbeat', clientId: clientId);
       return;
@@ -1187,7 +1189,7 @@ class HealthService {
       ).timeout(const Duration(seconds: 10));
     } on TimeoutException catch (e) {
       if (kDebugMode) debugPrint('[HealthService] ⚠️ Watch 签到请求超时(10s，避免永久卡死): $e');
-      await DebugLog.write('191 WB', '签到超时(10s) source=$source');
+      await DebugLog.write('191 WB', tr.z0317(source));
       if (source == 'watch' && clientId != null && clientId.isNotEmpty) {
         _sendWatchAck(
           clientId: clientId,
@@ -1201,7 +1203,7 @@ class HealthService {
       return;
     } catch (e) {
       if (kDebugMode) debugPrint('[HealthService] ⚠️ Watch 签到请求异常(登录失效/网络错误): $e');
-      await DebugLog.write('191 WB', '签到异常 source=$source: $e');
+      await DebugLog.write('191 WB', tr.z0318(source, e));
       // 异常兜底：让 Watch 不卡死，但诚实回包「失败」（不再假绿为已签到），
       // 手机端刷新最新状态
       if (source == 'watch' && clientId != null && clientId.isNotEmpty) {
@@ -1219,7 +1221,7 @@ class HealthService {
 
     if (res['success'] == true) {
       if (kDebugMode) debugPrint('[HealthService] ✅ 签到成功 (source=$source)');
-      await DebugLog.write('191 WB', '签到成功 source=$source uid=$uid');
+      await DebugLog.write('191 WB', tr.z0319(source, uid));
       final lastDateKey = uid.isNotEmpty ? 'last_check_in_date_$uid' : 'last_check_in_date';
       // 【v1.97.2 彻底修复】以「本地签到历史」为单一真相源重算连续天数，
       // 不再直接信任后端易错的 streak 字段（曾导致手表签到后手机首屏显示 6 而非真实 3，
@@ -1277,7 +1279,7 @@ class HealthService {
       }
     } else {
       if (kDebugMode) debugPrint('[HealthService] ⚠️ 签到返回未成功: ${res['error']}');
-      await DebugLog.write('191 WB', '签到未成功(服务端) source=$source: ${res['error']}');
+      await DebugLog.write('191 WB', tr.z0320(source, res['error']));
       // 即使服务端返回未成功(例如已签到)，也尝试回包让 Watch 显示已签到状态
       if (source == 'watch' && clientId != null && clientId.isNotEmpty) {
         _sendWatchAck(clientId: clientId, streak: StreakUtil.readStreak(prefs, uid), total: prefs.getInt(totalKey) ?? 0, alreadyDone: true);
@@ -1420,49 +1422,52 @@ class HealthService {
     }
   }
 
-  /// 请求跌倒检测授权
-  static Future<bool> requestFallDetectionAuthorization() async {
+  /// 请求运动监测授权
+  static Future<bool> requestMotionMonitoringAuthorization() async {
+    if (kIsChinaBuild) return false;
     try {
-      final bool? result = await _healthKitChannel.invokeMethod<bool>('requestFallDetectionAuthorization');
-      if (kDebugMode) debugPrint('[HealthService] 跌倒检测授权结果: $result');
+      final bool? result = await _healthKitChannel.invokeMethod<bool>('requestMotionMonitoringAuthorization');
+      if (kDebugMode) debugPrint('[HealthService] 运动监测授权结果: $result');
       return result ?? false;
     } catch (e) {
-      if (kDebugMode) debugPrint('[HealthService] 请求跌倒检测授权失败: $e');
+      if (kDebugMode) debugPrint('[HealthService] 请求运动监测授权失败: $e');
       return false;
     }
   }
 
-  /// 获取最近 N 小时的跌倒事件
-  static Future<List<Map<String, dynamic>>> getRecentFallEvents({int hours = 24}) async {
+  /// 获取最近 N 小时的运动监测事件
+  static Future<List<Map<String, dynamic>>> getRecentMotionEvents({int hours = 24}) async {
+    if (kIsChinaBuild) return [];
     try {
       final List<dynamic>? result = await _healthKitChannel.invokeMethod<List<dynamic>>(
-        'getRecentFallEvents',
+        'getRecentMotionEvents',
         {'hours': hours},
       );
       if (result == null) return [];
       return result.map((e) => Map<String, dynamic>.from(e as Map)).toList();
     } catch (e) {
-      if (kDebugMode) debugPrint('[HealthService] 获取跌倒事件失败: $e');
+      if (kDebugMode) debugPrint('[HealthService] 获取运动监测事件失败: $e');
       return [];
     }
   }
 
-  /// 检查是否有新的跌倒事件，并记录到 SafetyService
+  /// 检查是否有新的运动监测事件，并记录到 SafetyService
   /// [onNewFall] 发现新事件时的回调
-  static Future<List<Map<String, dynamic>>> checkForNewFallEvents({
+  static Future<List<Map<String, dynamic>>> checkForNewMotionEvents({
     void Function(Map<String, dynamic>)? onNewFall,
   }) async {
+    if (kIsChinaBuild) return [];
     final prefs = await SharedPreferences.getInstance();
     final lastCheckStr = prefs.getString('last_fall_check_time');
     final lastCheck = lastCheckStr != null
         ? DateTime.tryParse(lastCheckStr)
         : null;
-    
+
     // 请求授权（首次会弹出权限框）
-    await requestFallDetectionAuthorization();
-    
-    // 拉取过去 7 天的跌倒事件（避免遗漏）
-    final events = await getRecentFallEvents(hours: 24 * 7);
+    await requestMotionMonitoringAuthorization();
+
+    // 拉取过去 7 天的运动监测事件（避免遗漏）
+    final events = await getRecentMotionEvents(hours: 24 * 7);
     final now = DateTime.now();
     final newEvents = <Map<String, dynamic>>[];
     

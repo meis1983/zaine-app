@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../theme/theme_helper.dart';
 import '../data/app_constants.dart';
+import '../l10n/i18n.dart';
 
 /// 守护卡模板配置
 class GuardianCardTemplate {
@@ -64,7 +65,7 @@ class GuardianCardPainter {
     String? cardCode,
     bool isWelcomeMode = false,
   }) {
-    // 根据安全码的首字母或随机数决定模板，确保同一张卡模板固定
+    // 根据守护码的首字母或随机数决定模板，确保同一张卡模板固定
     final int themeIdx = (cardCode != null && cardCode.isNotEmpty) 
         ? cardCode.codeUnitAt(0) % GuardianCardTemplate.themes.length
         : Random().nextInt(GuardianCardTemplate.themes.length);
@@ -164,7 +165,7 @@ class _GuardianCardWidgetState extends State<_GuardianCardWidget> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            '· 在呢 · 守护卡 ·',
+            tr.z0749,
             style: TextStyle(
               fontSize: 14,
               color: theme.accentColor,
@@ -216,8 +217,8 @@ class _GuardianCardWidgetState extends State<_GuardianCardWidget> {
 
           Text(
             widget.recipientName != null && widget.recipientName!.isNotEmpty
-                ? '致 ${widget.recipientName}'
-                : '见信如晤',
+                ? tr.z0750(widget.recipientName)
+                : tr.z0751,
             style: TextStyle(
               fontSize: 24,
               color: theme.textColor,
@@ -250,7 +251,7 @@ class _GuardianCardWidgetState extends State<_GuardianCardWidget> {
               ),
               const SizedBox(height: 10),
               Text(
-                '扫一扫，领取守护',
+                tr.z0752,
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
@@ -260,7 +261,7 @@ class _GuardianCardWidgetState extends State<_GuardianCardWidget> {
               ),
               const SizedBox(height: 4),
               Text(
-                '在呢+ · 收到一份温暖的牵挂',
+                tr.z0753,
                 style: TextStyle(fontSize: 12, color: theme.textColor.withValues(alpha: 0.55)),
               ),
             ],
@@ -268,7 +269,7 @@ class _GuardianCardWidgetState extends State<_GuardianCardWidget> {
 
           const SizedBox(height: 16),
 
-          // 安全码（醒目展示 — 扫码失败时的备用绑定方案）
+          // 守护码（醒目展示 — 扫码失败时的备用绑定方案）
           if (widget.cardCode != null && widget.cardCode!.isNotEmpty)
             Container(
               width: double.infinity,
@@ -281,7 +282,7 @@ class _GuardianCardWidgetState extends State<_GuardianCardWidget> {
               child: Column(
                 children: [
                   Text(
-                    '守护安全码',
+                    tr.s1015,
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
@@ -291,7 +292,7 @@ class _GuardianCardWidgetState extends State<_GuardianCardWidget> {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    '扫码失败？在 App 内输入此码绑定',
+                    tr.z0754,
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 12,
@@ -302,7 +303,7 @@ class _GuardianCardWidgetState extends State<_GuardianCardWidget> {
                   if ((widget.totalGuardians ?? 0) > 0) ...[
                     const SizedBox(height: 8),
                     Text(
-                      '已有 ${widget.totalGuardians} 人加入守护圈',
+                      tr.z0755(widget.totalGuardians),
                       style: TextStyle(
                         fontSize: 11,
                         color: theme.textColor.withValues(alpha: 0.55),
@@ -314,7 +315,7 @@ class _GuardianCardWidgetState extends State<_GuardianCardWidget> {
               ),
             ),
 
-          // 安全码大字展示（金色醒目）
+          // 守护码大字展示（金色醒目）
           if (widget.cardCode != null && widget.cardCode!.isNotEmpty) ...[
             const SizedBox(height: 16),
             Container(
@@ -328,7 +329,7 @@ class _GuardianCardWidgetState extends State<_GuardianCardWidget> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    '安全码 ',
+                    tr.s272,
                     style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: theme.textColor.withValues(alpha: 0.7)),
                   ),
                   Text(
@@ -429,7 +430,7 @@ class _GuardianCardWidgetState extends State<_GuardianCardWidget> {
 
           // 标题
           Text(
-            '· 在呢 · 守护已建立 ·',
+            tr.z0756,
             style: TextStyle(
               fontSize: 14,
               color: theme.accentColor,
@@ -441,7 +442,7 @@ class _GuardianCardWidgetState extends State<_GuardianCardWidget> {
 
           // 主标题
           Text(
-            '守护关系已建立',
+            tr.s1012,
             style: TextStyle(
               fontSize: 24,
               color: theme.textColor,
@@ -453,7 +454,7 @@ class _GuardianCardWidgetState extends State<_GuardianCardWidget> {
 
           // 副标题
           Text(
-            '${widget.senderName} 想守护你',
+            tr.z0757(widget.senderName),
             style: TextStyle(
               fontSize: 16,
               color: theme.textColor.withValues(alpha: 0.7),
@@ -484,7 +485,7 @@ class _GuardianCardWidgetState extends State<_GuardianCardWidget> {
 
           // 温馨说明
           Text(
-            '从今天起，你们将互相收到每日签到提醒',
+            tr.z0758,
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 12,
@@ -494,7 +495,7 @@ class _GuardianCardWidgetState extends State<_GuardianCardWidget> {
           ),
           const SizedBox(height: 6),
           Text(
-            '让在乎的人知道你很好 💌',
+            tr.z0759,
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 12,

@@ -17,6 +17,7 @@ import '../widgets/full_help_page_widget.dart';
 import '../widgets/lightweight_guide_widget.dart';
 import 'profile_page.dart';
 import 'contacts_page.dart';
+import '../l10n/i18n.dart';
 
 class HelpPage extends StatefulWidget {
   const HelpPage({super.key});
@@ -47,7 +48,7 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
   // ========== 健康档案数据 ==========
   String _userName = '';
   int _userAge = 0;
-  String _bloodType = '未知';
+  String _bloodType = tr.s013;
   String _allergy = '';
   String _disease = '';
   String _medicine = '';
@@ -157,12 +158,12 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
           final profile = jsonDecode(profileJson);
           _userName = profile['name'] ?? '';
           _userAge = profile['age'] ?? 0;
-          _bloodType = profile['bloodType'] ?? '未知';
+          _bloodType = profile['bloodType'] ?? tr.s013;
           _allergy = profile['allergy'] ?? '';
           _disease = profile['disease'] ?? '';
           _medicine = profile['medicine'] ?? '';
           _emergencyNote = profile['emergencyNote'] ?? '';
-          profileOk = _userName.isNotEmpty && _userAge > 0 && _bloodType != '未知' && _bloodType.isNotEmpty;
+          profileOk = _userName.isNotEmpty && _userAge > 0 && _bloodType != tr.s013 && _bloodType.isNotEmpty;
         } catch (_) {}
       }
       _hasProfileReady = profileOk;
@@ -237,11 +238,11 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
       setState(() => _hasLocationReady = true);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Row(
+          content:  Row(
             children: [
               Icon(Icons.check_circle, color: Colors.white, size: 18),
               SizedBox(width: ZaiNeSpacing.sm),
-              Text('✅ 位置权限已开启！'),
+              Text(tr.s843),
             ],
           ),
           backgroundColor: Colors.green.shade600,
@@ -256,19 +257,19 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
       showDialog(
         context: context,
         builder: (ctx) => AlertDialog(
-          title: const Text('需要位置权限'),
-          content: const Text('您之前拒绝了位置权限，请在系统设置中开启。\n\n设置路径：\n隐私 → 定位服务 → 在呢 → "使用App期间"'),
+          title:  Text(tr.s844),
+          content:  Text(tr.s845),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('取消'),
+              child:  Text(tr.s016),
             ),
             TextButton(
               onPressed: () {
                 Navigator.pop(ctx);
                 _openLocationSettings();
               },
-              child: const Text('去设置'),
+              child:  Text(tr.s846),
             ),
           ],
         ),
@@ -278,11 +279,11 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
       if (kDebugMode) debugPrint('[Help] 权限请求失败: $status');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Row(
+          content:  Row(
             children: [
               Icon(Icons.location_off, color: Colors.white, size: 18),
               SizedBox(width: ZaiNeSpacing.sm),
-              Expanded(child: Text('位置权限未开启。紧急求助需要您的位置才能发送求救信息')),
+              Expanded(child: Text(tr.s847)),
             ],
           ),
           backgroundColor: Colors.orange.shade700,
@@ -290,7 +291,7 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.small)),
           duration: const Duration(seconds: 5),
           action: SnackBarAction(
-            label: '去设置',
+            label: tr.s846,
             textColor: Colors.white,
             onPressed: () => _openLocationSettings(),
           ),
@@ -323,11 +324,11 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
       setState(() => _hasLocationReady = true);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Row(
+          content:  Row(
             children: [
               Icon(Icons.check_circle, color: Colors.white, size: 18),
               SizedBox(width: ZaiNeSpacing.sm),
-              Text('✅ 位置权限已开启！'),
+              Text(tr.s843),
             ],
           ),
           backgroundColor: Colors.green.shade600,
@@ -340,7 +341,7 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
       // 还是没有权限——可能用户没改，给个轻提示
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('位置权限仍未开启，请确保已设置为「使用期间允许」'),
+          content:  Text(tr.s848),
           backgroundColor: Colors.orange.shade700,
           behavior: SnackBarBehavior.floating,
           shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(10))),
@@ -370,8 +371,8 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
         // 源头即清洗，避免污染短信地址行与苹果地图 q 参数。
         // 进入此分支说明定位成功（latitude != null），address 必有值
         _address = result.address!.replaceAll(RegExp(r'[\u002B\uFF0B\u207A\u208B\u2795\uFB29]'), '').trim();
-        _coordLat = '北纬 ${result.latitude!.toStringAsFixed(6)}°';
-        _coordLng = '东经 ${result.longitude!.toStringAsFixed(6)}°';
+        _coordLat = tr.s849(result.latitude!.toStringAsFixed(6));
+        _coordLng = tr.s850(result.longitude!.toStringAsFixed(6));
       } else {
         _address = null;
         _coordLat = null;
@@ -398,7 +399,7 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
               appBar: AppBar(
                 backgroundColor: Colors.transparent, elevation: 0,
                 leading: null,
-                title: Text('紧急求助', style: TextStyle(color: ZaiNeColors.textPrimary())),
+                title: Text(tr.s851, style: TextStyle(color: ZaiNeColors.textPrimary())),
                 centerTitle: true,
               ),
               body: Center(
@@ -409,13 +410,13 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
                     children: [
                       const Icon(Icons.error_outline, color: Colors.red, size: 48),
                       const SizedBox(height: ZaiNeSpacing.lg),
-                      const Text('紧急求助页面加载异常', style: TextStyle(fontSize: ZaiNeFontSize.title, fontWeight: FontWeight.bold)),
+                       Text(tr.s852, style: TextStyle(fontSize: ZaiNeFontSize.title, fontWeight: FontWeight.bold)),
                       const SizedBox(height: ZaiNeSpacing.sm),
-                      Text('错误信息: $e', style: const TextStyle(fontSize: ZaiNeFontSize.caption, color: Colors.grey)),
+                      Text(tr.s853(e), style: const TextStyle(fontSize: ZaiNeFontSize.caption, color: Colors.grey)),
                       const SizedBox(height: ZaiNeSpacing.xl),
                       ElevatedButton(
                         onPressed: () => setState(() {}),
-                        child: const Text('重试'),
+                        child:  Text(tr.s699),
                       ),
                     ],
                   ),
@@ -437,16 +438,16 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
         appBar: AppBar(
           backgroundColor: Colors.transparent, elevation: 0,
           leading: null,
-          title: Text('紧急求助', style: TextStyle(color: ZaiNeColors.textPrimary())),
+          title: Text(tr.s851, style: TextStyle(color: ZaiNeColors.textPrimary())),
           centerTitle: true,
         ),
         body: const Center(child: CircularProgressIndicator()),
       );
     } else {
       final missingItems = <String>[];
-      if (!_hasProfileReady) missingItems.add('档案');
-      if (!_hasContactsReady) missingItems.add('联系人');
-      if (!_hasLocationReady) missingItems.add('定位');
+      if (!_hasProfileReady) missingItems.add(tr.s854);
+      if (!_hasContactsReady) missingItems.add(tr.s855);
+      if (!_hasLocationReady) missingItems.add(tr.s856);
 
       child = missingItems.isNotEmpty
           ? LightweightGuideWidget(
@@ -498,11 +499,11 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.card)),
-        title: const Text('📱 设置手机号', style: TextStyle(fontSize: ZaiNeFontSize.title)),
+        title:  Text(tr.s857, style: TextStyle(fontSize: ZaiNeFontSize.title)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('设置后，紧急求助短信中将包含您的手机号', style: TextStyle(fontSize: ZaiNeFontSize.caption, color: Colors.grey)),
+             Text(tr.s858, style: TextStyle(fontSize: ZaiNeFontSize.caption, color: Colors.grey)),
             const SizedBox(height: ZaiNeSpacing.md),
             TextField(
               controller: controller,
@@ -510,8 +511,8 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
               maxLength: 11,
               autofocus: true,
               decoration: InputDecoration(
-                labelText: '手机号',
-                hintText: '请输入11位手机号',
+                labelText: tr.s859,
+                hintText: tr.s356,
                 prefixIcon: const Icon(Icons.phone),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.input)),
                 counterText: '',
@@ -520,13 +521,13 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
+          TextButton(onPressed: () => Navigator.pop(ctx), child:  Text(tr.s016)),
           ElevatedButton(
             onPressed: () async {
               final phone = controller.text.trim();
               if (phone.length < 11) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('请输入正确的11位手机号'), backgroundColor: Colors.orange),
+                   SnackBar(content: Text(tr.s860), backgroundColor: Colors.orange),
                 );
                 return;
               }
@@ -538,12 +539,12 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
               Navigator.pop(ctx);
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('手机号已设置为 $normalizedPhone'), backgroundColor: Colors.green),
+                  SnackBar(content: Text(tr.s861(normalizedPhone)), backgroundColor: Colors.green),
                 );
               }
             },
             style: ElevatedButton.styleFrom(backgroundColor: ZaiNeColors.brandOrange),
-            child: const Text('保存', style: TextStyle(color: Colors.white)),
+            child:  Text(tr.s366, style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -605,8 +606,8 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
     // 解析坐标（用于短信模板中的导航链接）
     String? latStr, lngStr;
     if (_coordLat != null && _coordLng != null) {
-      latStr = _coordLat!.replaceAll('北纬 ', '').replaceAll('°', '').replaceAll(' ', '');
-      lngStr = _coordLng!.replaceAll('东经 ', '').replaceAll('°', '').replaceAll(' ', '');
+      latStr = _coordLat!.replaceAll(tr.s862, '').replaceAll('°', '').replaceAll(' ', '');
+      lngStr = _coordLng!.replaceAll(tr.s863, '').replaceAll('°', '').replaceAll(' ', '');
     }
 
     // 【方案 C v1.95】SOS 短信改为"超短文本 + 后端短链(H5 求助页)"：
@@ -715,8 +716,8 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
         // 3) 刷新本页位置预览
         if (mounted) {
           setState(() {
-            _coordLat = '北纬 ${lat.toStringAsFixed(6)}°';
-            _coordLng = '东经 ${lng.toStringAsFixed(6)}°';
+            _coordLat = tr.s864(lat.toStringAsFixed(6));
+            _coordLng = tr.s865(lng.toStringAsFixed(6));
             if (addr.isNotEmpty) _address = addr;
           });
         }
@@ -747,7 +748,7 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
     final timeStr = '${now.year}-${now.month.toString().padLeft(2,'0')}-'
         '${now.day.toString().padLeft(2,'0')}\u200B${now.hour.toString().padLeft(2,'0')}:'
         '${now.minute.toString().padLeft(2,'0')}';
-    final rawAddr = (_address != null && _address!.isNotEmpty) ? _address! : '未知地址';
+    final rawAddr = (_address != null && _address!.isNotEmpty) ? _address! : tr.s866;
     // 【v1.95.0+115 修复】正则清洗所有"加号类"Unicode 字符（覆盖全角/上标/下标等伪加号变体）
     final addrPart = rawAddr.replaceAll(RegExp(r'[\u002B\uFF0B\u207A\u208B\u2795\uFB29]'), '');
     // 坐标格式：无空格，确保 iOS SMS 能正确识别为 URL
@@ -756,28 +757,28 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
         : '';
 
     final sb = StringBuffer();
-    sb.writeln('【在呢 紧急求助】');
+    sb.writeln(tr.s867);
     sb.writeln(timeStr);
     sb.writeln('');
-    sb.writeln('求救人：${_userName.isNotEmpty ? _userName : "未知"}');
+    sb.writeln(tr.s868(_userName.isNotEmpty ? _userName : "未知"));
     // 求救者手机号——始终显示（紧急场景不能缺此信息），未设置时提示
-    sb.writeln('手机号：${cleanPhone.isNotEmpty ? cleanPhone : "未设置"}');
-    sb.writeln('年龄：${_userAge > 0 ? "$_userAge岁" : "未知"}');
-    sb.writeln('血型：$_bloodType');
-    if (_disease.isNotEmpty) sb.writeln('病史：$_disease');
-    if (_medicine.isNotEmpty) sb.writeln('药物：$_medicine');
-    if (_allergy.isNotEmpty) sb.writeln('过敏：$_allergy');
-    if (_emergencyNote.isNotEmpty) sb.writeln('备注：$_emergencyNote');
+    sb.writeln(tr.s869(cleanPhone.isNotEmpty ? cleanPhone : "未设置"));
+    sb.writeln(tr.s870(_userAge > 0 ? "$_userAge岁" : "未知"));
+    sb.writeln(tr.s871(_bloodType));
+    if (_disease.isNotEmpty) sb.writeln(tr.s872(_disease));
+    if (_medicine.isNotEmpty) sb.writeln(tr.s873(_medicine));
+    if (_allergy.isNotEmpty) sb.writeln(tr.s874(_allergy));
+    if (_emergencyNote.isNotEmpty) sb.writeln(tr.s875(_emergencyNote));
     sb.writeln('');
     // 改用普通空格破坏地址连续性，防止 iOS 短信将地址识别为可点击链接（占用 Data Detector 配额）
-    final addrBroken = addrPart.contains('区')
-        ? addrPart.replaceFirst('区', '区 ')
-        : addrPart.contains('县')
-            ? addrPart.replaceFirst('县', '县 ')
-            : addrPart.contains('市')
-                ? addrPart.replaceFirst('市', '市 ')
+    final addrBroken = addrPart.contains(tr.s876)
+        ? addrPart.replaceFirst(tr.s876, tr.s877)
+        : addrPart.contains(tr.s878)
+            ? addrPart.replaceFirst(tr.s878, tr.s879)
+            : addrPart.contains(tr.s880)
+                ? addrPart.replaceFirst(tr.s880, tr.s881)
                 : addrPart;
-    sb.writeln('地址：$addrBroken');
+    sb.writeln(tr.s882(addrBroken));
 
     // 【最终方案】直接使用 maps.apple.com / uri.amap.com 官方域名直链。
     // ① maps.apple.com 是苹果自有域名，iOS Data Detector 100% 识别为可点链接；
@@ -786,24 +787,24 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
     // ④ 每条 URL 独占一行，前后空行隔离，最大化跨平台 SMS Data Detector 识别率。
     if (coordPart.isNotEmpty) {
       sb.writeln('');
-      sb.writeln('🍎 苹果地图导航');
+      sb.writeln(tr.s883);
       // 【修复 v1.94.x】用 daddr= 而非 ll= ：ll 仅居中地图视图、不进入导航模式，
       // 接收端打开后停在坐标点、无出发点、无法一键导航；
       // daddr= 让苹果地图直接进入导航模式，起点默认取接收端当前位置（"我的位置"），
       // 接收端点"出发"即可导航到求救者位置。终点名称无需在 URL 携带（短信正文已有纯文本地址）。
       sb.writeln('https://maps.apple.com/?daddr=$coordPart');
-      sb.writeln('📍 高德地图导航');
+      sb.writeln(tr.s884);
       sb.writeln('https://uri.amap.com/marker?position=$lngStr,$latStr');
     } else {
       sb.writeln('');
-      sb.writeln('⚠️ 位置获取失败，请立即回拨确认位置！');
-      sb.writeln('如果方便，请描述您当前的位置（如：XX路口、XX小区、XX商场附近）');
+      sb.writeln(tr.s885);
+      sb.writeln(tr.s886);
     }
 
     // 页脚放在导航链接之后（用户要求：链接在上方，求助提示在最末尾）
     sb.writeln('');
-    sb.writeln('请立即联系我或拨打120！');
-    sb.writeln('在呢 - 独居守护App');
+    sb.writeln(tr.s887);
+    sb.writeln(tr.s888);
     return sb.toString().trim();
   }
 
@@ -816,9 +817,9 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
   /// 带「发送人 + 接收人」双姓名，丰富求助语境，让紧急联系人第一眼认出是谁、明白严重性、敢点链接。
   /// iOS→iOS（iMessage）可发长文本无压力；iOS→安卓虽会转 MMS 丢链，但发送端已自动复制带链接文案可补发。
   String _buildShortSosMessage(String senderName, String receiverName, String shortUrl) {
-    final s = senderName.isNotEmpty ? senderName : '我';
-    final r = receiverName.isNotEmpty ? receiverName : '你';
-    return '【在呢·紧急求助】$r，我是$s。我可能遇到了危险，已经通过「在呢」把我的实时位置和求助信息发出去了。请你马上点开下面的链接看我的位置，并帮我拨打120急救电话！ $shortUrl';
+    final s = senderName.isNotEmpty ? senderName : tr.s320;
+    final r = receiverName.isNotEmpty ? receiverName : tr.s889;
+    return tr.s890(r, s, shortUrl);
   }
 
   /// 求助已触发结果弹窗
@@ -832,7 +833,7 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
   void _showHelpResultDialog(List<Map<String, dynamic>> contacts, String Function(Map<String, dynamic>) smsContentBuilder) {
     // 取第一位联系人的信息用于"拨打联系人电话"
     final firstContact = contacts.isNotEmpty ? contacts.first : null;
-    final firstContactName = firstContact?['name']?.toString() ?? '紧急联系人';
+    final firstContactName = firstContact?['name']?.toString() ?? tr.s346;
     final firstContactPhone = firstContact?['phone']?.toString() ?? '';
 
     showDialog(

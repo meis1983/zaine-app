@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider/path_provider.dart';
 import '../api_service.dart';
 import '../../utils/streak_util.dart';
+import '../../l10n/i18n.dart';
 
 class SyncService {
   static String _formatYyyyMmDd(DateTime dt) {
@@ -145,7 +146,7 @@ class SyncService {
                   
                   // 如果本地有 relation 且服务器的 relation 为空或为默认值"守护人"，保留本地值
                   if (localRelation.isNotEmpty && 
-                      (serverRelation.isEmpty || serverRelation == '守护人')) {
+                      (serverRelation.isEmpty || serverRelation == tr.s305)) {
                     merged['relation'] = localRelation;
                     if (kDebugMode) {
                       debugPrint('[SyncService] ✅ 保留本地 relation: id=$serverId, relation=$localRelation');

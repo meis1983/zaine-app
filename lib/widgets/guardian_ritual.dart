@@ -8,7 +8,9 @@
 
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:async';
 import 'guardian_card_envelope.dart';
+import '../l10n/i18n.dart';
 
 const String _seenRitualPrefKey = 'seen_guardian_ritual_keys';
 
@@ -44,60 +46,100 @@ Future<void> showGuardianWelcomeRitual(
   BuildContext context, {
   required String senderName,
   String? senderAvatar,
-  String message = '想和你建立守护关系',
+  String? message,
   String? cardCode,
   String mode = 'welcome',
   required VoidCallback onClosed,
 }) async {
-  final dialogCtx = context;
   final bool isSuccess = mode == 'success';
-  final String title = isSuccess ? '守护成功 🎉' : '开启你的守护礼';
+  final String title = isSuccess ? tr.z0522 : tr.z0523;
   final String defaultMsg =
-      isSuccess ? '已成为你的守护人' : '想和你建立守护关系';
+      isSuccess ? tr.z0524 : tr.s139;
+
+  // 【CN合规 177·加固】防止弹窗永久卡屏的多重兜底：
+  //  1) barrierDismissible: true —— 点击空白处即可关闭；
+  //  2) 右上角 X 按钮手动关闭；
+  //  3) 8 秒硬超时 —— 无论动画是否正常完成都强制关闭；
+  //  4) onClosed 只触发一次（_closed 守卫），避免重复刷新/重复 pop。
+  bool closed = false;
+  BuildContext? dialogCtx;
+  Timer? hardTimeout;
+
+  void closeRitual() {
+    if (closed) return;
+    closed = true;
+    hardTimeout?.cancel();
+    final ctx = dialogCtx;
+    if (ctx != null && ctx.mounted && Navigator.of(ctx).canPop()) {
+      Navigator.of(ctx).pop();
+    }
+  }
+
+  hardTimeout = Timer(const Duration(seconds: 8), closeRitual);
+
   await showGeneralDialog(
-    context: dialogCtx,
-    barrierDismissible: false,
+    context: context,
+    barrierDismissible: true,
     barrierColor: Colors.black.withValues(alpha: 0.9),
     transitionDuration: const Duration(milliseconds: 300),
     pageBuilder: (ctx, anim1, anim2) {
+      dialogCtx = ctx;
       return Scaffold(
         backgroundColor: Colors.transparent,
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              FadeTransition(
-                opacity: anim1,
-                child: Text(
-                  title,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: isSuccess ? 22 : 18,
-                    letterSpacing: isSuccess ? 2 : 4,
-                    fontWeight: FontWeight.w300,
+        body: Stack(
+          children: [
+            Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  FadeTransition(
+                    opacity: anim1,
+                    child: Text(
+                      title,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: isSuccess ? 22 : 18,
+                        letterSpacing: isSuccess ? 2 : 4,
+                        fontWeight: FontWeight.w300,
+                      ),
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 32),
+                  GuardianCardEnvelope(
+                    senderName: senderName,
+                    senderAvatar: senderAvatar,
+                    message: (message != null && message.isNotEmpty) ? message : defaultMsg,
+                    appStoreUrl: '',
+                    cardCode: cardCode,
+                    isWelcomeMode: true,
+                    onComplete: () {
+                      // 动画播完后延迟关闭，给足沉浸感
+                      Future.delayed(const Duration(milliseconds: 3500), () {
+                        if (ctx.mounted) closeRitual();
+                      });
+                    },
+                  ),
+                ],
               ),
-              const SizedBox(height: 32),
-              GuardianCardEnvelope(
-                senderName: senderName,
-                senderAvatar: senderAvatar,
-                message: message.isNotEmpty ? message : defaultMsg,
-                appStoreUrl: '',
-                cardCode: cardCode,
-                isWelcomeMode: true,
-                onComplete: () {
-                  // 动画播完后延迟关闭，给足沉浸感
-                  Future.delayed(const Duration(milliseconds: 3500), () {
-                    if (ctx.mounted) Navigator.pop(ctx);
-                    onClosed();
-                  });
-                },
+            ),
+            // 右上角手动关闭按钮（兜底）
+            Positioned(
+              top: 48,
+              right: 20,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.white70, size: 28),
+                onPressed: closeRitual,
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       );
     },
   );
+
+  // 弹窗以任何方式关闭（动画完成 / 超时 / X / 点击空白）后统一收尾：
+  // 取消可能仍在计时的兜底 Timer（Timer.cancel 可安全重复调用），再触发一次 onClosed。
+  closed = true;
+  hardTimeout.cancel();
+  onClosed();
 }

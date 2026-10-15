@@ -95,8 +95,9 @@ class CardService {
     });
   }
 
-  /// 【新增 v1.9.78】使用安全码兑换守护卡
-  /// 用于：B 下载 App 后手动输入安全码，完成守护关系绑定
+  /// 【新增 v1.9.78】使用守护码兑换守护关系
+  /// 用于：B 下载 App 后手动输入守护码，完成守护关系绑定
+  /// [oneway]：CN 合规单向（仅 A→B）；海外版传 false（双向）
   ///
   /// 返回示例（成功）：
   /// {
@@ -108,9 +109,11 @@ class CardService {
   /// }
   static Future<Map<String, dynamic>> redeemCard({
     required String cardCode,
+    bool oneway = false,
   }) async {
     return await ApiService.post('/api/card/redeem', body: {
       'card_code': cardCode,
+      'oneway': oneway,
     });
   }
 

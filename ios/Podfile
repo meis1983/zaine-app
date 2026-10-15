@@ -42,5 +42,26 @@ post_install do |installer|
     target.build_configurations.each do |config|
       config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.0'
     end
+
+    # 【v1.97.7/178 修复】CocoaPods 1.16+ 老式 podspec 用 `source_files = 'Sources/**/*'`
+    # 会把 *.xcprivacy（Apple Privacy Manifest，type=text.xml）也包含进 source build phase。
+    # Xcode 26.5 报 'no rule to process file ... text.xml ... for architecture arm64'，
+    # 在 archive 时直接 fatal。统一从每个 Pod target 的 source build phase 移除 xcprivacy，
+    # 保留 resource bundle（Apple 要求打进 privacy bundle 不受影响）。
+    if target.respond_to?(:source_build_phase) && target.source_build_phase
+      phase = target.source_build_phase
+      removed = 0
+      # 直接操作 files 数组并移除 PBXBuildFile，比 remove_build_file 在各版本 CocoaPods 都稳
+      phase.files.dup.each do |bf|
+        fr = bf.file_ref
+        next unless fr
+        path = (fr.path || '').to_s
+        if path.end_with?('.xcprivacy') || path.end_with?('PrivacyInfo.xcprivacy')
+          phase.files.delete(bf)
+          removed += 1
+        end
+      end
+      puts "  [zaine-178-patch] target=#{target.name} removed .xcprivacy from source = #{removed}" if removed > 0
+    end
   end
 end

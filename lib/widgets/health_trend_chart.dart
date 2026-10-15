@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 import '../theme/theme_helper.dart';
+import '../l10n/i18n.dart';
 
 /// 健康数据趋势图表组件
 /// 
@@ -101,7 +102,7 @@ class HealthTrendChart extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              '暂无$title数据',
+              tr.z0765(title),
               style: TextStyle(
                 color: Colors.grey.shade500,
                 fontSize: 14,
@@ -109,7 +110,7 @@ class HealthTrendChart extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              '佩戴 Apple Watch 并开启健康权限后可查看',
+              tr.z0766,
               style: TextStyle(
                 color: Colors.grey.shade400,
                 fontSize: 12,
@@ -141,7 +142,7 @@ class HealthTrendChart extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                '最近${timeRange.inDays}天趋势',
+                tr.z0767(timeRange.inDays),
                 style: TextStyle(
                   fontSize: 12,
                   color: Colors.grey.shade500,
@@ -151,11 +152,11 @@ class HealthTrendChart extends StatelessWidget {
           ),
         ),
         // 统计数据
-        _buildStatItem('当前', latest.toStringAsFixed(0), unit),
+        _buildStatItem(tr.z0768, latest.toStringAsFixed(0), unit),
         const SizedBox(width: 16),
-        _buildStatItem('平均', avg.toStringAsFixed(0), unit),
+        _buildStatItem(tr.z0769, avg.toStringAsFixed(0), unit),
         const SizedBox(width: 16),
-        _buildStatItem('最高', max.toStringAsFixed(0), unit),
+        _buildStatItem(tr.z0770, max.toStringAsFixed(0), unit),
       ],
     );
   }

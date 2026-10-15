@@ -3,16 +3,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import '../theme/theme_helper.dart';
 import '../services/safety/safety_service.dart';
-import '../services/safety/fall_detection_service.dart';
-import '../services/safety/geofence_service.dart';
+import '../services/safety/motion_monitor_service.dart';
+import '../services/safety/safe_zone_service.dart';
 import '../services/platform/watch_data_service.dart';
 import '../widgets/safety_features.dart';
-import '../widgets/fall_confirmation_dialog.dart';
+import '../widgets/motion_confirmation_dialog.dart';
 import 'location_map_page.dart';
-import 'fall_event_history_page.dart';
-import 'geofence_page.dart';
+import 'motion_event_history_page.dart';
+import 'safe_zone_page.dart';
 import '../config/feature_flags.dart';
 import '../config/app_config.dart';
+import '../l10n/i18n.dart';
 
 /// 安全设置页面
 ///
@@ -26,16 +27,16 @@ class SafetySettingsPage extends StatefulWidget {
 
 class _SafetySettingsPageState extends State<SafetySettingsPage> {
   final SafetyService _safetyService = SafetyService();
-  final FallDetectionService _fallDetectionService = FallDetectionService();
-  final GeoFenceService _geoFenceService = GeoFenceService(); // 【v1.93.0】
+  final _motionMonitor = getMotionMonitor();
+  final SafeZoneMonitor? _safeZoneService = getSafeZoneService(); // 【v1.93.0】
   CheckInReminder _reminderConfig = const CheckInReminder();
   List<LocationRecord> _todayTrack = [];
-  List<FallEvent> _fallEvents = [];
+  List<MotionEvent> _fallEvents = [];
   DateTime? _lastRecordTime;
   bool _isLocationTracking = false;
   LocationTrackingMode _trackingMode = LocationTrackingMode.normal; // 【v1.93.0】
   bool _isLoading = true;
-  int _geoFenceRefreshToken = 0; // 【v1.95.0】围栏刷新令牌：_loadData 时自增，强制 GeoFenceCard 重建以重新加载
+  int _safeZoneRefreshToken = 0; // 【v1.95.0】安全区域刷新令牌：_loadData 时自增，强制 SafeZoneCard 重建以重新加载
   bool _watchPaired = false;
   bool _watchReachable = false;
   bool _phoneDetectionEnabled = false;
@@ -46,26 +47,29 @@ class _SafetySettingsPageState extends State<SafetySettingsPage> {
     super.initState();
     _loadData();
     _startWatchTimer();
-    _setupFallDetectionCallbacks();
+    _setupMotionMonitorCallbacks();
   }
 
-  /// 【v1.93.0】设置跌倒检测回调
-  void _setupFallDetectionCallbacks() {
-    _fallDetectionService.onFallDetected = () {
-      if (kDebugMode) debugPrint('[SafetySettings] 跌倒检测回调触发');
-      _showFallConfirmationDialog();
+  /// 【v1.93.0】设置运动监测回调
+  /// CN 版（kIsChinaBuild）下 _motionMonitor 为 null，直接跳过。
+  void _setupMotionMonitorCallbacks() {
+    final fd = _motionMonitor;
+    if (fd == null) return;
+    fd.onTriggered = () {
+      if (kDebugMode) debugPrint('[SafetySettings] 运动监测回调触发');
+      _showMotionConfirmationDialog();
     };
-    _fallDetectionService.onFallTimeout = () {
-      if (kDebugMode) debugPrint('[SafetySettings] 跌倒超时回调触发');
+    fd.onTimeout = () {
+      if (kDebugMode) debugPrint('[SafetySettings] 运动监测超时回调触发');
       // 超时后由用户手动确认再通知，已在 service 中处理，这里刷新数据并提示
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+           SnackBar(
             content: Row(
               children: [
                 Icon(Icons.warning_amber, color: Colors.white),
                 SizedBox(width: ZaiNeSpacing.sm),
-                Expanded(child: Text('跌倒未响应，请确认是否通知守护者')),
+                Expanded(child: Text(tr.s1019)),
               ],
             ),
             backgroundColor: Colors.orange,
@@ -76,19 +80,19 @@ class _SafetySettingsPageState extends State<SafetySettingsPage> {
         _loadData();
       }
     };
-    _fallDetectionService.onFallCancelled = () {
-      if (kDebugMode) debugPrint('[SafetySettings] 跌倒取消回调触发');
+    fd.onCancelled = () {
+      if (kDebugMode) debugPrint('[SafetySettings] 运动监测取消回调触发');
       if (mounted) _loadData();
     };
   }
 
   /// 【v1.93.0】显示跌倒确认对话框
-  void _showFallConfirmationDialog() {
+  void _showMotionConfirmationDialog() {
     if (!mounted || !_phoneDetectionEnabled) return;
     Navigator.of(context).push(
       MaterialPageRoute(
         fullscreenDialog: true,
-        builder: (context) => FallConfirmationDialog(
+        builder: (context) => MotionConfirmationDialog(
           onCancel: () {
             _loadData();
           },
@@ -123,10 +127,10 @@ class _SafetySettingsPageState extends State<SafetySettingsPage> {
 
   Future<void> _loadData() async {
     await _safetyService.initialize();
-    await _fallDetectionService.init();
+    if (_motionMonitor != null) await _motionMonitor!.init();
     final reminder = await _safetyService.getReminderConfig();
     final track = await _safetyService.getLocationTrackForDay(DateTime.now());
-    final falls = await _safetyService.getFallEvents();
+    final falls = await _safetyService.getMotionEvents();
     final lastRecordTime = await _safetyService.getLastRecordTime();
 
     // 检查 Apple Watch 连接状态 - 使用 refreshWatchState 确保状态最新
@@ -155,7 +159,7 @@ class _SafetySettingsPageState extends State<SafetySettingsPage> {
         _trackingMode = savedMode;
         _isLocationTracking = _safetyService.isLocationTracking;
         _isLoading = false;
-        _geoFenceRefreshToken++; // 【v1.95.0】触发 GeoFenceCard 重建并重新加载围栏
+        _safeZoneRefreshToken++; // 【v1.95.0】触发 SafeZoneCard 重建并重新加载安全区域
       });
     }
   }
@@ -165,12 +169,12 @@ class _SafetySettingsPageState extends State<SafetySettingsPage> {
     await _loadData();
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+         SnackBar(
           content: Row(
             children: [
               Icon(Icons.check_circle, color: Colors.white),
               SizedBox(width: ZaiNeSpacing.sm),
-              Text('✅ 平安确认完成！'),
+              Text(tr.s1020),
             ],
           ),
           backgroundColor: Colors.green,
@@ -186,11 +190,13 @@ class _SafetySettingsPageState extends State<SafetySettingsPage> {
       _phoneDetectionEnabled = !_phoneDetectionEnabled;
     });
     if (_phoneDetectionEnabled) {
-      _fallDetectionService.startPhoneDetection(safetyService: _safetyService);
+      if (_motionMonitor != null) {
+        _motionMonitor!.startMonitoring(safetyService: _safetyService);
+      }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('📱 手机端跌倒检测已开启（简化版）'),
+            content:  Text(tr.s1021),
             backgroundColor: Colors.blue,
             behavior: SnackBarBehavior.floating,
             duration: const Duration(seconds: 2),
@@ -198,11 +204,11 @@ class _SafetySettingsPageState extends State<SafetySettingsPage> {
         );
       }
     } else {
-      _fallDetectionService.stopPhoneDetection();
+      if (_motionMonitor != null) _motionMonitor!.stopMonitoring();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('📱 手机端跌倒检测已关闭'),
+            content:  Text(tr.s1022),
             backgroundColor: Colors.grey.shade700,
             behavior: SnackBarBehavior.floating,
             duration: const Duration(seconds: 2),
@@ -217,7 +223,7 @@ class _SafetySettingsPageState extends State<SafetySettingsPage> {
     return Scaffold(
       backgroundColor: ZaiNeColors.scaffoldBg(),
       appBar: AppBar(
-        title: const Text('安全中心'),
+        title:  Text(tr.s235),
         backgroundColor: ZaiNeColors.cardBg(),
         foregroundColor: ZaiNeColors.textPrimary(),
         elevation: 0,
@@ -279,13 +285,13 @@ class _SafetySettingsPageState extends State<SafetySettingsPage> {
                           if (!mounted) return;
                           setState(() => _isLocationTracking = success);
                           if (success) {
-                            // 【v1.93.0】启动围栏定时检查（cn 首版已禁用）
-                            _geoFenceService.startPeriodicCheck();
+                            // 【v1.93.0】启动安全区域定时检查（cn 首版已禁用）
+                            _safeZoneService?.startPeriodicCheck();
                           }
                           if (!success && mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('请开启位置权限'),
+                               SnackBar(
+                                content: Text(tr.s1023),
                                 backgroundColor: Colors.orange,
                               ),
                             );
@@ -293,7 +299,7 @@ class _SafetySettingsPageState extends State<SafetySettingsPage> {
                         },
                         onStopTracking: () {
                           _safetyService.stopLocationTracking();
-                          _geoFenceService.stopPeriodicCheck(); // 【v1.93.0】
+                          _safeZoneService?.stopPeriodicCheck(); // 【v1.93.0】
                           if (mounted) setState(() => _isLocationTracking = false);
                         },
                         onModeChanged: (mode) {
@@ -304,22 +310,22 @@ class _SafetySettingsPageState extends State<SafetySettingsPage> {
                       const SizedBox(height: ZaiNeSpacing.lg),
                     ],
 
-                    if (FeatureFlags.enableGeoFenceCn || !AppConfig.isChinaRegion) ...[
-                      // 【v1.93.0】安全围栏
-                      GeoFenceCard(
-                        key: ValueKey(_geoFenceRefreshToken),
+                    if (FeatureFlags.enableSafeZoneCn || !AppConfig.isChinaRegion) ...[
+                      // 【v1.93.0】安全区域
+                      SafeZoneCard(
+                        key: ValueKey(_safeZoneRefreshToken),
                         onManageFences: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (context) => const GeoFencePage()),
+                            MaterialPageRoute(builder: (context) => const SafeZonePage()),
                           ).then((_) => _loadData());
                         },
                       ),
                     ],
-                    if (FeatureFlags.enableFallDetectionCn || !AppConfig.isChinaRegion) ...[
+                    if (FeatureFlags.enableMotionCn || !AppConfig.isChinaRegion) ...[
                       const SizedBox(height: ZaiNeSpacing.lg),
 
-                      FallDetectionCard(
+                      MotionMonitorCard(
                         recentFalls: _fallEvents,
                         watchPaired: _watchPaired,
                         watchReachable: _watchReachable,
@@ -329,7 +335,7 @@ class _SafetySettingsPageState extends State<SafetySettingsPage> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => const FallEventHistoryPage(),
+                              builder: (context) => const MotionEventHistoryPage(),
                             ),
                           ).then((_) => _loadData());
                         },
@@ -356,13 +362,13 @@ class _SafetySettingsPageState extends State<SafetySettingsPage> {
     String scoreLabel;
     if (score >= 80) {
       scoreColor = Colors.green;
-      scoreLabel = '安全';
+      scoreLabel = tr.s1024;
     } else if (score >= 50) {
       scoreColor = Colors.orange;
-      scoreLabel = '一般';
+      scoreLabel = tr.s1025;
     } else {
       scoreColor = Colors.red;
-      scoreLabel = '需关注';
+      scoreLabel = tr.s1026;
     }
 
     return Container(
@@ -436,8 +442,8 @@ class _SafetySettingsPageState extends State<SafetySettingsPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  '安全状态',
+                 Text(
+                  tr.s1027,
                   style: TextStyle(
                     fontSize: ZaiNeFontSize.subtitle,
                     fontWeight: FontWeight.bold,
@@ -457,11 +463,11 @@ class _SafetySettingsPageState extends State<SafetySettingsPage> {
                   runSpacing: 4,
                   children: [
                     if (_reminderConfig.enabled && !AppConfig.isChinaRegion)
-                      _buildStatusChip('定时确认', Colors.green),
+                      _buildStatusChip(tr.s1028, Colors.green),
                     if (_isLocationTracking)
-                      _buildStatusChip('位置追踪', Colors.blue),
+                      _buildStatusChip(tr.s1029, Colors.blue),
                     if (_fallEvents.isNotEmpty && _fallEvents.any((e) => !e.acknowledged))
-                      _buildStatusChip('有未确认事件', Colors.orange),
+                      _buildStatusChip(tr.s1030, Colors.orange),
                   ],
                 ),
               ],
@@ -505,11 +511,11 @@ class _SafetySettingsPageState extends State<SafetySettingsPage> {
 
   String _getSafetyDescription() {
     if (_reminderConfig.enabled && _isLocationTracking) {
-      return '您的安全保护已全面开启，让我们一起守护您的平安。';
+      return tr.s1031;
     } else if (_reminderConfig.enabled) {
-      return '定时确认已开启，建议开启位置追踪获得更全面的保护。';
+      return tr.s1032;
     } else {
-      return '建议开启定时确认和位置追踪，构建更完善的保护体系。';
+      return tr.s1033;
     }
   }
 
@@ -528,7 +534,7 @@ class _SafetySettingsPageState extends State<SafetySettingsPage> {
               Icon(Icons.lightbulb_outline, color: Colors.blue.shade400, size: 20),
               const SizedBox(width: ZaiNeSpacing.sm),
               Text(
-                '安全小贴士',
+                tr.s1034,
                 style: TextStyle(
                   fontSize: ZaiNeFontSize.bodySm,
                   fontWeight: FontWeight.bold,
@@ -538,10 +544,10 @@ class _SafetySettingsPageState extends State<SafetySettingsPage> {
             ],
           ),
           const SizedBox(height: ZaiNeSpacing.md),
-          _buildTipItem('1', '建议每天至少确认一次平安'),
-          _buildTipItem('2', '开启位置追踪可在紧急时快速定位'),
-          _buildTipItem('3', '绑定 Apple Watch 可同步健康数据'),
-          _buildTipItem('4', '记得定期检查紧急联系人是否正确'),
+          _buildTipItem('1', tr.s1035),
+          _buildTipItem('2', tr.s1036),
+          _buildTipItem('3', tr.s1037),
+          _buildTipItem('4', tr.s1038),
         ],
       ),
     );

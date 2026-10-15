@@ -4,6 +4,7 @@ import '../services/social/guardian_message_service.dart';
 import '../widgets/guardian_message_board.dart';
 import '../widgets/emoji_interaction_picker.dart';
 import '../widgets/guardian_achievement_badge.dart';
+import '../l10n/i18n.dart';
 
 /// 社交互动页面
 ///
@@ -12,7 +13,7 @@ class SocialPage extends StatefulWidget {
   final String currentUserId;
   final String currentUserName;
 
-  const SocialPage({
+   SocialPage({
     super.key,
     required this.currentUserId,
     required this.currentUserName,
@@ -43,7 +44,7 @@ class _SocialPageState extends State<SocialPage> with SingleTickerProviderStateM
     return Scaffold(
       backgroundColor: ZaiNeColors.scaffoldBg(),
       appBar: AppBar(
-        title: const Text('社交互动'),
+        title:  Text(tr.s1039),
         backgroundColor: ZaiNeColors.cardBg(),
         foregroundColor: ZaiNeColors.textPrimary(),
         elevation: 0,
@@ -52,10 +53,10 @@ class _SocialPageState extends State<SocialPage> with SingleTickerProviderStateM
           labelColor: Theme.of(context).primaryColor,
           unselectedLabelColor: Colors.grey,
           indicatorColor: Theme.of(context).primaryColor,
-          tabs: const [
-            Tab(icon: Icon(Icons.chat_bubble_outline), text: '消息'),
-            Tab(icon: Icon(Icons.emoji_emotions), text: '表情'),
-            Tab(icon: Icon(Icons.emoji_events), text: '成就'),
+          tabs:  [
+            Tab(icon: Icon(Icons.chat_bubble_outline), text: tr.s402),
+            Tab(icon: Icon(Icons.emoji_emotions), text: tr.s403),
+            Tab(icon: Icon(Icons.emoji_events), text: tr.s404),
           ],
         ),
       ),
@@ -106,9 +107,9 @@ class _MessagesTabState extends State<_MessagesTab> {
 
   // 模拟守护对象数据
   final List<Map<String, String>> _guardians = [
-    {'id': 'guardian_1', 'name': '妈妈'},
-    {'id': 'guardian_2', 'name': '爸爸'},
-    {'id': 'guardian_3', 'name': '闺蜜小美'},
+    {'id': 'guardian_1', 'name': tr.s1040},
+    {'id': 'guardian_2', 'name': tr.s1041},
+    {'id': 'guardian_3', 'name': tr.s1042},
   ];
 
   @override
@@ -167,7 +168,7 @@ class _MessagesTabState extends State<_MessagesTab> {
           ),
           const SizedBox(height: ZaiNeSpacing.xl),
           Text(
-            '暂无消息',
+            tr.s1043,
             style: TextStyle(
               fontSize: ZaiNeFontSize.subtitle,
               color: ZaiNeColors.textSecondary(),
@@ -176,7 +177,7 @@ class _MessagesTabState extends State<_MessagesTab> {
           ),
           const SizedBox(height: ZaiNeSpacing.sm),
           Text(
-            '开始和守护你的人互动吧~',
+            tr.s1044,
             style: TextStyle(
               fontSize: ZaiNeFontSize.bodySm,
               color: ZaiNeColors.textHint(),
@@ -312,13 +313,13 @@ class _MessagesTabState extends State<_MessagesTab> {
       case MessageType.text:
         return message.content ?? '';
       case MessageType.emoji:
-        return '发送了一个表情';
+        return tr.s1045;
       case MessageType.checkin:
-        return '已签到平安';
+        return tr.s1046;
       case MessageType.sos:
-        return '发送了紧急求助';
+        return tr.s1047;
       case MessageType.milestone:
-        return '解锁了新成就';
+        return tr.s1048;
     }
   }
 
@@ -466,7 +467,7 @@ class _EmojisTabState extends State<_EmojisTab> {
           ),
           const SizedBox(height: ZaiNeSpacing.xl),
           Text(
-            '还没有收到表情',
+            tr.s1049,
             style: TextStyle(
               fontSize: ZaiNeFontSize.subtitle,
               color: ZaiNeColors.textSecondary(),
@@ -475,7 +476,7 @@ class _EmojisTabState extends State<_EmojisTab> {
           ),
           const SizedBox(height: ZaiNeSpacing.sm),
           Text(
-            '守护你的人会发送表情给你~',
+            tr.s1050,
             style: TextStyle(
               fontSize: ZaiNeFontSize.bodySm,
               color: ZaiNeColors.textHint(),
@@ -545,13 +546,13 @@ class _EmojisTabState extends State<_EmojisTab> {
 
       String key;
       if (date == today) {
-        key = '今天';
+        key = tr.s164;
       } else if (date == yesterday) {
-        key = '昨天';
+        key = tr.s1051;
       } else if (now.difference(date).inDays < 7) {
-        key = '本周';
+        key = tr.s1052;
       } else {
-        key = '${date.month}月${date.day}日';
+        key = tr.s1053(date.month, date.day);
       }
 
       grouped.putIfAbsent(key, () => []);

@@ -10,6 +10,7 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../data/app_constants.dart';
 import 'security/cert_pinner.dart' as security;
+import '../l10n/i18n.dart';
 
 /// 安全存储实例（用于 Token）
 const _secureStorage = FlutterSecureStorage(
@@ -318,18 +319,18 @@ class ApiService {
       final body = response.body.trim();
       String errorMsg;
       if (body.isEmpty) {
-        errorMsg = '服务器返回空响应 (HTTP ${response.statusCode})';
+        errorMsg = tr.s1157(response.statusCode);
       } else if (body.startsWith('<')) {
         // 后端返回了 HTML 错误页面（如 502/504 Gateway Error）
         if (response.statusCode >= 500) {
-          errorMsg = '服务器繁忙，请稍后重试';
+          errorMsg = tr.s1158;
         } else if (response.statusCode == 429) {
-          errorMsg = '请求过于频繁，请稍后再试';
+          errorMsg = tr.s1159;
         } else {
-          errorMsg = '服务器响应异常 (HTTP ${response.statusCode})';
+          errorMsg = tr.s1160(response.statusCode);
         }
       } else {
-        errorMsg = '服务器响应格式错误 (HTTP ${response.statusCode})';
+        errorMsg = tr.s1161(response.statusCode);
       }
       return {
         'success': false,

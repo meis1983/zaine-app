@@ -1,0 +1,7085 @@
+{
+  "@@locale": "en",
+  "appTitle": "在呢",
+  "@appTitle": {
+    "description": "App 名称"
+  },
+  "signInButtonCheckedIn": "Checked in today",
+  "@signInButtonCheckedIn": {
+    "description": "签到按钮：今日已签到状态文案"
+  },
+  "signInButtonTapToCheckIn": "Tap to check in",
+  "@signInButtonTapToCheckIn": {
+    "description": "签到按钮：未签到时的引导文案"
+  },
+  "continuousDays": "{count}-day streak",
+  "@continuousDays": {
+    "description": "签到按钮：连续签到天数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "s003": "Please allow notification permission in system settings to receive check-in reminders",
+  "s004": "Missed check-in alerts",
+  "s005": "Escalating reminders for consecutive missed check-ins",
+  "s006": "You haven't checked in today",
+  "s007": "Take 3 seconds to open Zaine and check in, so your guardian knows you're safe 💙",
+  "s008": "You've missed 2 days in a row",
+  "s009": "Your guardian might be a little worried—let them know you're safe 🏠",
+  "s011": "Take 3 seconds to open Zaine and check in today—give yourself peace of mind ❤️",
+  "s012": "System reminders are on. An extra reminder will be sent if you miss your check-in for the day",
+  "s013": "Unknown",
+  "s014": "Sign out",
+  "s015": "After signing out, local data will be cleared and you'll return to the sign-in page. Next time you'll need to sign in again with your phone number.\n\nAre you sure you want to sign out?",
+  "s016": "Cancel",
+  "s017": "Sign out",
+  "s018": "Signed out",
+  "s019": "Choose theme",
+  "s020": "Light mode",
+  "s021": "Fresh and bright, soft warm white",
+  "s022": "Dark mode",
+  "s023": "Eye-friendly for night use, deep and calm",
+  "s024": "Soft light mode",
+  "s025": "Warm off-white, cozy and soft",
+  "s026": "Unable to open the privacy policy page",
+  "s027": "Delete account",
+  "s028": "This action will permanently delete your account and all data:",
+  "s029": "• Profile and health records",
+  "s030": "• Check-in records and guardian cards",
+  "s031": "• Emergency contact list",
+  "s032": "• Membership subscription records",
+  "s033": "This action cannot be undone!",
+  "s034": "Confirm deletion",
+  "s035": "Final confirmation",
+  "s036": "Please type \"删除\" to confirm account deletion:",
+  "s037": "Enter \"删除\"",
+  "s038": "Delete",
+  "s039": "Permanently delete",
+  "s040": "Account deleted",
+  "s041": "Your account and all data have been permanently deleted. The app will exit; please reopen it.",
+  "s042": "OK",
+  "s043": "Deletion failed",
+  "s045": "Watch over every check-in, every loved one who cares.",
+  "s046": "Zaine is a guardian app designed for young people living alone in the city. Check in daily to let others know you're safe, and call for help with one tap in an emergency—so the people who care about you can feel at ease.",
+  "s047": "Check for updates",
+  "s048": "Close",
+  "s050": "You're on the latest version!",
+  "s051": "Thank you for using Zaine ❤️",
+  "s052": "OK",
+  "s053": "Dark",
+  "s054": "Soft light",
+  "s055": "Light",
+  "s056": "Settings",
+  "s057": "Zaine user",
+  "s058": "Health profile complete",
+  "s059": "Please complete your health profile",
+  "s060": "Unlock the full help feature after completing your profile",
+  "s061": "Fill in",
+  "s062": "Appearance",
+  "s063": "Theme mode",
+  "s065": "Check-in reminder",
+  "s066": "Daily reminder",
+  "s067": "Reminds you to check in daily",
+  "s068": "Reminder time",
+  "s069": "System reminder",
+  "s070": "If you miss your check-in for the day, the system will send an extra reminder",
+  "s071": "Help settings",
+  "s072": "Emergency call 120",
+  "s073": "Please go to the help page to use this feature",
+  "s074": "Membership",
+  "s075": "Zaine Smart",
+  "s076": "Unlock more guardian features",
+  "s077": "Subscribed",
+  "s078": "Upgrade",
+  "s079": "Account",
+  "s080": "Permanently delete all data, cannot be undone",
+  "s081": "Privacy & data",
+  "s082": "Privacy policy",
+  "s083": "Data security",
+  "s084": "Cloud-synced storage—never lost when switching devices",
+  "s085": "Data security assurance",
+  "s086": "Your health profile, emergency contacts, and check-in records are all encrypted and synced to cloud servers. After signing in on a new device, your data is automatically restored.\n\nWe promise:\n• Industry-standard encryption protects data transmission and storage\n• Your information will never be used for commercial purposes\n• We will never disclose your privacy to third parties\n• You can delete all data anytime in the health profile page or settings",
+  "s087": "Got it",
+  "s088": "Storage management",
+  "s089": "Clear cache",
+  "s090": "Clean up temporary files and image cache",
+  "s091": "Reset all data",
+  "s092": "Clear all local data (check-ins, profiles, contacts)",
+  "s093": "About",
+  "s094": "About Zaine",
+  "s095": "Version",
+  "s096": "Developer mode ✅",
+  "s098": "Give peace of mind to those who care about you",
+  "s099": "This will clear image cache and temporary files, and won't affect your check-in data or health profile.",
+  "s100": "Clear",
+  "s101": "Cache cleared ✓",
+  "s102": "⚠️ Dangerous operation",
+  "s103": "This action will permanently delete all of the following data:",
+  "s104": "• Check-in records and streak days",
+  "s105": "• Health profile information",
+  "s106": "• Sign-in status",
+  "s107": "• Theme preferences",
+  "s108": "Note: Only local data is cleared. Cloud account and server data are unaffected.",
+  "s109": "To permanently delete your cloud account and all data, use \"Delete account\" below.",
+  "s110": "Confirm reset",
+  "s111": "All data has been reset ✓ The app will restart...",
+  "s113": "🔒 Final confirmation",
+  "s114": "Please type \"重置\" to confirm deleting all data:",
+  "s115": "Enter \"重置\"",
+  "s116": "Reset",
+  "s125": "Daily check-in reminder set for {p1}",
+  "@s125": {
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s126": "Check-in reminder is on, every day at {p1}",
+  "@s126": {
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s127": "[Reminder] You've missed {daysSinceLastCheckIn} days of check-ins",
+  "@s127": {
+    "placeholders": {
+      "daysSinceLastCheckIn": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s128": "Deletion failed: {e}",
+  "@s128": {
+    "placeholders": {
+      "e": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s129": "Current version v{p1} (Build {p2})",
+  "@s129": {
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      },
+      "p2": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s130": "Current: {p1}",
+  "@s130": {
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s131": "Tap {p1} more times to activate",
+  "@s131": {
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s132": "Reset failed: {e}",
+  "@s132": {
+    "placeholders": {
+      "e": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s133": "💓 Your watch detected you and checked you in",
+  "s134": "⌚ Apple Watch check-in successful",
+  "s135": "Check-in successful",
+  "s136": "Peace of mind · {streak}-day streak",
+  "@s136": {
+    "placeholders": {
+      "streak": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s137": "🔥 {streak}-day streak · {total} days total",
+  "@s137": {
+    "placeholders": {
+      "streak": {
+        "type": "Object?"
+      },
+      "total": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s138": "Your friend",
+  "s139": "Wants to set up a guardian relationship with you",
+  "s140": "Safe confirmed ❤️",
+  "s141": "{_entryTag} entry _isLoggedIn={_isLoggedIn} _checkedInToday={_checkedInToday}",
+  "@s141": {
+    "placeholders": {
+      "_entryTag": {
+        "type": "Object?"
+      },
+      "_isLoggedIn": {
+        "type": "Object?"
+      },
+      "_checkedInToday": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s142": "Entry _isLoggedIn={_isLoggedIn} _checkedInToday={_checkedInToday}",
+  "@s142": {
+    "placeholders": {
+      "_isLoggedIn": {
+        "type": "Object?"
+      },
+      "_checkedInToday": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s143": "Please sign in before checking in",
+  "s144": "No user_id",
+  "s145": "No token",
+  "s146": "Decoding error: {e}",
+  "@s146": {
+    "placeholders": {
+      "e": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s147": "Before check-in uid(local)={p1} tokenUid(backend will recognize)={_tokenUid}",
+  "@s147": {
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      },
+      "_tokenUid": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s148": "Calling do_checkin date={today} uid={uid}",
+  "@s148": {
+    "placeholders": {
+      "today": {
+        "type": "Object?"
+      },
+      "uid": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s149": "do_checkin response: {res}",
+  "@s149": {
+    "placeholders": {
+      "res": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s150": "do_checkin success res={res}",
+  "@s150": {
+    "placeholders": {
+      "res": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s151": "☀️ Check-in synced",
+  "s152": "Business error: {errorMsg}",
+  "@s152": {
+    "placeholders": {
+      "errorMsg": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s153": "☀️ Checked in today",
+  "s154": "Check-in recorded, cloud sync failed: {errorMsg}",
+  "@s154": {
+    "placeholders": {
+      "errorMsg": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s155": "Exception: {e}",
+  "@s155": {
+    "placeholders": {
+      "e": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s156": "Check-in recorded and saved to offline queue; will auto-sync when connected ☁️",
+  "s157": "Please complete your information first",
+  "s158": "Before using the emergency help feature, please fill in your health profile and emergency contact information.\n\nThis ensures rescuers can access your key health information in an emergency.",
+  "s159": "Later",
+  "s160": "Upgrade to Smart",
+  "s161": "Unlock all features",
+  "s162": "{p1}/{p2}",
+  "@s162": {
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      },
+      "p2": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s163": "{monthCheckInCount}/{daysInMonth} days checked in",
+  "@s163": {
+    "placeholders": {
+      "monthCheckInCount": {
+        "type": "Object?"
+      },
+      "daysInMonth": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s164": "Today",
+  "s165": "This month",
+  "s166": "Mon",
+  "s167": "Tue",
+  "s168": "Wed",
+  "s169": "Thu",
+  "s170": "Fri",
+  "s171": "Sat",
+  "s172": "Sun",
+  "s173": "Less",
+  "s174": "  More",
+  "s175": "{dateStr} {p1}",
+  "@s175": {
+    "placeholders": {
+      "dateStr": {
+        "type": "Object?"
+      },
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s176": "Select month",
+  "s177": "{selectedYear}",
+  "@s177": {
+    "placeholders": {
+      "selectedYear": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s178": "{month}",
+  "@s178": {
+    "placeholders": {
+      "month": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s179": "Male",
+  "s180": "Type A",
+  "s181": "Type B",
+  "s182": "Type O",
+  "s183": "Type AB",
+  "s184": "Other",
+  "s185": "Avatar save failed, please try again",
+  "s186": "Avatar synced to cloud ✓",
+  "s187": "Avatar sync failed, please try again later",
+  "s188": "Avatar save failed: {e}",
+  "@s188": {
+    "placeholders": {
+      "e": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s189": "Health profile saved successfully!",
+  "s190": "Saved locally, cloud sync failed. Please check your network",
+  "s191": "Theme settings",
+  "s192": "Feedback",
+  "s193": "Your feedback is very important to us, and we'll handle it as soon as possible.",
+  "s194": "Please describe the issue or suggestion you encountered...",
+  "s195": "Thank you for your feedback, we'll handle it soon! ✓",
+  "s196": "Submit feedback",
+  "s197": "No feedback records yet",
+  "s198": "User feedback ({p1})",
+  "@s198": {
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s199": "Confirm clearing",
+  "s200": "Are you sure you want to delete all feedback records? This action cannot be undone.",
+  "s201": "Feedback records cleared",
+  "s202": "Clear all",
+  "s203": "Unknown time",
+  "s204": "Guardian relationship",
+  "s205": "Enter guardian code",
+  "s206": "Manually enter a safety code to accept someone's guardian card",
+  "s207": "Developer mode",
+  "s208": "Not signed in",
+  "s209": "USER-ID copied to clipboard",
+  "s210": "Copy",
+  "s211": "None",
+  "s212": "Check-in simulator",
+  "s213": "Set consecutive check-in days to test badges and milestone pop-ups",
+  "s214": "Reset guardian cards",
+  "s215": "Restore to the initial 3-card state for testing the full card-issuing flow",
+  "s216": "Show onboarding again",
+  "s217": "Show the startup guide again on next app launch",
+  "s218": "Set. The guide will show on next launch ✓",
+  "s219": "Reset onboarding tasks",
+  "s220": "Clear onboarding task completion status to re-experience the 5-step guide",
+  "s221": "Onboarding tasks reset. Return to home to re-experience ✓",
+  "s222": "Switch membership level",
+  "s223": "Trial ↔ Smart—test membership benefit differences",
+  "s224": "Simulate membership expiration downgrade",
+  "s225": "Smart → Trial: contacts retained but locked",
+  "s226": "View user feedback",
+  "s227": "View all submitted feedback",
+  "s228": "Health profile",
+  "s229": "Tap avatar to set",
+  "s230": "Tap avatar to change photo",
+  "s231": "Profile complete",
+  "s232": "Please complete your health profile",
+  "s233": "Help feature unlocked. Protect yourself starting now",
+  "s234": "Emergency help needs your health information",
+  "s235": "Safety center",
+  "s236": "Scheduled safety check · Location sharing · Fall detection",
+  "s237": "Statistics",
+  "s238": "Check-in calendar · Health trends · Menstrual cycle",
+  "s239": "My achievements",
+  "s240": "Check-in streak · Care · Milestones",
+  "s241": "Medical ID ✓ Set",
+  "s242": "Medical ID",
+  "s243": "iOS native",
+  "s244": "Viewable from lock screen · No need to unlock phone",
+  "s245": "Medical ID setup guide",
+  "s246": "What is a Medical ID?",
+  "s247": "Medical ID is an iPhone system-level feature. From the lock screen, anyone can view your emergency medical information without unlocking your phone.",
+  "s248": "Setup steps (4 total)",
+  "s249": "Open the Health app",
+  "s250": "Find and open the Health app on your iPhone (green heart icon)",
+  "s251": "Tap the avatar in the top-right corner",
+  "s252": "On the Summary page, tap the top-right avatar to enter your profile",
+  "s253": "Select \"Medical ID\"",
+  "s254": "Scroll down, find the \"Medical ID\" option, and tap to enter",
+  "s255": "Fill in and save",
+  "s256": "Fill in name, blood type, allergy info, emergency contacts, etc. Then tap \"Done\"",
+  "s257": "Tip: After setup, on the lock screen tap \"Emergency\" → \"Medical ID\" to view",
+  "s258": "I've completed the setup",
+  "s259": "Please manually open the Health app on your iPhone to set up",
+  "s260": "Unable to open the Health app; please search manually: {e}",
+  "@s260": {
+    "placeholders": {
+      "e": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s261": "Set up in Health app",
+  "s262": "Please manually open the Health app on your iPhone to edit",
+  "s263": "Unable to open the Health app: {e}",
+  "@s263": {
+    "placeholders": {
+      "e": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s264": "Edit in Health app",
+  "s265": "Confirm setup complete",
+  "s266": "Are you sure you've completed filling in and saving your Medical ID in the iPhone Health app?",
+  "s267": "After setup, your info can be viewed from the lock screen via \"Emergency\" → \"Medical ID\"",
+  "s268": "Check again",
+  "s269": "✅ Medical ID marked as complete!",
+  "s270": "✅ Confirm completed",
+  "s271": "Theme color",
+  "s272": "Safety code",
+  "s273": "Bind guardian card",
+  "s274": "Tell us",
+  "s275": "Basic info",
+  "s276": "Required",
+  "s277": "Name",
+  "s278": "Please enter your name",
+  "s279": "Please enter name",
+  "s280": "Age",
+  "s281": "Please enter age",
+  "s282": "Please enter a valid age",
+  "s283": "Gender",
+  "s284": "Female",
+  "s285": "Allergy history",
+  "s286": "e.g., penicillin, mango, seafood (enter \"None\" if none)",
+  "s287": "Please fill in your allergies",
+  "s288": "Health Information",
+  "s289": "Optional",
+  "s290": "Medical History",
+  "s291": "e.g., hypertension, diabetes, etc.",
+  "s292": "Medications in Use",
+  "s293": "e.g., antihypertensive drugs, insulin, etc.",
+  "s294": "Emergency Notes",
+  "s295": "Information rescuers need to know",
+  "s296": "Update Profile",
+  "s297": "Save and Enable SOS",
+  "s298": "Your health profile and emergency contact information is encrypted and synced to the cloud, so your data won't be lost when you switch devices. We strictly protect your privacy and security.",
+  "s299": "Family",
+  "s300": "Friends",
+  "s301": "Colleagues",
+  "s302": "Parents",
+  "s303": "Spouse",
+  "s304": "Children",
+  "s305": "Guardian",
+  "s306": "Custom...",
+  "s307": "Siblings",
+  "s308": "Smart plan allows up to {maxContacts} contacts",
+  "@s308": {
+    "placeholders": {
+      "maxContacts": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s309": "Contact limit reached",
+  "s310": "Free plan allows up to {maxContacts} emergency contacts.",
+  "@s310": {
+    "placeholders": {
+      "maxContacts": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s311": "Upgrade to Smart plan, you'll get:",
+  "s312": "Emergency contacts 5 → {p1}",
+  "@s312": {
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s313": "Quick emergency call 1 → {p1}",
+  "@s313": {
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s314": "Quick emergency SMS 1 → {p1}",
+  "@s314": {
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s315": "Maybe Later",
+  "s316": "Upgrade Now",
+  "s317": "{contactName} added as your guardian",
+  "@s317": {
+    "placeholders": {
+      "contactName": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s318": "Upgrade to Smart plan to add more contacts",
+  "s319": "Upgrade",
+  "s320": "Me",
+  "s321": "【在呢】Hi {p1}! I'm {senderName}, and I've just added you as my emergency contact 🛡️\n\nI use the \"在呢\" app to keep myself safe—checking in daily to report I'm safe, and with one tap for help in an emergency, so I can share my real-time location with you after you confirm.\n\nIf you download \"在呢\" too, we can watch over each other and both feel more at ease. ❤️\n\nTap the link to accept the invitation: {p2}",
+  "@s321": {
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      },
+      "senderName": {
+        "type": "Object?"
+      },
+      "p2": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s322": "Send Invitation SMS",
+  "s323": "Set {name} as your emergency contact.",
+  "@s323": {
+    "placeholders": {
+      "name": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s324": "Edit SMS content (nicknames optional)",
+  "s325": "Your Nickname",
+  "s326": "Who you appear as when sending SMS",
+  "s327": "Recipient's Name",
+  "s328": "What you'd like to call them",
+  "s329": "SMS preview:",
+  "s330": "【在呢】Hi {recipientDisplayName}! I'm {finalSender}, and I've just added you as my emergency contact 🛡️\n\nKnowing you're there gives me peace of mind. I check in safely every day on \"在呢\", and I'll notify you in an emergency.\n\nWant to see the guardian app I use? Tap here:\n{inviteShortUrl}",
+  "@s330": {
+    "placeholders": {
+      "recipientDisplayName": {
+        "type": "Object?"
+      },
+      "finalSender": {
+        "type": "Object?"
+      },
+      "inviteShortUrl": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s331": "Send SMS",
+  "s332": "Invitation to {p1} is ready in your SMS app",
+  "@s332": {
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s333": "Cannot open SMS app. Please check your system settings",
+  "s334": "Failed to send SMS: {e}",
+  "@s334": {
+    "placeholders": {
+      "e": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s335": "Temporary",
+  "s336": "Save failed: {p1}",
+  "@s336": {
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s337": "View Logs",
+  "s338": "Save error: {e}",
+  "@s338": {
+    "placeholders": {
+      "e": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s339": "Delete Contact",
+  "s340": "Are you sure you want to delete {p1}?",
+  "@s340": {
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s341": "👑 Priority",
+  "s342": "Seven",
+  "s343": "Eight",
+  "s344": "Nine",
+  "s345": "Ten",
+  "s346": "Emergency Contact",
+  "s347": "Add Contact",
+  "s348": "Calls go in priority order during an SOS. Drag the ☰ on the left to reorder",
+  "s349": "First contact = primary emergency contact (highest priority)",
+  "s350": "Edit Emergency Contact",
+  "s351": "Add Emergency Contact",
+  "s352": "Changes are saved automatically and update the priority order",
+  "s353": "Calls go in priority order during an SOS",
+  "s354": "Please enter the contact's name",
+  "s355": "Phone Number",
+  "s356": "Please enter an 11-digit phone number",
+  "s357": "Please enter a phone number",
+  "s358": "Please enter a valid phone number",
+  "s359": "Relationship",
+  "s360": "Please select a relationship",
+  "s361": "Please enter a custom relationship",
+  "s362": "e.g., senior, neighbor, roommate",
+  "s363": "Save Changes",
+  "s364": "Edit Nickname",
+  "s365": "Enter the name shown in \"People I Guard\"",
+  "s366": "Save",
+  "s367": "People I Guard",
+  "s369": "Pending Activation",
+  "s370": "No check-in today",
+  "s371": "Re-invite",
+  "s372": "Not Detected Yet",
+  "s373": "Unnamed",
+  "s374": "Guardian",
+  "s379": "Network Error",
+  "s380": "Query Failed",
+  "s384": "Not Registered",
+  "s386": "Failed to create free guardian card",
+  "s387": "Network error. Please try again later",
+  "s388": "Unable to generate your exclusive invitation link",
+  "s390": "SMS is open and the full link has been copied. If they don't receive it, long-press to paste and resend",
+  "s392": "Reminder Failed",
+  "s394": "My Guardian Circle",
+  "s396": "No Guardians Yet",
+  "s399": "Syncing guardian circle status…",
+  "s400": "Emergency contacts automatically become your guardians",
+  "s401": "Add emergency contacts so they can guard you",
+  "s402": "Messages",
+  "s403": "Emoji",
+  "s404": "Achievements",
+  "s405": "💌 Send Guardian Card",
+  "s406": "Invite someone you care about so they're protected too",
+  "s408": "Guardian Streak",
+  "s409": "Checked In",
+  "s410": "Not Checked In",
+  "s411": "Today's Status",
+  "s413": "Total Check-ins",
+  "s414": "No Guardians Yet",
+  "s415": "Add emergency contacts\nso they can become your guardians",
+  "s416": "Add Guardian",
+  "s417": "Quick Actions",
+  "s418": "Emergency Contact Management",
+  "s419": "Add, edit, and reorder your guardians (up to 10)",
+  "s420": "View and edit the guardian cards you've sent",
+  "s422": "Safety Confirmation",
+  "s423": "Let your guardians know you're safe",
+  "s424": "What is a Guardian Circle",
+  "s425": "Learn how the guardian circle works",
+  "s426": "You · Today's check-in",
+  "s427": "You've completed today's check-in. All is well",
+  "s429": "Your guardian has reported safe",
+  "s430": "Just now",
+  "s432": "Circle Activity",
+  "s433": "It's quiet in the circle today",
+  "s434": "Check in or report safe so your guardian circle can see you",
+  "s435": "Enable Vital Signs Guard",
+  "s436": "Sync Apple Watch heart rate, blood oxygen, and sleep",
+  "s438": "Guard ready · Collecting data",
+  "s439": "Vital signs guard enabled, syncing Apple Watch data",
+  "s440": "Heart Rate",
+  "s441": "Blood Oxygen",
+  "s442": "Sleep",
+  "s443": "Tap to view full vital signs",
+  "s444": "Auto-guarding · Tap to view full vital signs",
+  "s445": "Auto-guard off · Tap to view full vital signs",
+  "s446": "Synced just now",
+  "s449": "Guarding",
+  "s450": "Guardian cards I sent · Mutual guardians (no limit)",
+  "s451": "No one guarded yet",
+  "s452": "Send a guardian card, and they'll appear in the list once they sign up",
+  "s454": "Mutual Guardians",
+  "s455": "Call",
+  "s456": "Safe",
+  "s457": "Reminder",
+  "s458": "Invite",
+  "s459": "Request Safety Confirmation",
+  "s460": "Remind to Download",
+  "s461": "Invite to Sign Up",
+  "s462": "This guardian hasn't set a phone number",
+  "s465": "Call",
+  "s466": "Cannot open the dialer. Please call manually",
+  "s470": "Send Request",
+  "s471": "This guardian hasn't linked a phone number, so a safety confirmation can't be sent",
+  "s473": "Network request failed. Please check your connection and retry",
+  "s476": "End Guardianship",
+  "s479": "End Guardianship",
+  "s480": "No record found for this contact",
+  "s482": "Failed to End",
+  "s484": "Your guardian circle is your personal safety network.",
+  "s485": "🛡️ Add trusted family and friends as guardians",
+  "s486": "🔔 Your daily check-in status is visible to your guardians",
+  "s487": "🆘 Guardians are notified immediately when an SOS is triggered",
+  "s488": "❤️ Give peace of mind to those who care about you",
+  "s489": "Got it",
+  "s490": "Send a safety message to your guardians so they know you're doing well.\n\n\"I'm fine, don't worry ❤️\"",
+  "s491": "Send Confirmation",
+  "s492": "No guardians added yet. Please add an emergency contact first",
+  "s493": "Guardian info is invalid. Please re-add the contact",
+  "s495": "You · Report safe",
+  "s498": "Cannot open SMS. Please send the safety message manually",
+  "s540": "{p1}",
+  "@s540": {
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s541": "{ph}:check-in={ci},avatar={av},lastSignin={p1},isActive={p2}; ",
+  "@s541": {
+    "placeholders": {
+      "ph": {
+        "type": "Object?"
+      },
+      "ci": {
+        "type": "Object?"
+      },
+      "av": {
+        "type": "Object?"
+      },
+      "p1": {
+        "type": "Object?"
+      },
+      "p2": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s542": "batchLookup RAW_RESULTS_KEYS={p1} | guardian: {sb}",
+  "@s542": {
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      },
+      "sb": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s543": "dump error: {e}",
+  "@s543": {
+    "placeholders": {
+      "e": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s544": "batchLookup exception (fallback): {e}",
+  "@s544": {
+    "placeholders": {
+      "e": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s545": "Not connected (tap to enable Vital Signs Guard · {ts})",
+  "@s545": {
+    "placeholders": {
+      "ts": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s546": "Connected (HR {hr}/SpO₂ {bo} · {ts})",
+  "@s546": {
+    "placeholders": {
+      "hr": {
+        "type": "Object?"
+      },
+      "bo": {
+        "type": "Object?"
+      },
+      "ts": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s547": "Connected · Syncing data ({ts})",
+  "@s547": {
+    "placeholders": {
+      "ts": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s548": "Checked in today {p1}",
+  "@s548": {
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s549": "【在呢】{safeName} invites you to guard together 🛡️ I use the \"在呢\" app to check in safely every day, so I feel safe even when alone.\nTap the link to sign up, and we can guard each other:\n{landingUrl}",
+  "@s549": {
+    "placeholders": {
+      "safeName": {
+        "type": "Object?"
+      },
+      "landingUrl": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s550": "Reminded {name} to download and check in ✅",
+  "@s550": {
+    "placeholders": {
+      "name": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s551": "Failed to send reminder: {e}",
+  "@s551": {
+    "placeholders": {
+      "e": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s552": "{p1} guardians",
+  "@s552": {
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s553": "Successfully guarding {p1} friends",
+  "@s553": {
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s554": "Mutual guardians with {p1}",
+  "@s554": {
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s555": "{p1} days",
+  "@s555": {
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s556": "{p1} days",
+  "@s556": {
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s557": "Manage {p1} people you guard",
+  "@s557": {
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s558": "{name} checked in today",
+  "@s558": {
+    "placeholders": {
+      "name": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s559": "{p1} min ago",
+  "@s559": {
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s560": "Diagnosis: {_healthAuthDiag}",
+  "@s560": {
+    "placeholders": {
+      "_healthAuthDiag": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s561": "Synced {diffMin} min ago",
+  "@s561": {
+    "placeholders": {
+      "diffMin": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s562": "Synced {diffH} hr ago",
+  "@s562": {
+    "placeholders": {
+      "diffH": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s563": "· Bound {boundAt}",
+  "@s563": {
+    "placeholders": {
+      "boundAt": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s564": "Call {name}",
+  "@s564": {
+    "placeholders": {
+      "name": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s565": "Calling: {p1}\n\nThe dialer will open after you tap confirm.",
+  "@s565": {
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s566": "Call failed: {e}",
+  "@s566": {
+    "placeholders": {
+      "e": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s567": "Send a safety confirmation request to {name}",
+  "@s567": {
+    "placeholders": {
+      "name": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s568": "A safety confirmation request will be sent to {name}.\nOnce they open the 在呢 app, they can tap \"Safe\" to confirm.\n\nContinue?",
+  "@s568": {
+    "placeholders": {
+      "name": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s569": "{name} hasn't signed up for 在呢 yet, so a safety confirmation can't be sent",
+  "@s569": {
+    "placeholders": {
+      "name": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s570": "Safety confirmation request sent to {name}",
+  "@s570": {
+    "placeholders": {
+      "name": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s571": "Send failed: {p1}",
+  "@s571": {
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s572": "End your guardianship with {name} ({phone})?\n\nAfter ending it, they'll no longer receive your SOS notifications, and you won't see their check-in status either.",
+  "@s572": {
+    "placeholders": {
+      "name": {
+        "type": "Object?"
+      },
+      "phone": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s573": "Remove {name} ({phone}) from your guardian circle?",
+  "@s573": {
+    "placeholders": {
+      "name": {
+        "type": "Object?"
+      },
+      "phone": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s574": "Ended guardianship with {p1}",
+  "@s574": {
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s575": "Operation failed: {e}",
+  "@s575": {
+    "placeholders": {
+      "e": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s576": "【在呢】{senderName} is safe. No need to worry ❤️",
+  "@s576": {
+    "placeholders": {
+      "senderName": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s577": "Safety message sent to {p1} guardians",
+  "@s577": {
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s578": "SMS prepared for {p1} guardians. Please send it in your SMS app",
+  "@s578": {
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s579": "SMS unavailable: {e}",
+  "@s579": {
+    "placeholders": {
+      "e": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s580": "Period Settings",
+  "s581": "Menstrual Cycle Length",
+  "s582": "Period Length",
+  "s583": "Reminder Settings",
+  "s584": "Save Settings",
+  "s585": "{p1} days",
+  "@s585": {
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s586": "Average menstrual cycle length (from the first day of this period to the first day of the next)",
+  "s587": "{p1} days",
+  "@s587": {
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s588": "Average Period Length",
+  "s589": "Enable Period Reminder",
+  "s590": "Remind you before your period starts",
+  "s591": "Remind {p1} days in advance",
+  "@s591": {
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s592": "{p1} days",
+  "@s592": {
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s593": "Enable Ovulation Reminder",
+  "s594": "Remind you when ovulation begins",
+  "s595": "Settings saved",
+  "s596": "Save failed. Please retry",
+  "s597": "Analysis failed: {e}",
+  "@s597": {
+    "placeholders": {
+      "e": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s598": "AI Health Analysis",
+  "s599": "No analysis data yet",
+  "s600": "Start Analysis",
+  "s601": "📝 Today's To-Do",
+  "s602": "⚠️ Needs Attention",
+  "s603": "💡 Health Insights",
+  "s604": "🎯 Personalized Tips",
+  "s605": "Analysis time: {p1}",
+  "@s605": {
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s606": "Excellent",
+  "s607": "Good",
+  "s608": "Needs Improvement",
+  "s609": "Health Score",
+  "s610": "Based on your health data analysis",
+  "s611": "Current: {p1}",
+  "@s611": {
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s612": "Suggested: {p1}",
+  "@s612": {
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s613": "Urgent",
+  "s614": "Important",
+  "s615": "Suggested",
+  "s616": "Tip",
+  "s617": "Severe",
+  "s618": "Moderate",
+  "s619": "Mild",
+  "s620": "{p1} min ago",
+  "@s620": {
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s621": "{p1} hr ago",
+  "@s621": {
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s622": "Fall Event Records",
+  "s623": "Feature Info",
+  "s624": "Precision detection enabled",
+  "s625": "Paired · Guarding in background",
+  "s626": "Not Paired",
+  "s627": "Phone",
+  "s628": "Assistive detection ready",
+  "s629": "{p1} records",
+  "@s629": {
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s630": "No fall events yet",
+  "s631": "The system is continuously monitoring.\nApple Watch provides precision fall detection,\nand your phone provides assistive motion detection.",
+  "s632": "Location",
+  "s633": "Confidence",
+  "s634": "Confirmed at",
+  "s635": "Confirmed as false alarm",
+  "s636": "Guardians notified",
+  "s637": "Not notified",
+  "s638": "About Fall Detection",
+  "s639": "Apple Watch Precision Detection",
+  "s640": "Uses the Watch's high-precision accelerometer to accurately detect fall motions.\nRequires Apple Watch Series 4 or later.",
+  "s641": "Phone-assisted detection",
+  "s642": "Uses iPhone accelerometer for simplified fall detection.\nAccuracy is lower than Watch, but as a backup it still provides basic protection.",
+  "s643": "Notify guardian",
+  "s644": "When a fall is detected and you don't respond within 60 seconds, you can confirm to notify your guardian.",
+  "s645": "Disclaimer",
+  "s646": "This feature is only a safety reference aid and cannot replace professional medical diagnosis or emergency services.",
+  "s647": "Location permission required to set up a safe zone",
+  "s648": "Delete safe zone",
+  "s649": "Are you sure you want to delete the \"{p1}\" safe zone?",
+  "@s649": {
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s650": "Clear all safe zones",
+  "s651": "Are you sure you want to delete all safe zones? This action cannot be undone.",
+  "s652": "Clear all",
+  "s653": "Safe zone",
+  "s654": "Clear all",
+  "s655": "Add safe zone",
+  "s656": "No safe zones yet",
+  "s657": "Set your home or frequent places as safe zones\nYou can choose to notify your guardian when leaving",
+  "s658": "Add your first safe zone",
+  "s659": "{p1} · {p2}m radius",
+  "@s659": {
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      },
+      "p2": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s660": "Enabled",
+  "s661": "Disabled",
+  "s662": "Add safe zone",
+  "s663": "Safe zone name",
+  "s664": "e.g. Home, Office, Gym",
+  "s665": "Type",
+  "s666": "Home",
+  "s667": "Office",
+  "s668": "Radius (m)",
+  "s669": "e.g. 200",
+  "s670": "m",
+  "s671": "Set coordinates manually (optional)",
+  "s672": "Latitude",
+  "s673": "Longitude",
+  "s674": "Leave blank to use current location",
+  "s675": "Enter a safe zone name",
+  "s676": "Add",
+  "s677": "Wishing you safe and happy every day 💙",
+  "s678": "No matter how far, I care about you 🌟",
+  "s679": "Take good care of yourself, reach out anytime 🤗",
+  "s680": "You are the one I care about most 💕",
+  "s681": "Safety is the best news—check in every day 🏠",
+  "s682": "Whenever it is, you're not alone ✨",
+  "s683": "card/list success=false: {p1}",
+  "@s683": {
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s684": "card/list error: {e}",
+  "@s684": {
+    "placeholders": {
+      "e": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s685": "invite/stats success=false: {p1}",
+  "@s685": {
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s686": "invite/stats error: {e}",
+  "@s686": {
+    "placeholders": {
+      "e": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s687": "Both card/list and invite/stats returned 0",
+  "s688": "Please sign in before sending a guardian card",
+  "s689": "Edit nickname",
+  "s690": "Recipient's nickname (required)",
+  "s691": "e.g. Xiao Zhao",
+  "s692": "So the recipient knows at a glance it's a gift from you 💌",
+  "s693": "Enter the recipient's nickname",
+  "s694": "Generate guardian card",
+  "s695": "Network connection failed, saved to retry queue\nIt will retry automatically once the network is restored",
+  "s696": "Session expired, please sign out and sign in again",
+  "s697": "No guardian cards available (may have expired)\nWait for the invitee to sign up to get new cards",
+  "s698": "Failed to send card, saved to retry queue\nTap the \"Retry\" button to send again",
+  "s699": "Retry",
+  "s700": "Card generation failed, please retry",
+  "s701": "Guardian Card · 在呢",
+  "s702": "Guardian card generated, but sharing failed: {e}",
+  "@s702": {
+    "placeholders": {
+      "e": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s703": "Guardian card sent 💌",
+  "s704": "Sharing failed, please retry",
+  "s705": "Saved to album 📷",
+  "s706": "Save failed",
+  "s707": "Unable to sync guardian card quota, please check your network and retry",
+  "s708": "Diagnosis: {_syncError}",
+  "@s708": {
+    "placeholders": {
+      "_syncError": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s709": "Both card/list and invite/stats returned 0 or failed",
+  "s710": "Sync successful, {_availableCards} guardian cards remaining",
+  "@s710": {
+    "placeholders": {
+      "_availableCards": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s711": "Sync failed, please retry later",
+  "s712": "Some guardian cards failed to send, can retry",
+  "s713": "You are not signed in; sending guardian cards requires an account",
+  "s714": "Sign in",
+  "s715": "Send guardian card",
+  "s716": "Guardian cards coming soon",
+  "s717": "Send a guardian card to someone you care about\nLet them feel your care across the distance",
+  "s718": "Beautiful guardian cards",
+  "s719": "Multiple warmly designed card templates",
+  "s720": "3D ceremony",
+  "s721": "Immersive envelope-opening animation",
+  "s722": "Emotional sharing",
+  "s723": "Build real connections through guardian cards",
+  "s724": "Android coming soon",
+  "s725": "The Android version is in full development\nWe hope to bring you the ultimate guardian experience",
+  "s726": "Guardian cards left: {_availableCards}",
+  "@s726": {
+    "placeholders": {
+      "_availableCards": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s727": "Waiting for recipient to sign up...",
+  "s728": "Guardian card expired — check in to unlock a new card",
+  "s729": "Guardian cards used up — invite friends to sign up to unlock",
+  "s730": "Guardian cards used up",
+  "s731": "{_availableCards} cards",
+  "@s731": {
+    "placeholders": {
+      "_availableCards": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s732": "Sign up within 24h",
+  "s733": "Check in {remainingDays} more days",
+  "@s733": {
+    "placeholders": {
+      "remainingDays": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s734": "Unlock",
+  "s735": "Loading",
+  "s736": "Locked",
+  "s737": "{_availableCards} available",
+  "@s737": {
+    "placeholders": {
+      "_availableCards": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s738": "Starter card valid for: {_initialRemainingDays} days",
+  "@s738": {
+    "placeholders": {
+      "_initialRemainingDays": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s739": "If not registered within 24 hours, it will be returned automatically",
+  "s740": "Checked in {totalDays} days total — check in {targetDays} days to unlock 1 guardian card",
+  "@s740": {
+    "placeholders": {
+      "totalDays": {
+        "type": "Object?"
+      },
+      "targetDays": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s741": "📖 Check-in unlock rules",
+  "s742": "• Cumulative check-ins (not consecutive!)",
+  "s743": "• Missing a check-in won't reset your cumulative days",
+  "s744": "• Unlock tiers: 3/7/14/30 days",
+  "s745": "💡 Check in with peace of mind—missing days is okay!",
+  "s746": "You've guarded {_totalRegistered} people — keep inviting to get more guardian cards",
+  "@s746": {
+    "placeholders": {
+      "_totalRegistered": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s747": "Sent {p1} cards",
+  "@s747": {
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s748": "Collapse",
+  "s749": "Expand",
+  "s750": "They haven't joined yet ({p1})",
+  "@s750": {
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s751": "Expired",
+  "s752": "{h}h {m}m left",
+  "@s752": {
+    "placeholders": {
+      "h": {
+        "type": "Object?"
+      },
+      "m": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s753": "{m}m {s}s left",
+  "@s753": {
+    "placeholders": {
+      "m": {
+        "type": "Object?"
+      },
+      "s": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s754": "Card returned automatically",
+  "s755": "Expiring soon",
+  "s756": "Security code copied",
+  "s757": "Remind them",
+  "s758": "Tap \"Remind them\" to pick a caring message, then copy and paste it in WeChat to send",
+  "s759": "I sent you a guardian card, did you get it?\n👇 Tap the link to accept my care\n{shareUrl}",
+  "@s759": {
+    "placeholders": {
+      "shareUrl": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s760": "The guardian card I sent you is about to expire~\nTap the link to let me know you're okay 💛\n{shareUrl}",
+  "@s760": {
+    "placeholders": {
+      "shareUrl": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s761": "Your guardian card is expiring, where are you? 😂\nTap the link quick so I can keep guarding you!\n{shareUrl}",
+  "@s761": {
+    "placeholders": {
+      "shareUrl": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s762": "I sent you a guardian card 👇\nTap the link to claim it\n{shareUrl}",
+  "@s762": {
+    "placeholders": {
+      "shareUrl": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s763": "Send your care to them",
+  "s764": "Change message",
+  "s765": "Copy and open WeChat",
+  "s766": "Retry complete: {succeeded}/{retried} successful{p1}",
+  "@s766": {
+    "placeholders": {
+      "succeeded": {
+        "type": "Object?"
+      },
+      "retried": {
+        "type": "Object?"
+      },
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s767": "Retry failed, please retry later",
+  "s768": "Retry error: {e}",
+  "@s768": {
+    "placeholders": {
+      "e": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s769": "Invited {_invitedCount} people to join",
+  "@s769": {
+    "placeholders": {
+      "_invitedCount": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s770": "Received {_invitedCount} cards",
+  "@s770": {
+    "placeholders": {
+      "_invitedCount": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s771": "Recipient's nickname (optional), e.g. \"Mom\"",
+  "s772": "Choose a message",
+  "s773": "Custom message",
+  "s774": "Write what you want to say...",
+  "s775": "Save to album",
+  "s776": "Vital signs guard",
+  "s777": "Vital metrics",
+  "s778": "Record today's vitals and share them anytime",
+  "s779": "When abnormal, it reminds you to check in safely with your guardian circle",
+  "s780": "Please authorize health data on iPhone",
+  "s781": "iOS: Settings → Health → Data Sources & Access → 在呢+ → Turn on all. After authorization, this page's data syncs immediately.",
+  "s782": "Re-check",
+  "s783": "Reading…",
+  "s784": "Syncing…",
+  "s785": "Sync and check in safely with your guardian circle",
+  "s786": "Data synced at {_lastUpdated}",
+  "@s786": {
+    "placeholders": {
+      "_lastUpdated": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s787": "Health data not synced yet",
+  "s788": "Sync successful, checked in safely with your guardian circle ❤️",
+  "s789": "Auto-notify guardian circle on abnormalities",
+  "s790": "If abnormalities like prolonged inactivity are detected, it notifies on your behalf automatically",
+  "s791": "Off—abnormalities only alert you within the app",
+  "s792": "On: guardian circle is auto-notified on abnormalities",
+  "s793": "Off: abnormalities are only alerted within the app",
+  "s794": "Blood oxygen level",
+  "s795": "Walking stability",
+  "s796": "Blood pressure",
+  "s797": "Unit: mmHg",
+  "s798": "Today's activity",
+  "s799": "{steps} steps",
+  "@s799": {
+    "placeholders": {
+      "steps": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s800": "Exercise {exercise} min · Stand {stand} hr",
+  "@s800": {
+    "placeholders": {
+      "exercise": {
+        "type": "Object?"
+      },
+      "stand": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s801": "Apple Watch required",
+  "s802": "Today {min}–{max} bpm",
+  "@s802": {
+    "placeholders": {
+      "min": {
+        "type": "Object?"
+      },
+      "max": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s803": "Past 24 hours",
+  "s804": "Fall risk assessment",
+  "s805": "Stable · low fall risk",
+  "s806": "Fair · keep an eye out",
+  "s807": "Low · high fall risk",
+  "s808": "Data abnormal",
+  "s809": "Last night's sleep",
+  "s810": "{hours}h {minutes}m",
+  "@s810": {
+    "placeholders": {
+      "hours": {
+        "type": "Object?"
+      },
+      "minutes": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s811": "No data yet",
+  "s812": "Deep sleep",
+  "s813": "Core sleep",
+  "s814": "Data source: HealthKit (may include iPhone and Apple Watch)",
+  "s815": "On period",
+  "s816": "Not on period",
+  "s817": "Tracking off",
+  "s818": "Menstrual cycle tracking",
+  "s819": "Day {cycleDay}",
+  "@s819": {
+    "placeholders": {
+      "cycleDay": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s820": "Average cycle",
+  "s821": "{avgCycle} days",
+  "@s821": {
+    "placeholders": {
+      "avgCycle": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s822": "Predict next",
+  "s823": "Not enough data",
+  "s824": "You can manually log period dates; the system will auto-calculate your cycle and predict the next period",
+  "s825": "Log period",
+  "s826": "Start logging",
+  "s827": "Tomorrow",
+  "s828": "In {diff} days",
+  "@s828": {
+    "placeholders": {
+      "diff": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s829": "More body data",
+  "s830": "Resting heart rate",
+  "s831": "Heart rate variability HRV",
+  "s832": "Respiratory rate",
+  "s833": "per min",
+  "s834": "Wrist temperature",
+  "s835": "Overnight wear required",
+  "s836": "Walking distance",
+  "s837": "Active energy",
+  "s838": "kcal",
+  "s839": "ECG · Hearing · Fitness and other complete data",
+  "s840": "Apple only makes this data available in the system Health app",
+  "s841": "Open the system Health app on iPhone to view",
+  "s842": "Health data provided by Apple HealthKit\nFor reference only, not for medical diagnosis",
+  "s843": "✅ Location permission enabled!",
+  "s844": "Location permission required",
+  "s845": "You previously denied location permission; please enable it in system settings.\n\nPath:\nPrivacy → Location Services → 在呢 → \"While Using the App\"",
+  "s846": "Go to settings",
+  "s847": "Location permission not enabled. Emergency SOS needs your location to send a distress message",
+  "s848": "Location permission still not enabled; please make sure it's set to \"Allow While Using\"",
+  "s849": "N {p1}°",
+  "@s849": {
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s850": "E {p1}°",
+  "@s850": {
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s851": "Emergency SOS",
+  "s852": "Emergency SOS page failed to load",
+  "s853": "Error message: {e}",
+  "@s853": {
+    "placeholders": {
+      "e": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s854": "Profile",
+  "s855": "Contacts",
+  "s856": "Location",
+  "s857": "📱 Set phone number",
+  "s858": "Once set, your emergency SOS text will include your phone number",
+  "s859": "Phone number",
+  "s860": "Please enter a valid 11-digit phone number",
+  "s861": "Phone number set to {normalizedPhone}",
+  "@s861": {
+    "placeholders": {
+      "normalizedPhone": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s862": "N ",
+  "s863": "E ",
+  "s864": "N {p1}°",
+  "@s864": {
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s865": "E {p1}°",
+  "@s865": {
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s866": "Unknown address",
+  "s867": "【在呢 Emergency SOS】",
+  "s868": "Person in need: {p1}",
+  "@s868": {
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s869": "Phone number: {p1}",
+  "@s869": {
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s870": "Age: {p1}",
+  "@s870": {
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s871": "Blood type: {_bloodType}",
+  "@s871": {
+    "placeholders": {
+      "_bloodType": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s872": "Medical history: {_disease}",
+  "@s872": {
+    "placeholders": {
+      "_disease": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s873": "Medication: {_medicine}",
+  "@s873": {
+    "placeholders": {
+      "_medicine": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s874": "Allergies: {_allergy}",
+  "@s874": {
+    "placeholders": {
+      "_allergy": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s875": "Notes: {_emergencyNote}",
+  "@s875": {
+    "placeholders": {
+      "_emergencyNote": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s876": "District",
+  "s877": "District ",
+  "s878": "County",
+  "s879": "County ",
+  "s880": "City",
+  "s881": "City ",
+  "s882": "Address: {addrBroken}",
+  "@s882": {
+    "placeholders": {
+      "addrBroken": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s883": "🍎 Apple Maps navigation",
+  "s884": "📍 Amap navigation",
+  "s885": "⚠️ Location retrieval failed, please call back immediately to confirm location!",
+  "s886": "If convenient, please describe your current location (e.g. XX intersection, XX neighborhood, near XX mall)",
+  "s887": "Please contact me immediately or call 120!",
+  "s888": "在呢 - Solo Living Guardian App",
+  "s889": "You",
+  "s890": "【在呢·Emergency SOS】{r}, I'm {s}. I may be in danger and have already sent my real-time location and SOS info via 在呢. Please open the link below right away to see my location and call 120 emergency for me! {shortUrl}",
+  "@s890": {
+    "placeholders": {
+      "r": {
+        "type": "Object?"
+      },
+      "s": {
+        "type": "Object?"
+      },
+      "shortUrl": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s891": "Location history",
+  "s892": "Select date",
+  "s893": "yyyy/MM/dd",
+  "s894": "Switch",
+  "s895": "No location history yet",
+  "s896": "Once location tracking is on, your location is recorded every 5 minutes",
+  "s897": "Location history {p1}",
+  "@s897": {
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s898": "Accuracy ±{p1}m",
+  "@s898": {
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s899": "Latitude: {p1}",
+  "@s899": {
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s900": "Longitude: {p1}",
+  "@s900": {
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s901": "Location accuracy about {p1} m (smaller value = more precise)",
+  "@s901": {
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s902": "Stationary",
+  "s903": "Walking",
+  "s904": "Running",
+  "s905": "Cycling",
+  "s906": "Driving",
+  "s907": "Today's route",
+  "s908": "Route list",
+  "s909": "No track recorded today",
+  "s910": "After enabling location sharing, your activity map shows here",
+  "s911": "Today's movement",
+  "s912": "Activity range",
+  "s913": "0 min",
+  "s914": "Time in safe zone",
+  "s915": "{h}h {p1}m",
+  "@s915": {
+    "placeholders": {
+      "h": {
+        "type": "Object?"
+      },
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s916": "{min}m",
+  "@s916": {
+    "placeholders": {
+      "min": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s917": "Record saved",
+  "s918": "Period tracking",
+  "s919": "Start date",
+  "s920": "Select start date",
+  "s921": "End date (optional)",
+  "s922": "Select end date",
+  "s923": "Flow level",
+  "s924": "Symptoms (optional)",
+  "s925": "Notes (optional)",
+  "s926": "Record your feelings...",
+  "s927": "Save record",
+  "s928": "Get started",
+  "s929": "Enter your phone number to start your safety guard",
+  "s930": "Sign in with phone number to get started",
+  "s931": "Please enter your phone number",
+  "s932": "Someone sent you a guardian card?",
+  "s933": "Enter the security code to bind in one tap →",
+  "s934": "Zaine — your guardian for solo living",
+  "s935": "Enter your guardian security code",
+  "s936": "The security code is provided by the issuer. Once entered, you'll establish a guardian relationship with them.",
+  "s937": "Example: TFABT4",
+  "s938": "Please enter the security code",
+  "s939": "Security code must be at least 4 characters",
+  "s940": "Invalid security code",
+  "s941": "Verification failed. Please check your network",
+  "s942": "✅ Security code saved. It will bind automatically after sign-in",
+  "s943": "Confirm",
+  "s944": "Apple sign-in failed: {p1}",
+  "@s944": {
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s945": "Apple sign-in failed: {e}",
+  "@s945": {
+    "placeholders": {
+      "e": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s946": "A caring guardian for solo living",
+  "s947": "Every night on your own\nyou are not alone",
+  "s948": "Guarding every night of yours",
+  "s949": "Send a help request when you need it",
+  "s950": "Real-time location, your guardian responds instantly",
+  "s951": "Let those who love you stop worrying",
+  "s952": "Zaine — let those who care know you're doing well",
+  "s953": "Complete your health profile",
+  "s954": "Let rescuers know your situation immediately",
+  "s955": "Key info, precise protection",
+  "s956": "Blood type — key reference for transfusions",
+  "s957": "Drug allergies — avoid secondary harm",
+  "s958": "Medical history notes — help doctors assess",
+  "s959": "This info is only sent when you trigger an SOS",
+  "s960": "Add your guardians",
+  "s961": "Emergency contacts = your safety net",
+  "s962": "Add at least 1 family member or friend",
+  "s963": "Notified by priority order when you call for help",
+  "s964": "Quickly send emergency SMS + location",
+  "s965": "Drag to adjust priority",
+  "s966": "They will receive your message when you need it most",
+  "s967": "Enable location permission",
+  "s968": "Our promise: we never monitor your daily location",
+  "s969": "We only fetch your location once when you call for help",
+  "s970": "No tracking, monitoring, or uploading in normal times",
+  "s971": "We only locate you when you actively trigger an SOS",
+  "s972": "Accurate to the meter, with a map link",
+  "s973": "Your privacy, we defend with our lives",
+  "s974": "Emergency SOS texts will include your phone number",
+  "s975": "Your info is only used for safety protection and help among friends and family",
+  "s976": "An unregistered phone number will auto-create an account",
+  "s977": "To let your guardian know your exact location immediately when you trigger an SOS, we need location permission.",
+  "s978": "Our promise:",
+  "s979": "• No tracking, monitoring, or uploading of your location in normal times",
+  "s980": "• We only fetch your location once when you actively trigger an SOS",
+  "s981": "• Your privacy, we defend with our lives",
+  "s982": "Continue",
+  "s983": "Signing in...",
+  "s984": "Sign in / Sign up",
+  "s985": "Please enter a valid phone number",
+  "s986": "Network connection timed out. Please check your network and retry",
+  "s987": "Network connection failed. Please check your network and retry",
+  "s988": "Network request timed out. Please check your network and retry",
+  "s989": "Secure connection failed. Please check your network environment",
+  "s990": "Server busy",
+  "s991": "Server returned an empty response",
+  "s992": "Server response error",
+  "s993": "Server response format error",
+  "s994": "Sign-in failed. Please try again later",
+  "s995": "Guardian invitation",
+  "s996": "The user with phone number {inviterPhone} has set you as their emergency contact",
+  "@s996": {
+    "placeholders": {
+      "inviterPhone": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s997": "Would you also like them to guard you?",
+  "s998": "Guard each other",
+  "s999": "  You can view each other's status and help each other in emergencies",
+  "s1000": "You can also choose \"No thanks\" to only be their emergency contact",
+  "s1001": "No thanks",
+  "s1002": "Warmth across the distance",
+  "s1003": "Mr. Mei",
+  "s1004": "Seeing this letter is like seeing you. May you be safe and happy.",
+  "s1005": "Dear",
+  "s1006": "Round-the-clock vital signs monitoring",
+  "s1007": "Heart rate, blood pressure, sleep — all at your fingertips",
+  "s1008": "Your personal safety network",
+  "s1009": "When needed, one tap notifies all your guardians",
+  "s1010": "Please enter your guardian security code",
+  "s1011": "Redemption failed",
+  "s1012": "Guardian relationship established",
+  "s1013": "You are now {senderName}'s guardian\nYou can guard each other's safety",
+  "@s1013": {
+    "placeholders": {
+      "senderName": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s1014": "If someone sends you a guardian card but you can't scan the QR code or open the link, you can enter the security code here to complete binding",
+  "s1015": "Guardian security code",
+  "s1016": "Example: ABC123",
+  "s1017": "The security code is provided by the issuer and usually shown on the guardian card",
+  "s1018": "Confirm binding",
+  "s1019": "Fall detected with no response. Confirm whether to notify your guardian",
+  "s1020": "✅ Safety check confirmed!",
+  "s1021": "📱 Fall detection on phone enabled (simplified)",
+  "s1022": "📱 Fall detection on phone disabled",
+  "s1023": "Please enable location permission",
+  "s1024": "Safe",
+  "s1025": "Normal",
+  "s1026": "Needs attention",
+  "s1027": "Safety status",
+  "s1028": "Scheduled check-in",
+  "s1029": "Location tracking",
+  "s1030": "Unconfirmed events pending",
+  "s1031": "Your safety protection is fully enabled. Let's guard your peace together.",
+  "s1032": "Scheduled check-in is on. We recommend enabling location tracking for more comprehensive protection.",
+  "s1033": "We recommend enabling scheduled check-in and location tracking to build a more complete protection system.",
+  "s1034": "Safety tips",
+  "s1035": "We recommend confirming your safety at least once a day",
+  "s1036": "Enabling location tracking allows quick positioning in emergencies",
+  "s1037": "Pairing an Apple Watch syncs health data",
+  "s1038": "Remember to periodically check your emergency contacts are correct",
+  "s1039": "Social",
+  "s1040": "Mom",
+  "s1041": "Dad",
+  "s1042": "Bestie Xiaomei",
+  "s1043": "No messages yet",
+  "s1044": "Start interacting with your guardians~",
+  "s1045": "Sent an emoji",
+  "s1046": "Checked in safe",
+  "s1047": "Sent an emergency SOS",
+  "s1048": "Unlocked a new achievement",
+  "s1049": "No stickers received yet",
+  "s1050": "Your guardians will send you stickers~",
+  "s1051": "Yesterday",
+  "s1052": "This week",
+  "s1053": "{p1}/{p2}",
+  "@s1053": {
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      },
+      "p2": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s1054": "Health",
+  "s1055": "Check in",
+  "s1056": "Period",
+  "s1057": "Heart rate trend",
+  "s1058": "Blood oxygen trend",
+  "s1059": "Sleep duration",
+  "s1060": "min",
+  "s1061": "Smart analysis of your health data with personalized suggestions",
+  "s1062": "Settings → Health → Data Sources & Access → Zaine+ → Enable all",
+  "s1063": "Please open iPhone Settings → Health to authorize manually",
+  "s1064": "Subscription product not ready yet. Please try again later",
+  "s1065": "⏰ Subscription product is being prepared\nTakes 2–24 hours to take effect after Apple approval",
+  "s1066": "App Store purchase service unavailable. Please try again later",
+  "s1067": "Subscription product not found ({productId}). Please retry later or contact support",
+  "@s1067": {
+    "placeholders": {
+      "productId": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s1068": "Network",
+  "s1069": "Purchase failed: unstable network. Please check and retry\n(Sandbox testing recommends turning off VPN)",
+  "s1070": "Verification failed. Please restart the app and retry",
+  "s1071": "⚠️ Payment verification failed\nPlease restart the app to auto-retry, or contact support",
+  "s1072": "Verification failed: {e}",
+  "@s1072": {
+    "placeholders": {
+      "e": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s1073": "⚠️ Network error. Please restart the app to auto-retry",
+  "s1074": "Purchase canceled",
+  "s1075": "Purchase record restored",
+  "s1076": "No recoverable purchase record found",
+  "s1077": "yyyy/M/d",
+  "s1078": "Zaine Guard",
+  "s1079": "Your guardian circle is now lit",
+  "s1080": "Light up your guardian circle",
+  "s1081": "Those who care about you feel more at ease now",
+  "s1082": "Let those who care always know you're there",
+  "s1083": "Guardian valid until {p1}",
+  "@s1083": {
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s1084": "Quick call to 3 people",
+  "s1085": "Quick text to 3 people",
+  "s1086": "10 guardians",
+  "s1087": "A simple \"I'm here\" is worth more than a thousand words",
+  "s1088": "In an emergency, quickly notify 3 contacts",
+  "s1089": "One-tap SOS: quick call and text the first 3 contacts — every second counts",
+  "s1090": "Up to 10 guardians — peace of mind for the whole family",
+  "s1091": "Parents, partner, close friends… no one important gets left out",
+  "s1092": "Guardian cards — pass care on to more people",
+  "s1093": "Start with 3 guardian cards. Invite family and friends into your guardian circle and let love flow",
+  "s1094": "Guardian plan comparison",
+  "s1095": "Guardian features",
+  "s1096": "Basic",
+  "s1097": "Smart",
+  "s1098": "Emergency contact limit",
+  "s1099": "5",
+  "s1100": "10",
+  "s1101": "Emergency quick call",
+  "s1102": "1",
+  "s1103": "3",
+  "s1104": "Emergency quick text",
+  "s1105": "Smart protection",
+  "s1106": "A small subscription, a great peace of mind",
+  "s1107": "Just {p1} per day",
+  "@s1107": {
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s1108": "Auto-renews via Apple subscription management",
+  "s1109": "Loading subscription product. Tapping purchase will auto-refresh",
+  "s1110": "⚠ App Store temporarily unavailable. Please try again later",
+  "s1111": "Loading...",
+  "s1112": "/month",
+  "s1113": "/year",
+  "s1114": "Monthly",
+  "s1115": "Yearly",
+  "s1116": "{p1}/year",
+  "@s1116": {
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s1117": "Save 18%",
+  "s1118": "Start protection now",
+  "s1119": "Start protection now · Yearly saves more",
+  "s1120": "Your protection is now active",
+  "s1121": "In an emergency, quickly guard 3 contacts",
+  "s1122": "One-tap SOS: quick call and text the first 3 contacts",
+  "s1123": "Up to 10 guardians",
+  "s1124": "Parents, partner, close friends — no important person gets left out",
+  "s1125": "Guardian cards pass on care",
+  "s1126": "Invite family and friends into your guardian circle and let love flow",
+  "s1127": "Manage guardian subscription",
+  "s1128": "Manage your guardian subscription via your Apple ID. Adjust anytime",
+  "s1129": "Go to Apple ID management",
+  "s1130": "Your trust, we guard with care",
+  "s1131": "Official Apple payment",
+  "s1132": "Cancel anytime",
+  "s1133": "Privacy & security",
+  "s1134": "Restore purchase",
+  "s1135": "≈{p1} {p2}/month",
+  "@s1135": {
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      },
+      "p2": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s1136": "≈¥7.3/month",
+  "s1137": " · Monthly {p1}",
+  "@s1137": {
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s1138": " · Yearly {p1}",
+  "@s1138": {
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s1139": "View privacy policy",
+  "s1140": "View terms of service (user agreement)",
+  "s1141": "Cannot open page: {url}",
+  "@s1141": {
+    "placeholders": {
+      "url": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s1142": "Light",
+  "s1143": "Low",
+  "s1144": "Normal",
+  "s1145": "Heavy",
+  "s1146": "Very heavy",
+  "s1147": "Stomachache",
+  "s1148": "Lower back pain",
+  "s1149": "Headache",
+  "s1150": "Breast tenderness",
+  "s1151": "Fatigue",
+  "s1152": "Mood swings",
+  "s1153": "Increased appetite",
+  "s1154": "Insomnia",
+  "s1155": "Acne",
+  "s1156": "Constipation",
+  "s1157": "Server returned empty response (HTTP {p1})",
+  "@s1157": {
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s1158": "Server busy. Please try again later",
+  "s1159": "Too many requests. Please try again later",
+  "s1160": "Server response error (HTTP {p1})",
+  "@s1160": {
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s1161": "Server response format error (HTTP {p1})",
+  "@s1161": {
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s1162": "Daily check-in reminder",
+  "s1163": "Reminds you to complete your daily check-in so your guardian knows you're safe",
+  "s1164": "Time to check in 🏠",
+  "s1165": "Tap to open Zaine, complete today's check-in, and ease your guardian's mind ❤️",
+  "s1166": "Extra reminder if you haven't checked in that day",
+  "s1167": "Don't forget to check in 💙",
+  "s1168": "You haven't checked in today. Take 3 seconds to report you're safe and ease your guardian's mind",
+  "s1169": "StoreKit unavailable. Please try again later",
+  "s1170": "Failed to initiate purchase request",
+  "s1171": "Purchase failed: {lastError}",
+  "@s1171": {
+    "placeholders": {
+      "lastError": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s1172": "Network connection unstable\nPlease check your network and retry\n(Sandbox testing environment may require turning off VPN)",
+  "s1173": "Sandbox service temporarily unavailable\nPlease retry later or restart the app",
+  "s1174": "Purchase issue ({p1}...)",
+  "@s1174": {
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s1175": "Purchase error: {errStr}",
+  "@s1175": {
+    "placeholders": {
+      "errStr": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s1176": "Product not found: {productId}",
+  "@s1176": {
+    "placeholders": {
+      "productId": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s1177": "Purchase failed",
+  "languageSettings": "Language",
+  "languageHint": "Switch app display language",
+  "langSystem": "Follow system",
+  "langZhCn": "Simplified Chinese",
+  "langZhTw": "Traditional Chinese (Taiwan)",
+  "langZhHk": "Traditional Chinese (Hong Kong)",
+  "langEn": "English",
+  "splashSlogan": "Let those who care always know you're there",
+  "s1181": "I have a guardian code",
+  "@s1181": {
+    "description": "auto i18n extracted"
+  },
+  "s1182": "Guardian code saved",
+  "@s1182": {
+    "description": "auto i18n extracted"
+  },
+  "s1183": "Enter their guardian code",
+  "@s1183": {
+    "description": "auto i18n extracted"
+  },
+  "s1184": "Add it now - we will connect you right after you sign in",
+  "@s1184": {
+    "description": "auto i18n extracted"
+  },
+  "s1185": "{senderName}'s code confirmed - we will connect you after you sign in",
+  "@s1185": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "senderName": {
+        "type": "Object?"
+      }
+    }
+  },
+  "s1186": "Please enter the guardian code",
+  "@s1186": {
+    "description": "auto i18n extracted"
+  },
+  "s1187": "This guardian code is invalid or has expired",
+  "@s1187": {
+    "description": "auto i18n extracted"
+  },
+  "s1188": "Network error, please try again later",
+  "@s1188": {
+    "description": "auto i18n extracted"
+  },
+  "s1189": "Share with a friend",
+  "@s1189": {
+    "description": "auto i18n extracted"
+  },
+  "s1190": "My guardian code",
+  "@s1190": {
+    "description": "auto i18n extracted"
+  },
+  "s1191": "Scan the QR code above, or enter this code in Zaine+\nto connect with me",
+  "@s1191": {
+    "description": "auto i18n extracted"
+  },
+  "z0607": "{p1} has left",
+  "@z0607": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0003": "{p1} days ago",
+  "@z0003": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0002": "{p1} hours ago",
+  "@z0002": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0001": "{p1} minutes ago",
+  "@z0001": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0606": "{p1} fences · {p2} inside",
+  "@z0606": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      },
+      "p2": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0611": "{p1} ({p2}m)",
+  "@z0611": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      },
+      "p2": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0562": "{p1} location records",
+  "@z0562": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0579": "{p1} location points · tap for details",
+  "@z0579": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0595": "Apple Watch paired · guarding in background",
+  "@z0595": {
+    "description": "auto i18n extracted"
+  },
+  "z0594": "Apple Watch precise detection",
+  "@z0594": {
+    "description": "auto i18n extracted"
+  },
+  "z0582": "Apple Watch fall detection",
+  "@z0582": {
+    "description": "auto i18n extracted"
+  },
+  "z0601": "Apple Watch fall detection (precise)",
+  "@z0601": {
+    "description": "auto i18n extracted"
+  },
+  "z0599": "⚠ Awaiting confirmation",
+  "@z0599": {
+    "description": "auto i18n extracted"
+  },
+  "z0598": "✓ Confirmed",
+  "@z0598": {
+    "description": "auto i18n extracted"
+  },
+  "z0551": "{p1} AM",
+  "@z0551": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0543": "9 AM",
+  "@z0543": {
+    "description": "auto i18n extracted"
+  },
+  "z0530": "Last confirmed: {p1}",
+  "@z0530": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0564": "Last record",
+  "@z0564": {
+    "description": "auto i18n extracted"
+  },
+  "z0552": "{p1} PM",
+  "@z0552": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0544": "6 PM",
+  "@z0544": {
+    "description": "auto i18n extracted"
+  },
+  "z0025": "12 PM",
+  "@z0025": {
+    "description": "auto i18n extracted"
+  },
+  "z0554": "Location sharing",
+  "@z0554": {
+    "description": "auto i18n extracted"
+  },
+  "z0603": "Uses your phone's accelerometer to detect falls. Less accurate than Apple Watch, but \"better than nothing\". For users without an Apple Watch.",
+  "@z0603": {
+    "description": "auto i18n extracted"
+  },
+  "z0555": "Protect your whereabouts",
+  "@z0555": {
+    "description": "auto i18n extracted"
+  },
+  "z0565": "Stop tracking",
+  "@z0565": {
+    "description": "auto i18n extracted"
+  },
+  "z0592": "Turn off phone detection",
+  "@z0592": {
+    "description": "auto i18n extracted"
+  },
+  "z0550": "{p1} AM",
+  "@z0550": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0549": "12 AM",
+  "@z0549": {
+    "description": "auto i18n extracted"
+  },
+  "z0557": "Guardians can see your live location · {p1}",
+  "@z0557": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0525": "Scheduled safety check-in",
+  "@z0525": {
+    "description": "auto i18n extracted"
+  },
+  "z0573": "Live",
+  "@z0573": {
+    "description": "auto i18n extracted"
+  },
+  "z0567": "Live tracking · ⚡high battery use",
+  "@z0567": {
+    "description": "auto i18n extracted"
+  },
+  "z0585": "Enabled",
+  "@z0585": {
+    "description": "auto i18n extracted"
+  },
+  "z0583": "Connected · precise detection",
+  "@z0583": {
+    "description": "auto i18n extracted"
+  },
+  "z0556": "Enable",
+  "@z0556": {
+    "description": "auto i18n extracted"
+  },
+  "z0593": "Enable phone detection",
+  "@z0593": {
+    "description": "auto i18n extracted"
+  },
+  "z0566": "Start tracking",
+  "@z0566": {
+    "description": "auto i18n extracted"
+  },
+  "z0561": "Optional before tracking",
+  "@z0561": {
+    "description": "auto i18n extracted"
+  },
+  "z0596": "Phone detection · simplified",
+  "@z0596": {
+    "description": "auto i18n extracted"
+  },
+  "z0026": "Phone fall detection (simplified)",
+  "@z0026": {
+    "description": "auto i18n extracted"
+  },
+  "z0541": "Watch heartbeat",
+  "@z0541": {
+    "description": "auto i18n extracted"
+  },
+  "z0534": "Auto-confirm via watch heartbeat",
+  "@z0534": {
+    "description": "auto i18n extracted"
+  },
+  "z0529": "Confirmed when watch detects you — peace of mind",
+  "@z0529": {
+    "description": "auto i18n extracted"
+  },
+  "z0526": "Reminder frequency",
+  "@z0526": {
+    "description": "auto i18n extracted"
+  },
+  "z0542": "7 AM",
+  "@z0542": {
+    "description": "auto i18n extracted"
+  },
+  "z0024": "Time schedule",
+  "@z0024": {
+    "description": "auto i18n extracted"
+  },
+  "z0546": "10 PM",
+  "@z0546": {
+    "description": "auto i18n extracted"
+  },
+  "z0545": "9 PM",
+  "@z0545": {
+    "description": "auto i18n extracted"
+  },
+  "z0553": "{p1} PM",
+  "@z0553": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0575": "Normal",
+  "@z0575": {
+    "description": "auto i18n extracted"
+  },
+  "z0568": "Normal tracking · recommended",
+  "@z0568": {
+    "description": "auto i18n extracted"
+  },
+  "z0563": "No track recorded today",
+  "@z0563": {
+    "description": "auto i18n extracted"
+  },
+  "z0588": "No fall records yet; detection running",
+  "@z0588": {
+    "description": "auto i18n extracted"
+  },
+  "z0586": "Recent falls ({p1} to confirm)",
+  "@z0586": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0587": "Recent fall records",
+  "@z0587": {
+    "description": "auto i18n extracted"
+  },
+  "z0581": "Not enabled",
+  "@z0581": {
+    "description": "auto i18n extracted"
+  },
+  "z0023": "Not enabled",
+  "@z0023": {
+    "description": "auto i18n extracted"
+  },
+  "z0605": "No safe zone set",
+  "@z0605": {
+    "description": "auto i18n extracted"
+  },
+  "z0584": "Not connected",
+  "@z0584": {
+    "description": "auto i18n extracted"
+  },
+  "z0600": "This feature offers two fall-detection methods:",
+  "@z0600": {
+    "description": "auto i18n extracted"
+  },
+  "z0591": "View history",
+  "@z0591": {
+    "description": "auto i18n extracted"
+  },
+  "z0590": "View history ({p1})",
+  "@z0590": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0022": "View details",
+  "@z0022": {
+    "description": "auto i18n extracted"
+  },
+  "z0580": "Gait stability & fall detection",
+  "@z0580": {
+    "description": "auto i18n extracted"
+  },
+  "z0578": "Every 15 min",
+  "@z0578": {
+    "description": "auto i18n extracted"
+  },
+  "z0572": "Update every 15 min",
+  "@z0572": {
+    "description": "auto i18n extracted"
+  },
+  "z0574": "Every 30 sec",
+  "@z0574": {
+    "description": "auto i18n extracted"
+  },
+  "z0570": "Update every 30 sec",
+  "@z0570": {
+    "description": "auto i18n extracted"
+  },
+  "z0576": "Every 5 min",
+  "@z0576": {
+    "description": "auto i18n extracted"
+  },
+  "z0571": "Update every 5 min",
+  "@z0571": {
+    "description": "auto i18n extracted"
+  },
+  "z0539": "Weekly",
+  "@z0539": {
+    "description": "auto i18n extracted"
+  },
+  "z0536": "Weekly reminder · {p1}",
+  "@z0536": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0538": "Daily",
+  "@z0538": {
+    "description": "auto i18n extracted"
+  },
+  "z0535": "Daily reminder · {p1}",
+  "@z0535": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0547": "Add time",
+  "@z0547": {
+    "description": "auto i18n extracted"
+  },
+  "z0577": "Power saving",
+  "@z0577": {
+    "description": "auto i18n extracted"
+  },
+  "z0569": "Power-saving tracking · 🔋saves battery",
+  "@z0569": {
+    "description": "auto i18n extracted"
+  },
+  "z0540": "Leave safe zone",
+  "@z0540": {
+    "description": "auto i18n extracted"
+  },
+  "z0608": "When leaving the safe zone, you can choose to notify guardians",
+  "@z0608": {
+    "description": "auto i18n extracted"
+  },
+  "z0528": "Auto-confirm on leaving safe zone, no fixed time needed",
+  "@z0528": {
+    "description": "auto i18n extracted"
+  },
+  "z0533": "Auto-confirm on leaving safe zone",
+  "@z0533": {
+    "description": "auto i18n extracted"
+  },
+  "z0532": "Confirm safety now",
+  "@z0532": {
+    "description": "auto i18n extracted"
+  },
+  "z0610": "Manage fences",
+  "@z0610": {
+    "description": "auto i18n extracted"
+  },
+  "z0015": "Custom",
+  "@z0015": {
+    "description": "auto i18n extracted"
+  },
+  "z0537": "Custom time · {p1}",
+  "@z0537": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0527": "Trigger method",
+  "@z0527": {
+    "description": "auto i18n extracted"
+  },
+  "z0609": "Set up safe fence",
+  "@z0609": {
+    "description": "auto i18n extracted"
+  },
+  "z0589": "Fall-detection data is for safety reference only, not a medical diagnosis",
+  "@z0589": {
+    "description": "auto i18n extracted"
+  },
+  "z0604": "Fall-detection data is for safety reference only, not a medical diagnosis.",
+  "@z0604": {
+    "description": "auto i18n extracted"
+  },
+  "z0558": "Collecting track data...",
+  "@z0558": {
+    "description": "auto i18n extracted"
+  },
+  "z0560": "Running",
+  "@z0560": {
+    "description": "auto i18n extracted"
+  },
+  "z0531": "{p1} consecutive unconfirmed",
+  "@z0531": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0559": "Tracking mode",
+  "@z0559": {
+    "description": "auto i18n extracted"
+  },
+  "z0548": "Choose reminder time",
+  "@z0548": {
+    "description": "auto i18n extracted"
+  },
+  "z0602": "Requires Apple Watch Series 4 or later. Uses the watch's accelerometer and gyroscope for precise fall detection. When a fall is detected, you can notify your guardians after confirming.",
+  "@z0602": {
+    "description": "auto i18n extracted"
+  },
+  "z0597": "Requires Apple Watch or phone detection enabled",
+  "@z0597": {
+    "description": "auto i18n extracted"
+  },
+  "z0890": "{p1} {p2} · checked in",
+  "@z0890": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      },
+      "p2": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0891": "{p1} {p2} · not checked in",
+  "@z0891": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      },
+      "p2": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0889": "{p1} mo",
+  "@z0889": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0886": "1 year",
+  "@z0886": {
+    "description": "auto i18n extracted"
+  },
+  "z0884": "30 days",
+  "@z0884": {
+    "description": "auto i18n extracted"
+  },
+  "z0883": "7 days",
+  "@z0883": {
+    "description": "auto i18n extracted"
+  },
+  "z0885": "90 days",
+  "@z0885": {
+    "description": "auto i18n extracted"
+  },
+  "z0892": "Multi",
+  "@z0892": {
+    "description": "auto i18n extracted"
+  },
+  "z0004": "days",
+  "@z0004": {
+    "description": "auto i18n extracted"
+  },
+  "z0896": "Current streak",
+  "@z0896": {
+    "description": "auto i18n extracted"
+  },
+  "z0888": "Total check-ins {p1} days · streak {p2} days · longest {p3} days",
+  "@z0888": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      },
+      "p2": {
+        "type": "Object?"
+      },
+      "p3": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0893": "No check-in in the last {p1} days",
+  "@z0893": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0897": "This week",
+  "@z0897": {
+    "description": "auto i18n extracted"
+  },
+  "z0894": "Check in daily, light up your safety calendar",
+  "@z0894": {
+    "description": "auto i18n extracted"
+  },
+  "z0887": "Check-in heatmap",
+  "@z0887": {
+    "description": "auto i18n extracted"
+  },
+  "z0895": "Check-in stats",
+  "@z0895": {
+    "description": "auto i18n extracted"
+  },
+  "z0663": "{p1} days",
+  "@z0663": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0654": "{p1} days",
+  "@z0654": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0655": "{p1} days",
+  "@z0655": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0659": "Next period",
+  "@z0659": {
+    "description": "auto i18n extracted"
+  },
+  "z0662": "Cycle length",
+  "@z0662": {
+    "description": "auto i18n extracted"
+  },
+  "z0646": "Record period data on the health overview to see cycle analysis",
+  "@z0646": {
+    "description": "auto i18n extracted"
+  },
+  "z0651": "Safe period",
+  "@z0651": {
+    "description": "auto i18n extracted"
+  },
+  "z0648": "Average cycle {p1} days",
+  "@z0648": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0652": "Fertile window",
+  "@z0652": {
+    "description": "auto i18n extracted"
+  },
+  "z0660": "Fertility window",
+  "@z0660": {
+    "description": "auto i18n extracted"
+  },
+  "z0645": "No period records yet",
+  "@z0645": {
+    "description": "auto i18n extracted"
+  },
+  "z0656": "Day {p1}",
+  "@z0656": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0661": "Day {p1}-{p2}",
+  "@z0661": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      },
+      "p2": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0647": "Menstrual cycle",
+  "@z0647": {
+    "description": "auto i18n extracted"
+  },
+  "z0649": "Period day {p1}",
+  "@z0649": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0658": "Period prediction",
+  "@z0658": {
+    "description": "auto i18n extracted"
+  },
+  "z0653": "Recent records",
+  "@z0653": {
+    "description": "auto i18n extracted"
+  },
+  "z0657": "Prediction",
+  "@z0657": {
+    "description": "auto i18n extracted"
+  },
+  "z0650": "In {p1} days",
+  "@z0650": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0666": "Name · age · blood type",
+  "@z0666": {
+    "description": "auto i18n extracted"
+  },
+  "z0029": "Complete health profile",
+  "@z0029": {
+    "description": "auto i18n extracted"
+  },
+  "z0668": "Tap the button below → system dialog → tap “Allow”",
+  "@z0668": {
+    "description": "auto i18n extracted"
+  },
+  "z0671": "Just {p1} steps — set once, works forever",
+  "@z0671": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0667": "Bind at least one family member or friend",
+  "@z0667": {
+    "description": "auto i18n extracted"
+  },
+  "z0669": "Enable emergency help",
+  "@z0669": {
+    "description": "auto i18n extracted"
+  },
+  "z0672": "One last step to finish!",
+  "@z0672": {
+    "description": "auto i18n extracted"
+  },
+  "z0670": "Available anytime",
+  "@z0670": {
+    "description": "auto i18n extracted"
+  },
+  "z0635": "Location permission enabled — accurate location sent when you call for help",
+  "@z0635": {
+    "description": "auto i18n extracted"
+  },
+  "z0634": "Send",
+  "@z0634": {
+    "description": "auto i18n extracted"
+  },
+  "z0028": "Enable",
+  "@z0028": {
+    "description": "auto i18n extracted"
+  },
+  "z0632": "Add",
+  "@z0632": {
+    "description": "auto i18n extracted"
+  },
+  "z0633": "Send 1 guardian card",
+  "@z0633": {
+    "description": "auto i18n extracted"
+  },
+  "z0629": "Fill in key health info — it helps at critical moments",
+  "@z0629": {
+    "description": "auto i18n extracted"
+  },
+  "z0644": "Guardian Pioneer · all newbie tasks done",
+  "@z0644": {
+    "description": "auto i18n extracted"
+  },
+  "z0643": "Completed",
+  "@z0643": {
+    "description": "auto i18n extracted"
+  },
+  "z0638": "Done! Keep checking in to unlock more badges 🏆",
+  "@z0638": {
+    "description": "auto i18n extracted"
+  },
+  "z0639": "Checked in {p1} days straight, {p2} more to go 💪",
+  "@z0639": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      },
+      "p2": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0627": "All newbie tasks complete!",
+  "@z0627": {
+    "description": "auto i18n extracted"
+  },
+  "z0628": "Newbie guardian tasks",
+  "@z0628": {
+    "description": "auto i18n extracted"
+  },
+  "z0640": "Check in daily so guardians know you're safe",
+  "@z0640": {
+    "description": "auto i18n extracted"
+  },
+  "z0636": "Only when calling for help can accurate location be sent to guardians",
+  "@z0636": {
+    "description": "auto i18n extracted"
+  },
+  "z0630": "Add 1 guardian",
+  "@z0630": {
+    "description": "auto i18n extracted"
+  },
+  "z0631": "Emergency contacts automatically become your guardians",
+  "@z0631": {
+    "description": "auto i18n extracted"
+  },
+  "z0641": "Unlock badge: Guardian Pioneer",
+  "@z0641": {
+    "description": "auto i18n extracted"
+  },
+  "z0642": "In progress",
+  "@z0642": {
+    "description": "auto i18n extracted"
+  },
+  "z0637": "Check in 3 days in a row",
+  "@z0637": {
+    "description": "auto i18n extracted"
+  },
+  "z0772": "Good morning",
+  "@z0772": {
+    "description": "auto i18n extracted"
+  },
+  "z0774": "Good afternoon",
+  "@z0774": {
+    "description": "auto i18n extracted"
+  },
+  "z0773": "Good noon",
+  "@z0773": {
+    "description": "auto i18n extracted"
+  },
+  "z0010": "Late at night",
+  "@z0010": {
+    "description": "auto i18n extracted"
+  },
+  "z0771": "Good morning",
+  "@z0771": {
+    "description": "auto i18n extracted"
+  },
+  "z0775": "Good evening",
+  "@z0775": {
+    "description": "auto i18n extracted"
+  },
+  "z0722": "{p1} yrs",
+  "@z0722": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0732": "{p1}, {p2}",
+  "@z0732": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      },
+      "p2": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0734": "https://maps.apple.com/?daddr={p1},{p2}&q={p3}",
+  "@z0734": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      },
+      "p2": {
+        "type": "Object?"
+      },
+      "p3": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0727": "━━━━━━━━ Helper's location ━━━━━━━━",
+  "@z0727": {
+    "description": "auto i18n extracted"
+  },
+  "z0709": "✅ Sent to all {p1} guardians",
+  "@z0709": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0741": "Location info",
+  "@z0741": {
+    "description": "auto i18n extracted"
+  },
+  "z0712": "Upgrade to Smart to unlock all guardian notifications",
+  "@z0712": {
+    "description": "auto i18n extracted"
+  },
+  "z0713": "Send SMS to {p1}",
+  "@z0713": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0728": "Address",
+  "@z0728": {
+    "description": "auto i18n extracted"
+  },
+  "z0733": "Coordinates:",
+  "@z0733": {
+    "description": "auto i18n extracted"
+  },
+  "z0030": "Sent",
+  "@z0030": {
+    "description": "auto i18n extracted"
+  },
+  "z0719": "Copied to clipboard",
+  "@z0719": {
+    "description": "auto i18n extracted"
+  },
+  "z0716": "All contacts called",
+  "@z0716": {
+    "description": "auto i18n extracted"
+  },
+  "z0737": "Called",
+  "@z0737": {
+    "description": "auto i18n extracted"
+  },
+  "z0742": "Acquired",
+  "@z0742": {
+    "description": "auto i18n extracted"
+  },
+  "z0740": "Pending send",
+  "@z0740": {
+    "description": "auto i18n extracted"
+  },
+  "z0738": "Pending call",
+  "@z0738": {
+    "description": "auto i18n extracted"
+  },
+  "z0708": "I'm okay now",
+  "@z0708": {
+    "description": "auto i18n extracted"
+  },
+  "z0711": "More guardians",
+  "@z0711": {
+    "description": "auto i18n extracted"
+  },
+  "z0721": "Not set",
+  "@z0721": {
+    "description": "auto i18n extracted"
+  },
+  "z0735": "Taking the following actions:",
+  "@z0735": {
+    "description": "auto i18n extracted"
+  },
+  "z0720": "Person calling for help",
+  "@z0720": {
+    "description": "auto i18n extracted"
+  },
+  "z0718": "SOS message preview (tap to expand)",
+  "@z0718": {
+    "description": "auto i18n extracted"
+  },
+  "z0717": "SOS message (tap to collapse)",
+  "@z0717": {
+    "description": "auto i18n extracted"
+  },
+  "z0724": "Medical history",
+  "@z0724": {
+    "description": "auto i18n extracted"
+  },
+  "z0739": "SMS notification",
+  "@z0739": {
+    "description": "auto i18n extracted"
+  },
+  "z0707": "Emergency SOS triggered",
+  "@z0707": {
+    "description": "auto i18n extracted"
+  },
+  "z0736": "Emergency contact phone",
+  "@z0736": {
+    "description": "auto i18n extracted"
+  },
+  "z0729": "Apple Maps",
+  "@z0729": {
+    "description": "auto i18n extracted"
+  },
+  "z0725": "Medication",
+  "@z0725": {
+    "description": "auto i18n extracted"
+  },
+  "z0743": "Acquiring...",
+  "@z0743": {
+    "description": "auto i18n extracted"
+  },
+  "z0723": "Blood type",
+  "@z0723": {
+    "description": "auto i18n extracted"
+  },
+  "z0731": "Please contact me immediately or dial 120!\nZaine - solo safety app",
+  "@z0731": {
+    "description": "auto i18n extracted"
+  },
+  "z0726": "Allergies",
+  "@z0726": {
+    "description": "auto i18n extracted"
+  },
+  "z0730": "Amap",
+  "@z0730": {
+    "description": "auto i18n extracted"
+  },
+  "z0031": "(location unknown)",
+  "@z0031": {
+    "description": "auto i18n extracted"
+  },
+  "z0715": "(done)",
+  "@z0715": {
+    "description": "auto i18n extracted"
+  },
+  "z0714": "📞 Call {p1}",
+  "@z0714": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0710": "📨 Sending SOS SMS to guardian {p1}/{p2}: {p3}",
+  "@z0710": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      },
+      "p2": {
+        "type": "Object?"
+      },
+      "p3": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0744": "🚑 Call 120 emergency",
+  "@z0744": {
+    "description": "auto i18n extracted"
+  },
+  "z0675": "Sit-less reminder",
+  "@z0675": {
+    "description": "auto i18n extracted"
+  },
+  "z0696": "Keep your phone charged — in an emergency it's your lifeline",
+  "@z0696": {
+    "description": "auto i18n extracted"
+  },
+  "z0687": "Stay in touch",
+  "@z0687": {
+    "description": "auto i18n extracted"
+  },
+  "z0695": "Charge backup",
+  "@z0695": {
+    "description": "auto i18n extracted"
+  },
+  "z0679": "Care for your heart",
+  "@z0679": {
+    "description": "auto i18n extracted"
+  },
+  "z0682": "Takeout is convenient, but remember veggies and protein",
+  "@z0682": {
+    "description": "auto i18n extracted"
+  },
+  "z0681": "Eat well",
+  "@z0681": {
+    "description": "auto i18n extracted"
+  },
+  "z0690": "If you take medication, set an alarm so you don't miss a dose",
+  "@z0690": {
+    "description": "auto i18n extracted"
+  },
+  "z0700": "Keep indoor temperature 22-26°C; too cold or hot affects your body",
+  "@z0700": {
+    "description": "auto i18n extracted"
+  },
+  "z0678": "Try to sleep before 23:30, get 7-8 hours",
+  "@z0678": {
+    "description": "auto i18n extracted"
+  },
+  "z0685": "Open windows for fresh air",
+  "@z0685": {
+    "description": "auto i18n extracted"
+  },
+  "z0691": "Mood logging",
+  "@z0691": {
+    "description": "auto i18n extracted"
+  },
+  "z0697": "First-aid knowledge",
+  "@z0697": {
+    "description": "auto i18n extracted"
+  },
+  "z0692": "When feeling low, try writing it down — sharing is the first step to healing",
+  "@z0692": {
+    "description": "auto i18n extracted"
+  },
+  "z0680": "If you feel palpitations or chest tightness, don't tough it out — call 120",
+  "@z0680": {
+    "description": "auto i18n extracted"
+  },
+  "z0689": "Take meds on time",
+  "@z0689": {
+    "description": "auto i18n extracted"
+  },
+  "z0683": "Digital detox",
+  "@z0683": {
+    "description": "auto i18n extracted"
+  },
+  "z0686": "Ventilate 15 min morning and evening for fresh air",
+  "@z0686": {
+    "description": "auto i18n extracted"
+  },
+  "z0693": "Check doors and windows",
+  "@z0693": {
+    "description": "auto i18n extracted"
+  },
+  "z0676": "Get up and walk 5 min every 45 min — protect neck and back",
+  "@z0676": {
+    "description": "auto i18n extracted"
+  },
+  "z0688": "Call family or friends at least once a week — don't isolate",
+  "@z0688": {
+    "description": "auto i18n extracted"
+  },
+  "z0699": "Temperature control",
+  "@z0699": {
+    "description": "auto i18n extracted"
+  },
+  "z0674": "Living solo it's easy to forget water — drink a cup of warm water hourly",
+  "@z0674": {
+    "description": "auto i18n extracted"
+  },
+  "z0684": "Put the phone down 1 hour before bed, let brain and eyes rest",
+  "@z0684": {
+    "description": "auto i18n extracted"
+  },
+  "z0694": "Before bed, confirm doors and windows are locked — never slack on safety",
+  "@z0694": {
+    "description": "auto i18n extracted"
+  },
+  "z0698": "Spend 10 min learning CPR — it can save a life when it counts",
+  "@z0698": {
+    "description": "auto i18n extracted"
+  },
+  "z0677": "Regular routine",
+  "@z0677": {
+    "description": "auto i18n extracted"
+  },
+  "z0673": "Drink more water",
+  "@z0673": {
+    "description": "auto i18n extracted"
+  },
+  "z0875": "{p1}{p2} · {p3} yrs · {p4}",
+  "@z0875": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      },
+      "p2": {
+        "type": "Object?"
+      },
+      "p3": {
+        "type": "Object?"
+      },
+      "p4": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0879": "Demo experience",
+  "@z0879": {
+    "description": "auto i18n extracted"
+  },
+  "z0876": "Phone not set — tap here to add →",
+  "@z0876": {
+    "description": "auto i18n extracted"
+  },
+  "z0874": "Profile · contacts · location ready",
+  "@z0874": {
+    "description": "auto i18n extracted"
+  },
+  "z0877": "Sending SOS...",
+  "@z0877": {
+    "description": "auto i18n extracted"
+  },
+  "z0005": "Help",
+  "@z0005": {
+    "description": "auto i18n extracted"
+  },
+  "z0878": "Tap to trigger emergency SOS",
+  "@z0878": {
+    "description": "auto i18n extracted"
+  },
+  "z0873": "Use only in emergencies — contacts guardians and sends location",
+  "@z0873": {
+    "description": "auto i18n extracted"
+  },
+  "z0505": "Emergency SOS auto-triggers in {p1}s",
+  "@z0505": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0506": "I'm okay",
+  "@z0506": {
+    "description": "auto i18n extracted"
+  },
+  "z0503": "Possible fall detected",
+  "@z0503": {
+    "description": "auto i18n extracted"
+  },
+  "z0504": "The system detected a possible fall.\nIf you're okay, tap \"I'm okay\".\nIf you need help, tap \"Need help\".",
+  "@z0504": {
+    "description": "auto i18n extracted"
+  },
+  "z0511": "The system detected a possible fall. Please confirm your safety status",
+  "@z0511": {
+    "description": "auto i18n extracted"
+  },
+  "z0508": "Fall detection",
+  "@z0508": {
+    "description": "auto i18n extracted"
+  },
+  "z0510": "Fall detection reminder",
+  "@z0510": {
+    "description": "auto i18n extracted"
+  },
+  "z0509": "Fall detection reminder notification",
+  "@z0509": {
+    "description": "auto i18n extracted"
+  },
+  "z0507": "Need help",
+  "@z0507": {
+    "description": "auto i18n extracted"
+  },
+  "z0470": "GPS locating",
+  "@z0470": {
+    "description": "auto i18n extracted"
+  },
+  "z0491": "GPS locating...",
+  "@z0491": {
+    "description": "auto i18n extracted"
+  },
+  "z0477": "✅ 120 dialer opened",
+  "@z0477": {
+    "description": "auto i18n extracted"
+  },
+  "z0471": "✅ Location acquired",
+  "@z0471": {
+    "description": "auto i18n extracted"
+  },
+  "z0481": "✅ All contacts notified",
+  "@z0481": {
+    "description": "auto i18n extracted"
+  },
+  "z0474": "✅ SOS SMS sent",
+  "@z0474": {
+    "description": "auto i18n extracted"
+  },
+  "z0500": "Demo only above",
+  "@z0500": {
+    "description": "auto i18n extracted"
+  },
+  "z0484": "Demo only — no real info sent",
+  "@z0484": {
+    "description": "auto i18n extracted"
+  },
+  "z0465": "Preparing demo...",
+  "@z0465": {
+    "description": "auto i18n extracted"
+  },
+  "z0466": "88 Jianguo Rd, Chaoyang, Beijing SOHO Modern City",
+  "@z0466": {
+    "description": "auto i18n extracted"
+  },
+  "z0492": "Send SOS SMS",
+  "@z0492": {
+    "description": "auto i18n extracted"
+  },
+  "z0499": "Share live location with guardian circle",
+  "@z0499": {
+    "description": "auto i18n extracted"
+  },
+  "z0480": "Send live location to guardian circle members",
+  "@z0480": {
+    "description": "auto i18n extracted"
+  },
+  "z0482": "Mom is on the way",
+  "@z0482": {
+    "description": "auto i18n extracted"
+  },
+  "z0487": "Done",
+  "@z0487": {
+    "description": "auto i18n extracted"
+  },
+  "z0496": "Dialer opened",
+  "@z0496": {
+    "description": "auto i18n extracted"
+  },
+  "z0493": "Notified 3 contacts",
+  "@z0493": {
+    "description": "auto i18n extracted"
+  },
+  "z0475": "Notified: Mom, Dad, Dr. Li",
+  "@z0475": {
+    "description": "auto i18n extracted"
+  },
+  "z0502": "Got it, back to help page",
+  "@z0502": {
+    "description": "auto i18n extracted"
+  },
+  "z0498": "All members notified",
+  "@z0498": {
+    "description": "auto i18n extracted"
+  },
+  "z0495": "Call 120",
+  "@z0495": {
+    "description": "auto i18n extracted"
+  },
+  "z0467": "Initiating SOS...",
+  "@z0467": {
+    "description": "auto i18n extracted"
+  },
+  "z0472": "Sending SOS SMS...",
+  "@z0472": {
+    "description": "auto i18n extracted"
+  },
+  "z0476": "Calling 120 emergency...",
+  "@z0476": {
+    "description": "auto i18n extracted"
+  },
+  "z0469": "Acquiring location...",
+  "@z0469": {
+    "description": "auto i18n extracted"
+  },
+  "z0479": "Notifying emergency contacts...",
+  "@z0479": {
+    "description": "auto i18n extracted"
+  },
+  "z0501": "No real SMS or calls were made during the demo.\nA real SOS will contact your guardians and get your precise location after you confirm.",
+  "@z0501": {
+    "description": "auto i18n extracted"
+  },
+  "z0478": "User can manually call emergency",
+  "@z0478": {
+    "description": "auto i18n extracted"
+  },
+  "z0489": "User manually taps help button to trigger SOS",
+  "@z0489": {
+    "description": "auto i18n extracted"
+  },
+  "z0468": "User manually triggered help",
+  "@z0468": {
+    "description": "auto i18n extracted"
+  },
+  "z0485": "A real SOS will contact guardians and send location after you confirm",
+  "@z0485": {
+    "description": "auto i18n extracted"
+  },
+  "z0490": "Get location",
+  "@z0490": {
+    "description": "auto i18n extracted"
+  },
+  "z0488": "Trigger help",
+  "@z0488": {
+    "description": "auto i18n extracted"
+  },
+  "z0021": "Jump to system dialer",
+  "@z0021": {
+    "description": "auto i18n extracted"
+  },
+  "z0473": "Notify 3 emergency contacts",
+  "@z0473": {
+    "description": "auto i18n extracted"
+  },
+  "z0497": "Notify guardian circle",
+  "@z0497": {
+    "description": "auto i18n extracted"
+  },
+  "z0494": "Notify emergency contacts",
+  "@z0494": {
+    "description": "auto i18n extracted"
+  },
+  "z0483": "🎉 Demo complete",
+  "@z0483": {
+    "description": "auto i18n extracted"
+  },
+  "z0486": "🎬 Demo mode",
+  "@z0486": {
+    "description": "auto i18n extracted"
+  },
+  "z0303": "iOS HealthKit 隐私模型下永远 false，请使用 checkRealAuthStatus()",
+  "@z0303": {
+    "description": "auto i18n extracted"
+  },
+  "z0014": "Vital sign anomaly alert",
+  "@z0014": {
+    "description": "auto i18n extracted"
+  },
+  "z0304": "Heart rate too high ({p1} bpm)",
+  "@z0304": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0305": "Heart rate too low ({p1} bpm)",
+  "@z0305": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0306": "Low blood oxygen saturation ({p1}%)",
+  "@z0306": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0307": "High blood pressure detected ({p1}/{p2} mmHg)",
+  "@z0307": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      },
+      "p2": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0308": "Low blood pressure detected ({p1} mmHg)",
+  "@z0308": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0309": "Respiration rate abnormally high ({p1}/min)",
+  "@z0309": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0310": "Respiration rate abnormally low ({p1}/min)",
+  "@z0310": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0311": "Elevated body temperature detected ({p1}°C)",
+  "@z0311": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0312": "Elevated temperature during menstruation ({p1}°C), get some rest",
+  "@z0312": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0313": "Your period may be coming soon (cycle day {p1})",
+  "@z0313": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0314": "Menstrual cycle longer than usual (day {p1}, average {p2})",
+  "@z0314": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      },
+      "p2": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0315": "今日已签到，跳过自动签到(仍同步健康数据到手表) fromHeartbeat={p1} hasWatchSignal={p2}",
+  "@z0315": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      },
+      "p2": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0316": "执行 Watch 心跳自动签到 clientId={p1}",
+  "@z0316": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0317": "签到超时(10s) source={p1}",
+  "@z0317": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0318": "签到异常 source={p1}: {p2}",
+  "@z0318": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      },
+      "p2": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0319": "签到成功 source={p1} uid={p2}",
+  "@z0319": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      },
+      "p2": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0320": "签到未成功(服务端) source={p1}: {p2}",
+  "@z0320": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      },
+      "p2": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0333": "定时判断已签到: 全局={p1} uid({p2})={p3} today={p4} => true(本地命中)",
+  "@z0333": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      },
+      "p2": {
+        "type": "Object?"
+      },
+      "p3": {
+        "type": "Object?"
+      },
+      "p4": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0334": "定时判断已签到: 本地未命中，用服务端缓存 => {p1} (today={p2})",
+  "@z0334": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      },
+      "p2": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0335": "定时判断已签到: 本地未命中，查服务端 checked_in_today={p1} (today={p2}) res={p3}",
+  "@z0335": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      },
+      "p2": {
+        "type": "Object?"
+      },
+      "p3": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0336": "定时判断已签到: 服务端查询异常({p1})，回退本地=false",
+  "@z0336": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0337": "Your watch detected you 💓",
+  "@z0337": {
+    "description": "auto i18n extracted"
+  },
+  "z0338": "Are you safe? Open the App to confirm with one tap",
+  "@z0338": {
+    "description": "auto i18n extracted"
+  },
+  "z0339": "Missed safety confirmation {p1} times in a row",
+  "@z0339": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0340": "If you want your guardians to know, open the App and notify them manually",
+  "@z0340": {
+    "description": "auto i18n extracted"
+  },
+  "z0341": "{p1} times",
+  "@z0341": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0006": "Scheduled check-in reminder",
+  "@z0006": {
+    "description": "auto i18n extracted"
+  },
+  "z0007": "Reminding you to confirm your safety",
+  "@z0007": {
+    "description": "auto i18n extracted"
+  },
+  "z0342": "Safety check-in reminder 💚",
+  "@z0342": {
+    "description": "auto i18n extracted"
+  },
+  "z0343": "You haven't confirmed your safety today. Tap here to check in",
+  "@z0343": {
+    "description": "auto i18n extracted"
+  },
+  "z0344": "Left {p1}",
+  "@z0344": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0345": "Your watch detected you",
+  "@z0345": {
+    "description": "auto i18n extracted"
+  },
+  "z0346": "You have left \"{p1}\". Please open the App to confirm you are safe",
+  "@z0346": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0347": "Your heartbeat detected, please open the App to confirm safety",
+  "@z0347": {
+    "description": "auto i18n extracted"
+  },
+  "z0348": "Left safe zone, automatically confirmed safe 🛡️",
+  "@z0348": {
+    "description": "auto i18n extracted"
+  },
+  "z0349": "Left \"{p1}\", automatically checked you in safe",
+  "@z0349": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0350": "Your watch detected you, safety auto-confirmed 💓",
+  "@z0350": {
+    "description": "auto i18n extracted"
+  },
+  "z0351": "Your heartbeat detected, automatically checked you in safe",
+  "@z0351": {
+    "description": "auto i18n extracted"
+  },
+  "z0352": "{p1}",
+  "@z0352": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0353": "Almost no activity recorded today ({p1} steps)",
+  "@z0353": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0354": "Low activity today, inactive for about {p1} hours",
+  "@z0354": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0355": "Heart rate {p1} bpm, out of normal range",
+  "@z0355": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0356": "Large heart-rate fluctuation today ({p1}–{p2} bpm)",
+  "@z0356": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      },
+      "p2": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0357": "Apple Watch recorded {p1} heart-rate notifications in the last 30 days",
+  "@z0357": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0358": "Blood oxygen {p1}%, significantly low",
+  "@z0358": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0359": "Blood oxygen {p1}%, slightly below normal",
+  "@z0359": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0360": "Walking stability {p1}%, higher fall risk",
+  "@z0360": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0361": "Slept only {p1} hours last night",
+  "@z0361": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0362": "Slept {p1} hours last night, abnormally long",
+  "@z0362": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0008": "No health data yet",
+  "@z0008": {
+    "description": "auto i18n extracted"
+  },
+  "z0009": "After wearing Apple Watch and enabling health permission, your today's status will show here",
+  "@z0009": {
+    "description": "auto i18n extracted"
+  },
+  "z0016": "Good morning status",
+  "@z0016": {
+    "description": "auto i18n extracted"
+  },
+  "z0017": "Stable condition today",
+  "@z0017": {
+    "description": "auto i18n extracted"
+  },
+  "z0018": "Everything is fine today",
+  "@z0018": {
+    "description": "auto i18n extracted"
+  },
+  "z0019": "A few things worth noting",
+  "@z0019": {
+    "description": "auto i18n extracted"
+  },
+  "z0363": "Good condition today, you can proactively tell family",
+  "@z0363": {
+    "description": "auto i18n extracted"
+  },
+  "z0364": "Suggested to report safety to your guardian circle",
+  "@z0364": {
+    "description": "auto i18n extracted"
+  },
+  "z0365": "Today {p1} steps, all vitals normal, feel free to let family know anytime",
+  "@z0365": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0366": "All vitals normal, feel free to tell family anytime",
+  "@z0366": {
+    "description": "auto i18n extracted"
+  },
+  "z0367": "Total {p1} reminders, not necessarily a problem, suggested to keep an eye",
+  "@z0367": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0368": "Some notable signals detected, proactively tell family to ease their worry",
+  "@z0368": {
+    "description": "auto i18n extracted"
+  },
+  "z0369": "Today {p1} steps, all vitals normal, your family can rest easy",
+  "@z0369": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0370": "All vitals normal, your family can rest easy",
+  "@z0370": {
+    "description": "auto i18n extracted"
+  },
+  "z0371": "Total {p1} reminders, not necessarily a problem, but worth noting",
+  "@z0371": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0372": "Abnormal signal detected, proactively report safety to ease family's worry",
+  "@z0372": {
+    "description": "auto i18n extracted"
+  },
+  "z0373": "Love",
+  "@z0373": {
+    "description": "auto i18n extracted"
+  },
+  "z0374": "Happy",
+  "@z0374": {
+    "description": "auto i18n extracted"
+  },
+  "z0375": "Flower",
+  "@z0375": {
+    "description": "auto i18n extracted"
+  },
+  "z0376": "Sunshine",
+  "@z0376": {
+    "description": "auto i18n extracted"
+  },
+  "z0377": "Moon",
+  "@z0377": {
+    "description": "auto i18n extracted"
+  },
+  "z0378": "Lucky clover",
+  "@z0378": {
+    "description": "auto i18n extracted"
+  },
+  "z0379": "Cheer up",
+  "@z0379": {
+    "description": "auto i18n extracted"
+  },
+  "z0380": "Blessing",
+  "@z0380": {
+    "description": "auto i18n extracted"
+  },
+  "z0381": "Celebrate",
+  "@z0381": {
+    "description": "auto i18n extracted"
+  },
+  "z0382": "Hug",
+  "@z0382": {
+    "description": "auto i18n extracted"
+  },
+  "z0383": "Like",
+  "@z0383": {
+    "description": "auto i18n extracted"
+  },
+  "z0384": "Victory",
+  "@z0384": {
+    "description": "auto i18n extracted"
+  },
+  "z0385": "Rainbow",
+  "@z0385": {
+    "description": "auto i18n extracted"
+  },
+  "z0386": "Butterfly",
+  "@z0386": {
+    "description": "auto i18n extracted"
+  },
+  "z0387": "Music",
+  "@z0387": {
+    "description": "auto i18n extracted"
+  },
+  "z0388": "Coffee",
+  "@z0388": {
+    "description": "auto i18n extracted"
+  },
+  "z0389": "Checked in 7 days in a row",
+  "@z0389": {
+    "description": "auto i18n extracted"
+  },
+  "z0390": "Checked in 7 days straight, showing your persistence",
+  "@z0390": {
+    "description": "auto i18n extracted"
+  },
+  "z0391": "Checked in 30 days in a row",
+  "@z0391": {
+    "description": "auto i18n extracted"
+  },
+  "z0392": "Checked in for a month, guardian heart unchanged",
+  "@z0392": {
+    "description": "auto i18n extracted"
+  },
+  "z0393": "Check-in master",
+  "@z0393": {
+    "description": "auto i18n extracted"
+  },
+  "z0394": "Checked in 100 days, became a guardian pro",
+  "@z0394": {
+    "description": "auto i18n extracted"
+  },
+  "z0395": "First care",
+  "@z0395": {
+    "description": "auto i18n extracted"
+  },
+  "z0396": "First emoji sent to a guardian",
+  "@z0396": {
+    "description": "auto i18n extracted"
+  },
+  "z0397": "Warmth delivered",
+  "@z0397": {
+    "description": "auto i18n extracted"
+  },
+  "z0398": "Sent 10 emoji cares in total",
+  "@z0398": {
+    "description": "auto i18n extracted"
+  },
+  "z0399": "Love ambassador",
+  "@z0399": {
+    "description": "auto i18n extracted"
+  },
+  "z0400": "Sent 50 emoji cares in total",
+  "@z0400": {
+    "description": "auto i18n extracted"
+  },
+  "z0401": "Prevent problems before they occur",
+  "@z0401": {
+    "description": "auto i18n extracted"
+  },
+  "z0402": "Set up emergency contact info",
+  "@z0402": {
+    "description": "auto i18n extracted"
+  },
+  "z0403": "Prepare for a rainy day",
+  "@z0403": {
+    "description": "auto i18n extracted"
+  },
+  "z0404": "Test the emergency help feature once",
+  "@z0404": {
+    "description": "auto i18n extracted"
+  },
+  "z0405": "Three guardians",
+  "@z0405": {
+    "description": "auto i18n extracted"
+  },
+  "z0406": "Have 3 guardians",
+  "@z0406": {
+    "description": "auto i18n extracted"
+  },
+  "z0407": "Guardian alliance",
+  "@z0407": {
+    "description": "auto i18n extracted"
+  },
+  "z0408": "Have 5 guardians",
+  "@z0408": {
+    "description": "auto i18n extracted"
+  },
+  "z0409": "Guard 10 people",
+  "@z0409": {
+    "description": "auto i18n extracted"
+  },
+  "z0410": "Guard 10 friends & family",
+  "@z0410": {
+    "description": "auto i18n extracted"
+  },
+  "z0411": "请改用 refreshAllAchievements，一次性刷新全部 11 个成就",
+  "@z0411": {
+    "description": "auto i18n extracted"
+  },
+  "z0412": "High heart rate",
+  "@z0412": {
+    "description": "auto i18n extracted"
+  },
+  "z0413": "Current heart rate {p1} bpm, above normal resting range",
+  "@z0413": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0414": "Relax body and mind",
+  "@z0414": {
+    "description": "auto i18n extracted"
+  },
+  "z0415": "Try deep breathing or meditation to lower heart rate",
+  "@z0415": {
+    "description": "auto i18n extracted"
+  },
+  "z0020": "Start meditating",
+  "@z0020": {
+    "description": "auto i18n extracted"
+  },
+  "z0416": "Low heart rate",
+  "@z0416": {
+    "description": "auto i18n extracted"
+  },
+  "z0417": "Current heart rate {p1} bpm, below normal range",
+  "@z0417": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0418": "Normal heart rate",
+  "@z0418": {
+    "description": "auto i18n extracted"
+  },
+  "z0419": "Your heart rate {p1} bpm is within healthy range",
+  "@z0419": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0420": "Excellent cardio-pulmonary function",
+  "@z0420": {
+    "description": "auto i18n extracted"
+  },
+  "z0421": "Your resting heart rate is low, indicating good cardio-pulmonary function",
+  "@z0421": {
+    "description": "auto i18n extracted"
+  },
+  "z0422": "Insufficient sleep",
+  "@z0422": {
+    "description": "auto i18n extracted"
+  },
+  "z0423": "Slept only {p1} hours last night, aim for 7-9 hours",
+  "@z0423": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0424": "{p1} hours",
+  "@z0424": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0425": "7-9 hours",
+  "@z0425": {
+    "description": "auto i18n extracted"
+  },
+  "z0426": "Improve sleep",
+  "@z0426": {
+    "description": "auto i18n extracted"
+  },
+  "z0427": "Try going to bed 30 minutes earlier to build a regular routine",
+  "@z0427": {
+    "description": "auto i18n extracted"
+  },
+  "z0428": "Set sleep reminder",
+  "@z0428": {
+    "description": "auto i18n extracted"
+  },
+  "z0429": "Sufficient sleep",
+  "@z0429": {
+    "description": "auto i18n extracted"
+  },
+  "z0430": "Slept well last night, helps recovery",
+  "@z0430": {
+    "description": "auto i18n extracted"
+  },
+  "z0431": "Insufficient deep sleep",
+  "@z0431": {
+    "description": "auto i18n extracted"
+  },
+  "z0432": "Deep sleep only {p1}%, affecting recovery quality",
+  "@z0432": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0433": "Low blood oxygen",
+  "@z0433": {
+    "description": "auto i18n extracted"
+  },
+  "z0434": "Current blood oxygen {p1}%, suggested to watch respiratory health",
+  "@z0434": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0435": "Watch your respiratory health",
+  "@z0435": {
+    "description": "auto i18n extracted"
+  },
+  "z0436": "Blood oxygen too low, suggested to see a doctor",
+  "@z0436": {
+    "description": "auto i18n extracted"
+  },
+  "z0437": "Normal blood oxygen",
+  "@z0437": {
+    "description": "auto i18n extracted"
+  },
+  "z0438": "Good blood oxygen level, healthy respiratory system",
+  "@z0438": {
+    "description": "auto i18n extracted"
+  },
+  "z0439": "High stress",
+  "@z0439": {
+    "description": "auto i18n extracted"
+  },
+  "z0440": "Low heart rate variability, suggesting high stress state",
+  "@z0440": {
+    "description": "auto i18n extracted"
+  },
+  "z0441": "De-stress and relax",
+  "@z0441": {
+    "description": "auto i18n extracted"
+  },
+  "z0442": "Try deep breathing, yoga or meditation to relieve stress",
+  "@z0442": {
+    "description": "auto i18n extracted"
+  },
+  "z0443": "Good stress management",
+  "@z0443": {
+    "description": "auto i18n extracted"
+  },
+  "z0444": "Good heart rate variability, indicating good stress management",
+  "@z0444": {
+    "description": "auto i18n extracted"
+  },
+  "z0445": "Long menstruation",
+  "@z0445": {
+    "description": "auto i18n extracted"
+  },
+  "z0446": "Currently day {p1} of menstruation, consult a doctor if it lasts too long",
+  "@z0446": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0447": "Menstrual care",
+  "@z0447": {
+    "description": "auto i18n extracted"
+  },
+  "z0448": "Keep warm, avoid strenuous exercise, drink warm water",
+  "@z0448": {
+    "description": "auto i18n extracted"
+  },
+  "z0449": "Irregular cycle",
+  "@z0449": {
+    "description": "auto i18n extracted"
+  },
+  "z0450": "Current cycle {p1} days, outside normal range (21-35 days)",
+  "@z0450": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0451": "{p1} days",
+  "@z0451": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0452": "21-35 days",
+  "@z0452": {
+    "description": "auto i18n extracted"
+  },
+  "z0453": "Today's check-in",
+  "@z0453": {
+    "description": "auto i18n extracted"
+  },
+  "z0454": "You haven't confirmed safety today, tap to check in and ease your guardians",
+  "@z0454": {
+    "description": "auto i18n extracted"
+  },
+  "z0455": "Check in now",
+  "@z0455": {
+    "description": "auto i18n extracted"
+  },
+  "z0456": "Insufficient data, need at least 2 cycle records",
+  "@z0456": {
+    "description": "auto i18n extracted"
+  },
+  "z0457": "Cycle data abnormal",
+  "@z0457": {
+    "description": "auto i18n extracted"
+  },
+  "z0458": "Prediction based on {p1} cycles",
+  "@z0458": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0027": "Image generation failed",
+  "@z0027": {
+    "description": "auto i18n extracted"
+  },
+  "z0612": "Image decode failed",
+  "@z0612": {
+    "description": "auto i18n extracted"
+  },
+  "z0613": "Badge image saved to album",
+  "@z0613": {
+    "description": "auto i18n extracted"
+  },
+  "z0614": "Save failed: {p1}",
+  "@z0614": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0615": "Check-in successful ✓",
+  "@z0615": {
+    "description": "auto i18n extracted"
+  },
+  "z0616": "You have guarded yourself for {p1} days in a row",
+  "@z0616": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0617": "Stay",
+  "@z0617": {
+    "description": "auto i18n extracted"
+  },
+  "z0618": "tuned",
+  "@z0618": {
+    "description": "auto i18n extracted"
+  },
+  "z0619": "Scan to download \"Zaine+\"",
+  "@z0619": {
+    "description": "auto i18n extracted"
+  },
+  "z0620": "Solo-safety guardian App\nLet those who care know you're well",
+  "@z0620": {
+    "description": "auto i18n extracted"
+  },
+  "z0621": "Android version coming soon\nStay tuned",
+  "@z0621": {
+    "description": "auto i18n extracted"
+  },
+  "z0622": "Guarded for {p1} days",
+  "@z0622": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0623": "Save badge",
+  "@z0623": {
+    "description": "auto i18n extracted"
+  },
+  "z0624": "{p1} days",
+  "@z0624": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0512": "No messages yet",
+  "@z0512": {
+    "description": "auto i18n extracted"
+  },
+  "z0513": "Send your first message~",
+  "@z0513": {
+    "description": "auto i18n extracted"
+  },
+  "z0514": "Sending message...",
+  "@z0514": {
+    "description": "auto i18n extracted"
+  },
+  "z0515": "{p1} sent an emoji",
+  "@z0515": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0516": "Achievement unlocked",
+  "@z0516": {
+    "description": "auto i18n extracted"
+  },
+  "z0517": "Tap to view details",
+  "@z0517": {
+    "description": "auto i18n extracted"
+  },
+  "z0518": "Guardee has checked in",
+  "@z0518": {
+    "description": "auto i18n extracted"
+  },
+  "z0519": "Congratulations!",
+  "@z0519": {
+    "description": "auto i18n extracted"
+  },
+  "z0859": "Guardian achievements",
+  "@z0859": {
+    "description": "auto i18n extracted"
+  },
+  "z0860": "All",
+  "@z0860": {
+    "description": "auto i18n extracted"
+  },
+  "z0861": "Care",
+  "@z0861": {
+    "description": "auto i18n extracted"
+  },
+  "z0862": "Milestone",
+  "@z0862": {
+    "description": "auto i18n extracted"
+  },
+  "z0863": "Unlocked {p1} / {p2}",
+  "@z0863": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      },
+      "p2": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0864": "Start your guardian journey!",
+  "@z0864": {
+    "description": "auto i18n extracted"
+  },
+  "z0865": "Keep it up!",
+  "@z0865": {
+    "description": "auto i18n extracted"
+  },
+  "z0866": "Nice work!",
+  "@z0866": {
+    "description": "auto i18n extracted"
+  },
+  "z0867": "Close to the goal!",
+  "@z0867": {
+    "description": "auto i18n extracted"
+  },
+  "z0868": "Awesome! All unlocked!",
+  "@z0868": {
+    "description": "auto i18n extracted"
+  },
+  "z0869": "Unlocked",
+  "@z0869": {
+    "description": "auto i18n extracted"
+  },
+  "z0870": "Unlocked on {p1}",
+  "@z0870": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0871": "Achievement unlocked!",
+  "@z0871": {
+    "description": "auto i18n extracted"
+  },
+  "z0872": "Awesome!",
+  "@z0872": {
+    "description": "auto i18n extracted"
+  },
+  "z0052": "Lifetime Guardian King",
+  "@z0052": {
+    "description": "auto i18n extracted"
+  },
+  "z0053": "5+ years, guarding has become a habit",
+  "@z0053": {
+    "description": "auto i18n extracted"
+  },
+  "z0054": "1400 Legend",
+  "@z0054": {
+    "description": "auto i18n extracted"
+  },
+  "z0055": "Nearly 4 years, the legend never ends",
+  "@z0055": {
+    "description": "auto i18n extracted"
+  },
+  "z0056": "Triple Crown King",
+  "@z0056": {
+    "description": "auto i18n extracted"
+  },
+  "z0057": "3+ years, a kingly bearing",
+  "@z0057": {
+    "description": "auto i18n extracted"
+  },
+  "z0058": "Double Crown Legend",
+  "@z0058": {
+    "description": "auto i18n extracted"
+  },
+  "z0059": "Nearly 3 years, the legend continues",
+  "@z0059": {
+    "description": "auto i18n extracted"
+  },
+  "z0060": "Guardian Diamond",
+  "@z0060": {
+    "description": "auto i18n extracted"
+  },
+  "z0061": "2+ years, you are the most reliable guardian",
+  "@z0061": {
+    "description": "auto i18n extracted"
+  },
+  "z0062": "Double Crown King",
+  "@z0062": {
+    "description": "auto i18n extracted"
+  },
+  "z0063": "Nearly 2 years, double the glory",
+  "@z0063": {
+    "description": "auto i18n extracted"
+  },
+  "z0064": "Double Diamond Guardian",
+  "@z0064": {
+    "description": "auto i18n extracted"
+  },
+  "z0065": "Nearly 2 years, diamonds shine",
+  "@z0065": {
+    "description": "auto i18n extracted"
+  },
+  "z0066": "Annual Champion",
+  "@z0066": {
+    "description": "auto i18n extracted"
+  },
+  "z0067": "Nearly 1.5 years, a champion heart",
+  "@z0067": {
+    "description": "auto i18n extracted"
+  },
+  "z0068": "Annual Flame",
+  "@z0068": {
+    "description": "auto i18n extracted"
+  },
+  "z0069": "1+ year, your perseverance is admirable",
+  "@z0069": {
+    "description": "auto i18n extracted"
+  },
+  "z0070": "300 King",
+  "@z0070": {
+    "description": "auto i18n extracted"
+  },
+  "z0071": "Nearly 1 year, the path of a king",
+  "@z0071": {
+    "description": "auto i18n extracted"
+  },
+  "z0072": "Golden Guardian",
+  "@z0072": {
+    "description": "auto i18n extracted"
+  },
+  "z0073": "250+ days, golden quality",
+  "@z0073": {
+    "description": "auto i18n extracted"
+  },
+  "z0074": "Guardian Gem",
+  "@z0074": {
+    "description": "auto i18n extracted"
+  },
+  "z0075": "200+ days, gems shine bright",
+  "@z0075": {
+    "description": "auto i18n extracted"
+  },
+  "z0076": "Silver Guardian",
+  "@z0076": {
+    "description": "auto i18n extracted"
+  },
+  "z0077": "Half year+, silver shining",
+  "@z0077": {
+    "description": "auto i18n extracted"
+  },
+  "z0078": "Bronze Guardian",
+  "@z0078": {
+    "description": "auto i18n extracted"
+  },
+  "z0079": "Nearly half a year, bronze resilience",
+  "@z0079": {
+    "description": "auto i18n extracted"
+  },
+  "z0080": "Bronze Medal",
+  "@z0080": {
+    "description": "auto i18n extracted"
+  },
+  "z0081": "140+ days, medal glory",
+  "@z0081": {
+    "description": "auto i18n extracted"
+  },
+  "z0082": "Guardian Medal",
+  "@z0082": {
+    "description": "auto i18n extracted"
+  },
+  "z0083": "120+ days, medals upon you",
+  "@z0083": {
+    "description": "auto i18n extracted"
+  },
+  "z0011": "100-Day Guardian",
+  "@z0011": {
+    "description": "auto i18n extracted"
+  },
+  "z0084": "100+ days, the habit is formed",
+  "@z0084": {
+    "description": "auto i18n extracted"
+  },
+  "z0085": "Art Master",
+  "@z0085": {
+    "description": "auto i18n extracted"
+  },
+  "z0086": "95+ days, a master bearing",
+  "@z0086": {
+    "description": "auto i18n extracted"
+  },
+  "z0087": "Quarterly Shine",
+  "@z0087": {
+    "description": "auto i18n extracted"
+  },
+  "z0088": "One quarter, shining bright",
+  "@z0088": {
+    "description": "auto i18n extracted"
+  },
+  "z0089": "Stage Star",
+  "@z0089": {
+    "description": "auto i18n extracted"
+  },
+  "z0090": "85+ days, a protagonist halo",
+  "@z0090": {
+    "description": "auto i18n extracted"
+  },
+  "z0091": "Circus Star",
+  "@z0091": {
+    "description": "auto i18n extracted"
+  },
+  "z0092": "80+ days, a star grace",
+  "@z0092": {
+    "description": "auto i18n extracted"
+  },
+  "z0093": "Camping Expert",
+  "@z0093": {
+    "description": "auto i18n extracted"
+  },
+  "z0094": "75+ days, the path of an expert",
+  "@z0094": {
+    "description": "auto i18n extracted"
+  },
+  "z0095": "Lofty Snow Mountain",
+  "@z0095": {
+    "description": "auto i18n extracted"
+  },
+  "z0096": "70+ days, lofty as a mountain",
+  "@z0096": {
+    "description": "auto i18n extracted"
+  },
+  "z0097": "Volcanic Eruption",
+  "@z0097": {
+    "description": "auto i18n extracted"
+  },
+  "z0098": "65+ days, passionate as fire",
+  "@z0098": {
+    "description": "auto i18n extracted"
+  },
+  "z0099": "Two-Month Flame",
+  "@z0099": {
+    "description": "auto i18n extracted"
+  },
+  "z0100": "Two months, flames blazing",
+  "@z0100": {
+    "description": "auto i18n extracted"
+  },
+  "z0101": "Surging Waves",
+  "@z0101": {
+    "description": "auto i18n extracted"
+  },
+  "z0102": "55+ days, surging on",
+  "@z0102": {
+    "description": "auto i18n extracted"
+  },
+  "z0103": "Fifty Thunder",
+  "@z0103": {
+    "description": "auto i18n extracted"
+  },
+  "z0104": "50+ days, thunderous power",
+  "@z0104": {
+    "description": "auto i18n extracted"
+  },
+  "z0105": "Cloud Stroll",
+  "@z0105": {
+    "description": "auto i18n extracted"
+  },
+  "z0106": "45+ days, strolling the clouds",
+  "@z0106": {
+    "description": "auto i18n extracted"
+  },
+  "z0107": "First Rainbow",
+  "@z0107": {
+    "description": "auto i18n extracted"
+  },
+  "z0108": "40+ days, a brilliant rainbow",
+  "@z0108": {
+    "description": "auto i18n extracted"
+  },
+  "z0109": "Half-Month Guardian",
+  "@z0109": {
+    "description": "auto i18n extracted"
+  },
+  "z0110": "35+ days, half-moon fulfilled",
+  "@z0110": {
+    "description": "auto i18n extracted"
+  },
+  "z0012": "Monthly Star",
+  "@z0012": {
+    "description": "auto i18n extracted"
+  },
+  "z0111": "One month, you are a true guardian",
+  "@z0111": {
+    "description": "auto i18n extracted"
+  },
+  "z0112": "Abundant Fruit",
+  "@z0112": {
+    "description": "auto i18n extracted"
+  },
+  "z0113": "28+ days, abundant harvest",
+  "@z0113": {
+    "description": "auto i18n extracted"
+  },
+  "z0114": "Tranquil Autumn Leaves",
+  "@z0114": {
+    "description": "auto i18n extracted"
+  },
+  "z0115": "26+ days, tranquil as ever",
+  "@z0115": {
+    "description": "auto i18n extracted"
+  },
+  "z0116": "Red Maple Leaves",
+  "@z0116": {
+    "description": "auto i18n extracted"
+  },
+  "z0117": "24+ days, maple at its reddest",
+  "@z0117": {
+    "description": "auto i18n extracted"
+  },
+  "z0118": "Shaded Green Trees",
+  "@z0118": {
+    "description": "auto i18n extracted"
+  },
+  "z0119": "22+ days, green trees in shade",
+  "@z0119": {
+    "description": "auto i18n extracted"
+  },
+  "z0120": "Upright Pine",
+  "@z0120": {
+    "description": "auto i18n extracted"
+  },
+  "z0121": "20+ days, upright as a pine",
+  "@z0121": {
+    "description": "auto i18n extracted"
+  },
+  "z0122": "Cactus",
+  "@z0122": {
+    "description": "auto i18n extracted"
+  },
+  "z0123": "18+ days, unyielding resilience",
+  "@z0123": {
+    "description": "auto i18n extracted"
+  },
+  "z0124": "Standing Palm",
+  "@z0124": {
+    "description": "auto i18n extracted"
+  },
+  "z0125": "16+ days, standing tall as a pine",
+  "@z0125": {
+    "description": "auto i18n extracted"
+  },
+  "z0126": "Two-Week Bloom",
+  "@z0126": {
+    "description": "auto i18n extracted"
+  },
+  "z0127": "Two weeks, blooming with glory",
+  "@z0127": {
+    "description": "auto i18n extracted"
+  },
+  "z0128": "First Rose Bloom",
+  "@z0128": {
+    "description": "auto i18n extracted"
+  },
+  "z0129": "12+ days, first rose bloom",
+  "@z0129": {
+    "description": "auto i18n extracted"
+  },
+  "z0130": "Toward the Sun",
+  "@z0130": {
+    "description": "auto i18n extracted"
+  },
+  "z0131": "10+ days, growing toward the sun",
+  "@z0131": {
+    "description": "auto i18n extracted"
+  },
+  "z0132": "Daisy Bloom",
+  "@z0132": {
+    "description": "auto i18n extracted"
+  },
+  "z0133": "9+ days, daisy in bloom",
+  "@z0133": {
+    "description": "auto i18n extracted"
+  },
+  "z0134": "First Cherry Blossom",
+  "@z0134": {
+    "description": "auto i18n extracted"
+  },
+  "z0135": "8+ days, cherry blossom opens",
+  "@z0135": {
+    "description": "auto i18n extracted"
+  },
+  "z0136": "Shining New Star",
+  "@z0136": {
+    "description": "auto i18n extracted"
+  },
+  "z0137": "One week, a good start is half the success",
+  "@z0137": {
+    "description": "auto i18n extracted"
+  },
+  "z0138": "First Show of Skill",
+  "@z0138": {
+    "description": "auto i18n extracted"
+  },
+  "z0139": "6+ days, first show of skill",
+  "@z0139": {
+    "description": "auto i18n extracted"
+  },
+  "z0140": "Budding",
+  "@z0140": {
+    "description": "auto i18n extracted"
+  },
+  "z0141": "5+ days, budding",
+  "@z0141": {
+    "description": "auto i18n extracted"
+  },
+  "z0142": "Growing Sprout",
+  "@z0142": {
+    "description": "auto i18n extracted"
+  },
+  "z0143": "4+ days, growing sprout",
+  "@z0143": {
+    "description": "auto i18n extracted"
+  },
+  "z0144": "Clover",
+  "@z0144": {
+    "description": "auto i18n extracted"
+  },
+  "z0145": "3 days, lucky triple",
+  "@z0145": {
+    "description": "auto i18n extracted"
+  },
+  "z0146": "First Tender Sprout",
+  "@z0146": {
+    "description": "auto i18n extracted"
+  },
+  "z0147": "2 days, first tender sprout",
+  "@z0147": {
+    "description": "auto i18n extracted"
+  },
+  "z0148": "Guardian Seed",
+  "@z0148": {
+    "description": "auto i18n extracted"
+  },
+  "z0013": "Every greatness begins with the first step",
+  "@z0013": {
+    "description": "auto i18n extracted"
+  },
+  "z0149": "Persistence matters more than perfection",
+  "@z0149": {
+    "description": "auto i18n extracted"
+  },
+  "z0150": "Guarding yourself is the best gift you give the world",
+  "@z0150": {
+    "description": "auto i18n extracted"
+  },
+  "z0151": "Today you are stronger than yesterday",
+  "@z0151": {
+    "description": "auto i18n extracted"
+  },
+  "z0152": "Living alone, never alone at heart; someone is quietly watching over you",
+  "@z0152": {
+    "description": "auto i18n extracted"
+  },
+  "z0153": "You are stronger than you imagine",
+  "@z0153": {
+    "description": "auto i18n extracted"
+  },
+  "z0154": "Every day is a new beginning",
+  "@z0154": {
+    "description": "auto i18n extracted"
+  },
+  "z0155": "Do not fear going slow; fear stopping",
+  "@z0155": {
+    "description": "auto i18n extracted"
+  },
+  "z0156": "You deserve to be treated well",
+  "@z0156": {
+    "description": "auto i18n extracted"
+  },
+  "z0157": "Take good care of yourself, and the world gets better",
+  "@z0157": {
+    "description": "auto i18n extracted"
+  },
+  "z0158": "Your persistence is changing everything",
+  "@z0158": {
+    "description": "auto i18n extracted"
+  },
+  "z0159": "Do not underestimate today you",
+  "@z0159": {
+    "description": "auto i18n extracted"
+  },
+  "z0160": "Safety is the best news",
+  "@z0160": {
+    "description": "auto i18n extracted"
+  },
+  "z0161": "Be gentle with yourself; you have worked hard too",
+  "@z0161": {
+    "description": "auto i18n extracted"
+  },
+  "z0162": "Check-in takes a second, but peace of mind lasts all day",
+  "@z0162": {
+    "description": "auto i18n extracted"
+  },
+  "z0163": "Your existence itself matters",
+  "@z0163": {
+    "description": "auto i18n extracted"
+  },
+  "z0164": "Take care of yourself first, then the world",
+  "@z0164": {
+    "description": "auto i18n extracted"
+  },
+  "z0165": "Today is another day of being cared for",
+  "@z0165": {
+    "description": "auto i18n extracted"
+  },
+  "z0166": "The way you live seriously is truly beautiful",
+  "@z0166": {
+    "description": "auto i18n extracted"
+  },
+  "z0167": "Small habits, great power",
+  "@z0167": {
+    "description": "auto i18n extracted"
+  },
+  "z0168": "Today, be proud of yourself too",
+  "@z0168": {
+    "description": "auto i18n extracted"
+  },
+  "z0169": "The warmest word in the world is \"I am here\"",
+  "@z0169": {
+    "description": "auto i18n extracted"
+  },
+  "z0170": "You are never alone",
+  "@z0170": {
+    "description": "auto i18n extracted"
+  },
+  "z0171": "Every today is the foundation of tomorrow",
+  "@z0171": {
+    "description": "auto i18n extracted"
+  },
+  "z0172": "Say to yourself: good job today",
+  "@z0172": {
+    "description": "auto i18n extracted"
+  },
+  "z0173": "Live well today, and that's the best tomorrow",
+  "@z0173": {
+    "description": "auto i18n extracted"
+  },
+  "z0174": "You deserve peace and happiness",
+  "@z0174": {
+    "description": "auto i18n extracted"
+  },
+  "z0175": "Remember to smile today",
+  "@z0175": {
+    "description": "auto i18n extracted"
+  },
+  "z0176": "Protecting yourself is protecting those who love you",
+  "@z0176": {
+    "description": "auto i18n extracted"
+  },
+  "z0177": "You get through every hard pass; you're truly amazing",
+  "@z0177": {
+    "description": "auto i18n extracted"
+  },
+  "z0178": "Slacked off yesterday? No worries, just keep going today.",
+  "@z0178": {
+    "description": "auto i18n extracted"
+  },
+  "z0179": "Haven't seen you for a few days. Are you okay? Glad you're back, let's continue.",
+  "@z0179": {
+    "description": "auto i18n extracted"
+  },
+  "z0180": "A week apart. What have you been busy with? Remember, someone is waiting for you.",
+  "@z0180": {
+    "description": "auto i18n extracted"
+  },
+  "z0181": "Almost half a month since we last met. Welcome back—someone here has been thinking of you.",
+  "@z0181": {
+    "description": "auto i18n extracted"
+  },
+  "z0182": "Long time no see. How was this past month? Either way, welcome home.",
+  "@z0182": {
+    "description": "auto i18n extracted"
+  },
+  "z0183": "You're finally back! Where have you been? We all missed you.",
+  "@z0183": {
+    "description": "auto i18n extracted"
+  },
+  "z0184": "It's been so long. Thank you for still remembering this place. No matter how long you've been away, home is always open to you.",
+  "@z0184": {
+    "description": "auto i18n extracted"
+  },
+  "z0185": "One week!",
+  "@z0185": {
+    "description": "auto i18n extracted"
+  },
+  "z0186": "One week! A new habit is forming. You're greater than you think.",
+  "@z0186": {
+    "description": "auto i18n extracted"
+  },
+  "z0187": "Double digits",
+  "@z0187": {
+    "description": "auto i18n extracted"
+  },
+  "z0188": "Double-digit check-in reached! Keep moving forward.",
+  "@z0188": {
+    "description": "auto i18n extracted"
+  },
+  "z0189": "20 days",
+  "@z0189": {
+    "description": "auto i18n extracted"
+  },
+  "z0190": "20 days of persistence—you're quietly growing stronger.",
+  "@z0190": {
+    "description": "auto i18n extracted"
+  },
+  "z0191": "🎉 One month! Congrats on becoming the 'Monthly Star'—protection has become part of your daily life.",
+  "@z0191": {
+    "description": "auto i18n extracted"
+  },
+  "z0192": "One and a half months",
+  "@z0192": {
+    "description": "auto i18n extracted"
+  },
+  "z0193": "One and a half months. You've proven with action that persistence isn't hard.",
+  "@z0193": {
+    "description": "auto i18n extracted"
+  },
+  "z0194": "Two months",
+  "@z0194": {
+    "description": "auto i18n extracted"
+  },
+  "z0195": "🔥 Two months! Your fire of protection is burning.",
+  "@z0195": {
+    "description": "auto i18n extracted"
+  },
+  "z0196": "One quarter",
+  "@z0196": {
+    "description": "auto i18n extracted"
+  },
+  "z0197": "One quarter. You've weathered a slice of the seasons. Remarkable.",
+  "@z0197": {
+    "description": "auto i18n extracted"
+  },
+  "z0198": "⭐ 100 Days of Protection! You are your own hero. Today is worth celebrating.",
+  "@z0198": {
+    "description": "auto i18n extracted"
+  },
+  "z0199": "Half a year",
+  "@z0199": {
+    "description": "auto i18n extracted"
+  },
+  "z0200": "Half a year now. These 180 days of dedication are the best gift you gave yourself.",
+  "@z0200": {
+    "description": "auto i18n extracted"
+  },
+  "z0201": "First anniversary",
+  "@z0201": {
+    "description": "auto i18n extracted"
+  },
+  "z0202": "👑 One year! You did it. Protection has become your instinct.",
+  "@z0202": {
+    "description": "auto i18n extracted"
+  },
+  "z0203": "{p1}-Day Milestone",
+  "@z0203": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0204": "Day {p1}! Every step of your persistence is creating a miracle.",
+  "@z0204": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0205": "New Year's Day",
+  "@z0205": {
+    "description": "auto i18n extracted"
+  },
+  "z0206": "First day of the new year; begin with this check-in. This year, take good care of yourself too.",
+  "@z0206": {
+    "description": "auto i18n extracted"
+  },
+  "z0207": "Qingming (Tomb-Sweeping Day)",
+  "@z0207": {
+    "description": "auto i18n extracted"
+  },
+  "z0208": "Honor the past and cherish the present. Living well is the best tribute.",
+  "@z0208": {
+    "description": "auto i18n extracted"
+  },
+  "z0209": "Labor Day",
+  "@z0209": {
+    "description": "auto i18n extracted"
+  },
+  "z0210": "Salute to you who live earnestly. Take a rest today.",
+  "@z0210": {
+    "description": "auto i18n extracted"
+  },
+  "z0211": "Dragon Boat Festival",
+  "@z0211": {
+    "description": "auto i18n extracted"
+  },
+  "z0212": "Wishing you well on the Dragon Boat Festival. Tie a colorful cord, and tie up the care for yourself too.",
+  "@z0212": {
+    "description": "auto i18n extracted"
+  },
+  "z0213": "Mid-Autumn Festival",
+  "@z0213": {
+    "description": "auto i18n extracted"
+  },
+  "z0214": "The moon rises above the sea; we share this moment though far apart. You are not alone.",
+  "@z0214": {
+    "description": "auto i18n extracted"
+  },
+  "z0215": "National Day",
+  "@z0215": {
+    "description": "auto i18n extracted"
+  },
+  "z0216": "A joyous celebration across the land, vast mountains and rivers. Don't forget to be kind to yourself.",
+  "@z0216": {
+    "description": "auto i18n extracted"
+  },
+  "z0217": "Spring Festival",
+  "@z0217": {
+    "description": "auto i18n extracted"
+  },
+  "z0218": "Happy New Year! No matter where you celebrate, remember someone is always thinking of you.",
+  "@z0218": {
+    "description": "auto i18n extracted"
+  },
+  "z0219": "New Year's Eve",
+  "@z0219": {
+    "description": "auto i18n extracted"
+  },
+  "z0220": "The last check-in of the year. You've worked hard this year.",
+  "@z0220": {
+    "description": "auto i18n extracted"
+  },
+  "z0221": "Lantern Festival",
+  "@z0221": {
+    "description": "auto i18n extracted"
+  },
+  "z0222": "Lanterns bright as day, moon and people round. May every day of yours be warm and bright.",
+  "@z0222": {
+    "description": "auto i18n extracted"
+  },
+  "z0223": "Longtaitou (Dragon Head-Raising Festival)",
+  "@z0223": {
+    "description": "auto i18n extracted"
+  },
+  "z0224": "The second day of the second month, the dragon raises its head. Spring has come, and your good fortune begins to rise too.",
+  "@z0224": {
+    "description": "auto i18n extracted"
+  },
+  "z0225": "Qixi (Chinese Valentine's Day)",
+  "@z0225": {
+    "description": "auto i18n extracted"
+  },
+  "z0226": "Tonight the galaxy shines bright. Love yourself first, then others.",
+  "@z0226": {
+    "description": "auto i18n extracted"
+  },
+  "z0227": "Chongyang (Double Ninth Festival)",
+  "@z0227": {
+    "description": "auto i18n extracted"
+  },
+  "z0228": "Climb high to see far, sky high and clouds light. Life fears not being late, but never climbing the mountain.",
+  "@z0228": {
+    "description": "auto i18n extracted"
+  },
+  "z0229": "Minor Cold",
+  "@z0229": {
+    "description": "auto i18n extracted"
+  },
+  "z0230": "Cold weather and frozen ground; taking care of yourself is the greatest warmth.",
+  "@z0230": {
+    "description": "auto i18n extracted"
+  },
+  "z0231": "Major Cold",
+  "@z0231": {
+    "description": "auto i18n extracted"
+  },
+  "z0232": "The coldest moment of the year, and also the closest to spring.",
+  "@z0232": {
+    "description": "auto i18n extracted"
+  },
+  "z0233": "Beginning of Spring",
+  "@z0233": {
+    "description": "auto i18n extracted"
+  },
+  "z0234": "Spring returns to the earth. The seed in your heart is about to sprout.",
+  "@z0234": {
+    "description": "auto i18n extracted"
+  },
+  "z0235": "Rain Water",
+  "@z0235": {
+    "description": "auto i18n extracted"
+  },
+  "z0236": "Good rain knows its season. Remember to bring an umbrella today, and to eat too.",
+  "@z0236": {
+    "description": "auto i18n extracted"
+  },
+  "z0237": "Awakening of Insects",
+  "@z0237": {
+    "description": "auto i18n extracted"
+  },
+  "z0238": "Spring thunder rumbles, all things revive. The energy in your body should wake up too.",
+  "@z0238": {
+    "description": "auto i18n extracted"
+  },
+  "z0239": "Spring Equinox",
+  "@z0239": {
+    "description": "auto i18n extracted"
+  },
+  "z0240": "Day and night equal, yin and yang balanced. Today, make peace with yourself.",
+  "@z0240": {
+    "description": "auto i18n extracted"
+  },
+  "z0241": "Qingming (solar term)",
+  "@z0241": {
+    "description": "auto i18n extracted"
+  },
+  "z0242": "Spring is gentle and bright, all things grow. A good day to go out for a walk.",
+  "@z0242": {
+    "description": "auto i18n extracted"
+  },
+  "z0243": "Grain Rain",
+  "@z0243": {
+    "description": "auto i18n extracted"
+  },
+  "z0244": "Rain breeds hundreds of grains. Sow hope and wait for the harvest.",
+  "@z0244": {
+    "description": "auto i18n extracted"
+  },
+  "z0245": "Beginning of Summer",
+  "@z0245": {
+    "description": "auto i18n extracted"
+  },
+  "z0246": "Summer is here; live with full, steaming vitality.",
+  "@z0246": {
+    "description": "auto i18n extracted"
+  },
+  "z0247": "Grain Buds",
+  "@z0247": {
+    "description": "auto i18n extracted"
+  },
+  "z0248": "Grain Buds beats perfection. Nothing needs to be too full; just right is best.",
+  "@z0248": {
+    "description": "auto i18n extracted"
+  },
+  "z0249": "Grain in Ear",
+  "@z0249": {
+    "description": "auto i18n extracted"
+  },
+  "z0250": "Grain in Ear, busy planting. All effort will eventually be rewarded.",
+  "@z0250": {
+    "description": "auto i18n extracted"
+  },
+  "z0251": "Summer Solstice",
+  "@z0251": {
+    "description": "auto i18n extracted"
+  },
+  "z0252": "The longest day of the year. Love yourself a little more today.",
+  "@z0252": {
+    "description": "auto i18n extracted"
+  },
+  "z0253": "Minor Heat",
+  "@z0253": {
+    "description": "auto i18n extracted"
+  },
+  "z0254": "The heat grows. A calm mind brings natural coolness.",
+  "@z0254": {
+    "description": "auto i18n extracted"
+  },
+  "z0255": "Major Heat",
+  "@z0255": {
+    "description": "auto i18n extracted"
+  },
+  "z0256": "Scorching summer; remember to give yourself a cup of plain cold water.",
+  "@z0256": {
+    "description": "auto i18n extracted"
+  },
+  "z0257": "Beginning of Autumn",
+  "@z0257": {
+    "description": "auto i18n extracted"
+  },
+  "z0258": "A leaf tells the coming of autumn. Some things, let go when it's time.",
+  "@z0258": {
+    "description": "auto i18n extracted"
+  },
+  "z0259": "End of Heat",
+  "@z0259": {
+    "description": "auto i18n extracted"
+  },
+  "z0260": "The heat fades, autumn deepens. Everything is slowly getting better.",
+  "@z0260": {
+    "description": "auto i18n extracted"
+  },
+  "z0261": "White Dew",
+  "@z0261": {
+    "description": "auto i18n extracted"
+  },
+  "z0262": "White dew turns to frost. It's getting cold; remember to add clothes.",
+  "@z0262": {
+    "description": "auto i18n extracted"
+  },
+  "z0263": "Autumn Equinox",
+  "@z0263": {
+    "description": "auto i18n extracted"
+  },
+  "z0264": "Equal share of autumn. Life is half bright, half composed.",
+  "@z0264": {
+    "description": "auto i18n extracted"
+  },
+  "z0265": "Cold Dew",
+  "@z0265": {
+    "description": "auto i18n extracted"
+  },
+  "z0266": "Dew grows cold. No matter how busy, don't forget to check in.",
+  "@z0266": {
+    "description": "auto i18n extracted"
+  },
+  "z0267": "Frost's Descent",
+  "@z0267": {
+    "description": "auto i18n extracted"
+  },
+  "z0268": "Frost descends upon the world. The last solar term of autumn; wrap it up well.",
+  "@z0268": {
+    "description": "auto i18n extracted"
+  },
+  "z0269": "Beginning of Winter",
+  "@z0269": {
+    "description": "auto i18n extracted"
+  },
+  "z0270": "Winter is here. Remember to keep a share of warmth for yourself.",
+  "@z0270": {
+    "description": "auto i18n extracted"
+  },
+  "z0271": "Minor Snow",
+  "@z0271": {
+    "description": "auto i18n extracted"
+  },
+  "z0272": "Minor snow falls. May there be light in your heart, unafraid of the cold.",
+  "@z0272": {
+    "description": "auto i18n extracted"
+  },
+  "z0273": "Major Snow",
+  "@z0273": {
+    "description": "auto i18n extracted"
+  },
+  "z0274": "Heavy snow flies. On the coldest days, be your own warm sun.",
+  "@z0274": {
+    "description": "auto i18n extracted"
+  },
+  "z0275": "Winter Solstice",
+  "@z0275": {
+    "description": "auto i18n extracted"
+  },
+  "z0276": "Winter Solstice is as grand as New Year. Remember to eat dumplings/tangyuan today, and to check in too.",
+  "@z0276": {
+    "description": "auto i18n extracted"
+  },
+  "z0277": "Welcome back",
+  "@z0277": {
+    "description": "auto i18n extracted"
+  },
+  "z0776": "开发者模式 v2.0",
+  "@z0776": {
+    "description": "auto i18n extracted"
+  },
+  "z0777": "3D 宣传录制模式",
+  "@z0777": {
+    "description": "auto i18n extracted"
+  },
+  "z0778": "进入电影感动画秀，用于录制宣传视频",
+  "@z0778": {
+    "description": "auto i18n extracted"
+  },
+  "z0779": "重置今日签到",
+  "@z0779": {
+    "description": "auto i18n extracted"
+  },
+  "z0780": "清除今天的签到记录，可重新签到",
+  "@z0780": {
+    "description": "auto i18n extracted"
+  },
+  "z0781": "恢复为初始3张卡状态",
+  "@z0781": {
+    "description": "auto i18n extracted"
+  },
+  "z0782": "体验版 ↔ 智能版",
+  "@z0782": {
+    "description": "auto i18n extracted"
+  },
+  "z0783": "测试智能版过期后自动降级为体验版",
+  "@z0783": {
+    "description": "auto i18n extracted"
+  },
+  "z0032": "逆地理诊断",
+  "@z0032": {
+    "description": "auto i18n extracted"
+  },
+  "z0784": "查看本次地址来源（高德/系统）及错误码",
+  "@z0784": {
+    "description": "auto i18n extracted"
+  },
+  "z0033": "Apple Watch 测试",
+  "@z0033": {
+    "description": "auto i18n extracted"
+  },
+  "z0785": "查看 Watch 信号 & 触发一次静默签到",
+  "@z0785": {
+    "description": "auto i18n extracted"
+  },
+  "z0034": "HealthKit 诊断",
+  "@z0034": {
+    "description": "auto i18n extracted"
+  },
+  "z0786": "查看授权/错误/最近一次拉取，并可一键触发读取",
+  "@z0786": {
+    "description": "auto i18n extracted"
+  },
+  "z0787": "导出工作记忆 / 切换账号",
+  "@z0787": {
+    "description": "auto i18n extracted"
+  },
+  "z0788": "导出本机调试数据（不含token）并退出登录",
+  "@z0788": {
+    "description": "auto i18n extracted"
+  },
+  "z0789": "来源：{p1}",
+  "@z0789": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0790": "时间：{p1}",
+  "@z0790": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0791": "地址：{p1}",
+  "@z0791": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0792": "高德 info：{p1}",
+  "@z0792": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0793": "高德 infocode：{p1}",
+  "@z0793": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0794": "诊断信息已复制",
+  "@z0794": {
+    "description": "auto i18n extracted"
+  },
+  "z0795": "最后一次 Watch action：{p1}",
+  "@z0795": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0796": "最后一次 Watch 时间：{p1}",
+  "@z0796": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0797": "提示：健康数据读取不依赖 Watch App，Apple Watch 佩戴数据会自动写入 iPhone 健康。",
+  "@z0797": {
+    "description": "auto i18n extracted"
+  },
+  "z0798": "已写入 Watch 签到信号（pending_watch_checkin=true）",
+  "@z0798": {
+    "description": "auto i18n extracted"
+  },
+  "z0799": "模拟信号",
+  "@z0799": {
+    "description": "auto i18n extracted"
+  },
+  "z0800": "触发静默签到",
+  "@z0800": {
+    "description": "auto i18n extracted"
+  },
+  "z0801": "最近授权：{p1}",
+  "@z0801": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0802": "授权时间：{p1}",
+  "@z0802": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0803": "授权错误：{p1}",
+  "@z0803": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0804": "最近拉取条数：{p1}",
+  "@z0804": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0805": "拉取时间：{p1}",
+  "@z0805": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0806": "拉取错误：{p1}",
+  "@z0806": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0807": "按类型条数：{p1}",
+  "@z0807": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0808": "按类型错误：{p1}",
+  "@z0808": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0809": "重新授权",
+  "@z0809": {
+    "description": "auto i18n extracted"
+  },
+  "z0810": "触发读取",
+  "@z0810": {
+    "description": "auto i18n extracted"
+  },
+  "z0811": "导出工作记忆",
+  "@z0811": {
+    "description": "auto i18n extracted"
+  },
+  "z0812": "已复制工作记忆（不含token）",
+  "@z0812": {
+    "description": "auto i18n extracted"
+  },
+  "z0813": "Day 1",
+  "@z0813": {
+    "description": "auto i18n extracted"
+  },
+  "z0814": "Day 6",
+  "@z0814": {
+    "description": "auto i18n extracted"
+  },
+  "z0815": "Day 7",
+  "@z0815": {
+    "description": "auto i18n extracted"
+  },
+  "z0816": "Day 29",
+  "@z0816": {
+    "description": "auto i18n extracted"
+  },
+  "z0817": "Day 30",
+  "@z0817": {
+    "description": "auto i18n extracted"
+  },
+  "z0818": "Day 99",
+  "@z0818": {
+    "description": "auto i18n extracted"
+  },
+  "z0819": "Day 100",
+  "@z0819": {
+    "description": "auto i18n extracted"
+  },
+  "z0820": "Day 364",
+  "@z0820": {
+    "description": "auto i18n extracted"
+  },
+  "z0821": "Day 365",
+  "@z0821": {
+    "description": "auto i18n extracted"
+  },
+  "z0822": "Day 1825",
+  "@z0822": {
+    "description": "auto i18n extracted"
+  },
+  "z0823": "设置连续签到天数，然后点击\"模拟签到\"。",
+  "@z0823": {
+    "description": "auto i18n extracted"
+  },
+  "z0824": "连续签到天数",
+  "@z0824": {
+    "description": "auto i18n extracted"
+  },
+  "z0825": "输入 1-1825 之间的天数",
+  "@z0825": {
+    "description": "auto i18n extracted"
+  },
+  "z0826": "快捷选择：",
+  "@z0826": {
+    "description": "auto i18n extracted"
+  },
+  "z0827": "请输入 1-1825 之间的有效天数",
+  "@z0827": {
+    "description": "auto i18n extracted"
+  },
+  "z0828": "模拟签到",
+  "@z0828": {
+    "description": "auto i18n extracted"
+  },
+  "z0829": "已模拟连续签到 {p1} 天 ✓",
+  "@z0829": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0830": "弹窗显示失败: {p1}",
+  "@z0830": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0831": "重置签到",
+  "@z0831": {
+    "description": "auto i18n extracted"
+  },
+  "z0832": "这将清除今天的签到记录，你可以重新签到。",
+  "@z0832": {
+    "description": "auto i18n extracted"
+  },
+  "z0833": "连续天数不会受影响。",
+  "@z0833": {
+    "description": "auto i18n extracted"
+  },
+  "z0834": "今日签到已重置 ✓",
+  "@z0834": {
+    "description": "auto i18n extracted"
+  },
+  "z0835": "这将重置守护卡为初始状态：",
+  "@z0835": {
+    "description": "auto i18n extracted"
+  },
+  "z0836": "• 后端配额重置为 3 张（30天有效期）",
+  "@z0836": {
+    "description": "auto i18n extracted"
+  },
+  "z0837": "• 清除本地所有守护卡缓存数据",
+  "@z0837": {
+    "description": "auto i18n extracted"
+  },
+  "z0838": "• 重置首次发卡日期",
+  "@z0838": {
+    "description": "auto i18n extracted"
+  },
+  "z0839": "后端已发出的卡片不受影响，仍可被注册",
+  "@z0839": {
+    "description": "auto i18n extracted"
+  },
+  "z0840": "守护卡已重置为初始状态 ✓（3张，30天有效）",
+  "@z0840": {
+    "description": "auto i18n extracted"
+  },
+  "z0841": "本地守护卡已重置 ✓（后端未登录未重置）",
+  "@z0841": {
+    "description": "auto i18n extracted"
+  },
+  "z0842": "请先切换为智能版，再测试过期降级",
+  "@z0842": {
+    "description": "auto i18n extracted"
+  },
+  "z0843": "模拟会员过期",
+  "@z0843": {
+    "description": "auto i18n extracted"
+  },
+  "z0844": "模拟智能版过期后自动降级为体验版：",
+  "@z0844": {
+    "description": "auto i18n extracted"
+  },
+  "z0845": "• 紧急求助快捷拨打上限：3位 → 1位",
+  "@z0845": {
+    "description": "auto i18n extracted"
+  },
+  "z0846": "• 联系人上限：10位 → 5位",
+  "@z0846": {
+    "description": "auto i18n extracted"
+  },
+  "z0847": "• 超出限制的联系人显示锁定图标",
+  "@z0847": {
+    "description": "auto i18n extracted"
+  },
+  "z0848": "• 已添加的联系人数据保留",
+  "@z0848": {
+    "description": "auto i18n extracted"
+  },
+  "z0035": "⚠️ 仅开发测试用，不影响后端数据",
+  "@z0035": {
+    "description": "auto i18n extracted"
+  },
+  "z0849": "已模拟会员过期降级 → 体验版 ✓",
+  "@z0849": {
+    "description": "auto i18n extracted"
+  },
+  "z0850": "模拟过期",
+  "@z0850": {
+    "description": "auto i18n extracted"
+  },
+  "z0851": "Starter Plan (Free)",
+  "@z0851": {
+    "description": "auto i18n extracted"
+  },
+  "z0852": "Smart Plan (¥9/month)",
+  "@z0852": {
+    "description": "auto i18n extracted"
+  },
+  "z0853": "Emergency SOS quick dial: 1 contact · up to 5 contacts",
+  "@z0853": {
+    "description": "auto i18n extracted"
+  },
+  "z0854": "Emergency SOS quick dial: 3 contacts · up to 10 contacts",
+  "@z0854": {
+    "description": "auto i18n extracted"
+  },
+  "z0855": "当前：{p1}",
+  "@z0855": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0856": "切换为：{p1}",
+  "@z0856": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0857": "已切换为 {p1} ✓",
+  "@z0857": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0858": "确认切换",
+  "@z0858": {
+    "description": "auto i18n extracted"
+  },
+  "z0326": "In the safe zone",
+  "@z0326": {
+    "description": "auto i18n extracted"
+  },
+  "z0327": "Left",
+  "@z0327": {
+    "description": "auto i18n extracted"
+  },
+  "z0328": "Not checked",
+  "@z0328": {
+    "description": "auto i18n extracted"
+  },
+  "z0329": "Safety Fence Alert",
+  "@z0329": {
+    "description": "auto i18n extracted"
+  },
+  "z0330": "Alert when leaving the safe area",
+  "@z0330": {
+    "description": "auto i18n extracted"
+  },
+  "z0331": "Left {p1} safe zone",
+  "@z0331": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0332": "You have left the \"{p1}\" safe area",
+  "@z0332": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0279": "Your parents wait late into the night for your safe check-in; your partner worries when you travel alone; your child hopes you come home early.",
+  "@z0279": {
+    "description": "auto i18n extracted"
+  },
+  "z0280": "Zaine+ is more than an app—it's an always-on line of protection between you and the people you care about.",
+  "@z0280": {
+    "description": "auto i18n extracted"
+  },
+  "z0281": "• Subscription name: Zaine+ Smart\n",
+  "@z0281": {
+    "description": "auto i18n extracted"
+  },
+  "z0282": "• Subscription period: {p1}\n",
+  "@z0282": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0283": "• Subscription price: {p1}\n",
+  "@z0283": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0284": "• Auto-renewal: Automatically charged 24 hours before the current billing cycle ends\n",
+  "@z0284": {
+    "description": "auto i18n extracted"
+  },
+  "z0285": "• Cancellation: You can cancel anytime in Apple ID settings; the current period remains available after cancellation.",
+  "@z0285": {
+    "description": "auto i18n extracted"
+  },
+  "z0765": "No {p1} data yet",
+  "@z0765": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0766": "Viewable after wearing Apple Watch and enabling health permissions",
+  "@z0766": {
+    "description": "auto i18n extracted"
+  },
+  "z0767": "Trend of last {p1} days",
+  "@z0767": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0768": "Current",
+  "@z0768": {
+    "description": "auto i18n extracted"
+  },
+  "z0769": "Average",
+  "@z0769": {
+    "description": "auto i18n extracted"
+  },
+  "z0770": "Maximum",
+  "@z0770": {
+    "description": "auto i18n extracted"
+  },
+  "z0295": "CREATE TABLE checkin_records (\n        id INTEGER PRIMARY KEY AUTOINCREMENT,\n        checkin_date TEXT NOT NULL,      -- 签到日期 (YYYY-MM-DD)\n        checkin_time TEXT NOT NULL,      -- 签到时间 (HH:MM:SS)\n        timestamp INTEGER NOT NULL,       -- Unix 时间戳（毫秒）\n        created_at TEXT DEFAULT CURRENT_TIMESTAMP\n      )",
+  "@z0295": {
+    "description": "auto i18n extracted"
+  },
+  "z0296": "CREATE TABLE contacts (\n        id INTEGER PRIMARY KEY AUTOINCREMENT,\n        server_id TEXT,                   -- 服务器返回的 ID（可为空，本地联系人）\n        name TEXT NOT NULL,\n        phone TEXT NOT NULL,\n        relation TEXT,                    -- 关系：家人/朋友/同事等\n        avatar_path TEXT,                 -- 头像本地路径\n        is_local INTEGER DEFAULT 0,       -- 1=本地联系人，0=服务器同步\n        is_emergency INTEGER DEFAULT 0,   -- 1=紧急联系人\n        sort_order INTEGER DEFAULT 0,     -- 排序权重\n        created_at TEXT DEFAULT CURRENT_TIMESTAMP,\n        updated_at TEXT DEFAULT CURRENT_TIMESTAMP\n      )",
+  "@z0296": {
+    "description": "auto i18n extracted"
+  },
+  "z0297": "CREATE TABLE health_cache (\n        id INTEGER PRIMARY KEY AUTOINCREMENT,\n        data_type TEXT NOT NULL,          -- 数据类型：steps/heart_rate/distance\n        value REAL NOT NULL,              -- 数值\n        unit TEXT,                        -- 单位\n        date TEXT NOT NULL,               -- 日期 (YYYY-MM-DD)\n        timestamp INTEGER NOT NULL,       -- 记录时间戳\n        source TEXT,                      -- 数据来源：HealthKit/手动\n        UNIQUE(data_type, date) ON CONFLICT REPLACE\n      )",
+  "@z0297": {
+    "description": "auto i18n extracted"
+  },
+  "z0298": "CREATE TABLE notification_history (\n        id INTEGER PRIMARY KEY AUTOINCREMENT,\n        type TEXT NOT NULL,               -- 类型：sos/checkin/reminder\n        recipient TEXT,                   -- 接收者\n        content TEXT,                     -- 内容摘要\n        status TEXT,                      -- 状态：sent/failed/pending\n        sent_at TEXT DEFAULT CURRENT_TIMESTAMP\n      )",
+  "@z0298": {
+    "description": "auto i18n extracted"
+  },
+  "z0299": "CREATE TABLE location_history (\n        id INTEGER PRIMARY KEY AUTOINCREMENT,\n        latitude REAL NOT NULL,\n        longitude REAL NOT NULL,\n        address TEXT,                     -- 逆地理编码地址\n        accuracy REAL,                    -- 精度（米）\n        trigger_reason TEXT,              -- 触发原因：sos/checkin/manual\n        created_at TEXT DEFAULT CURRENT_TIMESTAMP\n      )",
+  "@z0299": {
+    "description": "auto i18n extracted"
+  },
+  "z0036": "Home",
+  "@z0036": {
+    "description": "auto i18n extracted"
+  },
+  "z0037": "Guardian Circle",
+  "@z0037": {
+    "description": "auto i18n extracted"
+  },
+  "z0038": "Me",
+  "@z0038": {
+    "description": "auto i18n extracted"
+  },
+  "z0461": "Getting location...",
+  "@z0461": {
+    "description": "auto i18n extracted"
+  },
+  "z0462": "Current Location",
+  "@z0462": {
+    "description": "auto i18n extracted"
+  },
+  "z0463": "Failed to get location",
+  "@z0463": {
+    "description": "auto i18n extracted"
+  },
+  "z0464": "Tap to refresh and retry",
+  "@z0464": {
+    "description": "auto i18n extracted"
+  },
+  "z0745": "Check-in Streak",
+  "@z0745": {
+    "description": "auto i18n extracted"
+  },
+  "z0746": "{p1} days",
+  "@z0746": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0747": "{p1} days",
+  "@z0747": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0748": "This Week's Progress",
+  "@z0748": {
+    "description": "auto i18n extracted"
+  },
+  "z0898": "Guard ready · {p1} days of continuous guarding",
+  "@z0898": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0899": "Complete your health profile to start guarding",
+  "@z0899": {
+    "description": "auto i18n extracted"
+  },
+  "z0900": "· {p1} guardian members",
+  "@z0900": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0901": "· {p1} guardians",
+  "@z0901": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0625": "Completed ✓",
+  "@z0625": {
+    "description": "auto i18n extracted"
+  },
+  "z0626": "🔒 Please complete the previous step first",
+  "@z0626": {
+    "description": "auto i18n extracted"
+  },
+  "z0286": "Truly awaiting unlock",
+  "@z0286": {
+    "description": "auto i18n extracted"
+  },
+  "z0287": "卡片[{p1}] id={p2} status={p3} (type:{p4}) receiver={p5} code={p6}...",
+  "@z0287": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      },
+      "p2": {
+        "type": "Object?"
+      },
+      "p3": {
+        "type": "Object?"
+      },
+      "p4": {
+        "type": "Object?"
+      },
+      "p5": {
+        "type": "Object?"
+      },
+      "p6": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0288": "⚠️ 发卡后被过滤器丢弃: status={p1} is_free={p2}",
+  "@z0288": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      },
+      "p2": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0289": "{p1}, I sent you a protection card on Zaine+; it's not activated yet~\n\n",
+  "@z0289": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0290": "After downloading the app and logging in, we can check in with each other and reach each other right away when something happens.\n\n",
+  "@z0290": {
+    "description": "auto i18n extracted"
+  },
+  "z0291": "Tap the link below to activate the protection bond immediately:\n{p1}",
+  "@z0291": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0300": "Location permission is not enabled. Please enable location permission on the help page first.",
+  "@z0300": {
+    "description": "auto i18n extracted"
+  },
+  "z0301": "Location services are not enabled. Please turn them on in system settings.",
+  "@z0301": {
+    "description": "auto i18n extracted"
+  },
+  "z0302": "Failed to get location. Please share your location manually.",
+  "@z0302": {
+    "description": "auto i18n extracted"
+  },
+  "z0323": "Auto-confirmed on timeout — guardian notified",
+  "@z0323": {
+    "description": "auto i18n extracted"
+  },
+  "z0324": "User confirmed it was a false alarm",
+  "@z0324": {
+    "description": "auto i18n extracted"
+  },
+  "z0325": "User confirmed needing help — guardian notified",
+  "@z0325": {
+    "description": "auto i18n extracted"
+  },
+  "z0522": "Guard Successful 🎉",
+  "@z0522": {
+    "description": "auto i18n extracted"
+  },
+  "z0523": "Open your guardian gift",
+  "@z0523": {
+    "description": "auto i18n extracted"
+  },
+  "z0524": "Has become your guardian",
+  "@z0524": {
+    "description": "auto i18n extracted"
+  },
+  "z0762": "{p1} wants to confirm you're safe",
+  "@z0762": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0763": "Tap the button below to reassure them",
+  "@z0763": {
+    "description": "auto i18n extracted"
+  },
+  "z0764": "I'm Safe",
+  "@z0764": {
+    "description": "auto i18n extracted"
+  },
+  "z0880": "No emergency contacts yet",
+  "@z0880": {
+    "description": "auto i18n extracted"
+  },
+  "z0881": "Add at least one emergency contact\nEnsure the SOS feature works properly",
+  "@z0881": {
+    "description": "auto i18n extracted"
+  },
+  "z0882": "Emergency contacts will receive your location and health info when you call for help\nDrag to adjust priority order",
+  "@z0882": {
+    "description": "auto i18n extracted"
+  },
+  "z0039": "Copied, go to WeChat and paste to send 💬",
+  "@z0039": {
+    "description": "auto i18n extracted"
+  },
+  "z0040": "Open WeChat",
+  "@z0040": {
+    "description": "auto i18n extracted"
+  },
+  "z0321": "({p1})",
+  "@z0321": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0322": "Not recorded",
+  "@z0322": {
+    "description": "auto i18n extracted"
+  },
+  "z0520": "Tap to send emergency SOS",
+  "@z0520": {
+    "description": "auto i18n extracted"
+  },
+  "z0521": "Please complete your health profile first",
+  "@z0521": {
+    "description": "auto i18n extracted"
+  },
+  "z0664": "Family & Friends",
+  "@z0664": {
+    "description": "auto i18n extracted"
+  },
+  "z0665": "Edit",
+  "@z0665": {
+    "description": "auto i18n extracted"
+  },
+  "z0760": "Smart Plan Activated!",
+  "@z0760": {
+    "description": "auto i18n extracted"
+  },
+  "z0761": "You can now notify 3 guardians at once",
+  "@z0761": {
+    "description": "auto i18n extracted"
+  },
+  "z0278": "在呢+",
+  "@z0278": {
+    "description": "auto i18n extracted"
+  },
+  "z0292": "旧关系={p1}, 新关系={p2}",
+  "@z0292": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      },
+      "p2": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0293": "Tapped but no response",
+  "@z0293": {
+    "description": "auto i18n extracted"
+  },
+  "z0294": "{p1} @ {p2}:{p3}",
+  "@z0294": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      },
+      "p2": {
+        "type": "Object?"
+      },
+      "p3": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0459": "Apple 登录失败: {p1}",
+  "@z0459": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0460": "Safe Zone",
+  "@z0460": {
+    "description": "auto i18n extracted"
+  },
+  "z0749": "· Zaine+ · Guardian Card ·",
+  "@z0749": {
+    "description": "auto i18n extracted"
+  },
+  "z0750": "To {p1}",
+  "@z0750": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0751": "As if meeting you in person",
+  "@z0751": {
+    "description": "auto i18n extracted"
+  },
+  "z0752": "Scan to claim your guardian",
+  "@z0752": {
+    "description": "auto i18n extracted"
+  },
+  "z0753": "Zaine+ · Received a warm care message",
+  "@z0753": {
+    "description": "auto i18n extracted"
+  },
+  "z0754": "Scan failed? Enter this code in the App to bind",
+  "@z0754": {
+    "description": "auto i18n extracted"
+  },
+  "z0755": "{p1} people have joined the guardian circle",
+  "@z0755": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0756": "· Zaine+ · Guard Established ·",
+  "@z0756": {
+    "description": "auto i18n extracted"
+  },
+  "z0757": "{p1} wants to guard you",
+  "@z0757": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0758": "From today, you'll receive daily check-in reminders from each other",
+  "@z0758": {
+    "description": "auto i18n extracted"
+  },
+  "z0759": "Let those who care know you're doing well 💌",
+  "@z0759": {
+    "description": "auto i18n extracted"
+  },
+  "z0701": "Send to {p1}",
+  "@z0701": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0702": "Emotion",
+  "@z0702": {
+    "description": "auto i18n extracted"
+  },
+  "z0703": "Nature",
+  "@z0703": {
+    "description": "auto i18n extracted"
+  },
+  "z0704": "Action",
+  "@z0704": {
+    "description": "auto i18n extracted"
+  },
+  "z0705": "Social",
+  "@z0705": {
+    "description": "auto i18n extracted"
+  },
+  "z0706": "{p1} sent you a gift",
+  "@z0706": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0041": "Spring",
+  "@z0041": {
+    "description": "auto i18n extracted"
+  },
+  "z0042": "Summer",
+  "@z0042": {
+    "description": "auto i18n extracted"
+  },
+  "z0043": "Autumn",
+  "@z0043": {
+    "description": "auto i18n extracted"
+  },
+  "z0044": "Winter",
+  "@z0044": {
+    "description": "auto i18n extracted"
+  },
+  "z0045": "Good morning",
+  "@z0045": {
+    "description": "auto i18n extracted"
+  },
+  "z0046": "Good afternoon",
+  "@z0046": {
+    "description": "auto i18n extracted"
+  },
+  "z0047": "Good night",
+  "@z0047": {
+    "description": "auto i18n extracted"
+  },
+  "z0048": "{p1}, spring is in full bloom",
+  "@z0048": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0049": "{p1}, cool summer days",
+  "@z0049": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0050": "{p1}, crisp autumn air",
+  "@z0050": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0051": "{p1}, warm winter days",
+  "@z0051": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      }
+    }
+  },
+  "z0902": "I'm OK",
+  "@z0902": {
+    "description": "auto i18n extracted"
+  },
+  "z0903": "Check in now",
+  "@z0903": {
+    "description": "auto i18n extracted"
+  },
+  "z0904": "Need help",
+  "@z0904": {
+    "description": "auto i18n extracted"
+  },
+  "z0905": "Confirm sending a help alert to your guardians? They will reach out as soon as possible.",
+  "@z0905": {
+    "description": "auto i18n extracted"
+  },
+  "z0906": "Notify guardians",
+  "@z0906": {
+    "description": "auto i18n extracted"
+  },
+  "z0907": "Guardians have been notified",
+  "@z0907": {
+    "description": "auto i18n extracted"
+  },
+  "z0908": "Awaiting confirmation",
+  "@z0908": {
+    "description": "auto i18n extracted"
+  },
+  "z0909": "Confirmed safe",
+  "@z0909": {
+    "description": "auto i18n extracted"
+  },
+  "z0910": "Contacted",
+  "@z0910": {
+    "description": "auto i18n extracted"
+  },
+  "z0911": "No request to handle",
+  "@z0911": {
+    "description": "auto i18n extracted"
+  },
+  "z0912": "Marked as handled",
+  "@z0912": {
+    "description": "auto i18n extracted"
+  },
+  "z0913": "Failed to mark, please retry",
+  "@z0913": {
+    "description": "auto i18n extracted"
+  },
+  "z0914": "Your guardian will see your reply right away",
+  "@z0914": {
+    "description": "auto i18n extracted"
+  },
+  "z0915": "Say something… (optional, up to 100 chars)",
+  "@z0915": {
+    "description": "auto i18n extracted"
+  },
+  "z0916": "Your message is shared only with your guardians",
+  "@z0916": {
+    "description": "auto i18n extracted"
+  },
+  "z0925": "Add a note (10 chars max)",
+  "@z0925": {
+    "description": "auto i18n extracted"
+  },
+  "z0917": "Message",
+  "@z0917": {
+    "description": "auto i18n extracted"
+  },
+  "z0918": "Report I'm safe",
+  "@z0918": {
+    "description": "auto i18n extracted"
+  },
+  "z0919": "Just got home",
+  "@z0919": {
+    "description": "auto i18n extracted"
+  },
+  "z0920": "Just off work",
+  "@z0920": {
+    "description": "auto i18n extracted"
+  },
+  "z0921": "Just had a meal",
+  "@z0921": {
+    "description": "auto i18n extracted"
+  },
+  "z0922": "Heading to bed",
+  "@z0922": {
+    "description": "auto i18n extracted"
+  },
+  "z0923": "Pick a status (optional)",
+  "@z0923": {
+    "description": "auto i18n extracted"
+  },
+  "z0924": "Status",
+  "@z0924": {
+    "description": "auto i18n extracted"
+  },
+  "s1180": "Got a guardian code from a friend? Tap to connect",
+  "@s1180": {
+    "description": "auto i18n extracted"
+  }
+}

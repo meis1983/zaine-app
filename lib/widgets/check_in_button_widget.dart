@@ -4,6 +4,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../l10n/app_localizations.dart';
 import '../theme/theme_helper.dart';
 import '../utils/badge_generator.dart';
 
@@ -90,7 +91,9 @@ class CheckInButtonWidget extends StatelessWidget {
                     ),
                   const SizedBox(height: ZaiNeSpacing.xs),
                   Text(
-                    checkedInToday ? '今日已签到' : '点击签到',
+                    checkedInToday
+                        ? S.of(context)!.signInButtonCheckedIn
+                        : S.of(context)!.signInButtonTapToCheckIn,
                     style: const TextStyle(
                       fontSize: ZaiNeFontSize.title,  // 20
                       fontWeight: FontWeight.bold,
@@ -130,7 +133,7 @@ class CheckInButtonWidget extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      '连续 $continuousDays 天',
+                      S.of(context)!.continuousDays(continuousDays),
                       style: TextStyle(
                         fontSize: ZaiNeFontSize.micro,  // 12
                         color: Colors.white.withValues(alpha: 0.9),

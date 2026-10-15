@@ -2,6 +2,7 @@
 // 通知提醒 API（v1.9.77）
 
 import '../api_service.dart';
+import '../../l10n/i18n.dart';
 
 class NotifyService {
   /// 提醒待激活用户下载APP并签到
@@ -85,12 +86,22 @@ class NotifyService {
     required Map<String, dynamic> fence,
   }) async {
     return await ApiService.post('/api/notify/guardians-fence-exit', body: {
-      'fence_name': fence['name'] ?? '安全区域',
+      'fence_name': fence['name'] ?? tr.z0460,
       'fence_type': fence['type'] ?? 'custom',
       'latitude': fence['latitude'],
       'longitude': fence['longitude'],
       'radius': fence['radius'],
       'timestamp': DateTime.now().toIso8601String(),
+    });
+  }
+
+  /// 通知守护人：被守护者主动触发求助（方案C 合并版）
+  ///
+  /// 【CN 合规红线】必须由被守护者本人在 App 内明确触发（二次确认后调用），
+  /// 绝不自动外发。message 可选，用于附加求助说明。
+  static Future<Map<String, dynamic>> notifyGuardiansAboutHelp({String? message}) async {
+    return ApiService.post('/api/notify/guardians-help', body: {
+      if (message != null && message.isNotEmpty) 'message': message,
     });
   }
 }

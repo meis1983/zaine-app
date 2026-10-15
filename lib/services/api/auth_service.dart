@@ -21,6 +21,7 @@ import '../silent_login_service.dart';
 import '../membership_service.dart';
 import '../guardian_card_service.dart';
 import '../platform/health_service.dart';
+import '../../l10n/i18n.dart';
 
 /// 安全存储实例（单例）
 const _secureStorage = FlutterSecureStorage(
@@ -460,7 +461,7 @@ class AuthService {
       return res;
     } catch (e) {
       if (kDebugMode) debugPrint('[AuthService] Apple 登录异常: $e');
-      return {'success': false, 'message': 'Apple 登录失败: $e'};
+      return {'success': false, 'message': tr.z0459(e)};
     }
   }
 }

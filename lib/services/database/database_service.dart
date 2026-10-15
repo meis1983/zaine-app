@@ -42,9 +42,9 @@ class DatabaseService {
     await db.execute('''
       CREATE TABLE checkin_records (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        checkin_date TEXT NOT NULL,      -- 签到日期 (YYYY-MM-DD)
-        checkin_time TEXT NOT NULL,      -- 签到时间 (HH:MM:SS)
-        timestamp INTEGER NOT NULL,       -- Unix 时间戳（毫秒）
+        checkin_date TEXT NOT NULL,
+        checkin_time TEXT NOT NULL,
+        timestamp INTEGER NOT NULL,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP
       )
     ''');
@@ -57,14 +57,14 @@ class DatabaseService {
     await db.execute('''
       CREATE TABLE contacts (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        server_id TEXT,                   -- 服务器返回的 ID（可为空，本地联系人）
+        server_id TEXT,
         name TEXT NOT NULL,
         phone TEXT NOT NULL,
-        relation TEXT,                    -- 关系：家人/朋友/同事等
-        avatar_path TEXT,                 -- 头像本地路径
-        is_local INTEGER DEFAULT 0,       -- 1=本地联系人，0=服务器同步
-        is_emergency INTEGER DEFAULT 0,   -- 1=紧急联系人
-        sort_order INTEGER DEFAULT 0,     -- 排序权重
+        relation TEXT,
+        avatar_path TEXT,
+        is_local INTEGER DEFAULT 0,
+        is_emergency INTEGER DEFAULT 0,
+        sort_order INTEGER DEFAULT 0,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
         updated_at TEXT DEFAULT CURRENT_TIMESTAMP
       )
@@ -78,12 +78,12 @@ class DatabaseService {
     await db.execute('''
       CREATE TABLE health_cache (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        data_type TEXT NOT NULL,          -- 数据类型：steps/heart_rate/distance
-        value REAL NOT NULL,              -- 数值
-        unit TEXT,                        -- 单位
-        date TEXT NOT NULL,               -- 日期 (YYYY-MM-DD)
-        timestamp INTEGER NOT NULL,       -- 记录时间戳
-        source TEXT,                      -- 数据来源：HealthKit/手动
+        data_type TEXT NOT NULL,
+        value REAL NOT NULL,
+        unit TEXT,
+        date TEXT NOT NULL,
+        timestamp INTEGER NOT NULL,
+        source TEXT,
         UNIQUE(data_type, date) ON CONFLICT REPLACE
       )
     ''');
@@ -96,10 +96,10 @@ class DatabaseService {
     await db.execute('''
       CREATE TABLE notification_history (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        type TEXT NOT NULL,               -- 类型：sos/checkin/reminder
-        recipient TEXT,                   -- 接收者
-        content TEXT,                     -- 内容摘要
-        status TEXT,                      -- 状态：sent/failed/pending
+        type TEXT NOT NULL,
+        recipient TEXT,
+        content TEXT,
+        status TEXT,
         sent_at TEXT DEFAULT CURRENT_TIMESTAMP
       )
     ''');
@@ -111,9 +111,9 @@ class DatabaseService {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         latitude REAL NOT NULL,
         longitude REAL NOT NULL,
-        address TEXT,                     -- 逆地理编码地址
-        accuracy REAL,                    -- 精度（米）
-        trigger_reason TEXT,              -- 触发原因：sos/checkin/manual
+        address TEXT,
+        accuracy REAL,
+        trigger_reason TEXT,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP
       )
     ''');

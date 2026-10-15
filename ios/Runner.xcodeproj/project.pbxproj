@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 54;
+	objectVersion = 70;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -48,24 +48,6 @@
 			);
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
-		};
-		AA0821082108210821082105 /* Embed Watch Content (conditional) */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-			);
-			name = "Embed Watch Content (conditional)";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "# Conditionally embed ZaineWatch app — real-device builds only.\nif [ \"$PLATFORM_NAME\" = \"iphoneos\" ]; then\n  PARENT_DIR=\"$(dirname \"$BUILT_PRODUCTS_DIR\")\"\n  WATCH_APP=\"$BUILT_PRODUCTS_DIR/ZaineWatch Watch App.app\"\n  if [ ! -d \"$WATCH_APP\" ]; then WATCH_APP=\"$PARENT_DIR/Release-watchos/ZaineWatch Watch App.app\"; fi\n  if [ ! -d \"$WATCH_APP\" ]; then WATCH_APP=\"$PARENT_DIR/Debug-watchos/ZaineWatch Watch App.app\"; fi\n  if [ -d \"$WATCH_APP\" ]; then\n    mkdir -p \"$TARGET_BUILD_DIR/$WRAPPER_NAME/Watch\"\n    rm -rf \"$TARGET_BUILD_DIR/$WRAPPER_NAME/Watch/ZaineWatch Watch App.app\"\n    cp -R \"$WATCH_APP\" \"$TARGET_BUILD_DIR/$WRAPPER_NAME/Watch/\"\n    echo \"note: ZaineWatch embedded from $WATCH_APP\"\n  else\n    echo \"error: ZaineWatch Watch App.app NOT FOUND. 请在 Xcode 给 Runner target 添加 ZaineWatch Watch App 的 Target Dependency（菜单栏 Editor -> Add Target Dependency）。已搜索: $BUILT_PRODUCTS_DIR 及同级 Release-watchos / Debug-watchos\"\n    exit 1\n  fi\nfi\n";
 		};
 /* End PBXCopyFilesBuildPhase section */
 
@@ -401,6 +383,24 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "/bin/sh \"$FLUTTER_ROOT/packages/flutter_tools/bin/xcode_backend.sh\" build";
+		};
+		AA0821082108210821082105 /* Embed Watch Content (conditional) */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Embed Watch Content (conditional)";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# Conditionally embed ZaineWatch app — real-device builds only.\nif [ \"$PLATFORM_NAME\" = \"iphoneos\" ]; then\n  PARENT_DIR=\"$(dirname \"$BUILT_PRODUCTS_DIR\")\"\n  ARCHIVE_PARENT=\"$BUILT_PRODUCTS_DIR/../../IntermediateBuildFilesPath/UninstalledProducts/watchos\"\n  WATCH_APP=\"$BUILT_PRODUCTS_DIR/ZaineWatch Watch App.app\"\n  SIZE_OK() { [ \"$(du -sk \"$1\" 2>/dev/null | awk '{print $1}')\" -gt 100 ]; }\n  if [ ! -d \"$WATCH_APP\" ] || ! SIZE_OK \"$WATCH_APP\"; then WATCH_APP=\"$PARENT_DIR/Release-watchos/ZaineWatch Watch App.app\"; fi\n  if [ ! -d \"$WATCH_APP\" ] || ! SIZE_OK \"$WATCH_APP\"; then WATCH_APP=\"$PARENT_DIR/Debug-watchos/ZaineWatch Watch App.app\"; fi\n  if [ ! -d \"$WATCH_APP\" ] || ! SIZE_OK \"$WATCH_APP\"; then WATCH_APP=\"$ARCHIVE_PARENT/ZaineWatch Watch App.app\"; fi\n  if [ -d \"$WATCH_APP\" ] && SIZE_OK \"$WATCH_APP\"; then\n    mkdir -p \"$TARGET_BUILD_DIR/$WRAPPER_NAME/Watch\"\n    rm -rf \"$TARGET_BUILD_DIR/$WRAPPER_NAME/Watch/ZaineWatch Watch App.app\"\n    cp -R \"$WATCH_APP\" \"$TARGET_BUILD_DIR/$WRAPPER_NAME/Watch/\"\n    echo \"note: ZaineWatch embedded from $WATCH_APP ($(du -sh \"$WATCH_APP\" | awk '{print $1}'))\"\n  else\n    echo \"error: ZaineWatch Watch App.app NOT FOUND or all candidates empty. Searched: $BUILT_PRODUCTS_DIR / $PARENT_DIR/Release-watchos / $PARENT_DIR/Debug-watchos / $ARCHIVE_PARENT\"\n    exit 1\n  fi\nfi\n";
 		};
 		E3A7C6DE9AD1EBC53E20D922 /* [CP] Check Pods Manifest.lock */ = {
 			isa = PBXShellScriptBuildPhase;

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../services/social/guardian_message_service.dart';
 import '../theme/theme_helper.dart';
+import '../l10n/i18n.dart';
 
 /// 表情选择器组件
 ///
@@ -87,7 +88,7 @@ class _EmojiPickerState extends State<EmojiPicker> with SingleTickerProviderStat
             child: Row(
               children: [
                 Text(
-                  '发送给 ${widget.receiverName}',
+                  tr.z0701(widget.receiverName),
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -107,11 +108,11 @@ class _EmojiPickerState extends State<EmojiPicker> with SingleTickerProviderStat
             labelColor: Theme.of(context).primaryColor,
             unselectedLabelColor: Colors.grey,
             indicatorColor: Theme.of(context).primaryColor,
-            tabs: const [
-              Tab(text: '情感'),
-              Tab(text: '自然'),
-              Tab(text: '动作'),
-              Tab(text: '社交'),
+            tabs: [
+              Tab(text: tr.z0702),
+              Tab(text: tr.z0703),
+              Tab(text: tr.z0704),
+              Tab(text: tr.z0705),
             ],
           ),
           // 表情网格
@@ -185,7 +186,7 @@ class _EmojiPickerState extends State<EmojiPicker> with SingleTickerProviderStat
               children: [
                 Text(emojiCode, style: const TextStyle(fontSize: 20)),
                 const SizedBox(width: 8),
-                const Text('已发送'),
+                Text(tr.z0030),
               ],
             ),
             duration: const Duration(seconds: 1),
@@ -325,7 +326,7 @@ class _EmojiBubbleState extends State<EmojiBubble> with SingleTickerProviderStat
             ),
             const SizedBox(height: 8),
             Text(
-              '${widget.senderName} 送给你',
+              tr.z0706(widget.senderName),
               style: TextStyle(
                 fontSize: 12,
                 color: Colors.grey.shade600,
@@ -425,7 +426,7 @@ class EmojiHistoryList extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            '还没有收到表情',
+            tr.s1049,
             style: TextStyle(
               fontSize: 16,
               color: ZaiNeColors.textSecondary(),
@@ -433,7 +434,7 @@ class EmojiHistoryList extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            '守护你的人会发送表情给你~',
+            tr.s1050,
             style: TextStyle(
               fontSize: 14,
               color: ZaiNeColors.textHint(),
@@ -504,10 +505,10 @@ class EmojiHistoryList extends StatelessWidget {
     final now = DateTime.now();
     final diff = now.difference(time);
 
-    if (diff.inMinutes < 1) return '刚刚';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}分钟前';
-    if (diff.inHours < 24) return '${diff.inHours}小时前';
-    if (diff.inDays < 7) return '${diff.inDays}天前';
+    if (diff.inMinutes < 1) return tr.s430;
+    if (diff.inMinutes < 60) return tr.z0001(diff.inMinutes);
+    if (diff.inHours < 24) return tr.z0002(diff.inHours);
+    if (diff.inDays < 7) return tr.z0003(diff.inDays);
     return '${time.month}/${time.day}';
   }
 }

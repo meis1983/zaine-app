@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../theme/theme_helper.dart';
 import 'package:intl/intl.dart';
 import '../services/safety/safety_service.dart';
+import '../l10n/i18n.dart';
 
 /// 位置历史记录页面
 ///
@@ -56,7 +57,7 @@ class _LocationHistoryPageState extends State<LocationHistoryPage> {
     return Scaffold(
       backgroundColor: ZaiNeColors.scaffoldBg(),
       appBar: AppBar(
-        title: const Text('位置记录'),
+        title:  Text(tr.s891),
         backgroundColor: ZaiNeColors.cardBg(),
         foregroundColor: ZaiNeColors.textPrimary(),
         elevation: 0,
@@ -64,7 +65,7 @@ class _LocationHistoryPageState extends State<LocationHistoryPage> {
           IconButton(
             icon: const Icon(Icons.calendar_today),
             onPressed: _pickDay,
-            tooltip: '选择日期',
+            tooltip: tr.s892,
           ),
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -85,7 +86,7 @@ class _LocationHistoryPageState extends State<LocationHistoryPage> {
                 Icon(Icons.calendar_today, size: 16, color: Colors.blue.shade400),
                 const SizedBox(width: ZaiNeSpacing.sm),
                 Text(
-                  DateFormat('yyyy年MM月dd日').format(_selectedDay),
+                  DateFormat(tr.s893).format(_selectedDay),
                   style: TextStyle(
                     fontSize: ZaiNeFontSize.body,
                     fontWeight: FontWeight.w600,
@@ -100,7 +101,7 @@ class _LocationHistoryPageState extends State<LocationHistoryPage> {
                     minimumSize: Size.zero,
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
-                  child: const Text('切换', style: TextStyle(fontSize: ZaiNeFontSize.caption)),
+                  child:  Text(tr.s894, style: TextStyle(fontSize: ZaiNeFontSize.caption)),
                 ),
               ],
             ),
@@ -136,12 +137,12 @@ class _LocationHistoryPageState extends State<LocationHistoryPage> {
           Icon(Icons.location_off, size: 64, color: ZaiNeColors.textHint()),
           const SizedBox(height: ZaiNeSpacing.lg),
           Text(
-            '暂无位置记录',
+            tr.s895,
             style: TextStyle(fontSize: ZaiNeFontSize.body, color: ZaiNeColors.textSecondary()),
           ),
           const SizedBox(height: ZaiNeSpacing.sm),
           Text(
-            '开启位置追踪后，每5分钟记录一次位置',
+            tr.s896,
             style: TextStyle(fontSize: ZaiNeFontSize.caption, color: ZaiNeColors.textHint()),
           ),
         ],
@@ -198,7 +199,7 @@ class _LocationHistoryPageState extends State<LocationHistoryPage> {
                       Icon(Icons.location_on, size: 16, color: Colors.blue.shade400),
                       const SizedBox(width: ZaiNeSpacing.sm),
                       Text(
-                        '位置记录 ${_records.length - index}',
+                        tr.s897(_records.length - index),
                         style: const TextStyle(fontWeight: FontWeight.w600, fontSize: ZaiNeFontSize.caption),
                       ),
                       const Spacer(),
@@ -210,7 +211,7 @@ class _LocationHistoryPageState extends State<LocationHistoryPage> {
                             borderRadius: BorderRadius.circular(ZaiNeRadius.small),
                           ),
                           child: Text(
-                            '精度±${record.accuracy!.toStringAsFixed(0)}m',
+                            tr.s898(record.accuracy!.toStringAsFixed(0)),
                             style: TextStyle(
                               fontSize: ZaiNeFontSize.micro,
                               color: _getAccuracyColor(record.accuracy!),
@@ -221,17 +222,17 @@ class _LocationHistoryPageState extends State<LocationHistoryPage> {
                   ),
                   const SizedBox(height: ZaiNeSpacing.sm),
                   Text(
-                    '纬度: ${record.latitude.toStringAsFixed(6)}',
+                    tr.s899(record.latitude.toStringAsFixed(6)),
                     style: TextStyle(fontSize: ZaiNeFontSize.caption, color: Colors.grey.shade700, fontFamily: 'monospace'),
                   ),
                   Text(
-                    '经度: ${record.longitude.toStringAsFixed(6)}',
+                    tr.s900(record.longitude.toStringAsFixed(6)),
                     style: TextStyle(fontSize: ZaiNeFontSize.caption, color: Colors.grey.shade700, fontFamily: 'monospace'),
                   ),
                   if (record.accuracy != null) ...[
                     const SizedBox(height: ZaiNeSpacing.xs),
                     Text(
-                      '定位精度约 ${record.accuracy!.toStringAsFixed(0)} 米（数值越小越精确）',
+                      tr.s901(record.accuracy!.toStringAsFixed(0)),
                       style: TextStyle(fontSize: ZaiNeFontSize.micro, color: Colors.grey.shade500),
                     ),
                   ],
@@ -284,17 +285,17 @@ class _LocationHistoryPageState extends State<LocationHistoryPage> {
   String _getActivityText(LocationActivityType type) {
     switch (type) {
       case LocationActivityType.stationary:
-        return '静止';
+        return tr.s902;
       case LocationActivityType.walking:
-        return '行走';
+        return tr.s903;
       case LocationActivityType.running:
-        return '跑步';
+        return tr.s904;
       case LocationActivityType.cycling:
-        return '骑行';
+        return tr.s905;
       case LocationActivityType.driving:
-        return '驾驶';
+        return tr.s906;
       default:
-        return '未知';
+        return tr.s013;
     }
   }
 }

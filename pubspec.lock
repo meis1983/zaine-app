@@ -278,6 +278,11 @@ packages:
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "7.2.0"
+  flutter_localizations:
+    dependency: "direct main"
+    description: flutter
+    source: sdk
+    version: "0.0.0"
   flutter_plugin_android_lifecycle:
     dependency: transitive
     description:
@@ -580,10 +585,10 @@ packages:
     dependency: "direct main"
     description:
       name: intl
-      sha256: "3bc132a9dbce73a7e4a21a17d06e1878839ffbf975568bc875c60537824b0c4d"
+      sha256: "3df61194eb431efc39c4ceba583b95633a403f46c9fd341e550ce0bfa50e9aa5"
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "0.18.1"
+    version: "0.20.2"
   intl_phone_number_input:
     dependency: "direct main"
     description:
@@ -696,6 +701,14 @@ packages:
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "1.0.6"
+  mobile_scanner:
+    dependency: "direct main"
+    description:
+      name: mobile_scanner
+      sha256: ce3f059ebd6dbfab7292bba0e893e354b46730636820d3c9ef69005ce2d55bce
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "7.4.0"
   objective_c:
     dependency: transitive
     description:

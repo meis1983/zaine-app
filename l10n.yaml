@@ -1,0 +1,8 @@
+# i18n 生成配置（flutter gen-l10n）
+# 模板 = 简体中文（app_zh_CN.arb），作为所有语种的回退基准。
+# 第一阶段支持：zh_CN（简体，CN 版锁定）/ zh_TW（繁体台湾）/ zh_HK（繁体香港）/ en（英文）
+arb-dir: lib/l10n
+output-dir: lib/l10n
+template-arb-file: app_zh_CN.arb
+output-localization-file: app_localizations.dart
+output-class: S

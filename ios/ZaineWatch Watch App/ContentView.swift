@@ -125,6 +125,7 @@ struct ContentView: View {
                     .buttonStyle(PlainButtonStyle())
                 }
 
+                #if !ZAI_REGION_CN
                 // ===== 智能心跳守护状态条（仅海外版；cn 已关闭自动监测，故隐藏）=====
                 if !watchManager.isChinaRegion {
                 HStack(spacing: 6) {
@@ -155,6 +156,7 @@ struct ContentView: View {
                 .background(Color.white.opacity(0.06))
                 .cornerRadius(10)
                 } // end if !isChinaRegion
+                #endif
 
                 // ===== 健康速览（可点开查看详情）=====
                 // 🔴【v1.97.3 重设计】图标改蓝色图表，可点开看完整健康数据
@@ -233,9 +235,11 @@ struct ContentView: View {
         .onAppear {
             watchManager.refreshCheckInState()
             watchManager.requestHealthData()
+            #if !ZAI_REGION_CN
             if !watchManager.isChinaRegion {
                 watchManager.startHeartRateMonitoring()
             }
+            #endif
         }
     }
 

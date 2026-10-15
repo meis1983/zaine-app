@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../pages/subscription_page.dart';
 import '../theme/theme_helper.dart';
+import '../l10n/i18n.dart';
 
 /// 求助触发时的数据快照（用于解耦弹窗组件与 HelpPage 父组件）
 class HelpDataSnapshot {
@@ -24,7 +25,7 @@ class HelpDataSnapshot {
   final bool smsSent;
   final bool locationObtained;
 
-  const HelpDataSnapshot({
+  HelpDataSnapshot({
     required this.userName,
     this.myPhone,
     required this.userAge,
@@ -60,7 +61,7 @@ class HelpResultDialog extends StatefulWidget {
     /// 是否为智能版会员（已升级则不显示升级提示）
     final bool isPremium;
 
-    const HelpResultDialog({
+    HelpResultDialog({
       super.key,
       required this.contacts,
       required this.contactCount,
@@ -154,39 +155,39 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
     return Dialog(
       backgroundColor: Colors.grey.shade100,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      insetPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      insetPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       child: Container(
         width: double.infinity,
-        constraints: const BoxConstraints(maxHeight: 680),
+        constraints: BoxConstraints(maxHeight: 680),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             // ========== 1. ⚠️ 标题栏 ==========
             Padding(
-              padding: const EdgeInsets.fromLTRB(18, 16, 12, 6),
+              padding: EdgeInsets.fromLTRB(18, 16, 12, 6),
               child: Row(children: [
                 Icon(Icons.warning_rounded, color: Colors.red.shade700, size: 24),
-                const SizedBox(width: 8),
-                const Text('紧急求助已触发', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+                SizedBox(width: 8),
+                Text(tr.z0707, style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
               ]),
             ),
 
             Flexible(
               child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                physics: BouncingScrollPhysics(),
+                padding: EdgeInsets.symmetric(horizontal: 16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     _buildSMSSection(),
-                    const SizedBox(height: 10),
+                    SizedBox(height: 10),
                     _buildInfoPreviewSection(),
-                    const SizedBox(height: 12),
+                    SizedBox(height: 12),
                     _buildActionStatusSection(),
-                    const SizedBox(height: 12),
+                    SizedBox(height: 12),
                     _buildCall120Button(),
-                    const SizedBox(height: 4),
+                    SizedBox(height: 4),
                   ],
                 ),
               ),
@@ -194,10 +195,10 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
 
             // ========== 6. 底部「我没事了」直接退出（无二次确认） ==========
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 2, 16, 12),
+              padding: EdgeInsets.fromLTRB(16, 2, 16, 12),
               child: TextButton(
                 onPressed: widget.onCancel,
-                child: Text('我没事了', style: TextStyle(fontSize: 15, color: ZaiNeColors.textSecondary())),
+                child: Text(tr.z0708, style: TextStyle(fontSize: 15, color: ZaiNeColors.textSecondary())),
               ),
             ),
           ],
@@ -212,11 +213,11 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
     final lockedContacts = _getLockedContacts();
     final isAllSent = _currentSmsIndex >= autoNotify.length;
     final currentSmsContact = isAllSent ? null : autoNotify[_currentSmsIndex];
-    final currentSmsName = currentSmsContact?['name']?.toString() ?? '联系人';
+    final currentSmsName = currentSmsContact?['name']?.toString() ?? tr.s855;
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(ZaiNeSpacing.md),
+      padding: EdgeInsets.all(ZaiNeSpacing.md),
       decoration: BoxDecoration(
         color: Colors.orange.shade50,
         borderRadius: BorderRadius.circular(14),
@@ -228,30 +229,30 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
         children: [
           // ---- 标题行 ----
           Row(children: [
-            const Text('➤', style: TextStyle(fontSize: 14, color: Colors.orange)),
-            const SizedBox(width: 4),
-            const Text('📨', style: TextStyle(fontSize: 13)),
-            const SizedBox(width: 4),
+            Text('➤', style: TextStyle(fontSize: 14, color: Colors.orange)),
+            SizedBox(width: 4),
+            Text('📨', style: TextStyle(fontSize: 13)),
+            SizedBox(width: 4),
             Expanded(child: Text(
               isAllSent
-                ? '✅ 已发送给全部 ${autoNotify.length} 位守护人'
-                : '📨 发送求救短信给第 ${_currentSmsIndex + 1}/${autoNotify.length} 位：$currentSmsName',
+                ? tr.z0709(autoNotify.length)
+                : tr.z0710(_currentSmsIndex + 1, autoNotify.length, currentSmsName),
               style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: isAllSent ? Colors.green.shade700 : Colors.orange.shade800))),
           ]),
 
-          const SizedBox(height: 10),
+          SizedBox(height: 10),
 
           // ---- 通知联系人进度条 ----
           if (autoNotify.isNotEmpty) ...[
             ...autoNotify.asMap().entries.map((entry) {
               final idx = entry.key;
               final contact = entry.value;
-              final name = contact['name']?.toString() ?? '联系人';
+              final name = contact['name']?.toString() ?? tr.s855;
               final relation = contact['relation']?.toString() ?? '';
               final isSmsDone = idx < _currentSmsIndex;
               final isCallDone = idx < _currentCallIndex;
               return Padding(
-                padding: const EdgeInsets.only(bottom: 4),
+                padding: EdgeInsets.only(bottom: 4),
                 child: Row(children: [
                   if (isSmsDone)
                     Icon(Icons.check_circle, size: 16, color: Colors.green.shade600)
@@ -259,7 +260,7 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
                     Icon(Icons.radio_button_checked, size: 16, color: Colors.orange.shade700)
                   else
                     Icon(Icons.circle_outlined, size: 16, color: ZaiNeColors.textSecondary()),
-                  const SizedBox(width: 6),
+                  SizedBox(width: 6),
                   Expanded(child: Text(
                     '$name${relation.isNotEmpty ? '（$relation）' : ''}',
                     style: TextStyle(fontSize: 12.5, color: isSmsDone ? ZaiNeColors.textSecondary() : ZaiNeColors.textPrimary()),
@@ -269,30 +270,30 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
                 ]),
               );
             }),
-            const SizedBox(height: 8),
+            SizedBox(height: 8),
           ],
 
           // ---- 锁定联系人分区（非会员时显示升级提示）---
           if (!widget.isPremium && lockedContacts.isNotEmpty) ...[
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 6),
+              padding: EdgeInsets.symmetric(vertical: 6),
               child: Row(children: [
                 Expanded(child: Divider(color: Colors.orange.shade200, thickness: 1)),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  child: Text('更多守护人',
+                  padding: EdgeInsets.symmetric(horizontal: 8),
+                  child: Text(tr.z0711,
                     style: TextStyle(fontSize: 11, color: ZaiNeColors.textSecondary())),
                 ),
                 Expanded(child: Divider(color: Colors.orange.shade200, thickness: 1)),
               ]),
             ),
             ...lockedContacts.map((contact) {
-              final name = contact['name']?.toString() ?? '联系人';
+              final name = contact['name']?.toString() ?? tr.s855;
               final relation = contact['relation']?.toString() ?? '';
               return Padding(
-                padding: const EdgeInsets.only(bottom: 5),
+                padding: EdgeInsets.only(bottom: 5),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 5),
                   decoration: BoxDecoration(
                     color: Colors.grey.shade100.withValues(alpha: 0.6),
                     borderRadius: BorderRadius.circular(8),
@@ -301,7 +302,7 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
                     boxShadow: ZaiNeShadows.card,),
                   child: Row(children: [
                     Icon(Icons.lock_outline, size: 13, color: ZaiNeColors.textSecondary()),
-                    const SizedBox(width: 5),
+                    SizedBox(width: 5),
                     Expanded(child: Text(
                       '$name${relation.isNotEmpty ? '（$relation）' : ''}',
                       style: TextStyle(fontSize: 12, color: ZaiNeColors.textSecondary()),
@@ -311,17 +312,17 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
               );
             }),
             Padding(
-              padding: const EdgeInsets.only(top: 6, bottom: 2),
+              padding: EdgeInsets.only(top: 6, bottom: 2),
               child: GestureDetector(
                 onTap: () {
                   // 跳转会员升级页
                   Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const SubscriptionPage()),
+                    MaterialPageRoute(builder: (_) => SubscriptionPage()),
                   );
                 },
                 child: Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  padding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                   decoration: BoxDecoration(
                     color: Colors.amber.shade50.withValues(alpha: 0.5),
                     borderRadius: BorderRadius.circular(8),
@@ -330,14 +331,14 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
                     boxShadow: ZaiNeShadows.card,),
                   child: Row(children: [
                     Icon(Icons.workspace_premium_rounded, size: 15, color: Colors.amber.shade700),
-                    const SizedBox(width: 6),
-                    Text('升级智能版，解锁全部守护人通知',
+                    SizedBox(width: 6),
+                    Text(tr.z0712,
                       style: TextStyle(fontSize: 12, color: Colors.amber.shade800, fontWeight: FontWeight.w500)),
                   ]),
                 ),
               ),
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: 8),
           ],
 
           // ---- 发送短信按钮 ----
@@ -347,9 +348,9 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
               height: 46,
               child: ElevatedButton.icon(
                 onPressed: _sendCurrentSMS,
-                icon: const Text('📧', style: TextStyle(fontSize: 15)),
-                label: Text('发送短信给 $currentSmsName',
-                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
+                icon: Text('📧', style: TextStyle(fontSize: 15)),
+                label: Text(tr.z0713(currentSmsName),
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.orange,
                   foregroundColor: Colors.white,
@@ -359,7 +360,7 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
                 ),
               ),
             ),
-            const SizedBox(height: 10),
+            SizedBox(height: 10),
           ],
 
           // ---- 拨打联系人电话按钮 ----
@@ -369,9 +370,9 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
               height: 44,
               child: ElevatedButton.icon(
                 onPressed: () => _callCurrentContact(),
-                icon: const Text('📞', style: TextStyle(fontSize: 17)),
-                label: Text('📞 拨打 ${_getCurrentCallName()} 电话',
-                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
+                icon: Text('📞', style: TextStyle(fontSize: 17)),
+                label: Text(tr.z0714(_getCurrentCallName()),
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.blue.shade600,
                   foregroundColor: Colors.white,
@@ -446,8 +447,8 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
           await Clipboard.setData(ClipboardData(text: safeBody));
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('短信已打开，完整链接已复制。若对方收不到链接可长按粘贴补发'),
+              SnackBar(
+                content: Text(tr.s390),
                 duration: Duration(seconds: 4),
               ),
             );
@@ -461,15 +462,15 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
 
   String _getCurrentCallName() {
     final autoNotify = _getAutoNotifyContacts();
-    if (_currentCallIndex >= autoNotify.length) return '（已完成）';
-    return autoNotify[_currentCallIndex]['name']?.toString() ?? '紧急联系人';
+    if (_currentCallIndex >= autoNotify.length) return tr.z0715;
+    return autoNotify[_currentCallIndex]['name']?.toString() ?? tr.s346;
   }
 
   Future<void> _callCurrentContact() async {
     final autoNotify = _getAutoNotifyContacts();
     if (_currentCallIndex >= autoNotify.length) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('已完成所有联系人的电话拨打'), duration: Duration(seconds: 2)));
+        SnackBar(content: Text(tr.z0716), duration: Duration(seconds: 2)));
       return;
     }
 
@@ -509,16 +510,16 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
         data: ThemeData().copyWith(dividerColor: Colors.transparent),
         child: ExpansionTile(
           initiallyExpanded: _infoExpanded,
-          tilePadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          tilePadding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
           expandedAlignment: Alignment.topLeft,
           title: Row(children: [
-            const Text('📄', style: TextStyle(fontSize: 14)),
-            const SizedBox(width: 4),
-            const Text('📄', style: TextStyle(fontSize: 13)),
-            const SizedBox(width: 4),
-            Text(_infoExpanded ? '求救信息（点击收起）' : '求救信息预览（点击展开）',
+            Text('📄', style: TextStyle(fontSize: 14)),
+            SizedBox(width: 4),
+            Text('📄', style: TextStyle(fontSize: 13)),
+            SizedBox(width: 4),
+            Text(_infoExpanded ? tr.z0717 : tr.z0718,
               style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: Colors.blue.shade800)),
-            const Spacer(),
+            Spacer(),
             Icon(_infoExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
                  color: Colors.grey.shade500, size: 22),
           ]),
@@ -526,8 +527,8 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
           children: [
             Container(
               width: double.infinity,
-              margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-              padding: const EdgeInsets.all(ZaiNeSpacing.md),
+              margin: EdgeInsets.fromLTRB(12, 0, 12, 12),
+              padding: EdgeInsets.all(ZaiNeSpacing.md),
               decoration: BoxDecoration(
                 color: Colors.blue.shade50,
                 borderRadius: BorderRadius.circular(10),
@@ -535,51 +536,51 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
                 boxShadow: ZaiNeShadows.card,),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Row(children: [
-                  const Text('📱', style: TextStyle(fontSize: 13)),
-                  const SizedBox(width: 4),
-                  Text('【在呢 紧急求助】', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: Colors.red.shade700)),
-                  const Spacer(),
+                  Text('📱', style: TextStyle(fontSize: 13)),
+                  SizedBox(width: 4),
+                  Text(tr.s867, style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: Colors.red.shade700)),
+                  Spacer(),
                   GestureDetector(
                     onTap: () {
                       final auto = _getAutoNotifyContacts();
                       final cur = (_currentSmsIndex < auto.length)
                           ? auto[_currentSmsIndex]
-                          : (auto.isNotEmpty ? auto.first : const <String, dynamic>{});
+                          : (auto.isNotEmpty ? auto.first : <String, dynamic>{});
                       // 【修复 v1.95-F6】复制按钮与发送路径一致，走 _safeSmsBody 清理特殊字符
                       Clipboard.setData(ClipboardData(text: _safeSmsBody(widget.smsContentBuilder(cur))));
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('已复制到剪贴板'), duration: Duration(seconds: 1)));
+                        SnackBar(content: Text(tr.z0719), duration: Duration(seconds: 1)));
                     },
-                    child: const Icon(Icons.content_copy_outlined, size: 17, color: Colors.blue),
+                    child: Icon(Icons.content_copy_outlined, size: 17, color: Colors.blue),
                   ),
                 ]),
                 Padding(
-                  padding: const EdgeInsets.only(left: 2, top: 2, bottom: 6),
+                  padding: EdgeInsets.only(left: 2, top: 2, bottom: 6),
                   child: Row(children: [
-                    const Text('🕐', style: TextStyle(fontSize: 11.5, color: Colors.red)),
-                    const SizedBox(width: 4),
+                    Text('🕐', style: TextStyle(fontSize: 11.5, color: Colors.red)),
+                    SizedBox(width: 4),
                     Text(DateTime.now().toString().substring(0, 16),
                          style: TextStyle(fontSize: 11.5, color: Colors.red.shade400)),
                   ]),
                 ),
-                _oldStyleInfoRow('👤', '求救人', d.userName.isNotEmpty ? d.userName : '未知'),
-                _oldStyleInfoRow('📱', '手机号', (d.myPhone ?? '').isNotEmpty ? d.myPhone! : '未设置'),
-                if (d.userAge > 0) _oldStyleInfoRow('🎂', '年龄', '${d.userAge}岁'),
-                _oldStyleInfoRow('🩸', '血型', d.bloodType),
-                if (d.disease.isNotEmpty) _oldStyleInfoRow('🏥', '病史', d.disease),
-                if (d.medicine.isNotEmpty) _oldStyleInfoRow('💊', '药物', d.medicine),
-                if (d.allergy.isNotEmpty) _oldStyleInfoRow('⚠️', '过敏', d.allergy),
-                Center(child: Text('━━━━━━━━ 求助者位置信息 ━━━━━━━━',
+                _oldStyleInfoRow('👤', tr.z0720, d.userName.isNotEmpty ? d.userName : tr.s013),
+                _oldStyleInfoRow('📱', tr.s859, (d.myPhone ?? '').isNotEmpty ? d.myPhone! : tr.z0721),
+                if (d.userAge > 0) _oldStyleInfoRow('🎂', tr.s280, tr.z0722(d.userAge)),
+                _oldStyleInfoRow('🩸', tr.z0723, d.bloodType),
+                if (d.disease.isNotEmpty) _oldStyleInfoRow('🏥', tr.z0724, d.disease),
+                if (d.medicine.isNotEmpty) _oldStyleInfoRow('💊', tr.z0725, d.medicine),
+                if (d.allergy.isNotEmpty) _oldStyleInfoRow('⚠️', tr.z0726, d.allergy),
+                Center(child: Text(tr.z0727,
                     style: TextStyle(fontSize: 11, color: ZaiNeColors.textSecondary(), letterSpacing: 0.5, fontWeight: FontWeight.w500))),
-                const SizedBox(height: 4),
-                _locationInfoRowOld('', '地址', d.address ?? '未知地址'),
+                SizedBox(height: 4),
+                _locationInfoRowOld('', tr.z0728, d.address ?? tr.s866),
                 _coordInfoRowOld('🧭', d.coordLat, d.coordLng),
-                const SizedBox(height: 2),
-                _mapLinkRowOld('', '苹果地图', _buildAppleMapsUrl(d.coordLat, d.coordLng), isBlue: true),
-                _mapLinkRowOld('', '高德地图', _buildAmapUrl(d.coordLat, d.coordLng), isBlue: true),
+                SizedBox(height: 2),
+                _mapLinkRowOld('', tr.z0729, _buildAppleMapsUrl(d.coordLat, d.coordLng), isBlue: true),
+                _mapLinkRowOld('', tr.z0730, _buildAmapUrl(d.coordLat, d.coordLng), isBlue: true),
                 Padding(
-                  padding: const EdgeInsets.only(top: 6),
-                  child: Text('请立即联系我或拨打120！\n在呢 - 独居守护App',
+                  padding: EdgeInsets.only(top: 6),
+                  child: Text(tr.z0731,
                       style: TextStyle(fontSize: 11.5, color: ZaiNeColors.textSecondary(), height: 1.35)),
                 ),
               ]),
@@ -591,52 +592,52 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
   }
 
   Widget _oldStyleInfoRow(String emoji, String label, String value) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 2.5),
+    padding: EdgeInsets.symmetric(vertical: 2.5),
     child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(emoji, style: const TextStyle(fontSize: 12.5)),
-      const SizedBox(width: 6),
+      Text(emoji, style: TextStyle(fontSize: 12.5)),
+      SizedBox(width: 6),
       Text('$label：', style: TextStyle(fontSize: 12, color: ZaiNeColors.textSecondary(), fontWeight: FontWeight.w500)),
-      Expanded(child: Text(value, style: const TextStyle(fontSize: 12, height: 1.3))),
+      Expanded(child: Text(value, style: TextStyle(fontSize: 12, height: 1.3))),
     ]),
   );
 
   Widget _locationInfoRowOld(String emoji, String label, String value) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 2.5),
+    padding: EdgeInsets.symmetric(vertical: 2.5),
     child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(emoji, style: const TextStyle(fontSize: 12.5)),
-      const SizedBox(width: 6),
+      Text(emoji, style: TextStyle(fontSize: 12.5)),
+      SizedBox(width: 6),
       Text('$label：', style: TextStyle(fontSize: 12, color: ZaiNeColors.textSecondary(), fontWeight: FontWeight.w500)),
       Expanded(child: Text(value,
         style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500,
-            color: value == '未知地址' ? Colors.red : null, height: 1.3))),
+            color: value == tr.s866 ? Colors.red : null, height: 1.3))),
     ]),
   );
 
   Widget _coordInfoRowOld(String emoji, String? latStr, String? lngStr) {
     final coordText = (latStr != null && lngStr != null)
-        ? '${latStr.replaceAll('北纬 ', '').replaceAll('\u00b0', '')}, ${lngStr.replaceAll('东经 ', '').replaceAll('\u00b0', '')}'
-        : '未知';
+        ? tr.z0732(latStr.replaceAll('北纬 ', '').replaceAll('\u00b0', ''), lngStr.replaceAll('东经 ', '').replaceAll('\u00b0', ''))
+        : tr.s013;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2.5),
+      padding: EdgeInsets.symmetric(vertical: 2.5),
       child: Row(children: [
-        Text(emoji, style: const TextStyle(fontSize: 12.5)),
-        const SizedBox(width: 6),
-        Text('坐标：', style: TextStyle(fontSize: 12, color: ZaiNeColors.textSecondary(), fontWeight: FontWeight.w500)),
-        Flexible(child: Text(coordText, style: const TextStyle(fontSize: 11.5, fontFamily: 'monospace'))),
+        Text(emoji, style: TextStyle(fontSize: 12.5)),
+        SizedBox(width: 6),
+        Text(tr.z0733, style: TextStyle(fontSize: 12, color: ZaiNeColors.textSecondary(), fontWeight: FontWeight.w500)),
+        Flexible(child: Text(coordText, style: TextStyle(fontSize: 11.5, fontFamily: 'monospace'))),
       ]),
     );
   }
 
   String _buildAppleMapsUrl(String? latStr, String? lngStr) {
-    if (latStr == null || lngStr == null) return '（坐标未知）';
+    if (latStr == null || lngStr == null) return tr.z0031;
     final lat = latStr.replaceAll('北纬 ', '').replaceAll('°', '');
     final lng = lngStr.replaceAll('东经 ', '').replaceAll('°', '');
     // 【修复 v1.95-F5】预览与真实 SMS 一致：直接进入导航（从当前位置到求助位置）
-    return 'https://maps.apple.com/?daddr=$lat,$lng&q=${Uri.encodeComponent('求助位置')}';
+    return tr.z0734(lat, lng, Uri.encodeComponent('求助位置'));
   }
 
   String _buildAmapUrl(String? latStr, String? lngStr) {
-    if (latStr == null || lngStr == null) return '（坐标未知）';
+    if (latStr == null || lngStr == null) return tr.z0031;
     final lat = latStr.replaceAll('北纬 ', '').replaceAll('°', '');
     final lng = lngStr.replaceAll('东经 ', '').replaceAll('°', '');
     // 【修复 v1.95-F5】预览与真实 SMS 一致：直接进入导航
@@ -644,15 +645,15 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
   }
 
   Widget _mapLinkRowOld(String emoji, String label, String url, {bool isBlue = false}) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 2.5),
+    padding: EdgeInsets.symmetric(vertical: 2.5),
     child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
       if (emoji.isNotEmpty) ...[
-        Text(emoji, style: const TextStyle(fontSize: 12.5)),
-        const SizedBox(width: 6),
+        Text(emoji, style: TextStyle(fontSize: 12.5)),
+        SizedBox(width: 6),
       ],
       Text('$label：', style: TextStyle(fontSize: 12, color: isBlue ? Colors.blue.shade700 : ZaiNeColors.textSecondary(), fontWeight: FontWeight.w500)),
       Expanded(child: Text(url,
-        style: const TextStyle(fontSize: 9.5, fontFamily: 'monospace', color: Colors.blue),
+        style: TextStyle(fontSize: 9.5, fontFamily: 'monospace', color: Colors.blue),
         overflow: TextOverflow.ellipsis, maxLines: 2)),
     ]),
   );
@@ -667,35 +668,35 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.only(bottom: 10),
-          child: Text('正在采取以下行动：',
+          padding: EdgeInsets.only(bottom: 10),
+          child: Text(tr.z0735,
               style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold, color: ZaiNeColors.textPrimary())),
         ),
         // 紧急联系人电话 — 使用动态 _currentCallIndex 判断
         _buildDynamicStatusItem(
           emoji: '📞',
-          label: '紧急联系人电话',
+          label: tr.z0736,
           isDone: allCallsDone,
-          doneLabel: '已拨打',
-          pendingLabel: '待拨打',
+          doneLabel: tr.z0737,
+          pendingLabel: tr.z0738,
         ),
-        const SizedBox(height: 7),
+        SizedBox(height: 7),
         // 短信通知 — 使用动态 _currentSmsIndex 判断
         _buildDynamicStatusItem(
           emoji: '📬',
-          label: '短信通知',
+          label: tr.z0739,
           isDone: allSmsDone,
-          doneLabel: '已发送',
-          pendingLabel: '待发送',
+          doneLabel: tr.z0030,
+          pendingLabel: tr.z0740,
         ),
-        const SizedBox(height: 7),
+        SizedBox(height: 7),
         // 位置信息（仍使用原始数据，因为定位在进入弹窗前已完成）
         _buildDynamicStatusItem(
           emoji: '📍',
-          label: '位置信息',
-          isDone: d.locationObtained || (d.address != null && d.address!.isNotEmpty && d.address != '未知地址'),
-          doneLabel: '已获取',
-          pendingLabel: '获取中...',
+          label: tr.z0741,
+          isDone: d.locationObtained || (d.address != null && d.address!.isNotEmpty && d.address != tr.s866),
+          doneLabel: tr.z0742,
+          pendingLabel: tr.z0743,
         ),
       ],
     );
@@ -709,7 +710,7 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
     required String doneLabel,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 9),
       decoration: BoxDecoration(
         color: ZaiNeColors.cardBg(),
         borderRadius: BorderRadius.circular(10),
@@ -717,19 +718,19 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
       
         boxShadow: ZaiNeShadows.card,),
       child: Row(children: [
-        Text(emoji, style: const TextStyle(fontSize: 16)),
-        const SizedBox(width: 10),
+        Text(emoji, style: TextStyle(fontSize: 16)),
+        SizedBox(width: 10),
         Expanded(child: Text(label, style: TextStyle(fontSize: 13.5, color: ZaiNeColors.textPrimary()))),
         if (isDone)
           Row(mainAxisSize: MainAxisSize.min, children: [
             Icon(Icons.check_circle, size: 17, color: Colors.green.shade600),
-            const SizedBox(width: 4),
+            SizedBox(width: 4),
             Text(doneLabel, style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: Colors.green.shade700)),
           ])
         else
           Row(mainAxisSize: MainAxisSize.min, children: [
             Icon(Icons.hourglass_empty, size: 15, color: Colors.orange.shade700),
-            const SizedBox(width: 4),
+            SizedBox(width: 4),
             Text(pendingLabel, style: TextStyle(fontSize: 12.5, color: Colors.orange.shade700)),
           ]),
       ]),
@@ -742,8 +743,8 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
       height: 52,
       child: ElevatedButton.icon(
         onPressed: () { widget.onCall120(); HapticFeedback.heavyImpact(); },
-        icon: const Text('🚑', style: TextStyle(fontSize: 18)),
-        label: const Text('🚑 拨打 120 急救电话',
+        icon: Text('🚑', style: TextStyle(fontSize: 18)),
+        label: Text(tr.z0744,
              style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 0.5)),
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.red,

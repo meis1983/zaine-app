@@ -3,13 +3,14 @@
 
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import '../l10n/i18n.dart';
 
 class AppConstants {
   /// 版本号（运行时从 pubspec.yaml 读取，保证与构建版本一致）
   static String version = '1.93.10';
   /// Build 号（运行时读取，用于区分每次编译）
   static String buildNumber = '1';
-  static const String appName = '在呢+';
+  static String appName = tr.z0278;
 
   /// 初始化版本号（在 main.dart 中调用，确保读取到真实构建版本）
   static Future<void> initVersion() async {

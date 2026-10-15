@@ -5,6 +5,7 @@
 import 'package:flutter/material.dart';
 import '../theme/theme_helper.dart';
 import 'stat_item_widget.dart';
+import '../l10n/i18n.dart';
 
 /// 底部三列统计
 /// 显示连续签到、累计签到、本周进度
@@ -28,8 +29,8 @@ class StatsRowWidget extends StatelessWidget {
           child: StatItemWidget(
             icon: Icons.local_fire_department,
             iconColor: Colors.orange,
-            label: '连续签到',
-            value: '$continuousDays 天',
+            label: tr.z0745,
+            value: tr.z0746(continuousDays),
             bgColor: Colors.orange.shade50,
           ),
         ),
@@ -38,8 +39,8 @@ class StatsRowWidget extends StatelessWidget {
           child: StatItemWidget(
             icon: Icons.calendar_today,
             iconColor: Colors.blue,
-            label: '累计签到',
-            value: '$totalDays 天',
+            label: tr.s413,
+            value: tr.z0747(totalDays),
             bgColor: Colors.blue.shade50,
           ),
         ),
@@ -48,7 +49,7 @@ class StatsRowWidget extends StatelessWidget {
           child: StatItemWidget(
             icon: Icons.pie_chart,
             iconColor: Colors.teal,
-            label: '本周进度',
+            label: tr.z0748,
             value: '$weeklyDays/7',
             bgColor: Colors.teal.shade50,
           ),

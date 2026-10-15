@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 import 'dart:convert';
 import '../models/menstrual_record.dart';
+import '../l10n/i18n.dart';
 
 /// 经期服务
 class MenstrualService {
@@ -141,40 +142,40 @@ class MenstrualService {
 
   /// 格式化日期
   static String formatDate(DateTime date) {
-    return DateFormat('yyyy年MM月dd日').format(date);
+    return DateFormat(tr.s893).format(date);
   }
 
   /// 获取流量级别文本
   static String getFlowLevelText(int level) {
     switch (level) {
       case 1:
-        return '少量';
+        return tr.s1142;
       case 2:
-        return '偏少';
+        return tr.s1143;
       case 3:
-        return '正常';
+        return tr.s1144;
       case 4:
-        return '偏多';
+        return tr.s1145;
       case 5:
-        return '大量';
+        return tr.s1146;
       default:
-        return '正常';
+        return tr.s1144;
     }
   }
 
   /// 常见症状列表
   static List<String> get commonSymptoms {
     return [
-      '腹痛',
-      '腰酸',
-      '头痛',
-      '乳房胀痛',
-      '疲劳',
-      '情绪波动',
-      '食欲增加',
-      '失眠',
-      '痘痘',
-      '便秘',
+      tr.s1147,
+      tr.s1148,
+      tr.s1149,
+      tr.s1150,
+      tr.s1151,
+      tr.s1152,
+      tr.s1153,
+      tr.s1154,
+      tr.s1155,
+      tr.s1156,
     ];
   }
 }

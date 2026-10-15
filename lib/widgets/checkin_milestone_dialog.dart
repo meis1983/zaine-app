@@ -13,6 +13,7 @@ import '../theme/theme_helper.dart';
 import '../utils/badge_generator.dart';
 import '../utils/share_card_generator.dart';
 import '../data/app_constants.dart';
+import '../l10n/i18n.dart';
 
 /// 签到里程碑弹窗 — v1.3（精美徽章 + 渐变背景保存到相册 + 二维码）
 class CheckinMilestoneDialog extends StatefulWidget {
@@ -79,7 +80,7 @@ class _CheckinMilestoneDialogState extends State<CheckinMilestoneDialog>
       final boundary = _badgeKey.currentContext?.findRenderObject()
           as RenderRepaintBoundary?;
       if (boundary == null) {
-        _showError('图片生成失败');
+        _showError(tr.z0027);
         return;
       }
 
@@ -93,12 +94,12 @@ class _CheckinMilestoneDialogState extends State<CheckinMilestoneDialog>
       // 3. 转 PNG → 解码 → CPU 逐像素采样边缘色填充四角（让四角自然过渡）
       final byteData = await roundedImage.toByteData(format: ui.ImageByteFormat.png);
       if (byteData == null) {
-        _showError('图片生成失败');
+        _showError(tr.z0027);
         return;
       }
       var src = img.decodeImage(byteData.buffer.asUint8List());
       if (src == null) {
-        _showError('图片解码失败');
+        _showError(tr.z0612);
         return;
       }
 
@@ -117,12 +118,12 @@ class _CheckinMilestoneDialogState extends State<CheckinMilestoneDialog>
         if (mounted) {
           HapticFeedback.mediumImpact();
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
+            SnackBar(
               content: Row(
                 children: [
                   Icon(Icons.check_circle, color: Colors.white, size: 18),
                   SizedBox(width: ZaiNeSpacing.sm),
-                  Text('徽章图片已保存到相册'),
+                  Text(tr.z0613),
                 ],
               ),
               backgroundColor: Colors.green,
@@ -131,11 +132,11 @@ class _CheckinMilestoneDialogState extends State<CheckinMilestoneDialog>
           );
         }
       } else {
-        _showError('保存失败');
+        _showError(tr.s706);
       }
     } catch (e) {
       if (kDebugMode) debugPrint('Save image error: $e');
-      _showError('保存失败：$e');
+      _showError(tr.z0614(e));
     }
   }
 
@@ -313,8 +314,8 @@ class _CheckinMilestoneDialogState extends State<CheckinMilestoneDialog>
                                     children: [
                                       Text(badge.emoji, style: const TextStyle(fontSize: 30)),
                                       const SizedBox(height: ZaiNeSpacing.xs),
-                                      const Text(
-                                        '签到成功 ✓',
+                                      Text(
+                                        tr.z0615,
                                         style: TextStyle(
                                           fontSize: 22,
                                           fontWeight: FontWeight.bold,
@@ -377,7 +378,7 @@ class _CheckinMilestoneDialogState extends State<CheckinMilestoneDialog>
                                                   fontSize: 26, fontWeight: FontWeight.w900,
                                                   color: badge.badgeColor,
                                                 )),
-                                                Text('天', style: TextStyle(
+                                                Text(tr.z0004, style: TextStyle(
                                                   fontSize: 11, fontWeight: FontWeight.w600,
                                                   color: badge.badgeColor.withValues(alpha: 0.7),
                                                 )),
@@ -404,14 +405,14 @@ class _CheckinMilestoneDialogState extends State<CheckinMilestoneDialog>
 
                                 // 副标题
                                 Text(
-                                  '你已连续守护自己 ${widget.continuousDays} 天',
+                                  tr.z0616(widget.continuousDays),
                                   style: TextStyle(fontSize: 14, color: Colors.grey[700], fontWeight: FontWeight.w500),
                                 ),
 
                                 const SizedBox(height: ZaiNeSpacing.xs),
 
                                 Text(
-                                  widget.userName.isEmpty ? '在呢用户' : widget.userName,
+                                  widget.userName.isEmpty ? tr.s057 : widget.userName,
                                   style: TextStyle(fontSize: 12, color: Colors.grey[500]),
                                 ),
 
@@ -494,8 +495,8 @@ class _CheckinMilestoneDialogState extends State<CheckinMilestoneDialog>
                                               children: [
                                                 Icon(Icons.android, size: 22, color: Colors.orange.shade400),
                                                 const SizedBox(height: ZaiNeSpacing.xs),
-                                                Text('敬请', style: TextStyle(fontSize: 8, color: Colors.orange.shade600, fontWeight: FontWeight.w600)),
-                                                Text('期待', style: TextStyle(fontSize: 8, color: Colors.orange.shade600, fontWeight: FontWeight.w600)),
+                                                Text(tr.z0617, style: TextStyle(fontSize: 8, color: Colors.orange.shade600, fontWeight: FontWeight.w600)),
+                                                Text(tr.z0618, style: TextStyle(fontSize: 8, color: Colors.orange.shade600, fontWeight: FontWeight.w600)),
                                               ],
                                             ),
                                           ),
@@ -505,12 +506,12 @@ class _CheckinMilestoneDialogState extends State<CheckinMilestoneDialog>
                                         child: Column(
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
-                                            Text('扫码下载「在呢」', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.grey[800])),
+                                            Text(tr.z0619, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.grey[800])),
                                             const SizedBox(height: ZaiNeSpacing.xs),
                                             Text(
                                               Platform.isIOS
-                                                  ? '独居安全守护 App\n让在乎的人知道你很好'
-                                                  : 'Android 版本即将上线\n敬请期待',
+                                                  ? tr.z0620
+                                                  : tr.z0621,
                                               style: TextStyle(fontSize: 11, color: Colors.grey[500], height: 1.3),
                                             ),
                                             const SizedBox(height: ZaiNeSpacing.xs),
@@ -518,7 +519,7 @@ class _CheckinMilestoneDialogState extends State<CheckinMilestoneDialog>
                                               children: [
                                                 Icon(Icons.people_outline, size: 12, color: Colors.orange.shade600),
                                                 const SizedBox(width: ZaiNeSpacing.xs),
-                                                Text('已守护 ${widget.continuousDays} 天', style: TextStyle(fontSize: 10, color: Colors.orange.shade700, fontWeight: FontWeight.w600)),
+                                                Text(tr.z0622(widget.continuousDays), style: TextStyle(fontSize: 10, color: Colors.orange.shade700, fontWeight: FontWeight.w600)),
                                               ],
                                             ),
                                           ],
@@ -546,7 +547,7 @@ class _CheckinMilestoneDialogState extends State<CheckinMilestoneDialog>
                                               borderRadius: BorderRadius.circular(ZaiNeRadius.cardSm),
                                             
                                               boxShadow: ZaiNeShadows.card,),
-                                            child: const Text('关闭', textAlign: TextAlign.center,
+                                            child: Text(tr.s048, textAlign: TextAlign.center,
                                               style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w600, fontSize: 14)),
                                           ),
                                         ),
@@ -576,7 +577,7 @@ class _CheckinMilestoneDialogState extends State<CheckinMilestoneDialog>
                                                 children: [
                                                   Icon(Icons.download_rounded, color: Colors.teal.shade600, size: 17),
                                                   const SizedBox(width: ZaiNeSpacing.xs),
-                                                  Text('保存徽章', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.teal.shade700, fontSize: 14)),
+                                                  Text(tr.z0623, style: TextStyle(fontWeight: FontWeight.w600, color: Colors.teal.shade700, fontSize: 14)),
                                                 ],
                                               ),
                                             ),
@@ -627,7 +628,7 @@ class _CheckinMilestoneDialogState extends State<CheckinMilestoneDialog>
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Text(badge.emoji, style: const TextStyle(fontSize: 28)),
-                              Text('${widget.continuousDays}天', style: const TextStyle(
+                              Text(tr.z0624(widget.continuousDays), style: const TextStyle(
                                 fontSize: 9, fontWeight: FontWeight.bold, color: Colors.white70,
                               )),
                             ],

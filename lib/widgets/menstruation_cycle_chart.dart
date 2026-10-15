@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/theme_helper.dart';
+import '../l10n/i18n.dart';
 
 /// 经期周期可视化图表
 ///
@@ -20,7 +21,7 @@ class MenstruationCycleChart extends StatelessWidget {
   /// 是否正在经期
   final bool isInPeriod;
 
-  const MenstruationCycleChart({
+  MenstruationCycleChart({
     super.key,
     required this.periodRecords,
     this.averageCycleLength = 28,
@@ -42,16 +43,16 @@ class MenstruationCycleChart extends StatelessWidget {
         side: BorderSide(color: Colors.grey.shade200),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(ZaiNeSpacing.lg),
+        padding: EdgeInsets.all(ZaiNeSpacing.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // 标题和当前状态
             _buildHeader(),
-            const SizedBox(height: ZaiNeSpacing.section),
+            SizedBox(height: ZaiNeSpacing.section),
             // 周期可视化
             _buildCycleVisualization(),
-            const SizedBox(height: ZaiNeSpacing.section),
+            SizedBox(height: ZaiNeSpacing.section),
             // 周期历史
             _buildPeriodHistory(),
           ],
@@ -69,7 +70,7 @@ class MenstruationCycleChart extends StatelessWidget {
       ),
       child: Container(
         height: 200,
-        padding: const EdgeInsets.all(ZaiNeSpacing.lg),
+        padding: EdgeInsets.all(ZaiNeSpacing.lg),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -78,17 +79,17 @@ class MenstruationCycleChart extends StatelessWidget {
               size: 48,
               color: Colors.pink.shade200,
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             Text(
-              '暂无经期记录',
+              tr.z0645,
               style: TextStyle(
                 color: Colors.grey.shade500,
                 fontSize: 14,
               ),
             ),
-            const SizedBox(height: 4),
+            SizedBox(height: 4),
             Text(
-              '在健康概览页记录经期数据后可查看周期分析',
+              tr.z0646,
               style: TextStyle(
                 color: Colors.grey.shade400,
                 fontSize: 12,
@@ -108,16 +109,16 @@ class MenstruationCycleChart extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                '经期周期',
+              Text(
+                tr.z0647,
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              const SizedBox(height: 4),
+              SizedBox(height: 4),
               Text(
-                '平均周期 $averageCycleLength 天',
+                tr.z0648(averageCycleLength),
                 style: TextStyle(
                   fontSize: 12,
                   color: Colors.grey.shade500,
@@ -129,7 +130,7 @@ class MenstruationCycleChart extends StatelessWidget {
         // 当前状态
         if (isInPeriod && currentCycleDay != null)
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
               color: Colors.pink.shade50,
               borderRadius: BorderRadius.circular(20),
@@ -143,9 +144,9 @@ class MenstruationCycleChart extends StatelessWidget {
                   size: 16,
                   color: Colors.pink.shade400,
                 ),
-                const SizedBox(width: 4),
+                SizedBox(width: 4),
                 Text(
-                  '经期第 $currentCycleDay 天',
+                  tr.z0649(currentCycleDay),
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
@@ -157,7 +158,7 @@ class MenstruationCycleChart extends StatelessWidget {
           )
         else if (predictedNextDate != null)
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
               color: Colors.blue.shade50,
               borderRadius: BorderRadius.circular(20),
@@ -171,9 +172,9 @@ class MenstruationCycleChart extends StatelessWidget {
                   size: 16,
                   color: Colors.blue.shade400,
                 ),
-                const SizedBox(width: 4),
+                SizedBox(width: 4),
                 Text(
-                  '预计 ${_daysUntil(predictedNextDate!)} 天后',
+                  tr.z0650(_daysUntil(predictedNextDate!)),
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
@@ -214,16 +215,16 @@ class MenstruationCycleChart extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: 12),
+        SizedBox(height: 12),
         // 图例
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            _buildLegendItem('经期', Colors.pink.shade300),
-            const SizedBox(width: 20),
-            _buildLegendItem('安全期', Colors.green.shade300),
-            const SizedBox(width: 20),
-            _buildLegendItem('易孕期', Colors.orange.shade300),
+            _buildLegendItem(tr.s1056, Colors.pink.shade300),
+            SizedBox(width: 20),
+            _buildLegendItem(tr.z0651, Colors.green.shade300),
+            SizedBox(width: 20),
+            _buildLegendItem(tr.z0652, Colors.orange.shade300),
           ],
         ),
       ],
@@ -242,7 +243,7 @@ class MenstruationCycleChart extends StatelessWidget {
             borderRadius: BorderRadius.circular(2),
           ),
         ),
-        const SizedBox(width: 4),
+        SizedBox(width: 4),
         Text(
           label,
           style: TextStyle(
@@ -258,14 +259,14 @@ class MenstruationCycleChart extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          '近期记录',
+        Text(
+          tr.z0653,
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w600,
           ),
         ),
-        const SizedBox(height: 12),
+        SizedBox(height: 12),
         ...periodRecords.take(5).map((record) {
           return _buildPeriodHistoryItem(record);
         }),
@@ -279,7 +280,7 @@ class MenstruationCycleChart extends StatelessWidget {
     final endDateFormat = '${endDate.month}/${endDate.day}';
     
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: EdgeInsets.only(bottom: 8),
       child: Row(
         children: [
           Container(
@@ -290,7 +291,7 @@ class MenstruationCycleChart extends StatelessWidget {
               shape: BoxShape.circle,
             ),
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: 12),
           Expanded(
             child: Text(
               '$dateFormat - $endDateFormat',
@@ -301,7 +302,7 @@ class MenstruationCycleChart extends StatelessWidget {
             ),
           ),
           Text(
-            '${record.duration} 天',
+            tr.z0654(record.duration),
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w500,
@@ -320,7 +321,7 @@ class PeriodRecord {
   final int duration;
   final String? notes;
 
-  const PeriodRecord({
+  PeriodRecord({
     required this.startDate,
     required this.duration,
     this.notes,
@@ -398,7 +399,7 @@ class _CyclePainter extends CustomPainter {
     
     final rect = RRect.fromRectAndRadius(
       Rect.fromLTWH(left, top, width, height),
-      const Radius.circular(8),
+      Radius.circular(8),
     );
     canvas.drawRRect(rect, bgPaint);
 
@@ -412,12 +413,12 @@ class _CyclePainter extends CustomPainter {
     
     final periodRect = RRect.fromRectAndRadius(
       Rect.fromLTWH(left, top + height - periodHeight, width, periodHeight),
-      const Radius.circular(8),
+      Radius.circular(8),
     );
     canvas.drawRRect(periodRect, periodPaint);
 
     // 标签
-    _drawLabel(canvas, left + width / 2, top - 5, '${record.duration}天');
+    _drawLabel(canvas, left + width / 2, top - 5, tr.z0655(record.duration));
   }
 
   void _drawCurrentCycle(
@@ -434,7 +435,7 @@ class _CyclePainter extends CustomPainter {
     
     final rect = RRect.fromRectAndRadius(
       Rect.fromLTWH(left, top, width, height),
-      const Radius.circular(8),
+      Radius.circular(8),
     );
     canvas.drawRRect(rect, bgPaint);
 
@@ -455,7 +456,7 @@ class _CyclePainter extends CustomPainter {
     
     final periodRect = RRect.fromRectAndRadius(
       Rect.fromLTWH(left, top + height - progressHeight, width, progressHeight),
-      const Radius.circular(8),
+      Radius.circular(8),
     );
     canvas.drawRRect(periodRect, periodPaint);
 
@@ -480,7 +481,7 @@ class _CyclePainter extends CustomPainter {
     );
 
     // 标签
-    _drawLabel(canvas, left + width / 2, top - 5, '第$currentCycleDay天');
+    _drawLabel(canvas, left + width / 2, top - 5, tr.z0656(currentCycleDay));
   }
 
   void _drawPredictedCycle(
@@ -498,7 +499,7 @@ class _CyclePainter extends CustomPainter {
     
     final rect = RRect.fromRectAndRadius(
       Rect.fromLTWH(left, top, width, height),
-      const Radius.circular(8),
+      Radius.circular(8),
     );
     canvas.drawRRect(rect, borderPaint);
 
@@ -513,12 +514,12 @@ class _CyclePainter extends CustomPainter {
     
     final periodRect = RRect.fromRectAndRadius(
       Rect.fromLTWH(left, top + height - periodHeight, width, periodHeight),
-      const Radius.circular(8),
+      Radius.circular(8),
     );
     canvas.drawRRect(periodRect, periodPaint);
 
     // 标签
-    _drawLabel(canvas, left + width / 2, top - 5, '预测', isPredicted: true);
+    _drawLabel(canvas, left + width / 2, top - 5, tr.z0657, isPredicted: true);
   }
 
   void _drawLabel(Canvas canvas, double x, double y, String text, {bool isPredicted = false}) {
@@ -553,7 +554,7 @@ class MenstruationPredictionCard extends StatelessWidget {
   final int? fertileWindowEnd;
   final int averageCycleLength;
 
-  const MenstruationPredictionCard({
+  MenstruationPredictionCard({
     super.key,
     this.predictedNextDate,
     this.fertileWindowStart,
@@ -570,23 +571,23 @@ class MenstruationPredictionCard extends StatelessWidget {
         side: BorderSide(color: Colors.grey.shade200),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(ZaiNeSpacing.lg),
+        padding: EdgeInsets.all(ZaiNeSpacing.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              '经期预测',
+            Text(
+              tr.z0658,
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             Row(
               children: [
                 Expanded(
                   child: _buildPredictionItem(
-                    '下次经期',
+                    tr.z0659,
                     predictedNextDate != null
                         ? '${predictedNextDate!.month}/${predictedNextDate!.day}'
                         : '--',
@@ -596,9 +597,9 @@ class MenstruationPredictionCard extends StatelessWidget {
                 ),
                 Expanded(
                   child: _buildPredictionItem(
-                    '易孕窗口',
+                    tr.z0660,
                     fertileWindowStart != null && fertileWindowEnd != null
-                        ? '第$fertileWindowStart-$fertileWindowEnd天'
+                        ? tr.z0661(fertileWindowStart, fertileWindowEnd)
                         : '--',
                     Icons.favorite,
                     Colors.orange.shade400,
@@ -606,8 +607,8 @@ class MenstruationPredictionCard extends StatelessWidget {
                 ),
                 Expanded(
                   child: _buildPredictionItem(
-                    '周期长度',
-                    '$averageCycleLength天',
+                    tr.z0662,
+                    tr.z0663(averageCycleLength),
                     Icons.timelapse,
                     Colors.blue.shade400,
                   ),
@@ -629,7 +630,7 @@ class MenstruationPredictionCard extends StatelessWidget {
     return Column(
       children: [
         Icon(icon, color: color, size: 24),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         Text(
           value,
           style: TextStyle(
@@ -638,7 +639,7 @@ class MenstruationPredictionCard extends StatelessWidget {
             color: color,
           ),
         ),
-        const SizedBox(height: 4),
+        SizedBox(height: 4),
         Text(
           label,
           style: TextStyle(

@@ -27,6 +27,11 @@ INFOPLIST="$PROJECT_DIR/ios/Runner/Info.plist"
 # 安全中心导航 active 文件（方案 A 文件 swap）：CN 构建前整体替换为 stub，构建后 trap 还原
 NAV_ACTIVE="$PROJECT_DIR/lib/pages/safety_settings_navigator.dart"
 NAV_CN="$PROJECT_DIR/lib/pages/safety_settings_navigator_stub.dart"
+# 安全区域 / 运动监测服务 impl 文件（方案 A 文件 swap）：CN 构建前替换为 stub
+SZ_IMPL="$PROJECT_DIR/lib/services/safety/safe_zone_service_impl.dart"
+SZ_STUB="$PROJECT_DIR/lib/services/safety/safe_zone_service_stub.dart"
+MM_IMPL="$PROJECT_DIR/lib/services/safety/motion_monitor_service_impl.dart"
+MM_STUB="$PROJECT_DIR/lib/services/safety/motion_monitor_service_stub.dart"
 if [ "$ZAI_REGION" = "cn" ]; then
   echo "ℹ️  cn 区域：将工程 Bundle ID 切换为 com.zaine.app.cn，并改写位置/健康权限文案（去除守护/报平安等监控暗示）"
   cp "$PBXPROJ" "$PBXPROJ.bak"
@@ -64,6 +69,16 @@ if [ "$ZAI_REGION" = "cn" ]; then
     cp "$NAV_CN" "$NAV_ACTIVE"
     echo "[i] 已用 CN stub 替换安全中心导航文件（物理剥离 SafetySettingsPage）"
   fi
+  # 安全区域 / 运动监测：CN 构建前将 impl 物理替换为 stub（具体实现类不编译，类名彻底消失）
+  #   注：此处替代原先失效的 `if (kIsChinaBuild) stub` 条件导入（Dart stable 不支持自定义 const bool）。
+  for pair in "$SZ_IMPL:$SZ_STUB" "$MM_IMPL:$MM_STUB"; do
+    impl="${pair%%:*}"; stub="${pair##*:}"
+    if [ -f "$impl" ] && [ -f "$stub" ]; then
+      cp "$impl" "$impl.zai_bak"
+      cp "$stub" "$impl"
+      echo "[i] 已用 CN stub 替换 $(basename "$impl")（物理剥离具体实现类）"
+    fi
+  done
   cleanup_cn() {
     if [ -f "$PBXPROJ.bak" ]; then
       mv "$PBXPROJ.bak" "$PBXPROJ"
@@ -77,6 +92,12 @@ if [ "$ZAI_REGION" = "cn" ]; then
       mv "$NAV_ACTIVE.zai_bak" "$NAV_ACTIVE"
       echo "[i] 已还原安全中心导航文件"
     fi
+    for impl in "$SZ_IMPL" "$MM_IMPL"; do
+      if [ -f "$impl.zai_bak" ]; then
+        mv "$impl.zai_bak" "$impl"
+        echo "[i] 已还原 $(basename "$impl")"
+      fi
+    done
   }
   trap cleanup_cn EXIT
 fi
@@ -104,8 +125,18 @@ fi
 export PUB_HOSTED_URL="${PUB_HOSTED_URL:-https://pub.flutter-io.cn}"
 export FLUTTER_STORAGE_BASE_URL="${FLUTTER_STORAGE_BASE_URL:-https://storage.flutter-io.cn}"
 
+# 【v1.97.7+178 修复】Flutter 3.29+ 默认开启 Swift Package Manager，导致 13 个 plugin（mobile_scanner / image_picker_ios / geolocator_apple / sqflite_darwin 等）
+# 被 podhelper.rb 跳过 CocoaPods 安装，flutter build ios 找不到 native framework → kernel_snapshot_program failed。
+# 强制关闭 SPM，让所有 plugin 走传统 CocoaPods 路径（Runner.xcodeproj 是 CocoaPods workspace 模式，零冲突）。
+export FLUTTER_SWIFT_PACKAGE_MANAGER="${FLUTTER_SWIFT_PACKAGE_MANAGER:-false}"
+
 flutter clean
 flutter pub get
+
+# 【v1.97.7+178 修复】flutter clean 会删 ios/Pods/，pub get 不会自动重装 CocoaPods。
+# 必须手动 pod install，否则 flutter build ios 找不到 plugin 的 native framework → kernel_snapshot_program failed。
+# 让脚本自洽：clean+pub get 之后必接 pod install。
+cd "$PROJECT_DIR/ios" && pod install --repo-update && cd "$PROJECT_DIR"
 
 echo ""
 echo "===== Step 2: Flutter Release 构建（无签名） ====="

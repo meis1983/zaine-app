@@ -4,6 +4,7 @@
 
 import 'package:flutter/material.dart';
 import '../theme/theme_helper.dart';
+import '../l10n/i18n.dart';
 
 /// 引导步骤项
 /// 显示步骤编号/图标、标签、描述，支持完成/未完成/锁定状态
@@ -93,7 +94,7 @@ class StepItemWidget extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      isDone ? '已完成 ✓' : (locked ? '🔒 请先完成上一步' : desc),
+                      isDone ? tr.z0625 : (locked ? tr.z0626 : desc),
                       style: TextStyle(fontSize: 12, color: isDone ? Colors.green.shade600 : (isLocationAction ? Colors.green.shade600 : Colors.grey[500])),
                     ),
                   ],
@@ -173,10 +174,10 @@ class StepItemWidget extends StatelessWidget {
         borderRadius: BorderRadius.circular(ZaiNeRadius.pill),
         boxShadow: [BoxShadow(color: Colors.green.withValues(alpha: 0.3), blurRadius: 6, offset: const Offset(0, 2))],
       ),
-      child: const Row(
+      child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text('去开启', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white)),
+          Text(tr.z0028, style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white)),
           SizedBox(width: 2),
           Icon(Icons.arrow_forward_ios, size: 11, color: Colors.white),
         ],

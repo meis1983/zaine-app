@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/theme_helper.dart';
+import '../l10n/i18n.dart';
 
 /// 实时定位卡片 Widget
 /// 
@@ -66,7 +67,7 @@ class LocationCardWidget extends StatelessWidget {
         ),
         const SizedBox(width: ZaiNeSpacing.md),
         Text(
-          '正在获取位置...',
+          tr.z0461,
           style: TextStyle(fontSize: 13, color: Colors.grey[500]),
         ),
       ],
@@ -83,8 +84,8 @@ class LocationCardWidget extends StatelessWidget {
           children: [
             Icon(Icons.gps_fixed, color: Colors.green.shade600, size: 18),
             const SizedBox(width: ZaiNeSpacing.sm),
-            const Text(
-              '当前位置',
+            Text(
+              tr.z0462,
               style: TextStyle(
                 fontSize: 12,
                 color: Colors.grey,
@@ -184,12 +185,12 @@ class LocationCardWidget extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '位置获取失败',
+                tr.z0463,
                 style: TextStyle(fontSize: 13, color: Colors.grey[600]),
               ),
               const SizedBox(height: ZaiNeSpacing.xs),
               Text(
-                '点击刷新重试',
+                tr.z0464,
                 style: TextStyle(fontSize: 11, color: Colors.grey[400]),
               ),
             ],
@@ -198,7 +199,7 @@ class LocationCardWidget extends StatelessWidget {
         IconButton(
           icon: const Icon(Icons.refresh, size: 18),
           onPressed: onRefresh,
-          tooltip: '重试',
+          tooltip: tr.s699,
         ),
       ],
     );
