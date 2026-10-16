@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../pages/subscription_page.dart';
 import '../theme/theme_helper.dart';
 import '../l10n/i18n.dart';
 import '../utils/emergency_call.dart';
@@ -56,6 +57,10 @@ class HelpResultDialog extends StatefulWidget {
   final HelpDataSnapshot data;
   /// 当弹窗内更新了某个状态时回调给父组件
   final ValueChanged<String> onStatusChanged;
+    /// 当前会员等级的通知上限（体验版=1，智能版=3）
+  final int autoCallLimit;
+    /// 是否为智能版会员（已升级则不显示升级提示）
+    final bool isPremium;
 
     HelpResultDialog({
       super.key,
@@ -70,6 +75,8 @@ class HelpResultDialog extends StatefulWidget {
       required this.onCancel,
       required this.data,
       required this.onStatusChanged,
+      this.autoCallLimit = 1, // 默认体验版
+      this.isPremium = false, // 默认非会员
     });
 
   @override
@@ -127,14 +134,21 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
     }
   }
 
-  /// 获取可手动通知的联系人（全部有效联系人）
-  /// 【v1.97.8 手动阶段】求救短信/拨打电话均为设备端手动操作（零服务端成本），
-  /// 不按会员等级设限——紧急场景下每位守护人都必须可达。
-  /// 自动外发（CPaaS）二期接入时再按会员分级，届时限额只约束"自动"通道。
+  /// 获取可通知的联系人（前 autoCallLimit 位有效联系人）
   List<Map<String, dynamic>> _getAutoNotifyContacts() {
     return widget.contacts
         .where((c) => (c['phone']?.toString() ?? '').isNotEmpty)
+        .take(widget.autoCallLimit)
         .toList();
+  }
+
+  /// 获取超出通知上限的锁定联系人
+  List<Map<String, dynamic>> _getLockedContacts() {
+    final validContacts = widget.contacts
+        .where((c) => (c['phone']?.toString() ?? '').isNotEmpty)
+        .toList();
+    if (validContacts.length <= widget.autoCallLimit) return [];
+    return validContacts.sublist(widget.autoCallLimit);
   }
 
   @override
@@ -197,6 +211,7 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
   /// ===== 发送求救短信模块 =====
   Widget _buildSMSSection() {
     final autoNotify = _getAutoNotifyContacts();
+    final lockedContacts = _getLockedContacts();
     final isAllSent = _currentSmsIndex >= autoNotify.length;
     final currentSmsContact = isAllSent ? null : autoNotify[_currentSmsIndex];
     final currentSmsName = currentSmsContact?['name']?.toString() ?? tr.s855;
@@ -259,6 +274,78 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
             SizedBox(height: 8),
           ],
 
+          // ---- 锁定联系人分区（非会员时显示升级提示）---
+          if (!widget.isPremium && lockedContacts.isNotEmpty) ...[
+            Padding(
+              padding: EdgeInsets.symmetric(vertical: 6),
+              child: Row(children: [
+                Expanded(child: Divider(color: Colors.orange.shade200, thickness: 1)),
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 8),
+                  child: Text(tr.z0711,
+                    style: TextStyle(fontSize: 11, color: ZaiNeColors.textSecondary())),
+                ),
+                Expanded(child: Divider(color: Colors.orange.shade200, thickness: 1)),
+              ]),
+            ),
+            ...lockedContacts.map((contact) {
+              final name = contact['name']?.toString() ?? tr.s855;
+              final relation = contact['relation']?.toString() ?? '';
+              return Padding(
+                padding: EdgeInsets.only(bottom: 5),
+                child: Container(
+                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100.withValues(alpha: 0.6),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.grey.shade200.withValues(alpha: 0.4)),
+                  
+                    boxShadow: ZaiNeShadows.card,),
+                  child: Row(children: [
+                    Icon(Icons.lock_outline, size: 13, color: ZaiNeColors.textSecondary()),
+                    SizedBox(width: 5),
+                    Expanded(child: Text(
+                      '$name${relation.isNotEmpty ? '（$relation）' : ''}',
+                      style: TextStyle(fontSize: 12, color: ZaiNeColors.textSecondary()),
+                    )),
+                  ]),
+                ),
+              );
+            }),
+            Padding(
+              padding: EdgeInsets.only(top: 6, bottom: 2),
+              child: GestureDetector(
+                onTap: () {
+                  // 跳转会员升级页
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => SubscriptionPage()),
+                  );
+                },
+                child: Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.shade50.withValues(alpha: 0.5),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.amber.shade200.withValues(alpha: 0.4)),
+                  
+                    boxShadow: ZaiNeShadows.card,),
+                  child: Row(children: [
+                    Icon(Icons.workspace_premium_rounded, size: 15, color: Colors.amber.shade700),
+                    SizedBox(width: 6),
+                    Expanded(
+                      child: Text(tr.z0712,
+                        style: TextStyle(fontSize: 12, color: Colors.amber.shade800, fontWeight: FontWeight.w500),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                      ),
+                    ),
+                  ]),
+                ),
+              ),
+            ),
+            SizedBox(height: 8),
+          ],
 
           // ---- 发送短信按钮 ----
           if (!isAllSent && autoNotify.isNotEmpty) ...[

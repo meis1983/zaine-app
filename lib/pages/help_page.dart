@@ -8,6 +8,7 @@ import 'dart:async';
 import 'dart:convert';
 import '../services/platform/location_service.dart';
 import '../services/platform/health_service.dart'; // 【v1.93.0】Watch SOS 信号
+import '../services/membership_service.dart';
 import '../services/api_service.dart';
 import '../services/safety/safety_service.dart';
 import '../theme/theme_helper.dart';
@@ -850,6 +851,7 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
         firstContactName: firstContactName,
         firstContactPhone: firstContactPhone,
         smsContentBuilder: smsContentBuilder,
+        autoCallLimit: MembershipService.getAutoCallLimit(),
         onSendSMS: () async { /* 已迁移到 HelpResultDialog 内部处理 */ },
         onCallContact: () async {
           if (firstContactPhone.isNotEmpty) {
@@ -884,6 +886,7 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
           smsSent: _smsSent,
           locationObtained: _locationObtained,
         ),
+        isPremium: MembershipService.isSmartMember(),
       ),
     );
   }
