@@ -1,6 +1,6 @@
 {
   "@@locale": "en",
-  "appTitle": "Zaine+",
+  "appTitle": "Zaine",
   "@appTitle": {
     "description": "App 名称"
   },
@@ -2203,7 +2203,7 @@
   "s1059": "Sleep duration",
   "s1060": "min",
   "s1061": "Smart analysis of your health data with personalized suggestions",
-  "s1062": "Settings → Health → Data Sources & Access → Zaine+ → Enable all",
+  "s1062": "Settings → Health → Data Sources & Access → Zaine → Enable all",
   "s1063": "Please open iPhone Settings → Health to authorize manually",
   "s1064": "Subscription product not ready yet. Please try again later",
   "s1065": "⏰ Subscription product is being prepared\nTakes 2–24 hours to take effect after Apple approval",
@@ -2233,7 +2233,7 @@
   "s1075": "Purchase record restored",
   "s1076": "No recoverable purchase record found",
   "s1077": "yyyy/M/d",
-  "s1078": "Zaine+",
+  "s1078": "Zaine",
   "s1079": "Your guardian circle is now lit",
   "s1080": "Light up your guardian circle",
   "s1081": "Those who care about you feel more at ease now",
@@ -2491,7 +2491,7 @@
   "@s1190": {
     "description": "auto i18n extracted"
   },
-  "s1191": "Scan the QR code above, or enter this code in Zaine+\nto connect with me",
+  "s1191": "Scan the QR code above, or enter this code in Zaine\nto connect with me",
   "@s1191": {
     "description": "auto i18n extracted"
   },
@@ -4872,7 +4872,7 @@
   "@z0618": {
     "description": "auto i18n extracted"
   },
-  "z0619": "Scan to download \"Zaine+\"",
+  "z0619": "Scan to download \"Zaine\"",
   "@z0619": {
     "description": "auto i18n extracted"
   },
@@ -6428,11 +6428,11 @@
   "@z0279": {
     "description": "auto i18n extracted"
   },
-  "z0280": "Zaine+ is more than an app—it's an always-on line of protection between you and the people you care about.",
+  "z0280": "Zaine is more than an app—it's an always-on line of protection between you and the people you care about.",
   "@z0280": {
     "description": "auto i18n extracted"
   },
-  "z0281": "• Subscription name: Zaine+ Smart\n",
+  "z0281": "• Subscription name: Zaine Smart\n",
   "@z0281": {
     "description": "auto i18n extracted"
   },
@@ -6649,7 +6649,7 @@
       }
     }
   },
-  "z0289": "{p1}, I sent you a protection card on Zaine+; it's not activated yet~\n\n",
+  "z0289": "{p1}, I sent you a protection card on Zaine; it's not activated yet~\n\n",
   "@z0289": {
     "description": "auto i18n extracted",
     "placeholders": {
@@ -6829,7 +6829,7 @@
   "@z0460": {
     "description": "auto i18n extracted"
   },
-  "z0749": "· Zaine+ · Guardian Card ·",
+  "z0749": "· Zaine · Guardian Card ·",
   "@z0749": {
     "description": "auto i18n extracted"
   },
@@ -6850,7 +6850,7 @@
   "@z0752": {
     "description": "auto i18n extracted"
   },
-  "z0753": "Zaine+ · Received a warm care message",
+  "z0753": "Zaine · Received a warm care message",
   "@z0753": {
     "description": "auto i18n extracted"
   },
@@ -6867,7 +6867,7 @@
       }
     }
   },
-  "z0756": "· Zaine+ · Guard Established ·",
+  "z0756": "· Zaine · Guard Established ·",
   "@z0756": {
     "description": "auto i18n extracted"
   },

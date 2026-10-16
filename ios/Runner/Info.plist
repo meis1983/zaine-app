@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Zaine+</string>
+	<string>Zaine</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -15,7 +15,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>Zaine+</string>
+	<string>Zaine</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -49,23 +49,23 @@
 		<false/>
 	</dict>
 	<key>NSHealthClinicalHealthRecordsShareUsageDescription</key>
-	<string>Zaine+ needs to read your health records (steps, heart rate, blood oxygen, sleep) to display your health status and vital guardian features.</string>
+	<string>Zaine needs to read your health records (steps, heart rate, blood oxygen, sleep) to display your health status and vital guardian features.</string>
 	<key>NSHealthShareUsageDescription</key>
-	<string>Zaine+ needs to sync your health data (heart rate, blood oxygen, sleep, menstrual cycle, etc.) to provide vital guardian features.</string>
+	<string>Zaine needs to sync your health data (heart rate, blood oxygen, sleep, menstrual cycle, etc.) to provide vital guardian features.</string>
 	<key>NSHealthUpdateUsageDescription</key>
-	<string>Zaine+ needs to read your health data to enable daily check-in reports and menstrual cycle tracking.</string>
+	<string>Zaine needs to read your health data to enable daily check-in reports and menstrual cycle tracking.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>Zaine+ needs your location when you trigger an emergency SOS so your emergency contacts can receive it.</string>
+	<string>Zaine needs your location when you trigger an emergency SOS so your emergency contacts can receive it.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Zaine+ needs your location when you trigger an emergency SOS.</string>
+	<string>Zaine needs your location when you trigger an emergency SOS.</string>
 	<key>NSPhoneUsageDescription</key>
-	<string>Zaine+ needs to call your emergency contacts in urgent situations.</string>
+	<string>Zaine needs to call your emergency contacts in urgent situations.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Zaine+ needs access to your photo library to select a contact avatar or scan a guardian code QR code.</string>
+	<string>Zaine needs access to your photo library to select a contact avatar or scan a guardian code QR code.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>Zaine+ needs to save images to your photo library so you can keep or share your guardian code poster.</string>
+	<string>Zaine needs to save images to your photo library so you can keep or share your guardian code poster.</string>
 	<key>NSCameraUsageDescription</key>
-	<string>Zaine+ needs camera access to scan another user's guardian code and establish a guardian relationship.</string>
+	<string>Zaine needs camera access to scan another user's guardian code and establish a guardian relationship.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

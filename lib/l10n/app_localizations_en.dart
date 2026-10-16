@@ -9,7 +9,7 @@ class SEn extends S {
   SEn([String locale = 'en']) : super(locale);
 
   @override
-  String get appTitle => 'Zaine+';
+  String get appTitle => 'Zaine';
 
   @override
   String get signInButtonCheckedIn => 'Checked in today';
@@ -3347,7 +3347,7 @@ class SEn extends S {
 
   @override
   String get s1062 =>
-      'Settings → Health → Data Sources & Access → Zaine+ → Enable all';
+      'Settings → Health → Data Sources & Access → Zaine → Enable all';
 
   @override
   String get s1063 =>
@@ -3405,7 +3405,7 @@ class SEn extends S {
   String get s1077 => 'yyyy/M/d';
 
   @override
-  String get s1078 => 'Zaine+';
+  String get s1078 => 'Zaine';
 
   @override
   String get s1079 => 'Your guardian circle is now lit';
@@ -3824,7 +3824,7 @@ class SEn extends S {
 
   @override
   String get s1191 =>
-      'Scan the QR code above, or enter this code in Zaine+\nto connect with me';
+      'Scan the QR code above, or enter this code in Zaine\nto connect with me';
 
   @override
   String z0607(Object? p1) {
@@ -5411,7 +5411,7 @@ class SEn extends S {
   String get z0618 => 'tuned';
 
   @override
-  String get z0619 => 'Scan to download \"Zaine+\"';
+  String get z0619 => 'Scan to download \"Zaine\"';
 
   @override
   String get z0620 =>
@@ -6579,10 +6579,10 @@ class SEn extends S {
 
   @override
   String get z0280 =>
-      'Zaine+ is more than an app—it\'s an always-on line of protection between you and the people you care about.';
+      'Zaine is more than an app—it\'s an always-on line of protection between you and the people you care about.';
 
   @override
-  String get z0281 => '• Subscription name: Zaine+ Smart\n';
+  String get z0281 => '• Subscription name: Zaine Smart\n';
 
   @override
   String z0282(Object? p1) {
@@ -6722,7 +6722,7 @@ class SEn extends S {
 
   @override
   String z0289(Object? p1) {
-    return '$p1, I sent you a protection card on Zaine+; it\'s not activated yet~\n\n';
+    return '$p1, I sent you a protection card on Zaine; it\'s not activated yet~\n\n';
   }
 
   @override
@@ -6843,7 +6843,7 @@ class SEn extends S {
   String get z0460 => 'Safe Zone';
 
   @override
-  String get z0749 => '· Zaine+ · Guardian Card ·';
+  String get z0749 => '· Zaine · Guardian Card ·';
 
   @override
   String z0750(Object? p1) {
@@ -6857,7 +6857,7 @@ class SEn extends S {
   String get z0752 => 'Scan to claim your guardian';
 
   @override
-  String get z0753 => 'Zaine+ · Received a warm care message';
+  String get z0753 => 'Zaine · Received a warm care message';
 
   @override
   String get z0754 => 'Scan failed? Enter this code in the App to bind';
@@ -6868,7 +6868,7 @@ class SEn extends S {
   }
 
   @override
-  String get z0756 => '· Zaine+ · Guard Established ·';
+  String get z0756 => '· Zaine · Guard Established ·';
 
   @override
   String z0757(Object? p1) {
