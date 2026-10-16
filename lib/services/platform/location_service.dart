@@ -57,12 +57,13 @@ class LocationService {
           '${position.latitude.toStringAsFixed(6)}, ${position.longitude.toStringAsFixed(6)}';
       final mapsUrl =
           'https://maps.apple.com/?ll=${position.latitude},${position.longitude}';
-      final amapUrl =
-          'https://uri.amap.com/marker?position=${position.longitude},${position.latitude}';
+      // 【海外去高德】统一使用 Google Maps 全球通用链接（q=纬度,经度）
+      final mapUrl =
+          'https://www.google.com/maps?q=${position.latitude},${position.longitude}';
 
       if (kDebugMode) debugPrint('[LocationService] 坐标: $coordStr');
       if (kDebugMode) debugPrint('[LocationService] Apple Maps URL: $mapsUrl');
-      if (kDebugMode) debugPrint('[LocationService] 高德 URL: $amapUrl');
+      if (kDebugMode) debugPrint('[LocationService] Google Maps URL: $mapUrl');
 
       // 逆地理编码
       String? address;
@@ -78,7 +79,7 @@ class LocationService {
         longitude: position.longitude,
         coordString: coordStr,
         mapsUrl: mapsUrl,
-        amapUrl: amapUrl,
+        mapUrl: mapUrl,
         address: address,
       );
     } catch (e) {
@@ -323,7 +324,7 @@ class LocationResult {
   final double? longitude;
   final String? coordString;    // 十进制度数坐标 "lat, lng"
   final String? mapsUrl;        // Apple Maps URL
-  final String? amapUrl;        // 高德地图 URL
+  final String? mapUrl;         // Google Maps URL（海外通用）
   final String? address;        // 逆地理编码地址（如：北京市朝阳区xx路xx号）
   final String? errorMessage;
 
@@ -333,7 +334,7 @@ class LocationResult {
     this.longitude,
     this.coordString,
     this.mapsUrl,
-    this.amapUrl,
+    this.mapUrl,
     this.address,
     this.errorMessage,
   });
@@ -343,7 +344,7 @@ class LocationResult {
     required double longitude,
     required String coordString,
     required String mapsUrl,
-    String? amapUrl,
+    String? mapUrl,
     String? address,
   }) {
     return LocationResult._(
@@ -352,7 +353,7 @@ class LocationResult {
       longitude: longitude,
       coordString: coordString,
       mapsUrl: mapsUrl,
-      amapUrl: amapUrl,
+      mapUrl: mapUrl,
       address: address,
     );
   }

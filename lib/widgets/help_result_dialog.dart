@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../pages/subscription_page.dart';
 import '../theme/theme_helper.dart';
 import '../l10n/i18n.dart';
+import '../utils/emergency_call.dart';
 
 /// 求助触发时的数据快照（用于解耦弹窗组件与 HelpPage 父组件）
 class HelpDataSnapshot {
@@ -429,7 +430,7 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
       //   → 自动编码 ? & = + % 空格 换行
       //   → https:// 中的 : / 保持原样（query value 内的 / 不需要编码）
       //   → iOS 收到后自动解码，Data Detector 能识别完整 URL → 可点击！
-      // 【一条短信】发送完整求助短信（健康信息 + 苹果/高德两条短链），
+      // 【一条短信】发送完整求助短信（健康信息 + 苹果/Google 两条短链），
       // 短链为纯 ASCII 且独占末尾行，iPhone→安卓 跨平台接收方数据检测器必能识别为可点链接。
       final body = widget.smsContentBuilder(contact);
       final safeBody = _safeSmsBody(body);
@@ -580,10 +581,10 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
                 _coordInfoRowOld('🧭', d.coordLat, d.coordLng),
                 SizedBox(height: 2),
                 _mapLinkRowOld('', tr.z0729, _buildAppleMapsUrl(d.coordLat, d.coordLng), isBlue: true),
-                _mapLinkRowOld('', tr.z0730, _buildAmapUrl(d.coordLat, d.coordLng), isBlue: true),
+                _mapLinkRowOld('', tr.z0730, _buildGoogleMapsUrl(d.coordLat, d.coordLng), isBlue: true),
                 Padding(
                   padding: EdgeInsets.only(top: 6),
-                  child: Text(tr.z0731,
+                  child: Text(tr.z0731(EmergencyCall.localEmergencyNumber()),
                       style: TextStyle(fontSize: 11.5, color: ZaiNeColors.textSecondary(), height: 1.35)),
                 ),
               ]),
@@ -639,12 +640,12 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
     return tr.z0734(lat, lng, Uri.encodeComponent('求助位置'));
   }
 
-  String _buildAmapUrl(String? latStr, String? lngStr) {
+  String _buildGoogleMapsUrl(String? latStr, String? lngStr) {
     if (latStr == null || lngStr == null) return tr.z0031;
     final lat = latStr.replaceAll('北纬 ', '').replaceAll('°', '');
     final lng = lngStr.replaceAll('东经 ', '').replaceAll('°', '');
-    // 【修复 v1.95-F5】预览与真实 SMS 一致：直接进入导航
-    return 'https://uri.amap.com/navigation?to=$lng,$lat&mode=car&src=zaine&coordinate=gaode&callnative=1';
+    // 【海外去高德】Google Maps 全球通用（q=纬度,经度）
+    return 'https://www.google.com/maps?q=$lat,$lng';
   }
 
   Widget _mapLinkRowOld(String emoji, String label, String url, {bool isBlue = false}) => Padding(
@@ -747,7 +748,7 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
       child: ElevatedButton.icon(
         onPressed: () { widget.onCall120(); HapticFeedback.heavyImpact(); },
         icon: Text('🚑', style: TextStyle(fontSize: 18)),
-        label: Text(tr.z0744,
+        label: Text(tr.z0744(EmergencyCall.localEmergencyNumber()),
              style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 0.5)),
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.red,

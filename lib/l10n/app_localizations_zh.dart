@@ -218,7 +218,9 @@ class SZh extends S {
   String get s071 => '求助设置';
 
   @override
-  String get s072 => '紧急拨打120';
+  String s072(Object num) {
+    return '紧急拨打$num';
+  }
 
   @override
   String get s073 => '请前往求助页面使用此功能';
@@ -2679,7 +2681,7 @@ class SZh extends S {
   String get s883 => '🍎 苹果地图导航';
 
   @override
-  String get s884 => '📍 高德地图导航';
+  String get s884 => '📍 Google Maps 导航';
 
   @override
   String get s885 => '⚠️ 位置获取失败，请立即回拨确认位置！';
@@ -2688,7 +2690,9 @@ class SZh extends S {
   String get s886 => '如果方便，请描述您当前的位置（如：XX路口、XX小区、XX商场附近）';
 
   @override
-  String get s887 => '请立即联系我或拨打120！';
+  String s887(Object num) {
+    return '请立即联系我或拨打$num！';
+  }
 
   @override
   String get s888 => '在呢 - 独居守护App';
@@ -2697,8 +2701,8 @@ class SZh extends S {
   String get s889 => '你';
 
   @override
-  String s890(Object? r, Object? s, Object? shortUrl) {
-    return '【在呢·紧急求助】$r，我是$s。我可能遇到了危险，已经通过「在呢」把我的实时位置和求助信息发出去了。请你马上点开下面的链接看我的位置，并帮我拨打120急救电话！ $shortUrl';
+  String s890(Object? r, Object? s, Object? shortUrl, Object num) {
+    return '【在呢·紧急求助】$r，我是$s。我可能遇到了危险，已经通过「在呢」把我的实时位置和求助信息发出去了。请你马上点开下面的链接看我的位置，并帮我拨打$num急救电话！ $shortUrl';
   }
 
   @override
@@ -4367,13 +4371,15 @@ class SZh extends S {
   String get z0723 => '血型';
 
   @override
-  String get z0731 => '请立即联系我或拨打120！\n在呢 - 独居守护App';
+  String z0731(Object num) {
+    return '请立即联系我或拨打$num！\n在呢 - 独居守护App';
+  }
 
   @override
   String get z0726 => '过敏';
 
   @override
-  String get z0730 => '高德地图';
+  String get z0730 => '谷歌地图';
 
   @override
   String get z0031 => '（坐标未知）';
@@ -4392,7 +4398,9 @@ class SZh extends S {
   }
 
   @override
-  String get z0744 => '🚑 拨打 120 急救电话';
+  String z0744(Object num) {
+    return '🚑 拨打 $num 急救电话';
+  }
 
   @override
   String get z0675 => '久坐提醒';
@@ -4437,7 +4445,9 @@ class SZh extends S {
   String get z0692 => '情绪低落时试着写下来，倾诉是治愈的第一步';
 
   @override
-  String get z0680 => '感到心慌胸闷时不要硬撑，及时拨打120';
+  String z0680(Object num) {
+    return '感到心慌胸闷时不要硬撑，及时拨打$num';
+  }
 
   @override
   String get z0689 => '按时服药';
@@ -4540,7 +4550,9 @@ class SZh extends S {
   String get z0491 => 'GPS 定位中...';
 
   @override
-  String get z0477 => '✅ 120 拨号界面已打开';
+  String z0477(Object num) {
+    return '✅ $num 拨号界面已打开';
+  }
 
   @override
   String get z0471 => '✅ 位置已获取';
@@ -4594,7 +4606,9 @@ class SZh extends S {
   String get z0498 => '所有成员已收到通知';
 
   @override
-  String get z0495 => '拨打 120';
+  String z0495(Object num) {
+    return '拨打 $num';
+  }
 
   @override
   String get z0467 => '正在发起求救...';
@@ -4603,7 +4617,9 @@ class SZh extends S {
   String get z0472 => '正在发送求救短信...';
 
   @override
-  String get z0476 => '正在拨打 120 急救电话...';
+  String z0476(Object num) {
+    return '正在拨打 $num 急救电话...';
+  }
 
   @override
   String get z0469 => '正在获取位置信息...';
@@ -7002,7 +7018,9 @@ class SZhCn extends SZh {
   String get s071 => '求助设置';
 
   @override
-  String get s072 => '紧急拨打120';
+  String s072(Object num) {
+    return '紧急拨打$num';
+  }
 
   @override
   String get s073 => '请前往求助页面使用此功能';
@@ -9463,7 +9481,7 @@ class SZhCn extends SZh {
   String get s883 => '🍎 苹果地图导航';
 
   @override
-  String get s884 => '📍 高德地图导航';
+  String get s884 => '📍 Google Maps 导航';
 
   @override
   String get s885 => '⚠️ 位置获取失败，请立即回拨确认位置！';
@@ -9472,7 +9490,9 @@ class SZhCn extends SZh {
   String get s886 => '如果方便，请描述您当前的位置（如：XX路口、XX小区、XX商场附近）';
 
   @override
-  String get s887 => '请立即联系我或拨打120！';
+  String s887(Object num) {
+    return '请立即联系我或拨打$num！';
+  }
 
   @override
   String get s888 => '在呢 - 独居守护App';
@@ -9481,8 +9501,8 @@ class SZhCn extends SZh {
   String get s889 => '你';
 
   @override
-  String s890(Object? r, Object? s, Object? shortUrl) {
-    return '【在呢·紧急求助】$r，我是$s。我可能遇到了危险，已经通过「在呢」把我的实时位置和求助信息发出去了。请你马上点开下面的链接看我的位置，并帮我拨打120急救电话！ $shortUrl';
+  String s890(Object? r, Object? s, Object? shortUrl, Object num) {
+    return '【在呢·紧急求助】$r，我是$s。我可能遇到了危险，已经通过「在呢」把我的实时位置和求助信息发出去了。请你马上点开下面的链接看我的位置，并帮我拨打$num急救电话！ $shortUrl';
   }
 
   @override
@@ -11151,13 +11171,15 @@ class SZhCn extends SZh {
   String get z0723 => '血型';
 
   @override
-  String get z0731 => '请立即联系我或拨打120！\n在呢 - 独居守护App';
+  String z0731(Object num) {
+    return '请立即联系我或拨打$num！\n在呢 - 独居守护App';
+  }
 
   @override
   String get z0726 => '过敏';
 
   @override
-  String get z0730 => '高德地图';
+  String get z0730 => '谷歌地图';
 
   @override
   String get z0031 => '（坐标未知）';
@@ -11176,7 +11198,9 @@ class SZhCn extends SZh {
   }
 
   @override
-  String get z0744 => '🚑 拨打 120 急救电话';
+  String z0744(Object num) {
+    return '🚑 拨打 $num 急救电话';
+  }
 
   @override
   String get z0675 => '久坐提醒';
@@ -11221,7 +11245,9 @@ class SZhCn extends SZh {
   String get z0692 => '情绪低落时试着写下来，倾诉是治愈的第一步';
 
   @override
-  String get z0680 => '感到心慌胸闷时不要硬撑，及时拨打120';
+  String z0680(Object num) {
+    return '感到心慌胸闷时不要硬撑，及时拨打$num';
+  }
 
   @override
   String get z0689 => '按时服药';
@@ -11324,7 +11350,9 @@ class SZhCn extends SZh {
   String get z0491 => 'GPS 定位中...';
 
   @override
-  String get z0477 => '✅ 120 拨号界面已打开';
+  String z0477(Object num) {
+    return '✅ $num 拨号界面已打开';
+  }
 
   @override
   String get z0471 => '✅ 位置已获取';
@@ -11378,7 +11406,9 @@ class SZhCn extends SZh {
   String get z0498 => '所有成员已收到通知';
 
   @override
-  String get z0495 => '拨打 120';
+  String z0495(Object num) {
+    return '拨打 $num';
+  }
 
   @override
   String get z0467 => '正在发起求救...';
@@ -11387,7 +11417,9 @@ class SZhCn extends SZh {
   String get z0472 => '正在发送求救短信...';
 
   @override
-  String get z0476 => '正在拨打 120 急救电话...';
+  String z0476(Object num) {
+    return '正在拨打 $num 急救电话...';
+  }
 
   @override
   String get z0469 => '正在获取位置信息...';
@@ -13786,7 +13818,9 @@ class SZhHk extends SZh {
   String get s071 => '求助設置';
 
   @override
-  String get s072 => '緊急撥打120';
+  String s072(Object num) {
+    return '緊急撥打$num';
+  }
 
   @override
   String get s073 => '請前往求助頁面使用此功能';
@@ -16247,7 +16281,7 @@ class SZhHk extends SZh {
   String get s883 => '🍎 蘋果地圖導航';
 
   @override
-  String get s884 => '📍 高德地圖導航';
+  String get s884 => '📍 Google Maps 導航';
 
   @override
   String get s885 => '⚠️ 位置獲取失敗，請立即回撥確認位置！';
@@ -16256,7 +16290,9 @@ class SZhHk extends SZh {
   String get s886 => '如果方便，請描述您當前的位置（如：XX路口、XX小區、XX商場附近）';
 
   @override
-  String get s887 => '請立即聯繫我或撥打120！';
+  String s887(Object num) {
+    return '請立即聯絡我或撥打$num！';
+  }
 
   @override
   String get s888 => '在呢 - 獨居守護App';
@@ -16265,8 +16301,8 @@ class SZhHk extends SZh {
   String get s889 => '你';
 
   @override
-  String s890(Object? r, Object? s, Object? shortUrl) {
-    return '【在呢·緊急求助】$r，我是$s。我可能遇到了危險，已經通過「在呢」把我的實時位置和求助信息發出去了。請你馬上點開下面的鏈接看我的位置，並幫我撥打120急救電話！ $shortUrl';
+  String s890(Object? r, Object? s, Object? shortUrl, Object num) {
+    return '【在呢·緊急求助】$r，我是$s。我可能遇到了危險，已經通過「在呢」把我的實時位置和求助資訊發出去了。請你馬上點開下面的連結看我的位置，並幫我撥打$num急救電話！ $shortUrl';
   }
 
   @override
@@ -17935,13 +17971,15 @@ class SZhHk extends SZh {
   String get z0723 => '血型';
 
   @override
-  String get z0731 => '請立即聯繫我或撥打120！\n在呢 - 獨居守護App';
+  String z0731(Object num) {
+    return '請立即聯繫我或撥打$num！\n在呢 - 獨居守護App';
+  }
 
   @override
   String get z0726 => '過敏';
 
   @override
-  String get z0730 => '高德地圖';
+  String get z0730 => '谷歌地圖';
 
   @override
   String get z0031 => '（坐標未知）';
@@ -17960,7 +17998,9 @@ class SZhHk extends SZh {
   }
 
   @override
-  String get z0744 => '🚑 撥打 120 急救電話';
+  String z0744(Object num) {
+    return '🚑 撥打 $num 急救電話';
+  }
 
   @override
   String get z0675 => '久坐提醒';
@@ -18005,7 +18045,9 @@ class SZhHk extends SZh {
   String get z0692 => '情緒低落時試著寫下來，傾訴是治癒的第一步';
 
   @override
-  String get z0680 => '感到心慌胸悶時不要硬撐，及時撥打120';
+  String z0680(Object num) {
+    return '感到心慌胸悶時不要硬撐，及時撥打$num';
+  }
 
   @override
   String get z0689 => '按時服藥';
@@ -18108,7 +18150,9 @@ class SZhHk extends SZh {
   String get z0491 => 'GPS 定位中...';
 
   @override
-  String get z0477 => '✅ 120 撥號界面已打開';
+  String z0477(Object num) {
+    return '✅ $num 撥號界面已打開';
+  }
 
   @override
   String get z0471 => '✅ 位置已獲取';
@@ -18162,7 +18206,9 @@ class SZhHk extends SZh {
   String get z0498 => '所有成員已收到通知';
 
   @override
-  String get z0495 => '撥打 120';
+  String z0495(Object num) {
+    return '撥打 $num';
+  }
 
   @override
   String get z0467 => '正在發起求救...';
@@ -18171,7 +18217,9 @@ class SZhHk extends SZh {
   String get z0472 => '正在發送求救短信...';
 
   @override
-  String get z0476 => '正在撥打 120 急救電話...';
+  String z0476(Object num) {
+    return '正在撥打 $num 急救電話...';
+  }
 
   @override
   String get z0469 => '正在獲取位置信息...';
@@ -20570,7 +20618,9 @@ class SZhTw extends SZh {
   String get s071 => '求助設定';
 
   @override
-  String get s072 => '緊急撥打120';
+  String s072(Object num) {
+    return '緊急撥打$num';
+  }
 
   @override
   String get s073 => '請前往求助頁面使用此功能';
@@ -23031,7 +23081,7 @@ class SZhTw extends SZh {
   String get s883 => '🍎 蘋果地圖導航';
 
   @override
-  String get s884 => '📍 高德地圖導航';
+  String get s884 => '📍 Google Maps 導航';
 
   @override
   String get s885 => '⚠️ 位置獲取失敗，請立即回撥確認位置！';
@@ -23040,7 +23090,9 @@ class SZhTw extends SZh {
   String get s886 => '如果方便，請描述您當前的位置（如：XX路口、XX小區、XX商場附近）';
 
   @override
-  String get s887 => '請立即聯絡我或撥打120！';
+  String s887(Object num) {
+    return '請立即聯絡我或撥打$num！';
+  }
 
   @override
   String get s888 => '在呢 - 獨居守護App';
@@ -23049,8 +23101,8 @@ class SZhTw extends SZh {
   String get s889 => '你';
 
   @override
-  String s890(Object? r, Object? s, Object? shortUrl) {
-    return '【在呢·緊急求助】$r，我是$s。我可能遇到了危險，已經透過「在呢」把我的實時位置和求助資訊發出去了。請你馬上點開下面的連結看我的位置，並幫我撥打120急救電話！ $shortUrl';
+  String s890(Object? r, Object? s, Object? shortUrl, Object num) {
+    return '【在呢·緊急求助】$r，我是$s。我可能遇到了危險，已經通過「在呢」把我的實時位置和求助資訊發出去了。請你馬上點開下面的連結看我的位置，並幫我撥打$num急救電話！ $shortUrl';
   }
 
   @override
@@ -24719,13 +24771,15 @@ class SZhTw extends SZh {
   String get z0723 => '血型';
 
   @override
-  String get z0731 => '請立即聯繫我或撥打120！\n在呢 - 獨居守護App';
+  String z0731(Object num) {
+    return '請立即聯繫我或撥打$num！\n在呢 - 獨居守護App';
+  }
 
   @override
   String get z0726 => '過敏';
 
   @override
-  String get z0730 => '高德地圖';
+  String get z0730 => '谷歌地圖';
 
   @override
   String get z0031 => '（坐標未知）';
@@ -24744,7 +24798,9 @@ class SZhTw extends SZh {
   }
 
   @override
-  String get z0744 => '🚑 撥打 120 急救電話';
+  String z0744(Object num) {
+    return '🚑 撥打 $num 急救電話';
+  }
 
   @override
   String get z0675 => '久坐提醒';
@@ -24789,7 +24845,9 @@ class SZhTw extends SZh {
   String get z0692 => '情緒低落時試著寫下來，傾訴是治癒的第一步';
 
   @override
-  String get z0680 => '感到心慌胸悶時不要硬撐，及時撥打120';
+  String z0680(Object num) {
+    return '感到心慌胸悶時不要硬撐，及時撥打$num';
+  }
 
   @override
   String get z0689 => '按時服藥';
@@ -24892,7 +24950,9 @@ class SZhTw extends SZh {
   String get z0491 => 'GPS 定位中...';
 
   @override
-  String get z0477 => '✅ 120 撥號界面已打開';
+  String z0477(Object num) {
+    return '✅ $num 撥號界面已打開';
+  }
 
   @override
   String get z0471 => '✅ 位置已獲取';
@@ -24946,7 +25006,9 @@ class SZhTw extends SZh {
   String get z0498 => '所有成員已收到通知';
 
   @override
-  String get z0495 => '撥打 120';
+  String z0495(Object num) {
+    return '撥打 $num';
+  }
 
   @override
   String get z0467 => '正在發起求救...';
@@ -24955,7 +25017,9 @@ class SZhTw extends SZh {
   String get z0472 => '正在發送求救短信...';
 
   @override
-  String get z0476 => '正在撥打 120 急救電話...';
+  String z0476(Object num) {
+    return '正在撥打 $num 急救電話...';
+  }
 
   @override
   String get z0469 => '正在獲取位置信息...';

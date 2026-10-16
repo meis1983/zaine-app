@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 import '../theme/theme_helper.dart';
 import '../l10n/i18n.dart';
+import '../utils/emergency_call.dart';
 
 /// 健康小贴士卡片
 /// 每天固定显示一条（基于日期索引），点击可刷新
@@ -16,7 +17,7 @@ class HealthTipWidget extends StatelessWidget {
       {'icon': Icons.water_drop, 'color': Colors.blue, 'title': tr.z0673, 'desc': tr.z0674},
       {'icon': Icons.directions_walk, 'color': Colors.green, 'title': tr.z0675, 'desc': tr.z0676},
       {'icon': Icons.bedtime, 'color': Colors.indigo, 'title': tr.z0677, 'desc': tr.z0678},
-      {'icon': Icons.favorite, 'color': Colors.red, 'title': tr.z0679, 'desc': tr.z0680},
+      {'icon': Icons.favorite, 'color': Colors.red, 'title': tr.z0679, 'desc': tr.z0680(EmergencyCall.localEmergencyNumber())},
       {'icon': Icons.restaurant, 'color': Colors.orange, 'title': tr.z0681, 'desc': tr.z0682},
       {'icon': Icons.phone_android, 'color': Colors.purple, 'title': tr.z0683, 'desc': tr.z0684},
       {'icon': Icons.window, 'color': Colors.teal, 'title': tr.z0685, 'desc': tr.z0686},

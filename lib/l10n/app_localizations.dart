@@ -517,8 +517,8 @@ abstract class S {
   /// No description provided for @s072.
   ///
   /// In zh_CN, this message translates to:
-  /// **'紧急拨打120'**
-  String get s072;
+  /// **'紧急拨打{num}'**
+  String s072(Object num);
 
   /// No description provided for @s073.
   ///
@@ -4850,7 +4850,7 @@ abstract class S {
   /// No description provided for @s884.
   ///
   /// In zh_CN, this message translates to:
-  /// **'📍 高德地图导航'**
+  /// **'📍 Google Maps 导航'**
   String get s884;
 
   /// No description provided for @s885.
@@ -4868,8 +4868,8 @@ abstract class S {
   /// No description provided for @s887.
   ///
   /// In zh_CN, this message translates to:
-  /// **'请立即联系我或拨打120！'**
-  String get s887;
+  /// **'请立即联系我或拨打{num}！'**
+  String s887(Object num);
 
   /// No description provided for @s888.
   ///
@@ -4886,8 +4886,8 @@ abstract class S {
   /// No description provided for @s890.
   ///
   /// In zh_CN, this message translates to:
-  /// **'【在呢·紧急求助】{r}，我是{s}。我可能遇到了危险，已经通过「在呢」把我的实时位置和求助信息发出去了。请你马上点开下面的链接看我的位置，并帮我拨打120急救电话！ {shortUrl}'**
-  String s890(Object? r, Object? s, Object? shortUrl);
+  /// **'【在呢·紧急求助】{r}，我是{s}。我可能遇到了危险，已经通过「在呢」把我的实时位置和求助信息发出去了。请你马上点开下面的链接看我的位置，并帮我拨打{num}急救电话！ {shortUrl}'**
+  String s890(Object? r, Object? s, Object? shortUrl, Object num);
 
   /// No description provided for @s891.
   ///
@@ -7934,8 +7934,8 @@ abstract class S {
   /// auto i18n extracted
   ///
   /// In zh_CN, this message translates to:
-  /// **'请立即联系我或拨打120！\n在呢 - 独居守护App'**
-  String get z0731;
+  /// **'请立即联系我或拨打{num}！\n在呢 - 独居守护App'**
+  String z0731(Object num);
 
   /// auto i18n extracted
   ///
@@ -7946,7 +7946,7 @@ abstract class S {
   /// auto i18n extracted
   ///
   /// In zh_CN, this message translates to:
-  /// **'高德地图'**
+  /// **'谷歌地图'**
   String get z0730;
 
   /// auto i18n extracted
@@ -7976,8 +7976,8 @@ abstract class S {
   /// auto i18n extracted
   ///
   /// In zh_CN, this message translates to:
-  /// **'🚑 拨打 120 急救电话'**
-  String get z0744;
+  /// **'🚑 拨打 {num} 急救电话'**
+  String z0744(Object num);
 
   /// auto i18n extracted
   ///
@@ -8066,8 +8066,8 @@ abstract class S {
   /// auto i18n extracted
   ///
   /// In zh_CN, this message translates to:
-  /// **'感到心慌胸闷时不要硬撑，及时拨打120'**
-  String get z0680;
+  /// **'感到心慌胸闷时不要硬撑，及时拨打{num}'**
+  String z0680(Object num);
 
   /// auto i18n extracted
   ///
@@ -8264,8 +8264,8 @@ abstract class S {
   /// auto i18n extracted
   ///
   /// In zh_CN, this message translates to:
-  /// **'✅ 120 拨号界面已打开'**
-  String get z0477;
+  /// **'✅ {num} 拨号界面已打开'**
+  String z0477(Object num);
 
   /// auto i18n extracted
   ///
@@ -8372,8 +8372,8 @@ abstract class S {
   /// auto i18n extracted
   ///
   /// In zh_CN, this message translates to:
-  /// **'拨打 120'**
-  String get z0495;
+  /// **'拨打 {num}'**
+  String z0495(Object num);
 
   /// auto i18n extracted
   ///
@@ -8390,8 +8390,8 @@ abstract class S {
   /// auto i18n extracted
   ///
   /// In zh_CN, this message translates to:
-  /// **'正在拨打 120 急救电话...'**
-  String get z0476;
+  /// **'正在拨打 {num} 急救电话...'**
+  String z0476(Object num);
 
   /// auto i18n extracted
   ///

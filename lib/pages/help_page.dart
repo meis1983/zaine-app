@@ -18,6 +18,7 @@ import '../widgets/lightweight_guide_widget.dart';
 import 'profile_page.dart';
 import 'contacts_page.dart';
 import '../l10n/i18n.dart';
+import '../utils/emergency_call.dart';
 
 class HelpPage extends StatefulWidget {
   const HelpPage({super.key});
@@ -612,7 +613,7 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
 
     // 【方案 C v1.95】SOS 短信改为"超短文本 + 后端短链(H5 求助页)"：
     // 短信仅一句求助 + zaine.love/sos/{token} 短链（约 80 字，单条 SMS 不触发 MMS），
-    // 完整健康信息 / 内嵌地图 / 一键拨打120 由 H5 页承载 → 根治 iOS→安卓 MMS 丢链/失败。
+    // 完整健康信息 / 内嵌地图 / 一键拨打急救电话 由 H5 页承载 → 根治 iOS→安卓 MMS 丢链/失败。
     String sosShortUrl = '';
     if (latStr != null && lngStr != null) {
       try {
@@ -666,7 +667,7 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
     _locationObtained = true;
 
     // ⭐ 弹出求助已触发结果对话框
-    // 一条短信含完整健康/位置信息 + 苹果/高德两条短链（短链在短信末尾各自独占一行，
+    // 一条短信含完整健康/位置信息 + 苹果/Google 两条短链（短链在短信末尾各自独占一行，
     // 保证 iPhone→安卓 跨平台接收方数据检测器必能识别为可点链接）
     if (mounted) _showHelpResultDialog(contacts, buildSosBody);
   }
@@ -733,13 +734,14 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
     _sosLocationTimer = null;
   }
 
-  Future<void> _call120Directly() async {
-    final uri = Uri(scheme: 'tel', path: '120');
-    if (await canLaunchUrl(uri)) await launchUrl(uri);
+  Future<void> _callEmergency() async {
+    await EmergencyCall.callEmergency();
   }
 
   String _generateHelpMessage(String myPhone, [String? latStr, String? lngStr]) {
     final now = DateTime.now();
+    // 急救号码跟随设备地区（海外/港澳台/海外华裔统一按地区自适应，不再硬编码 120）
+    final emergencyNum = EmergencyCall.localEmergencyNumber();
     // 【修复 v1.94.x】手机号防御性清洗（兼容历史脏数据），只保留数字
     final cleanPhone = myPhone.replaceAll(RegExp(r'[^\d]'), '');
     // 【v1.95.0+115 修复】日期与时间之间插入零宽空格(\u200B)：
@@ -780,10 +782,10 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
                 : addrPart;
     sb.writeln(tr.s882(addrBroken));
 
-    // 【最终方案】直接使用 maps.apple.com / uri.amap.com 官方域名直链。
+    // 【最终方案】直接使用 maps.apple.com / Google Maps 官方域名直链（海外去高德）。
     // ① maps.apple.com 是苹果自有域名，iOS Data Detector 100% 识别为可点链接；
-    // ② uri.amap.com 是高德官方域名，Android/iOS 均可识别；
-    // ③ 不经过 FC 后端 → 无 302 跳转 → 无中转页 HTML → 无"下载提示" → 无"苹果链跳高德"；
+    // ② Google Maps 全球通用，Android/iOS 均可识别；
+    // ③ 不经过 FC 后端 → 无 302 跳转 → 无中转页 HTML → 无"下载提示"；
     // ④ 每条 URL 独占一行，前后空行隔离，最大化跨平台 SMS Data Detector 识别率。
     if (coordPart.isNotEmpty) {
       sb.writeln('');
@@ -794,7 +796,8 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
       // 接收端点"出发"即可导航到求救者位置。终点名称无需在 URL 携带（短信正文已有纯文本地址）。
       sb.writeln('https://maps.apple.com/?daddr=$coordPart');
       sb.writeln(tr.s884);
-      sb.writeln('https://uri.amap.com/marker?position=$lngStr,$latStr');
+      // Google Maps 全球通用（q=纬度,经度）
+      sb.writeln('https://www.google.com/maps?q=$latStr,$lngStr');
     } else {
       sb.writeln('');
       sb.writeln(tr.s885);
@@ -803,7 +806,7 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
 
     // 页脚放在导航链接之后（用户要求：链接在上方，求助提示在最末尾）
     sb.writeln('');
-    sb.writeln(tr.s887);
+    sb.writeln(tr.s887(emergencyNum));
     sb.writeln(tr.s888);
     return sb.toString().trim();
   }
@@ -819,7 +822,8 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
   String _buildShortSosMessage(String senderName, String receiverName, String shortUrl) {
     final s = senderName.isNotEmpty ? senderName : tr.s320;
     final r = receiverName.isNotEmpty ? receiverName : tr.s889;
-    return tr.s890(r, s, shortUrl);
+    final emergencyNum = EmergencyCall.localEmergencyNumber();
+    return tr.s890(r, s, shortUrl, emergencyNum);
   }
 
   /// 求助已触发结果弹窗
@@ -855,7 +859,7 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
           }
         },
         onCall120: () async {
-          await _call120Directly();
+          await _callEmergency();
         },
         onCancel: () {
           Navigator.pop(ctx);

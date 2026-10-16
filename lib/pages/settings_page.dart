@@ -24,6 +24,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../l10n/i18n.dart';
 import '../l10n/locale_notifier.dart';
 import '../config/app_config.dart';
+import '../utils/emergency_call.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -1256,7 +1257,7 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
               children: [
                 ListTile(
                   leading: Icon(Icons.medical_information, color: Colors.red.shade400),
-                  title:  Text(tr.s072),
+                  title:  Text(tr.s072(EmergencyCall.localEmergencyNumber())),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
                     ScaffoldMessenger.of(context).showSnackBar(

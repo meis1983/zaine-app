@@ -86,7 +86,7 @@
   "s069": "系统提醒",
   "s070": "当天未签到时，系统将发送额外提醒",
   "s071": "求助设置",
-  "s072": "紧急拨打120",
+  "s072": "紧急拨打{num}",
   "s073": "请前往求助页面使用此功能",
   "s074": "会员",
   "s075": "在呢智能版",
@@ -1922,13 +1922,13 @@
     }
   },
   "s883": "🍎 苹果地图导航",
-  "s884": "📍 高德地图导航",
+  "s884": "📍 Google Maps 导航",
   "s885": "⚠️ 位置获取失败，请立即回拨确认位置！",
   "s886": "如果方便，请描述您当前的位置（如：XX路口、XX小区、XX商场附近）",
-  "s887": "请立即联系我或拨打120！",
+  "s887": "请立即联系我或拨打{num}！",
   "s888": "在呢 - 独居守护App",
   "s889": "你",
-  "s890": "【在呢·紧急求助】{r}，我是{s}。我可能遇到了危险，已经通过「在呢」把我的实时位置和求助信息发出去了。请你马上点开下面的链接看我的位置，并帮我拨打120急救电话！ {shortUrl}",
+  "s890": "【在呢·紧急求助】{r}，我是{s}。我可能遇到了危险，已经通过「在呢」把我的实时位置和求助信息发出去了。请你马上点开下面的链接看我的位置，并帮我拨打{num}急救电话！ {shortUrl}",
   "@s890": {
     "placeholders": {
       "r": {
@@ -1939,7 +1939,8 @@
       },
       "shortUrl": {
         "type": "Object?"
-      }
+      },
+      "num": {}
     }
   },
   "s891": "位置记录",
@@ -3533,15 +3534,18 @@
   "@z0723": {
     "description": "auto i18n extracted"
   },
-  "z0731": "请立即联系我或拨打120！\n在呢 - 独居守护App",
+  "z0731": "请立即联系我或拨打{num}！\n在呢 - 独居守护App",
   "@z0731": {
-    "description": "auto i18n extracted"
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "num": {}
+    }
   },
   "z0726": "过敏",
   "@z0726": {
     "description": "auto i18n extracted"
   },
-  "z0730": "高德地图",
+  "z0730": "谷歌地图",
   "@z0730": {
     "description": "auto i18n extracted"
   },
@@ -3577,9 +3581,12 @@
       }
     }
   },
-  "z0744": "🚑 拨打 120 急救电话",
+  "z0744": "🚑 拨打 {num} 急救电话",
   "@z0744": {
-    "description": "auto i18n extracted"
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "num": {}
+    }
   },
   "z0675": "久坐提醒",
   "@z0675": {
@@ -3637,9 +3644,12 @@
   "@z0692": {
     "description": "auto i18n extracted"
   },
-  "z0680": "感到心慌胸闷时不要硬撑，及时拨打120",
+  "z0680": "感到心慌胸闷时不要硬撑，及时拨打{num}",
   "@z0680": {
-    "description": "auto i18n extracted"
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "num": {}
+    }
   },
   "z0689": "按时服药",
   "@z0689": {
@@ -3788,9 +3798,12 @@
   "@z0491": {
     "description": "auto i18n extracted"
   },
-  "z0477": "✅ 120 拨号界面已打开",
+  "z0477": "✅ {num} 拨号界面已打开",
   "@z0477": {
-    "description": "auto i18n extracted"
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "num": {}
+    }
   },
   "z0471": "✅ 位置已获取",
   "@z0471": {
@@ -3860,9 +3873,12 @@
   "@z0498": {
     "description": "auto i18n extracted"
   },
-  "z0495": "拨打 120",
+  "z0495": "拨打 {num}",
   "@z0495": {
-    "description": "auto i18n extracted"
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "num": {}
+    }
   },
   "z0467": "正在发起求救...",
   "@z0467": {
@@ -3872,9 +3888,12 @@
   "@z0472": {
     "description": "auto i18n extracted"
   },
-  "z0476": "正在拨打 120 急救电话...",
+  "z0476": "正在拨打 {num} 急救电话...",
   "@z0476": {
-    "description": "auto i18n extracted"
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "num": {}
+    }
   },
   "z0469": "正在获取位置信息...",
   "@z0469": {
@@ -7102,5 +7121,15 @@
   "z0924": "状态",
   "@z0924": {
     "description": "auto i18n extracted"
+  },
+  "@s887": {
+    "placeholders": {
+      "num": {}
+    }
+  },
+  "@s072": {
+    "placeholders": {
+      "num": {}
+    }
   }
 }

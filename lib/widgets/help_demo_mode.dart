@@ -7,6 +7,7 @@ import '../theme/theme_helper.dart';
 import '../services/social/guardian_message_service.dart';
 import '../l10n/i18n.dart';
 import '../config/app_config.dart';
+import '../utils/emergency_call.dart';
 
 /// 求助演示模式 — 让用户无需真出事就能体验完整求助流程
 ///
@@ -107,12 +108,13 @@ class _HelpDemoModeState extends State<HelpDemoMode> with TickerProviderStateMix
     await _setStep(2, tr.z0474, tr.z0475, 0.5);
     await Future.delayed(Duration(milliseconds: 800));
 
-    // ===== 步骤 5：拨打 120 =====
-    await _setStep(3, tr.z0476, tr.z0021, 0.6);
+    // ===== 步骤 5：拨打当地急救号码 =====
+    final emergencyNum = EmergencyCall.localEmergencyNumber();
+    await _setStep(3, tr.z0476(emergencyNum), tr.z0021, 0.6);
     HapticFeedback.heavyImpact();
     await Future.delayed(Duration(seconds: 2));
     if (!mounted) return;
-    await _setStep(3, tr.z0477, tr.z0478, 0.75);
+    await _setStep(3, tr.z0477(emergencyNum), tr.z0478, 0.75);
     await Future.delayed(Duration(milliseconds: 800));
 
     // ===== 步骤 6：通知紧急联系人 =====
@@ -405,7 +407,7 @@ class _HelpDemoModeState extends State<HelpDemoMode> with TickerProviderStateMix
                     _buildTimelineStep(
                       index: 3,
                       icon: Icons.phone_in_talk,
-                      label: tr.z0495,
+                      label: tr.z0495(EmergencyCall.localEmergencyNumber()),
                       detail: _stepCompleted[3] ? tr.z0496 : tr.z0021,
                       color: Colors.blue,
                       isActive: _currentStep == 3 && _isRunning,

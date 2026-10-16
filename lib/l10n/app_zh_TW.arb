@@ -86,7 +86,7 @@
   "s069": "系統提醒",
   "s070": "當天未簽到時，系統將傳送額外提醒",
   "s071": "求助設定",
-  "s072": "緊急撥打120",
+  "s072": "緊急撥打{num}",
   "s073": "請前往求助頁面使用此功能",
   "s074": "會員",
   "s075": "在呢智慧版",
@@ -1922,13 +1922,13 @@
     }
   },
   "s883": "🍎 蘋果地圖導航",
-  "s884": "📍 高德地圖導航",
+  "s884": "📍 Google Maps 導航",
   "s885": "⚠️ 位置獲取失敗，請立即回撥確認位置！",
   "s886": "如果方便，請描述您當前的位置（如：XX路口、XX小區、XX商場附近）",
-  "s887": "請立即聯絡我或撥打120！",
+  "s887": "請立即聯絡我或撥打{num}！",
   "s888": "在呢 - 獨居守護App",
   "s889": "你",
-  "s890": "【在呢·緊急求助】{r}，我是{s}。我可能遇到了危險，已經透過「在呢」把我的實時位置和求助資訊發出去了。請你馬上點開下面的連結看我的位置，並幫我撥打120急救電話！ {shortUrl}",
+  "s890": "【在呢·緊急求助】{r}，我是{s}。我可能遇到了危險，已經通過「在呢」把我的實時位置和求助資訊發出去了。請你馬上點開下面的連結看我的位置，並幫我撥打{num}急救電話！ {shortUrl}",
   "@s890": {
     "placeholders": {
       "r": {
@@ -1939,7 +1939,8 @@
       },
       "shortUrl": {
         "type": "Object?"
-      }
+      },
+      "num": {}
     }
   },
   "s891": "位置記錄",
@@ -3512,15 +3513,18 @@
   "@z0723": {
     "description": "auto i18n extracted"
   },
-  "z0731": "請立即聯繫我或撥打120！\n在呢 - 獨居守護App",
+  "z0731": "請立即聯繫我或撥打{num}！\n在呢 - 獨居守護App",
   "@z0731": {
-    "description": "auto i18n extracted"
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "num": {}
+    }
   },
   "z0726": "過敏",
   "@z0726": {
     "description": "auto i18n extracted"
   },
-  "z0730": "高德地圖",
+  "z0730": "谷歌地圖",
   "@z0730": {
     "description": "auto i18n extracted"
   },
@@ -3556,9 +3560,12 @@
       }
     }
   },
-  "z0744": "🚑 撥打 120 急救電話",
+  "z0744": "🚑 撥打 {num} 急救電話",
   "@z0744": {
-    "description": "auto i18n extracted"
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "num": {}
+    }
   },
   "z0675": "久坐提醒",
   "@z0675": {
@@ -3616,9 +3623,12 @@
   "@z0692": {
     "description": "auto i18n extracted"
   },
-  "z0680": "感到心慌胸悶時不要硬撐，及時撥打120",
+  "z0680": "感到心慌胸悶時不要硬撐，及時撥打{num}",
   "@z0680": {
-    "description": "auto i18n extracted"
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "num": {}
+    }
   },
   "z0689": "按時服藥",
   "@z0689": {
@@ -3767,9 +3777,12 @@
   "@z0491": {
     "description": "auto i18n extracted"
   },
-  "z0477": "✅ 120 撥號界面已打開",
+  "z0477": "✅ {num} 撥號界面已打開",
   "@z0477": {
-    "description": "auto i18n extracted"
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "num": {}
+    }
   },
   "z0471": "✅ 位置已獲取",
   "@z0471": {
@@ -3839,9 +3852,12 @@
   "@z0498": {
     "description": "auto i18n extracted"
   },
-  "z0495": "撥打 120",
+  "z0495": "撥打 {num}",
   "@z0495": {
-    "description": "auto i18n extracted"
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "num": {}
+    }
   },
   "z0467": "正在發起求救...",
   "@z0467": {
@@ -3851,9 +3867,12 @@
   "@z0472": {
     "description": "auto i18n extracted"
   },
-  "z0476": "正在撥打 120 急救電話...",
+  "z0476": "正在撥打 {num} 急救電話...",
   "@z0476": {
-    "description": "auto i18n extracted"
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "num": {}
+    }
   },
   "z0469": "正在獲取位置信息...",
   "@z0469": {
@@ -7085,5 +7104,15 @@
   "s1180": "朋友發你守護碼了？點此綁定",
   "@s1180": {
     "description": "auto i18n extracted"
+  },
+  "@s887": {
+    "placeholders": {
+      "num": {}
+    }
+  },
+  "@s072": {
+    "placeholders": {
+      "num": {}
+    }
   }
 }

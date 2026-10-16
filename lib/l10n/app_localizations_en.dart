@@ -229,7 +229,9 @@ class SEn extends S {
   String get s071 => 'Help settings';
 
   @override
-  String get s072 => 'Emergency call 120';
+  String s072(Object num) {
+    return 'Emergency call $num';
+  }
 
   @override
   String get s073 => 'Please go to the help page to use this feature';
@@ -2759,7 +2761,7 @@ class SEn extends S {
   String get s883 => '🍎 Apple Maps navigation';
 
   @override
-  String get s884 => '📍 Amap navigation';
+  String get s884 => '📍 Google Maps navigation';
 
   @override
   String get s885 =>
@@ -2770,7 +2772,9 @@ class SEn extends S {
       'If convenient, please describe your current location (e.g. XX intersection, XX neighborhood, near XX mall)';
 
   @override
-  String get s887 => 'Please contact me immediately or call 120!';
+  String s887(Object num) {
+    return 'Please contact me immediately or call $num!';
+  }
 
   @override
   String get s888 => '在呢 - Solo Living Guardian App';
@@ -2779,8 +2783,8 @@ class SEn extends S {
   String get s889 => 'You';
 
   @override
-  String s890(Object? r, Object? s, Object? shortUrl) {
-    return '【在呢·Emergency SOS】$r, I\'m $s. I may be in danger and have already sent my real-time location and SOS info via 在呢. Please open the link below right away to see my location and call 120 emergency for me! $shortUrl';
+  String s890(Object? r, Object? s, Object? shortUrl, Object num) {
+    return '【在呢·Emergency SOS】$r, I\'m $s. I may be in danger and have already sent my real-time location and SOS info via 在呢. Please open the link below right away to see my location and call $num emergency for me! $shortUrl';
   }
 
   @override
@@ -4503,14 +4507,15 @@ class SEn extends S {
   String get z0723 => 'Blood type';
 
   @override
-  String get z0731 =>
-      'Please contact me immediately or dial 120!\nZaine - solo safety app';
+  String z0731(Object num) {
+    return 'Please contact me immediately or dial $num!\nZaine - solo safety app';
+  }
 
   @override
   String get z0726 => 'Allergies';
 
   @override
-  String get z0730 => 'Amap';
+  String get z0730 => 'Google Maps';
 
   @override
   String get z0031 => '(location unknown)';
@@ -4529,7 +4534,9 @@ class SEn extends S {
   }
 
   @override
-  String get z0744 => '🚑 Call 120 emergency';
+  String z0744(Object num) {
+    return '🚑 Call $num emergency';
+  }
 
   @override
   String get z0675 => 'Sit-less reminder';
@@ -4578,8 +4585,9 @@ class SEn extends S {
       'When feeling low, try writing it down — sharing is the first step to healing';
 
   @override
-  String get z0680 =>
-      'If you feel palpitations or chest tightness, don\'t tough it out — call 120';
+  String z0680(Object num) {
+    return 'If you feel palpitations or chest tightness, don\'t tough it out — call $num';
+  }
 
   @override
   String get z0689 => 'Take meds on time';
@@ -4691,7 +4699,9 @@ class SEn extends S {
   String get z0491 => 'GPS locating...';
 
   @override
-  String get z0477 => '✅ 120 dialer opened';
+  String z0477(Object num) {
+    return '✅ $num dialer opened';
+  }
 
   @override
   String get z0471 => '✅ Location acquired';
@@ -4745,7 +4755,9 @@ class SEn extends S {
   String get z0498 => 'All members notified';
 
   @override
-  String get z0495 => 'Call 120';
+  String z0495(Object num) {
+    return 'Call $num';
+  }
 
   @override
   String get z0467 => 'Initiating SOS...';
@@ -4754,7 +4766,9 @@ class SEn extends S {
   String get z0472 => 'Sending SOS SMS...';
 
   @override
-  String get z0476 => 'Calling 120 emergency...';
+  String z0476(Object num) {
+    return 'Calling $num emergency...';
+  }
 
   @override
   String get z0469 => 'Acquiring location...';
