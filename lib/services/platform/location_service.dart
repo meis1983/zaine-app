@@ -1,25 +1,20 @@
 // lib/services/platform/location_service.dart
-// 位置服务（v1.7: 新增逆地理编码）
+// 位置服务（v1.7: 新增逆地理编码；v1.97.8: 海外去高德——逆地理编码统一走系统原生）
 
 import 'dart:async';
-import 'dart:convert';
-import 'dart:io' as io;
 import 'package:flutter/foundation.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../data/app_constants.dart';
 import '../../l10n/i18n.dart';
 
 class LocationService {
   static const String _diagProviderKey = 'geocode_last_provider';
   static const String _diagAddressKey = 'geocode_last_address';
   static const String _diagTimeKey = 'geocode_last_time';
-  static const String _diagAmapInfoKey = 'geocode_last_amap_info';
-  static const String _diagAmapInfoCodeKey = 'geocode_last_amap_infocode';
 
-  /// 获取当前位置（仅在求助触发时调用，降低高德API消耗）
+  /// 获取当前位置（仅在求助触发时调用，降低系统定位/编码消耗）
   /// ⚠️ 重要：此方法不再内部调用 request()！
   /// 权限必须由 UI 层（如 help_page 的引导页）先请求好，这里只负责获取位置。
   /// 原因：在获取位置时偷偷 request() 会导致 iOS 系统在不合适的时机吞掉权限弹窗，
@@ -168,9 +163,9 @@ class LocationService {
   }
 
   /// 逆地理编码：经纬度 → 可读地址
-  /// 使用高德 Web 服务 API (REST)
-  /// 返回格式化地址，失败时返回 null
-  /// 清洗地址中的特殊字符（高德 formatted_address 自带 '+' 或全角'＋'，
+  /// 【v1.97.8 海外去高德】统一走系统原生（iOS CLGeocoder / Android Geocoder）：
+  /// 全球可用、零 Key、零外依赖；失败时返回 null（调用方以坐标 + 地图链接兜底）。
+  /// 清洗地址中的特殊字符（地址可能自带 '+' 或全角'＋'，
   /// 会污染 SOS 短信模板与地图链接；同时归一化空白）
   static String? _cleanAddress(String? addr) {
     if (addr == null) return null;
@@ -186,11 +181,6 @@ class LocationService {
 
   static Future<String?> reverseGeocode(double latitude, double longitude) async {
     try {
-      final String? amapAddr = await _reverseGeocodeAmap(latitude, longitude);
-      if (amapAddr != null && amapAddr.trim().isNotEmpty) {
-        await _storeGeocodeDiag(provider: 'amap', address: amapAddr.trim());
-        return _cleanAddress(amapAddr);
-      }
       final nativeAddr = await _reverseGeocodeNative(latitude, longitude);
       await _storeGeocodeDiag(
         provider: (nativeAddr != null && nativeAddr.trim().isNotEmpty) ? 'native' : 'none',
@@ -207,8 +197,6 @@ class LocationService {
   static Future<void> _storeGeocodeDiag({
     required String provider,
     required String? address,
-    String? amapInfo,
-    String? amapInfoCode,
   }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -219,66 +207,9 @@ class LocationService {
       } else {
         await prefs.remove(_diagAddressKey);
       }
-      if (amapInfo != null) {
-        await prefs.setString(_diagAmapInfoKey, amapInfo);
-      }
-      if (amapInfoCode != null) {
-        await prefs.setString(_diagAmapInfoCodeKey, amapInfoCode);
-      }
     } catch (e) {
       if (kDebugMode) debugPrint('[LocationService] ⚠️ 写入逆地理诊断失败: $e');
     }
-  }
-
-  static Future<String?> _reverseGeocodeAmap(double latitude, double longitude) async {
-    final key = AppConstants.amapApiKey;
-    if (key.isEmpty) {
-      if (kDebugMode) debugPrint('[LocationService] ⚠️ 高德 API Key 未配置，跳过高德逆地理编码');
-      await _storeGeocodeDiag(provider: 'amap_failed', address: null, amapInfo: 'KEY_EMPTY');
-      return null;
-    }
-
-    final url = 'https://restapi.amap.com/v3/geocode/regeo'
-        '?key=$key'
-        '&location=$longitude,$latitude'
-        '&extensions=base'
-        '&output=JSON';
-
-    if (kDebugMode) debugPrint('[LocationService] 🔍 高德逆地理: lat=$latitude, lng=$longitude');
-
-    final client = _AmapHttpClient();
-    final responseBody = await client.get(url);
-
-    if (responseBody == null || responseBody.isEmpty) {
-      if (kDebugMode) debugPrint('[LocationService] ❌ 高德逆地理: 空响应');
-      return null;
-    }
-
-    final data = jsonDecode(responseBody);
-    final status = data['status'];
-    final info = data['info'];
-    final infoCode = data['infocode'];
-
-    if (status == '1' && data['regeocode'] != null) {
-      final formattedAddr = data['regeocode']['formatted_address'] as String?;
-      if (kDebugMode) debugPrint('[LocationService] ✅ 高德逆地理成功');
-      await _storeGeocodeDiag(
-        provider: 'amap',
-        address: formattedAddr?.trim(),
-        amapInfo: info?.toString(),
-        amapInfoCode: infoCode?.toString(),
-      );
-      return formattedAddr;
-    }
-
-    if (kDebugMode) debugPrint('[LocationService] ❌ 高德逆地理失败: status=$status info=$info infocode=$infoCode');
-    await _storeGeocodeDiag(
-      provider: 'amap_failed',
-      address: null,
-      amapInfo: info?.toString(),
-      amapInfoCode: infoCode?.toString(),
-    );
-    return null;
   }
 
   static Future<String?> _reverseGeocodeNative(double latitude, double longitude) async {
@@ -292,6 +223,7 @@ class LocationService {
       final p = placemarks.first;
       final parts = <String>[];
 
+      final country = (p.country ?? '').trim();
       final admin = (p.administrativeArea ?? '').trim();
       final locality = (p.locality ?? '').trim();
       final subLocality = (p.subLocality ?? '').trim();
@@ -305,10 +237,14 @@ class LocationService {
       if (thoroughfare.isNotEmpty) parts.add(thoroughfare);
       if (subThoroughfare.isNotEmpty) parts.add(subThoroughfare);
       if (name.isNotEmpty && !parts.join('').contains(name)) parts.add(name);
+      // 国家殿后：中文地址「大→小」习惯不受影响；海外地址补上 "United States" 才完整
+      if (country.isNotEmpty && !parts.join('').contains(country)) parts.add(country);
 
-      final result = parts.join();
+      // 【v1.97.8】西式地址必须以「, 」分隔——"CaliforniaSan Francisco" 对海外
+      // 接收人不可读；SOS 短信面向全球，统一用国际通用分隔
+      final result = parts.join(', ');
       if (result.isEmpty) return null;
-      if (kDebugMode) debugPrint('[LocationService] ✅ 系统逆地理成功');
+      if (kDebugMode) debugPrint('[LocationService] ✅ 系统逆地理成功: $result');
       return result;
     } catch (e) {
       if (kDebugMode) debugPrint('[LocationService] ⚠️ 系统逆地理失败: $e');
@@ -363,41 +299,5 @@ class LocationResult {
       isSuccess: false,
       errorMessage: message,
     );
-  }
-}
-
-/// 轻量级 HTTP Client（用于逆地理编码等简单 GET 请求，避免引入 http 包）
-class _AmapHttpClient {
-  Future<String?> get(String url) async {
-    try {
-      final uri = Uri.parse(url);
-      final client = io.HttpClient();
-      client.connectionTimeout = const Duration(seconds: 10);
-      final request = await client.getUrl(uri);
-      request.headers.set('User-Agent', 'ZaineApp/1.9.0');
-      final response = await request.close().timeout(const Duration(seconds: 15));
-      if (kDebugMode) debugPrint('[AmapHttpClient] HTTP status: ${response.statusCode}');
-      if (response.statusCode == 200) {
-        final body = await response.transform(utf8.decoder).join();
-        if (kDebugMode) debugPrint('[AmapHttpClient] response length: ${body.length}');
-        client.close();
-        return body;
-      }
-      if (kDebugMode) debugPrint('[AmapHttpClient] 非200状态码: ${response.statusCode}');
-      client.close();
-      return null;
-    } on io.SocketException catch (e) {
-      if (kDebugMode) debugPrint('[AmapHttpClient] 网络连接失败(SocketException): $e');
-      return null;
-    } on io.HttpException catch (e) {
-      if (kDebugMode) debugPrint('[AmapHttpClient] HTTP异常: $e');
-      return null;
-    } on TimeoutException catch (e) {
-      if (kDebugMode) debugPrint('[AmapHttpClient] 请求超时(15s): $e');
-      return null;
-    } catch (e) {
-      if (kDebugMode) debugPrint('_AmapHttpClient error: $e');
-      return null;
-    }
   }
 }

@@ -368,10 +368,12 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
     setState(() {
       _locationLoading = false;
       if (result.isSuccess && result.latitude != null) {
-        // 【修复 v1.94.x】高德反向地理编码 POI 地址自带 '+'（如"朝阳区+崔各庄乡"），
-        // 源头即清洗，避免污染短信地址行与苹果地图 q 参数。
-        // 进入此分支说明定位成功（latitude != null），address 必有值
-        _address = result.address!.replaceAll(RegExp(r'[\u002B\uFF0B\u207A\u208B\u2795\uFB29]'), '').trim();
+        // 【v1.97.8】逆地理地址可能为 null（海外弱网/系统编码失败），不再强解包；
+        // 地址缺失时由坐标 + Apple/Google 地图链接兜底。
+        // 清洗 '+' 类字符（全角＋/上标⁺等），避免污染短信地址行与地图链接。
+        _address = result.address
+            ?.replaceAll(RegExp(r'[\u002B\uFF0B\u207A\u208B\u2795\uFB29]'), '')
+            .trim();
         _coordLat = tr.s849(result.latitude!.toStringAsFixed(6));
         _coordLng = tr.s850(result.longitude!.toStringAsFixed(6));
       } else {

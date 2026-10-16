@@ -272,8 +272,6 @@ mixin DeveloperMode<T extends StatefulWidget> on State<T> {
     final provider = prefs.getString('geocode_last_provider') ?? 'unknown';
     final time = prefs.getString('geocode_last_time') ?? '';
     final address = prefs.getString('geocode_last_address') ?? '';
-    final amapInfo = prefs.getString('geocode_last_amap_info') ?? '';
-    final amapInfoCode = prefs.getString('geocode_last_amap_infocode') ?? '';
 
     if (!mounted) return;
     showDialog(
@@ -291,16 +289,12 @@ mixin DeveloperMode<T extends StatefulWidget> on State<T> {
               Text(tr.z0790(time.isEmpty ? "无" : time)),
               const SizedBox(height: 6),
               Text(tr.z0791(address.isEmpty ? "无" : address)),
-              const SizedBox(height: 12),
-              Text(tr.z0792(amapInfo.isEmpty ? "无" : amapInfo)),
-              const SizedBox(height: 6),
-              Text(tr.z0793(amapInfoCode.isEmpty ? "无" : amapInfoCode)),
             ],
           ),
           actions: [
             TextButton(
               onPressed: () async {
-                final text = 'provider=$provider\ntime=$time\naddress=$address\namap_info=$amapInfo\namap_infocode=$amapInfoCode';
+                final text = 'provider=$provider\ntime=$time\naddress=$address';
                 await Clipboard.setData(ClipboardData(text: text));
                 if (ctx.mounted) Navigator.pop(ctx);
                 if (mounted) {
@@ -317,8 +311,6 @@ mixin DeveloperMode<T extends StatefulWidget> on State<T> {
                 await prefs.remove('geocode_last_provider');
                 await prefs.remove('geocode_last_time');
                 await prefs.remove('geocode_last_address');
-                await prefs.remove('geocode_last_amap_info');
-                await prefs.remove('geocode_last_amap_infocode');
                 if (ctx.mounted) Navigator.pop(ctx);
               },
               child: Text(tr.s100),
