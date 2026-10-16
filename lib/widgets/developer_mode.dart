@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../services/guardian_card_service.dart';
 import '../theme/theme_helper.dart';
 import '../pages/promotional_showcase_page.dart'; // 新增
 import 'checkin_milestone_dialog.dart';
@@ -907,10 +908,11 @@ mixin DeveloperMode<T extends StatefulWidget> on State<T> {
         await prefs.remove(key);
       }
 
-      // 重新初始化赠送卡（3张，30天有效期）
+      // 重新初始化赠送卡（按会员等级：免费1张/智能版3张，30天有效期）
       final today = DateTime.now().toString().split(' ')[0];
       await prefs.setString('guardian_card_first_launch_date_$syncId', today);
-      await prefs.setInt('guardian_card_gift_remaining_$syncId', 3);
+      await prefs.setInt(
+          'guardian_card_gift_remaining_$syncId', GuardianCardService.giftCardCount);
 
       // 设置标记：下次打开守护卡页时跳过后端同步，避免后端0张覆盖本地3张
       await prefs.setBool('guardian_card_skip_sync_once', true);

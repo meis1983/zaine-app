@@ -160,7 +160,7 @@ class AuthService {
         await MembershipService.syncFromLoginResponse(res);
         // 核销 pending card_code（裂变注册奖励）— 失败不影响登录
         await DeepLinkService.processPendingCardCode(phone);
-        // 初始化守护卡额度（新用户首次登录自动获得 3 张）
+        // 初始化守护卡额度（新用户首次登录按会员等级获得：免费1张/智能版3张）
         await GuardianCardService.initGiftCards();
         // 【修复 v1.9.61】清除残留签到状态缓存（防止从其他账号切换后状态污染）
         await prefs.remove('last_check_in_date');
@@ -264,7 +264,7 @@ class AuthService {
       if (kDebugMode) debugPrint('[AuthService] ✅ 验证登录成功: userId=${res['userId']}, isNew=${res['is_new_user']}');
       // 同步会员信息到本地
       await MembershipService.syncFromLoginResponse(res);
-      // 初始化守护卡额度（新用户首次登录自动获得 3 张）
+      // 初始化守护卡额度（新用户首次登录按会员等级获得：免费1张/智能版3张）
       await GuardianCardService.initGiftCards();
       // card_code 绑定由后端 verify-and-link 接口在服务器端完成，无需重复调用
       // 【修复 v1.9.61】清除残留签到状态缓存（防止从其他账号切换后状态污染）
