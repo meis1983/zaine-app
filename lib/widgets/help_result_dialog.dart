@@ -519,9 +519,7 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
           expandedAlignment: Alignment.topLeft,
           title: Row(children: [
             Text('📄', style: TextStyle(fontSize: 14)),
-            SizedBox(width: 4),
-            Text('📄', style: TextStyle(fontSize: 13)),
-            SizedBox(width: 4),
+            SizedBox(width: 6),
             Text(_infoExpanded ? tr.z0717 : tr.z0718,
               style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: Colors.blue.shade800)),
             Spacer(),

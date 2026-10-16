@@ -416,23 +416,6 @@ class _CheckinMilestoneDialogState extends State<CheckinMilestoneDialog>
                                   style: TextStyle(fontSize: 12, color: Colors.grey[500]),
                                 ),
 
-                                // 装饰元素 + 每日文案
-                                const SizedBox(height: ZaiNeSpacing.xs),
-                                if (badge.message.isNotEmpty)
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.md),
-                                    child: Text(
-                                      '${BadgeGenerator.decoChars[badge.decoType]} ${badge.message}',
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: badge.badgeColor.withValues(alpha: 0.7),
-                                        fontWeight: FontWeight.w500,
-                                        height: 1.3,
-                                      ),
-                                    ),
-                                  ),
-
                                 const SizedBox(height: ZaiNeSpacing.md),
 
                                 // ====== 二维码/邀请卡片区 ======
@@ -624,14 +607,12 @@ class _CheckinMilestoneDialogState extends State<CheckinMilestoneDialog>
                           ],
                         ),
                         child: Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(badge.emoji, style: const TextStyle(fontSize: 28)),
-                              Text(tr.z0624(widget.continuousDays), style: const TextStyle(
-                                fontSize: 9, fontWeight: FontWeight.bold, color: Colors.white70,
-                              )),
-                            ],
+                          child: Text(
+                            tr.z0624(widget.continuousDays),
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white,
+                            ),
                           ),
                         ),
                       ),
