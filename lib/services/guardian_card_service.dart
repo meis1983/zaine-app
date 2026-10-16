@@ -3,16 +3,14 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'api/auth_service.dart';
 import 'api/card_service.dart';
-import 'membership_service.dart';
 
 /// 守护卡服务 — 管理守护卡额度（v2.0 单池模型）
 ///
-/// 额度规则（已对齐后端 MEMBERSHIP_CONFIG）：
-/// - 新用户注册赠送按会员等级：免费版 1 张 / 智能版 3 张（30 天有效期）
+/// 额度规则（已对齐后端）：
+/// - 新用户注册赠送 3 张（永久有效）
 /// - 无每日免费额度 —— 核心激励靠裂变解锁
 /// - 发出的卡被注册后，发卡人自动解锁 +1 张
-/// - 升级智能版时后端自动补足至 3 张（subscription.py verify）
-/// - 后端是权威源：本地 SharedPreferences 仅作缓存，每次进发卡页 syncQuotaFromBackend 拉取
+/// - 手上始终 2-3 张在流转，每张都珍贵
 class GuardianCardService {
   /// 异步获取当前用户的同步标识（优先用 user_id，其次用 phone）
   /// 【修复 v1.9.x】每次调用时实时从 SharedPreferences 读取，确保当前登录用户正确
@@ -28,20 +26,13 @@ class GuardianCardService {
     return 'anonymous';
   }
 
-  /// 新用户赠送数量（按会员等级：免费 1 张 / 智能版 3 张）
-  static const int freeGiftCardCount = 1;
-  static const int smartGiftCardCount = 3;
-
-  /// 获取当前会员等级对应的初始赠送张数
-  static int get giftCardCount {
-    final isSmart = MembershipService.isSmartMember();
-    return isSmart ? smartGiftCardCount : freeGiftCardCount;
-  }
+  /// 新用户赠送数量
+  static const int giftCardCount = 3;
 
   /// 发出卡等待注册小时数
   static const int sentCardWaitHours = 24;
 
-  /// 获取赠送卡剩余数量（初始按会员等级：免费1/智能3 + 裂变解锁）
+  /// 获取赠送卡剩余数量（新用户初始3张 + 裂变解锁）
   static Future<int> getGiftRemaining() async {
     final prefs = await SharedPreferences.getInstance();
     final syncId = await _getCurrentSyncIdAsync();
@@ -61,7 +52,7 @@ class GuardianCardService {
     if (!hasInitialized) {
       final today = DateTime.now().toString().split(' ')[0];
       await prefs.setString(firstLaunchKey, today);
-      // 使用用户特定的键存储额度（初始张数按会员等级：免费1/智能3）
+      // 使用用户特定的键存储额度（新用户初始 3 张）
       await prefs.setInt('guardian_card_gift_remaining_$syncId', giftCardCount);
       if (kDebugMode) debugPrint('[GuardianCard] 新用户赠送 $giftCardCount 张守护卡 (syncId=$syncId)');
       // 不再立即调用 syncQuotaFromBackend()，避免后端返回 0 覆盖本地值
