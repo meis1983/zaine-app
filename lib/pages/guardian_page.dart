@@ -1211,14 +1211,18 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                       Row(
                         children: [
                           if (_headerReady) ...[
-                            Text(
-                              _guardians.isNotEmpty
-                                  ? tr.s552(_guardians.length)
-                                  : tr.s396,
-                              style: TextStyle(
-                                fontSize: ZaiNeFontSize.caption,
-                                color: Colors.white.withValues(alpha: 0.9),
-                                fontWeight: FontWeight.w500,
+                            Flexible(
+                              child: Text(
+                                _guardians.isNotEmpty
+                                    ? tr.s552(_guardians.length)
+                                    : tr.s396,
+                                style: TextStyle(
+                                  fontSize: ZaiNeFontSize.caption,
+                                  color: Colors.white.withValues(alpha: 0.9),
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
                               ),
                             ),
                             if (_guardedByMe.isNotEmpty) ...[
@@ -1228,12 +1232,16 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                                 height: 10,
                                 color: Colors.white.withValues(alpha: 0.3),
                               ),
-                              Text(
-                                tr.s553(_guardedByMe.length),
-                                style: TextStyle(
-                                  fontSize: ZaiNeFontSize.caption,
-                                  color: Colors.white.withValues(alpha: 0.9),
-                                  fontWeight: FontWeight.w500,
+                              Flexible(
+                                child: Text(
+                                  tr.s553(_guardedByMe.length),
+                                  style: TextStyle(
+                                    fontSize: ZaiNeFontSize.caption,
+                                    color: Colors.white.withValues(alpha: 0.9),
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
                                 ),
                               ),
                             ],
@@ -1244,22 +1252,30 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                                 height: 10,
                                 color: Colors.white.withValues(alpha: 0.3),
                               ),
-                              Text(
-                                tr.s554(_mutualUserIds.length),
+                              Flexible(
+                                child: Text(
+                                  tr.s554(_mutualUserIds.length),
+                                  style: TextStyle(
+                                    fontSize: ZaiNeFontSize.caption,
+                                    color: Colors.white.withValues(alpha: 0.9),
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                ),
+                              ),
+                            ],
+                          ] else
+                            Flexible(
+                              child: Text(
+                                tr.s399,
                                 style: TextStyle(
                                   fontSize: ZaiNeFontSize.caption,
                                   color: Colors.white.withValues(alpha: 0.9),
                                   fontWeight: FontWeight.w500,
                                 ),
-                              ),
-                            ],
-                          ] else
-                            Text(
-                              tr.s399,
-                              style: TextStyle(
-                                fontSize: ZaiNeFontSize.caption,
-                                color: Colors.white.withValues(alpha: 0.9),
-                                fontWeight: FontWeight.w500,
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
                               ),
                             ),
                         ],

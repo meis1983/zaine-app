@@ -2099,7 +2099,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
     return GestureDetector(
       onTap: () => setState(() => _gender = gender),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
           color: isSelected ? ZaiNeColors.brandOrange.withValues(alpha: 31) : Colors.transparent,
           borderRadius: BorderRadius.circular(ZaiNeRadius.button),
@@ -2110,10 +2110,12 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
         child: Text(
           gender,
           style: TextStyle(
-            fontSize: 12,
+            fontSize: 11,
             fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
             color: isSelected ? ZaiNeColors.brandOrange : ZaiNeColors.textSecondary(),
           ),
+          overflow: TextOverflow.ellipsis,
+          maxLines: 1,
         ),
       ),
     );

@@ -332,8 +332,13 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
                   child: Row(children: [
                     Icon(Icons.workspace_premium_rounded, size: 15, color: Colors.amber.shade700),
                     SizedBox(width: 6),
-                    Text(tr.z0712,
-                      style: TextStyle(fontSize: 12, color: Colors.amber.shade800, fontWeight: FontWeight.w500)),
+                    Expanded(
+                      child: Text(tr.z0712,
+                        style: TextStyle(fontSize: 12, color: Colors.amber.shade800, fontWeight: FontWeight.w500),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                      ),
+                    ),
                   ]),
                 ),
               ),

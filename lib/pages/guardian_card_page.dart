@@ -1661,12 +1661,16 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
         children: [
           Icon(Icons.people, size: 12, color: Colors.green.shade600),
           const SizedBox(width: ZaiNeSpacing.xs),
-          Text(
-            tr.s746(_totalRegistered),
-            style: TextStyle(
-              fontSize: ZaiNeFontSize.micro,
-              color: Colors.green.shade600,
-              fontWeight: FontWeight.w500,
+          Expanded(
+            child: Text(
+              tr.s746(_totalRegistered),
+              style: TextStyle(
+                fontSize: ZaiNeFontSize.micro,
+                color: Colors.green.shade600,
+                fontWeight: FontWeight.w500,
+              ),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
             ),
           ),
         ],

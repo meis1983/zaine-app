@@ -1558,12 +1558,12 @@ class SEn extends S {
 
   @override
   String s553(Object? p1) {
-    return 'Successfully guarding $p1 friends';
+    return 'Guarding $p1 friends';
   }
 
   @override
   String s554(Object? p1) {
-    return 'Mutual guardians with $p1';
+    return '$p1 mutual guardians';
   }
 
   @override
@@ -1848,7 +1848,7 @@ class SEn extends S {
   String get s624 => 'Precision detection enabled';
 
   @override
-  String get s625 => 'Paired · Guarding in background';
+  String get s625 => 'Paired · guarding';
 
   @override
   String get s626 => 'Not Paired';
@@ -2261,7 +2261,7 @@ class SEn extends S {
 
   @override
   String s746(Object? _totalRegistered) {
-    return 'You\'ve guarded $_totalRegistered people — keep inviting to get more guardian cards';
+    return 'Guarded $_totalRegistered people — invite more for cards';
   }
 
   @override
@@ -3540,7 +3540,7 @@ class SEn extends S {
   String get s1118 => 'Start protection now';
 
   @override
-  String get s1119 => 'Start protection now · Yearly saves more';
+  String get s1119 => 'Start protection · Yearly saves more';
 
   @override
   String get s1120 => 'Your protection is now active';
@@ -3867,7 +3867,7 @@ class SEn extends S {
   }
 
   @override
-  String get z0595 => 'Apple Watch paired · guarding in background';
+  String get z0595 => 'Watch paired · guarding';
 
   @override
   String get z0594 => 'Apple Watch precise detection';
@@ -4052,19 +4052,19 @@ class SEn extends S {
   String get z0580 => 'Gait stability & fall detection';
 
   @override
-  String get z0578 => 'Every 15 min';
+  String get z0578 => '15 min';
 
   @override
   String get z0572 => 'Update every 15 min';
 
   @override
-  String get z0574 => 'Every 30 sec';
+  String get z0574 => '30 sec';
 
   @override
   String get z0570 => 'Update every 30 sec';
 
   @override
-  String get z0576 => 'Every 5 min';
+  String get z0576 => '5 min';
 
   @override
   String get z0571 => 'Update every 5 min';
@@ -4089,7 +4089,7 @@ class SEn extends S {
   String get z0547 => 'Add time';
 
   @override
-  String get z0577 => 'Power saving';
+  String get z0577 => 'Power save';
 
   @override
   String get z0569 => 'Power-saving tracking · 🔋saves battery';
@@ -4423,7 +4423,7 @@ class SEn extends S {
   String get z0741 => 'Location info';
 
   @override
-  String get z0712 => 'Upgrade to Smart to unlock all guardian notifications';
+  String get z0712 => 'Upgrade to Smart for all notifications';
 
   @override
   String z0713(Object? p1) {

@@ -614,13 +614,18 @@ class _SubscriptionPageState extends State<SubscriptionPage>
             children: [
               Icon(Icons.format_quote_rounded, size: 16, color: ZaiNeColors.brandOrangeSwatch[300]),
               const SizedBox(width: ZaiNeSpacing.md),
-              Text(
-                tr.s1087,
-                style: TextStyle(
-                  fontSize: ZaiNeFontSize.body,
-                  fontWeight: FontWeight.w600,
-                  color: ZaiNeColors.brandOrangeSwatch[800],
-                  letterSpacing: 0.5,
+              Expanded(
+                child: Text(
+                  tr.s1087,
+                  style: TextStyle(
+                    fontSize: ZaiNeFontSize.body,
+                    fontWeight: FontWeight.w600,
+                    color: ZaiNeColors.brandOrangeSwatch[800],
+                    letterSpacing: 0.5,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               const SizedBox(width: ZaiNeSpacing.md),
@@ -637,6 +642,8 @@ class _SubscriptionPageState extends State<SubscriptionPage>
               height: 1.6,
             ),
             textAlign: TextAlign.center,
+            maxLines: 5,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
@@ -1255,15 +1262,20 @@ class _SubscriptionPageState extends State<SubscriptionPage>
                               size: 20,
                             ),
                             const SizedBox(width: ZaiNeSpacing.sm),
-                            Text(
-                              _selectedPlan == 'monthly'
-                                  ? tr.s1118
-                                  : tr.s1119,
-                              style: const TextStyle(
-                                fontSize: ZaiNeFontSize.subtitle,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white,
-                                letterSpacing: 0.5,
+                            Flexible(
+                              child: Text(
+                                _selectedPlan == 'monthly'
+                                    ? tr.s1118
+                                    : tr.s1119,
+                                style: const TextStyle(
+                                  fontSize: ZaiNeFontSize.subtitle,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                  letterSpacing: 0.5,
+                                ),
+                                textAlign: TextAlign.center,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                           ],
@@ -1675,19 +1687,23 @@ class _SubscriptionPageState extends State<SubscriptionPage>
                   children: [
                     Icon(Icons.privacy_tip_outlined, size: 15, color: Colors.blue[600]),
                     const SizedBox(width: ZaiNeSpacing.sm),
-                    GestureDetector(
-                      onTap: () => _openUrl(AppConstants.privacyUrl),
-                      child: Text(
-                        tr.s1139,
-                        style: TextStyle(
-                          fontSize: ZaiNeFontSize.caption,
-                          color: Colors.blue[700],
-                          fontWeight: FontWeight.w600,
-                          decoration: TextDecoration.underline,
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => _openUrl(AppConstants.privacyUrl),
+                        child: Text(
+                          tr.s1139,
+                          style: TextStyle(
+                            fontSize: ZaiNeFontSize.caption,
+                            color: Colors.blue[700],
+                            fontWeight: FontWeight.w600,
+                            decoration: TextDecoration.underline,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
                         ),
                       ),
                     ),
-                    const Spacer(),
+                    const SizedBox(width: ZaiNeSpacing.sm),
                     Icon(Icons.chevron_right, size: 16, color: Colors.blue[300]),
                   ],
                 ),
@@ -1696,19 +1712,23 @@ class _SubscriptionPageState extends State<SubscriptionPage>
                   children: [
                     Icon(Icons.gavel_outlined, size: 15, color: ZaiNeColors.brandOrangeSwatch[700]),
                     const SizedBox(width: ZaiNeSpacing.sm),
-                    GestureDetector(
-                      onTap: () => _openUrl(AppConstants.termsUrl),
-                      child: Text(
-                        tr.s1140,
-                        style: TextStyle(
-                          fontSize: ZaiNeFontSize.caption,
-                          color: ZaiNeColors.brandOrangeSwatch[700],
-                          fontWeight: FontWeight.w600,
-                          decoration: TextDecoration.underline,
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => _openUrl(AppConstants.termsUrl),
+                        child: Text(
+                          tr.s1140,
+                          style: TextStyle(
+                            fontSize: ZaiNeFontSize.caption,
+                            color: ZaiNeColors.brandOrangeSwatch[700],
+                            fontWeight: FontWeight.w600,
+                            decoration: TextDecoration.underline,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
                         ),
                       ),
                     ),
-                    const Spacer(),
+                    const SizedBox(width: ZaiNeSpacing.sm),
                     Icon(Icons.chevron_right, size: 16, color: ZaiNeColors.brandOrangeSwatch[300]),
                   ],
                 ),

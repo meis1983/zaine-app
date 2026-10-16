@@ -935,7 +935,7 @@
       }
     }
   },
-  "s553": "Successfully guarding {p1} friends",
+  "s553": "Guarding {p1} friends",
   "@s553": {
     "placeholders": {
       "p1": {
@@ -943,7 +943,7 @@
       }
     }
   },
-  "s554": "Mutual guardians with {p1}",
+  "s554": "{p1} mutual guardians",
   "@s554": {
     "placeholders": {
       "p1": {
@@ -1272,7 +1272,7 @@
   "s622": "Fall Event Records",
   "s623": "Feature Info",
   "s624": "Precision detection enabled",
-  "s625": "Paired · Guarding in background",
+  "s625": "Paired · guarding",
   "s626": "Not Paired",
   "s627": "Phone",
   "s628": "Assistive detection ready",
@@ -1511,7 +1511,7 @@
   "s743": "• Missing a check-in won't reset your cumulative days",
   "s744": "• Unlock tiers: 3/7/14/30 days",
   "s745": "💡 Check in with peace of mind—missing days is okay!",
-  "s746": "You've guarded {_totalRegistered} people — keep inviting to get more guardian cards",
+  "s746": "Guarded {_totalRegistered} people — invite more for cards",
   "@s746": {
     "placeholders": {
       "_totalRegistered": {
@@ -2295,7 +2295,7 @@
   },
   "s1117": "Save 28%",
   "s1118": "Start protection now",
-  "s1119": "Start protection now · Yearly saves more",
+  "s1119": "Start protection · Yearly saves more",
   "s1120": "Your protection is now active",
   "s1121": "In an emergency, quickly guard 3 contacts",
   "s1122": "One-tap SOS: quick call and text the first 3 contacts",
@@ -2573,7 +2573,7 @@
       }
     }
   },
-  "z0595": "Apple Watch paired · guarding in background",
+  "z0595": "Watch paired · guarding",
   "@z0595": {
     "description": "auto i18n extracted"
   },
@@ -2837,7 +2837,7 @@
   "@z0580": {
     "description": "auto i18n extracted"
   },
-  "z0578": "Every 15 min",
+  "z0578": "15 min",
   "@z0578": {
     "description": "auto i18n extracted"
   },
@@ -2845,7 +2845,7 @@
   "@z0572": {
     "description": "auto i18n extracted"
   },
-  "z0574": "Every 30 sec",
+  "z0574": "30 sec",
   "@z0574": {
     "description": "auto i18n extracted"
   },
@@ -2853,7 +2853,7 @@
   "@z0570": {
     "description": "auto i18n extracted"
   },
-  "z0576": "Every 5 min",
+  "z0576": "5 min",
   "@z0576": {
     "description": "auto i18n extracted"
   },
@@ -2891,7 +2891,7 @@
   "@z0547": {
     "description": "auto i18n extracted"
   },
-  "z0577": "Power saving",
+  "z0577": "Power save",
   "@z0577": {
     "description": "auto i18n extracted"
   },
@@ -3403,7 +3403,7 @@
   "@z0741": {
     "description": "auto i18n extracted"
   },
-  "z0712": "Upgrade to Smart to unlock all guardian notifications",
+  "z0712": "Upgrade to Smart for all notifications",
   "@z0712": {
     "description": "auto i18n extracted"
   },

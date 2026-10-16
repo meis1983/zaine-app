@@ -801,8 +801,18 @@ class _LocationTrackCardState extends State<LocationTrackCard> {
           label: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(m.$2, style: TextStyle(fontSize: 12)),
-              Text(m.$3, style: TextStyle(fontSize: 10)),
+              Text(
+                m.$2,
+                style: TextStyle(fontSize: 11),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              Text(
+                m.$3,
+                style: TextStyle(fontSize: 9),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
             ],
           ),
         );
@@ -1234,13 +1244,8 @@ class MotionMonitorCard extends StatelessWidget {
                 // 手机端检测开关
                 SizedBox(width: ZaiNeSpacing.sm),
                 Expanded(
-                  child: OutlinedButton.icon(
+                  child: OutlinedButton(
                     onPressed: onTogglePhoneDetection,
-                    icon: Icon(
-                      phoneDetectionEnabled ? Icons.stop : Icons.play_arrow,
-                      size: 16,
-                    ),
-                    label: Text(phoneDetectionEnabled ? tr.z0592 : tr.z0593),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: phoneDetectionEnabled
                           ? Colors.red.shade600
@@ -1253,6 +1258,13 @@ class MotionMonitorCard extends StatelessWidget {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(ZaiNeRadius.input),
                       ),
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                    ),
+                    child: Text(
+                      phoneDetectionEnabled ? tr.z0592 : tr.z0593,
+                      style: const TextStyle(fontSize: 11),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ),
@@ -1285,14 +1297,18 @@ class MotionMonitorCard extends StatelessWidget {
           color: active ? Colors.green : Colors.grey,
         ),
         SizedBox(width: 8),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            color: active ? Colors.green.shade700 : Colors.grey.shade600,
+        Expanded(
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: active ? Colors.green.shade700 : Colors.grey.shade600,
+            ),
+            overflow: TextOverflow.ellipsis,
+            maxLines: 1,
           ),
         ),
-        Spacer(),
+        SizedBox(width: 8),
         Container(
           width: 8,
           height: 8,
@@ -1309,6 +1325,8 @@ class MotionMonitorCard extends StatelessWidget {
             fontWeight: FontWeight.w600,
             color: active ? Colors.green.shade700 : Colors.grey.shade500,
           ),
+          overflow: TextOverflow.ellipsis,
+          maxLines: 1,
         ),
       ],
     );
@@ -1562,6 +1580,8 @@ class _SafeZoneCardState extends State<SafeZoneCard> {
                       Text(
                         _fences.isEmpty ? tr.z0605 : tr.z0606(enabledFences.length, insideCount),
                         style: TextStyle(fontSize: 12, color: ZaiNeColors.textSecondary()),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
