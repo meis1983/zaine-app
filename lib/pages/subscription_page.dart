@@ -667,12 +667,6 @@ class _SubscriptionPageState extends State<SubscriptionPage>
         title: tr.s1090,
         subtitle: tr.s1091,
       ),
-      _PropItem(
-        icon: Icons.card_giftcard_rounded,
-        color: const Color(0xFFFF8A65),
-        title: tr.s1092,
-        subtitle: tr.s1093,
-      ),
     ];
 
     return Column(
