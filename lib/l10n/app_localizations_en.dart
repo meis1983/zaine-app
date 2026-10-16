@@ -9,7 +9,7 @@ class SEn extends S {
   SEn([String locale = 'en']) : super(locale);
 
   @override
-  String get appTitle => '在呢';
+  String get appTitle => 'Zaine+';
 
   @override
   String get signInButtonCheckedIn => 'Checked in today';
@@ -3405,7 +3405,7 @@ class SEn extends S {
   String get s1077 => 'yyyy/M/d';
 
   @override
-  String get s1078 => 'Zaine Guard';
+  String get s1078 => 'Zaine+';
 
   @override
   String get s1079 => 'Your guardian circle is now lit';
@@ -3534,7 +3534,7 @@ class SEn extends S {
   }
 
   @override
-  String get s1117 => 'Save 18%';
+  String get s1117 => 'Save 28%';
 
   @override
   String get s1118 => 'Start protection now';
@@ -3596,7 +3596,23 @@ class SEn extends S {
   }
 
   @override
-  String get s1136 => '≈¥7.3/month';
+  String get s1136 => '≈\$5.00/month';
+
+  @override
+  String get s1192 => 'Auto-renews monthly';
+
+  @override
+  String get s1193 => 'Auto-renews yearly';
+
+  @override
+  String s1194(Object? p1, Object? p2) {
+    return '$p1/month (approx. $p2/day)';
+  }
+
+  @override
+  String s1195(Object? p1, Object? p2) {
+    return '$p1/year (approx. $p2/day)';
+  }
 
   @override
   String s1137(Object? p1) {

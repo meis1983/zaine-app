@@ -244,14 +244,28 @@ class _ZaiNeAppState extends State<ZaiNeApp> with WidgetsBindingObserver {
     final textColor = isDark ? Colors.white : Colors.black87;
     final subtextColor = isDark ? Colors.white70 : Colors.black54;
 
+    final colorScheme = ColorScheme.fromSeed(
+      seedColor: ZaiNeColors.brandOrange,
+      brightness: isDark ? Brightness.dark : Brightness.light,
+    );
+
     return ThemeData(
       useMaterial3: true,
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: ZaiNeColors.brandOrange,
-        brightness: isDark ? Brightness.dark : Brightness.light,
-      ),
+      colorScheme: colorScheme,
       scaffoldBackgroundColor: bgColor,
       cardColor: cardColor,
+
+      // ===== 底部导航栏主题（标签字号 11：让 "Guardian Circle" 一行放下并居中）=====
+      navigationBarTheme: NavigationBarThemeData(
+        labelTextStyle: WidgetStateProperty.resolveWith((states) {
+          final selected = states.contains(WidgetState.selected);
+          return TextStyle(
+            fontSize: 11,
+            fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+            color: selected ? colorScheme.primary : colorScheme.onSurfaceVariant,
+          );
+        }),
+      ),
 
       // ===== 统一文字主题 =====
       textTheme: TextTheme(
@@ -617,11 +631,12 @@ class _SplashScreenState extends State<SplashScreen>
                 },
                 child: Text(
                   tr.appTitle,
+                  textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 42,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
-                    letterSpacing: 10,
+                    letterSpacing: 2,
                     shadows: [
                       Shadow(
                         color: Color(0x44000000),
@@ -641,6 +656,7 @@ class _SplashScreenState extends State<SplashScreen>
               opacity: _sloganFadeAnimation,
               child: Text(
                 tr.splashSlogan,
+                textAlign: TextAlign.center,
                 style: const TextStyle(
                   fontSize: 16,
                   color: Color(0xCCFFFFFF),

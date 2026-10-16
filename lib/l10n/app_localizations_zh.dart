@@ -9,7 +9,7 @@ class SZh extends S {
   SZh([String locale = 'zh']) : super(locale);
 
   @override
-  String get appTitle => '在呢';
+  String get appTitle => '在呢+';
 
   @override
   String get signInButtonCheckedIn => '今日已签到';
@@ -3291,7 +3291,7 @@ class SZh extends S {
   String get s1077 => 'yyyy年M月d日';
 
   @override
-  String get s1078 => '在呢守护';
+  String get s1078 => '在呢+';
 
   @override
   String get s1079 => '你的守护圈，已被点亮';
@@ -3414,7 +3414,7 @@ class SZh extends S {
   }
 
   @override
-  String get s1117 => '省18%';
+  String get s1117 => '省28%';
 
   @override
   String get s1118 => '立即开启守护';
@@ -3473,7 +3473,23 @@ class SZh extends S {
   }
 
   @override
-  String get s1136 => '≈¥7.3/月';
+  String get s1136 => '≈\$5.00/月';
+
+  @override
+  String get s1192 => '每月自动续费';
+
+  @override
+  String get s1193 => '每年自动续费';
+
+  @override
+  String s1194(Object? p1, Object? p2) {
+    return '$p1/月（约合 $p2/天）';
+  }
+
+  @override
+  String s1195(Object? p1, Object? p2) {
+    return '$p1/年（约合 $p2/天）';
+  }
 
   @override
   String s1137(Object? p1) {
@@ -6777,7 +6793,7 @@ class SZhCn extends SZh {
   SZhCn() : super('zh_CN');
 
   @override
-  String get appTitle => '在呢';
+  String get appTitle => '在呢+';
 
   @override
   String get signInButtonCheckedIn => '今日已签到';
@@ -10059,7 +10075,7 @@ class SZhCn extends SZh {
   String get s1077 => 'yyyy年M月d日';
 
   @override
-  String get s1078 => '在呢守护';
+  String get s1078 => '在呢+';
 
   @override
   String get s1079 => '你的守护圈，已被点亮';
@@ -10182,7 +10198,7 @@ class SZhCn extends SZh {
   }
 
   @override
-  String get s1117 => '省18%';
+  String get s1117 => '省28%';
 
   @override
   String get s1118 => '立即开启守护';
@@ -10241,7 +10257,23 @@ class SZhCn extends SZh {
   }
 
   @override
-  String get s1136 => '≈¥7.3/月';
+  String get s1136 => '≈\$5.00/月';
+
+  @override
+  String get s1192 => '每月自动续费';
+
+  @override
+  String get s1193 => '每年自动续费';
+
+  @override
+  String s1194(Object? p1, Object? p2) {
+    return '$p1/月（约合 $p2/天）';
+  }
+
+  @override
+  String s1195(Object? p1, Object? p2) {
+    return '$p1/年（约合 $p2/天）';
+  }
 
   @override
   String s1137(Object? p1) {
@@ -13545,7 +13577,7 @@ class SZhHk extends SZh {
   SZhHk() : super('zh_HK');
 
   @override
-  String get appTitle => '在呢';
+  String get appTitle => '在呢+';
 
   @override
   String get signInButtonCheckedIn => '今日已簽到';
@@ -16827,7 +16859,7 @@ class SZhHk extends SZh {
   String get s1077 => 'yyyy年M月d日';
 
   @override
-  String get s1078 => '在呢守護';
+  String get s1078 => '在呢+';
 
   @override
   String get s1079 => '你的守護圈，已被點亮';
@@ -16950,7 +16982,7 @@ class SZhHk extends SZh {
   }
 
   @override
-  String get s1117 => '省18%';
+  String get s1117 => '省28%';
 
   @override
   String get s1118 => '立即開啓守護';
@@ -17009,7 +17041,23 @@ class SZhHk extends SZh {
   }
 
   @override
-  String get s1136 => '≈¥7.3/月';
+  String get s1136 => '≈\$5.00/月';
+
+  @override
+  String get s1192 => '每月自動續費';
+
+  @override
+  String get s1193 => '每年自動續費';
+
+  @override
+  String s1194(Object? p1, Object? p2) {
+    return '$p1/月（約合 $p2/天）';
+  }
+
+  @override
+  String s1195(Object? p1, Object? p2) {
+    return '$p1/年（約合 $p2/天）';
+  }
 
   @override
   String s1137(Object? p1) {
@@ -20313,7 +20361,7 @@ class SZhTw extends SZh {
   SZhTw() : super('zh_TW');
 
   @override
-  String get appTitle => '在呢';
+  String get appTitle => '在呢+';
 
   @override
   String get signInButtonCheckedIn => '今日已簽到';
@@ -23595,7 +23643,7 @@ class SZhTw extends SZh {
   String get s1077 => 'yyyy年M月d日';
 
   @override
-  String get s1078 => '在呢守護';
+  String get s1078 => '在呢+';
 
   @override
   String get s1079 => '你的守護圈，已被點亮';
@@ -23718,7 +23766,7 @@ class SZhTw extends SZh {
   }
 
   @override
-  String get s1117 => '省18%';
+  String get s1117 => '省28%';
 
   @override
   String get s1118 => '立即開啟守護';
@@ -23777,7 +23825,23 @@ class SZhTw extends SZh {
   }
 
   @override
-  String get s1136 => '≈¥7.3/月';
+  String get s1136 => '≈\$5.00/月';
+
+  @override
+  String get s1192 => '每月自動續費';
+
+  @override
+  String get s1193 => '每年自動續費';
+
+  @override
+  String s1194(Object? p1, Object? p2) {
+    return '$p1/月（約合 $p2/天）';
+  }
+
+  @override
+  String s1195(Object? p1, Object? p2) {
+    return '$p1/年（約合 $p2/天）';
+  }
 
   @override
   String s1137(Object? p1) {

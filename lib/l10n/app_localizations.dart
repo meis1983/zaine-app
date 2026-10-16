@@ -103,7 +103,7 @@ abstract class S {
   /// App 名称
   ///
   /// In zh_CN, this message translates to:
-  /// **'在呢'**
+  /// **'在呢+'**
   String get appTitle;
 
   /// 签到按钮：今日已签到状态文案
@@ -6014,7 +6014,7 @@ abstract class S {
   /// No description provided for @s1078.
   ///
   /// In zh_CN, this message translates to:
-  /// **'在呢守护'**
+  /// **'在呢+'**
   String get s1078;
 
   /// No description provided for @s1079.
@@ -6248,7 +6248,7 @@ abstract class S {
   /// No description provided for @s1117.
   ///
   /// In zh_CN, this message translates to:
-  /// **'省18%'**
+  /// **'省28%'**
   String get s1117;
 
   /// No description provided for @s1118.
@@ -6362,8 +6362,32 @@ abstract class S {
   /// No description provided for @s1136.
   ///
   /// In zh_CN, this message translates to:
-  /// **'≈¥7.3/月'**
+  /// **'≈\$5.00/月'**
   String get s1136;
+
+  /// No description provided for @s1192.
+  ///
+  /// In zh_CN, this message translates to:
+  /// **'每月自动续费'**
+  String get s1192;
+
+  /// No description provided for @s1193.
+  ///
+  /// In zh_CN, this message translates to:
+  /// **'每年自动续费'**
+  String get s1193;
+
+  /// No description provided for @s1194.
+  ///
+  /// In zh_CN, this message translates to:
+  /// **'{p1}/月（约合 {p2}/天）'**
+  String s1194(Object? p1, Object? p2);
+
+  /// No description provided for @s1195.
+  ///
+  /// In zh_CN, this message translates to:
+  /// **'{p1}/年（约合 {p2}/天）'**
+  String s1195(Object? p1, Object? p2);
 
   /// No description provided for @s1137.
   ///

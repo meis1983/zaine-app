@@ -1,6 +1,6 @@
 {
   "@@locale": "en",
-  "appTitle": "在呢",
+  "appTitle": "Zaine+",
   "@appTitle": {
     "description": "App 名称"
   },
@@ -2233,7 +2233,7 @@
   "s1075": "Purchase record restored",
   "s1076": "No recoverable purchase record found",
   "s1077": "yyyy/M/d",
-  "s1078": "Zaine Guard",
+  "s1078": "Zaine+",
   "s1079": "Your guardian circle is now lit",
   "s1080": "Light up your guardian circle",
   "s1081": "Those who care about you feel more at ease now",
@@ -2293,7 +2293,7 @@
       }
     }
   },
-  "s1117": "Save 18%",
+  "s1117": "Save 28%",
   "s1118": "Start protection now",
   "s1119": "Start protection now · Yearly saves more",
   "s1120": "Your protection is now active",
@@ -2322,7 +2322,11 @@
       }
     }
   },
-  "s1136": "≈¥7.3/month",
+  "s1136": "≈$5.00/month",
+  "s1192": "Auto-renews monthly",
+  "s1193": "Auto-renews yearly",
+  "s1194": "{p1}/month (approx. {p2}/day)",
+  "s1195": "{p1}/year (approx. {p2}/day)",
   "s1137": " · Monthly {p1}",
   "@s1137": {
     "placeholders": {

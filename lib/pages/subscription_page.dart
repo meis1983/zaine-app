@@ -1582,7 +1582,7 @@ class _SubscriptionPageState extends State<SubscriptionPage>
       final p = _products.firstWhere((x) => x.id == pid);
       return p.price; // 已含本地化货币符号，如 ¥88 或 $12.99
     } catch (_) {
-      return _selectedPlan == 'monthly' ? '¥9' : '¥88';
+      return _selectedPlan == 'monthly' ? '\$6.99' : '\$59.99';
     }
   }
 
@@ -1596,7 +1596,7 @@ class _SubscriptionPageState extends State<SubscriptionPage>
       final perDay = p.rawPrice / days;
       return '${p.currencyCode} ${perDay.toStringAsFixed(2)}';
     } catch (_) {
-      return _selectedPlan == 'monthly' ? '¥0.30' : '¥0.24';
+      return _selectedPlan == 'monthly' ? 'USD 0.23' : 'USD 0.16';
     }
   }
 
@@ -1648,8 +1648,8 @@ class _SubscriptionPageState extends State<SubscriptionPage>
           // ── 订阅条款详情 ──
           Text(
             tr.z0281 +
-                tr.z0282(_selectedPlan == 'monthly' ? '每月自动续费' : '每年自动续费') +
-                tr.z0283(_selectedPlan == 'monthly' ? '${_dynamicPrice()}/月（约合 ${_perDayLabel()}/天）' : '${_dynamicPrice()}/年（约合 ${_perDayLabel()}/天）') +
+                tr.z0282(_selectedPlan == 'monthly' ? tr.s1192 : tr.s1193) +
+                tr.z0283(_selectedPlan == 'monthly' ? tr.s1194(_dynamicPrice(), _perDayLabel()) : tr.s1195(_dynamicPrice(), _perDayLabel())) +
                 tr.z0284 +
                 tr.z0285,
             style: TextStyle(
