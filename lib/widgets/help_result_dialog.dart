@@ -411,17 +411,21 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
             SizedBox(
               width: double.infinity,
               height: 44,
-              child: ElevatedButton.icon(
+              // 【v1.97.8-218】z0714 五语言文案已自带「📞」前缀，原 ElevatedButton.icon
+              // 又手加 icon: Text('📞') → 双话筒（与双救护车同源，217 漏修此按钮）。
+              // 改普通按钮+Center 整体居中。
+              child: ElevatedButton(
                 onPressed: () => _callCurrentContact(),
-                icon: Text('📞', style: TextStyle(fontSize: 17)),
-                label: Text(tr.z0714(_getCurrentCallName()),
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.blue.shade600,
                   foregroundColor: Colors.white,
                   elevation: 3,
                   shadowColor: Colors.blue.withValues(alpha: 0.35),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: Center(
+                  child: Text(tr.z0714(_getCurrentCallName()),
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
                 ),
               ),
             ),
