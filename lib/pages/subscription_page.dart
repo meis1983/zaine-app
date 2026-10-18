@@ -1257,24 +1257,26 @@ class _SubscriptionPageState extends State<SubscriptionPage>
                               size: 20,
                             ),
                             const SizedBox(width: ZaiNeSpacing.sm),
-                            // 【v1.97.8-217】不能用 Flexible：min 模式下 Flexible 仍占满「按钮宽-图标宽」，
-                            // Row 实际全宽、center 失效 → 图标钉在最左。文字自然宽度+
-                            // maxLines/ellipsis 防溢出，Row 收缩后 Center 生效整体居中。
-                            Text(
-                              _selectedPlan == 'monthly'
-                                  ? tr.s1118
-                                  : tr.s1119,
-                              style: const TextStyle(
-                                // 【v1.97.8-219】subtitle 17 时英文长文案
-                                // （33字符≈334pt）超按钮宽右溢出，缩至 bodySm 14
-                                fontSize: ZaiNeFontSize.bodySm,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white,
-                                letterSpacing: 0.5,
+                            // 【v1.97.8-220】Flexible(fit: loose)：默认 tight 会强制
+                            // 撑满剩余宽（216/217 图标钉最左的根因）；loose 允许文字自然宽，
+                            // 空间不足才收缩 → maxLines 2 换行生效，长英文分两段显示，
+                            // Row 收缩后 Center 整体居中保留。
+                            Flexible(
+                              fit: FlexFit.loose,
+                              child: Text(
+                                _selectedPlan == 'monthly'
+                                    ? tr.s1118
+                                    : tr.s1119,
+                                style: const TextStyle(
+                                  fontSize: ZaiNeFontSize.bodySm,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                  letterSpacing: 0.5,
+                                ),
+                                textAlign: TextAlign.center,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              textAlign: TextAlign.center,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
                             ),
                           ],
                         ),

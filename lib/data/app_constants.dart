@@ -1,6 +1,8 @@
 // lib/data/app_constants.dart
 // App 全局常量（v1.6 新增，v1.17.4 配置迁移到 .env）
 
+import 'dart:io';
+
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import '../l10n/i18n.dart';
@@ -82,8 +84,19 @@ class AppConstants {
       '$landingBaseUrl/landing/guardian_invite';
 
   /// 隐私政策链接
-  static String get privacyUrl => '$landingBaseUrl/privacy';
+  /// 【v1.97.8-220】按系统语言分流：英文设备 → privacy_en.html，中文设备 → 中文页。
+  /// 中文用户零感知；英文用户（海外 174 国主力）看母语页，呼应 Apple 3.1.2(c)。
+  static String get privacyUrl =>
+      '$landingBaseUrl/${_isEnglishDevice ? 'privacy_en.html' : 'privacy'}';
 
   /// 服务条款（用户协议 / EULA）链接【Apple 审核 Guideline 3.1.2(c) 要求】
-  static String get termsUrl => '$landingBaseUrl/terms';
+  /// 【v1.97.8-220】同隐私政策：按系统语言分流（英文 → terms_en.html）
+  static String get termsUrl =>
+      '$landingBaseUrl/${_isEnglishDevice ? 'terms_en.html' : 'terms'}';
+
+  /// 设备语言判定：zh_CN / zh-Hans / zh-Hant_TW / zh-Hant_HK 等均走中文页，
+  /// 其余（en 及其他语言）走英文页。与后端 H5 页 navigator.language 判定逻辑一致。
+  /// 用 Platform.localeName 而非 App 内语言，静态 getter 无 BuildContext 可用。
+  static bool get _isEnglishDevice =>
+      !Platform.localeName.toLowerCase().startsWith('zh');
 }

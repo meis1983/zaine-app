@@ -377,16 +377,24 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
                           )
                         : const Icon(Icons.favorite, size: 18),
                     const SizedBox(width: ZaiNeSpacing.sm),
-                    Text(
-                      _reporting ? tr.s784 : tr.s785,
-                      // 【v1.97.8-219】默认 16px 时英文长文案（s785 46字符≈394pt）
-                      // 超按钮宽右溢出，缩至 micro 12（≈302pt，375 屏仍余 25pt）
-                      style: TextStyle(
-                        fontSize: ZaiNeFontSize.micro,
+                    // 【v1.97.8-220】Flexible(fit: loose)：文字自然宽布局（短文案时 Center
+                    // 正常整体居中），空间不足才收缩 → maxLines 2 换行生效，长英文分两段
+                    // 显示、杜绝右溢出。勿改回默认 Flexible（tight 强制撑满 → Row 全宽 →
+                    // center 失效图标钉最左，216/217 两轮教训）；也勿裸 Text（219 教训：
+                    // min 模式不给宽度约束，ellipsis 不触发，394pt 自然宽直接画出按钮外）。
+                    Flexible(
+                      fit: FlexFit.loose,
+                      child: Text(
+                        _reporting ? tr.s784 : tr.s785,
+                        // 【v1.97.8-220】两行换行后恢复 bodySm 14
+                        // （micro 12 是 219 无约束溢出的权宜，非终态）
+                        style: const TextStyle(
+                          fontSize: ZaiNeFontSize.bodySm,
+                        ),
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      textAlign: TextAlign.center,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
