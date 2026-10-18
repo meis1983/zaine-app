@@ -351,16 +351,8 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
           // 一个动作：把结论同步给在乎你的人。这是 Apple 健康 App 永远不会做的事。
           SizedBox(
             width: double.infinity,
-            child: ElevatedButton.icon(
+            child: ElevatedButton(
               onPressed: _reporting ? null : _reportSafe,
-              icon: _reporting
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                    )
-                  : const Icon(Icons.favorite, size: 18),
-              label: Text(_reporting ? tr.s784 : tr.s785),
               style: ElevatedButton.styleFrom(
                 backgroundColor: ZaiNeColors.brandOrange,
                 foregroundColor: Colors.white,
@@ -369,6 +361,28 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(ZaiNeRadius.small),
                 ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _reporting
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Icon(Icons.favorite, size: 18),
+                  const SizedBox(width: ZaiNeSpacing.sm),
+                  Flexible(
+                    child: Text(
+                      _reporting ? tr.s784 : tr.s785,
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),

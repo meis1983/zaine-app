@@ -212,7 +212,7 @@ class IapService {
       final product = getProduct(productIdMonthly);
       return product!.price;
     } catch (_) {
-      return '¥9';
+      return '--';
     }
   }
 
@@ -222,7 +222,7 @@ class IapService {
       final product = getProduct(productIdYearly);
       return product!.price;
     } catch (_) {
-      return '¥88';
+      return '--';
     }
   }
 

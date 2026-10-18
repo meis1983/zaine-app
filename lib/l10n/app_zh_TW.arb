@@ -7069,6 +7069,18 @@
   "@z0925": {
     "description": "auto i18n extracted"
   },
+  "z0926": "{p1}（{p2}）",
+  "@z0926": {
+    "description": "auto i18n extracted",
+    "placeholders": {
+      "p1": {
+        "type": "Object?"
+      },
+      "p2": {
+        "type": "Object?"
+      }
+    }
+  },
   "z0917": "留言",
   "@z0917": {
     "description": "auto i18n extracted"

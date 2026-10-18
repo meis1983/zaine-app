@@ -6780,6 +6780,11 @@ class SZh extends S {
   String get z0925 => '补充一句（10字内）';
 
   @override
+  String z0926(Object? p1, Object? p2) {
+    return '$p1（$p2）';
+  }
+
+  @override
   String get z0917 => '留言';
 
   @override
@@ -13578,6 +13583,11 @@ class SZhCn extends SZh {
 
   @override
   String get z0925 => '补充一句（10字内）';
+
+  @override
+  String z0926(Object? p1, Object? p2) {
+    return '$p1（$p2）';
+  }
 
   @override
   String get z0917 => '留言';
@@ -20380,6 +20390,11 @@ class SZhHk extends SZh {
   String get z0925 => '補充一句（10字內）';
 
   @override
+  String z0926(Object? p1, Object? p2) {
+    return '$p1（$p2）';
+  }
+
+  @override
   String get z0917 => '留言';
 
   @override
@@ -27178,6 +27193,11 @@ class SZhTw extends SZh {
 
   @override
   String get z0925 => '補充一句（10字內）';
+
+  @override
+  String z0926(Object? p1, Object? p2) {
+    return '$p1（$p2）';
+  }
 
   @override
   String get z0917 => '留言';

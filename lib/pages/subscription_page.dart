@@ -1088,7 +1088,7 @@ class _SubscriptionPageState extends State<SubscriptionPage>
           Expanded(
             child: _buildPlanTab(
               label: tr.s1114,
-              price: '¥9',
+              price: IapService().getMonthlyPrice(),
               unit: tr.s1112,
               isSelected: _selectedPlan == 'monthly',
               onTap: () => setState(() => _selectedPlan = 'monthly'),
@@ -1248,6 +1248,7 @@ class _SubscriptionPageState extends State<SubscriptionPage>
                           ),
                         )
                       : Row(
+                          mainAxisSize: MainAxisSize.min,
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             const Icon(

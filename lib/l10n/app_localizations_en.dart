@@ -7009,6 +7009,11 @@ class SEn extends S {
   String get z0925 => 'Add a note (10 chars max)';
 
   @override
+  String z0926(Object? p1, Object? p2) {
+    return '$p1 ($p2)';
+  }
+
+  @override
   String get z0917 => 'Message';
 
   @override

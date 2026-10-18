@@ -151,6 +151,51 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
     return validContacts.sublist(widget.autoCallLimit);
   }
 
+  /// 关系值语言归一化【v1.97.8 修复】
+  /// 关系是「录入时的语言」存库的本地化字符串（如 守护人/守護人/Guardian），
+  /// 当前 UI 语言不同时会把原文直接显示出来。这里把已知预设关系
+  /// 映射回当前语言的译文；自定义关系（用户自由输入）原样返回。
+  String _localizeRelation(String relation) {
+    if (relation.isEmpty) return relation;
+    const toCurrentLanguage = <String, String>{
+      '家人': 's299', 'Family': 's299',
+      '朋友': 's300', 'Friends': 's300',
+      '同事': 's301', 'Colleagues': 's301',
+      '父母': 's302', 'Parents': 's302',
+      '配偶': 's303', 'Spouse': 's303',
+      '子女': 's304', 'Children': 's304',
+      '守护人': 's305', '守護人': 's305', 'Guardian': 's305',
+      '其他': 's184', 'Other': 's184',
+    };
+    switch (toCurrentLanguage[relation]) {
+      case 's299':
+        return tr.s299;
+      case 's300':
+        return tr.s300;
+      case 's301':
+        return tr.s301;
+      case 's302':
+        return tr.s302;
+      case 's303':
+        return tr.s303;
+      case 's304':
+        return tr.s304;
+      case 's305':
+        return tr.s305;
+      case 's184':
+        return tr.s184;
+      default:
+        return relation;
+    }
+  }
+
+  /// 联系人显示名：姓名 + 当前语言的关系（括号也随语言本地化）
+  String _contactDisplayName(Map<String, dynamic> contact) {
+    final name = contact['name']?.toString() ?? tr.s855;
+    final relation = _localizeRelation(contact['relation']?.toString() ?? '');
+    return relation.isNotEmpty ? tr.z0926(name, relation) : name;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Dialog(
@@ -229,17 +274,13 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // ---- 标题行 ----
-          Row(children: [
-            Text('➤', style: TextStyle(fontSize: 14, color: Colors.orange)),
-            SizedBox(width: 4),
-            Text('📨', style: TextStyle(fontSize: 13)),
-            SizedBox(width: 4),
-            Expanded(child: Text(
-              isAllSent
-                ? tr.z0709(autoNotify.length)
-                : tr.z0710(_currentSmsIndex + 1, autoNotify.length, currentSmsName),
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: isAllSent ? Colors.green.shade700 : Colors.orange.shade800))),
-          ]),
+          // 【v1.97.8 修复】删除手加的 ➤/📨 图标：z0710 五语言文案已自带「📨 」前缀，
+          // z0709 自带「✅ 」前缀，再叠加两个图标会双重显示、排版混乱
+          Text(
+            isAllSent
+              ? tr.z0709(autoNotify.length)
+              : tr.z0710(_currentSmsIndex + 1, autoNotify.length, currentSmsName),
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: isAllSent ? Colors.green.shade700 : Colors.orange.shade800)),
 
           SizedBox(height: 10),
 
@@ -248,8 +289,6 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
             ...autoNotify.asMap().entries.map((entry) {
               final idx = entry.key;
               final contact = entry.value;
-              final name = contact['name']?.toString() ?? tr.s855;
-              final relation = contact['relation']?.toString() ?? '';
               final isSmsDone = idx < _currentSmsIndex;
               final isCallDone = idx < _currentCallIndex;
               return Padding(
@@ -263,7 +302,7 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
                     Icon(Icons.circle_outlined, size: 16, color: ZaiNeColors.textSecondary()),
                   SizedBox(width: 6),
                   Expanded(child: Text(
-                    '$name${relation.isNotEmpty ? '（$relation）' : ''}',
+                    _contactDisplayName(contact),
                     style: TextStyle(fontSize: 12.5, color: isSmsDone ? ZaiNeColors.textSecondary() : ZaiNeColors.textPrimary()),
                   )),
                   if (isCallDone)
@@ -289,8 +328,6 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
               ]),
             ),
             ...lockedContacts.map((contact) {
-              final name = contact['name']?.toString() ?? tr.s855;
-              final relation = contact['relation']?.toString() ?? '';
               return Padding(
                 padding: EdgeInsets.only(bottom: 5),
                 child: Container(
@@ -305,7 +342,7 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
                     Icon(Icons.lock_outline, size: 13, color: ZaiNeColors.textSecondary()),
                     SizedBox(width: 5),
                     Expanded(child: Text(
-                      '$name${relation.isNotEmpty ? '（$relation）' : ''}',
+                      _contactDisplayName(contact),
                       style: TextStyle(fontSize: 12, color: ZaiNeColors.textSecondary()),
                     )),
                   ]),

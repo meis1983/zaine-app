@@ -12261,6 +12261,12 @@ abstract class S {
   /// auto i18n extracted
   ///
   /// In zh_CN, this message translates to:
+  /// **'{p1}（{p2}）'**
+  String z0926(Object? p1, Object? p2);
+
+  /// auto i18n extracted
+  ///
+  /// In zh_CN, this message translates to:
   /// **'留言'**
   String get z0917;
 
