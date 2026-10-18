@@ -362,27 +362,29 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
                   borderRadius: BorderRadius.circular(ZaiNeRadius.small),
                 ),
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _reporting
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                        )
-                      : const Icon(Icons.favorite, size: 18),
-                  const SizedBox(width: ZaiNeSpacing.sm),
-                  Flexible(
-                    child: Text(
+              child: Center(
+                // 【v1.97.8-217】同订阅页：min+Flexible 会让 Row 撑满按钮宽、
+                // center 失效图标靠左。去 Flexible，文字自然宽+ellipsis。
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _reporting
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          )
+                        : const Icon(Icons.favorite, size: 18),
+                    const SizedBox(width: ZaiNeSpacing.sm),
+                    Text(
                       _reporting ? tr.s784 : tr.s785,
                       textAlign: TextAlign.center,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),

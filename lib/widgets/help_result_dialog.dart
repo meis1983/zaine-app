@@ -558,9 +558,16 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
           title: Row(children: [
             Text('📄', style: TextStyle(fontSize: 14)),
             SizedBox(width: 6),
-            Text(_infoExpanded ? tr.z0717 : tr.z0718,
-              style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: Colors.blue.shade800)),
-            Spacer(),
+            // 【v1.97.8-217】文字外包 Flexible+ellipsis：英文等长语言收缩让位，
+            // 右侧展开箭头不再被挤出白框（Spacer 改小间距，避免与 Flexible 争 flex）
+            Flexible(
+              child: Text(_infoExpanded ? tr.z0717 : tr.z0718,
+                style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: Colors.blue.shade800),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+              ),
+            ),
+            SizedBox(width: 4),
             Icon(_infoExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
                  color: Colors.grey.shade500, size: 22),
           ]),
@@ -782,17 +789,20 @@ class _HelpResultDialogState extends State<HelpResultDialog> with WidgetsBinding
     return SizedBox(
       width: double.infinity,
       height: 52,
-      child: ElevatedButton.icon(
+      // 【v1.97.8-217】z0744 五语言文案已自带「🚑」前缀，原 ElevatedButton.icon
+      // 又手加 icon: Text('🚑') → 双救护车。改普通按钮+Center 整体居中。
+      child: ElevatedButton(
         onPressed: () { widget.onCall120(); HapticFeedback.heavyImpact(); },
-        icon: Text('🚑', style: TextStyle(fontSize: 18)),
-        label: Text(tr.z0744(EmergencyCall.localEmergencyNumber()),
-             style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 0.5)),
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.red,
           foregroundColor: Colors.white,
           elevation: 3,
           shadowColor: Colors.red.withValues(alpha: 0.35),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        ),
+        child: Center(
+          child: Text(tr.z0744(EmergencyCall.localEmergencyNumber()),
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 0.5)),
         ),
       ),
     );

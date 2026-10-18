@@ -1257,21 +1257,22 @@ class _SubscriptionPageState extends State<SubscriptionPage>
                               size: 20,
                             ),
                             const SizedBox(width: ZaiNeSpacing.sm),
-                            Flexible(
-                              child: Text(
-                                _selectedPlan == 'monthly'
-                                    ? tr.s1118
-                                    : tr.s1119,
-                                style: const TextStyle(
-                                  fontSize: ZaiNeFontSize.subtitle,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white,
-                                  letterSpacing: 0.5,
-                                ),
-                                textAlign: TextAlign.center,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
+                            // 【v1.97.8-217】不能用 Flexible：min 模式下 Flexible 仍占满「按钮宽-图标宽」，
+                            // Row 实际全宽、center 失效 → 图标钉在最左。文字自然宽度+
+                            // maxLines/ellipsis 防溢出，Row 收缩后 Center 生效整体居中。
+                            Text(
+                              _selectedPlan == 'monthly'
+                                  ? tr.s1118
+                                  : tr.s1119,
+                              style: const TextStyle(
+                                fontSize: ZaiNeFontSize.subtitle,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                                letterSpacing: 0.5,
                               ),
+                              textAlign: TextAlign.center,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ],
                         ),
