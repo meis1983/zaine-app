@@ -381,7 +381,9 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
                       _reporting ? tr.s784 : tr.s785,
                       // 【v1.97.8-219】默认 16px 时英文长文案（s785 46字符≈394pt）
                       // 超按钮宽右溢出，缩至 micro 12（≈302pt，375 屏仍余 25pt）
-                      fontSize: ZaiNeFontSize.micro,
+                      style: TextStyle(
+                        fontSize: ZaiNeFontSize.micro,
+                      ),
                       textAlign: TextAlign.center,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
