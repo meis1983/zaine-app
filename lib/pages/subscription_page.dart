@@ -1265,7 +1265,9 @@ class _SubscriptionPageState extends State<SubscriptionPage>
                                   ? tr.s1118
                                   : tr.s1119,
                               style: const TextStyle(
-                                fontSize: ZaiNeFontSize.subtitle,
+                                // 【v1.97.8-219】subtitle 17 时英文长文案
+                                // （33字符≈334pt）超按钮宽右溢出，缩至 bodySm 14
+                                fontSize: ZaiNeFontSize.bodySm,
                                 fontWeight: FontWeight.w600,
                                 color: Colors.white,
                                 letterSpacing: 0.5,
