@@ -16,6 +16,7 @@ import '../services/api_service.dart';
 import '../l10n/i18n.dart';
 import '../config/app_config.dart';
 import '../services/deep_link_service.dart'; // [v1.76.0] 紧急联系人邀请
+import '../services/push_service.dart'; // 【v1.98.0】APNs 推送注册（登录成功后请求权限）
 import '../services/api/card_service.dart'; // 新增
 import '../widgets/guardian_ritual.dart'; // 【修复 v1.9.95】统一守护仪式封装
 import 'scan_guardian_code_page.dart'; // 【CN 179】登录页渐进披露：扫码填守护码
@@ -1699,6 +1700,10 @@ class _OnboardingPageState extends State<OnboardingPage> {
             },
           );
           developer.log('[190 LOGIN] _completeOnboarding 完成', name: 'zaine.login');
+
+          // 【v1.98.0】登录成功 → 请求通知权限并注册 APNs 推送
+          // （守护人接收「报了平安/还没报平安」的到达通道；fire-and-forget 不阻塞进首页）
+          PushService.instance.promptAndRegister().catchError((_) {});
         }
       } else {
         if (_loginCompleted) return;

@@ -12,6 +12,8 @@ import HealthKit
   /// 【v1.94.0 修复】缓存 Watch MethodChannel，避免每次强转 window?.rootViewController
   /// （implicit engine 模式下 rootViewController 强转 FlutterViewController 经常为 nil，导致 Watch 签到通知静默失败）
   private var watchChannel: FlutterMethodChannel?
+  /// 【v1.98.0】APNs 推送通道：token 注册/回传 Flutter（守护人推送的到达地基）
+  private var pushChannel: FlutterMethodChannel?
   /// 【v1.94.0 修复】去重：Watch 同时发 transferUserInfo + sendMessage，防止重复触发签到
   private var processedWatchClientIds = Set<String>()
   /// 【2026-07-15 修复】暂存 Watch sendMessage 的 replyHandler，待 Flutter 真正完成签到后回包结果
@@ -65,6 +67,50 @@ import HealthKit
     UNUserNotificationCenter.current().delegate = self
 
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+  }
+
+  // MARK: - Push Method Channel（v1.98.0 APNs）
+  /// Dart 调 requestPermission（首次弹系统框）/ registerRemote / getCachedToken；
+  /// 原生拿到 deviceToken 后经 onToken 回调 Dart（token 晚于通道就绪的场景）。
+  private func setupPushMethodChannel(messenger: FlutterBinaryMessenger) {
+    let channel = FlutterMethodChannel(name: "zaine/push", binaryMessenger: messenger)
+    self.pushChannel = channel
+    channel.setMethodCallHandler { [weak self] call, result in
+      guard self != nil else {
+        result(FlutterError(code: "UNAVAILABLE", message: "AppDelegate released", details: nil))
+        return
+      }
+      switch call.method {
+      case "requestPermission":
+        let center = UNUserNotificationCenter.current()
+        center.requestAuthorization(options: [.alert, .sound, .badge]) { granted, _ in
+          DispatchQueue.main.async { result(granted) }
+        }
+      case "registerRemote":
+        UIApplication.shared.registerForRemoteNotifications()
+        result(nil)
+      case "getCachedToken":
+        result(UserDefaults.standard.string(forKey: "apns_device_token"))
+      default:
+        result(FlutterMethodNotImplemented)
+      }
+    }
+  }
+
+  /// APNs 注册成功 → 缓存 + 回传 Flutter
+  override func application(_ application: UIApplication,
+                            didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+    let hex = deviceToken.map { String(format: "%02x", $0) }.joined()
+    UserDefaults.standard.set(hex, forKey: "apns_device_token")
+    print("[AppDelegate] ✅ APNs token 注册成功: ...\(hex.suffix(8))")
+    DispatchQueue.main.async {
+      self.pushChannel?.invokeMethod("onToken", arguments: hex)
+    }
+  }
+
+  override func application(_ application: UIApplication,
+                            didFailToRegisterForRemoteNotificationsWithError error: Error) {
+    print("[AppDelegate] ❌ APNs 注册失败: \(error.localizedDescription)")
   }
 
   // MARK: - HealthKit Method Channel
@@ -306,7 +352,8 @@ import HealthKit
     let messenger = engineBridge.applicationRegistrar.messenger()
     self.setupHealthKitMethodChannel(messenger: messenger)
     self.setupWatchMethodChannel(messenger: messenger)
-    print("[AppDelegate] ✅ 引擎就绪，Watch/HealthKit MethodChannel 已在 didInitializeImplicitFlutterEngine 注册")
+    self.setupPushMethodChannel(messenger: messenger)
+    print("[AppDelegate] ✅ 引擎就绪，Watch/HealthKit/Push MethodChannel 已在 didInitializeImplicitFlutterEngine 注册")
 
     // 【2026-07-16 修复】重新夺回 WCSession delegate。
     // watch_connectivity 插件在 GeneratedPluginRegistrant.register 时会把自己设为
@@ -534,6 +581,19 @@ import HealthKit
       }
   }
   
+  // 【v1.98.0】远程推送前台展示（守护人收「报了平安」时往往正打开 App，横幅不可丢）
+  override func userNotificationCenter(
+      _ center: UNUserNotificationCenter,
+      willPresent notification: UNNotification,
+      withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+  ) {
+      if notification.request.trigger is UNPushNotificationTrigger {
+          completionHandler([.banner, .list, .sound])
+          return
+      }
+      super.userNotificationCenter(center, willPresent: notification, withCompletionHandler: completionHandler)
+  }
+
   // 【v1.97.3 SOS 后台】用户点按 SOS 通知(或"立即求助"按钮) → App 回到前台 → 驱动 Flutter SOS 流程
   // override 是因为 FlutterAppDelegate 父类已声明 UNUserNotificationCenterDelegate 并实现该方法
   // 父类无 firebase_messaging 时默认只调 completionHandler()，不会做任何额外动作，override 安全
@@ -549,6 +609,13 @@ import HealthKit
           self.notifyFlutterWatchSOS()
           // 保持 flag，供 Dart 在引擎尚未就绪的极端情况下兜底
           UserDefaults.standard.set(true, forKey: "pending_watch_sos")
+      }
+      // 【v1.98.0】远程推送点按 → 转发 Flutter（如「TA 还没报平安」→ 守护圈）
+      if response.notification.request.trigger is UNPushNotificationTrigger {
+          let userInfo = response.notification.request.content.userInfo
+          DispatchQueue.main.async {
+              self.pushChannel?.invokeMethod("onPushTapped", arguments: userInfo)
+          }
       }
       // 本项目未使用 FCM 远程推送，无需转发给 super；直接完成回调即可。
       completionHandler()

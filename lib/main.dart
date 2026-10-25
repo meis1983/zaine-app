@@ -14,6 +14,7 @@ import 'pages/profile_page.dart';
 import 'pages/onboarding_page.dart';
 import 'services/deep_link_service.dart';
 import 'services/silent_login_service.dart';
+import 'services/push_service.dart'; // 【v1.98.0】APNs 推送令牌注册
 import 'services/membership_service.dart';
 import 'services/api/auth_service.dart';
 import 'services/platform/health_service.dart'; // 【v1.91.0】Watch 签到通道
@@ -85,6 +86,12 @@ void main() async {
 
   // 初始化 Deep Link 监听（守护卡裂变落地页）
   await DeepLinkService.init();
+
+  // 【v1.98.0】APNs 推送：静默补传已缓存的推送令牌（已登录才上传；
+  // 权限申请不在这里弹，登录成功后由 Onboarding 调 promptAndRegister）
+  try {
+    await PushService.instance.init().timeout(const Duration(seconds: 3));
+  } catch (_) {}
 
   // 全局捕获 Flutter framework 级别的渲染错误（防止 release 模式下白屏无提示）
   FlutterError.onError = (FlutterErrorDetails details) {
