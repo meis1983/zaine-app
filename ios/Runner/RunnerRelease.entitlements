@@ -6,6 +6,8 @@
 	<string>production</string>
 	<key>com.apple.developer.accessibility.merchant-api-control</key>
 	<true/>
+	<key>com.apple.developer.applesignin</key>
+	<string>Default</string>
 	<key>com.apple.developer.associated-domains</key>
 	<array>
 		<string>applinks:zaine.love</string>
@@ -19,8 +21,6 @@
 	<array/>
 	<key>com.apple.developer.networking.wifi-info</key>
 	<true/>
-	<key>com.apple.developer.applesignin</key>
-	<string>Default</string>
 	<key>com.apple.security.network.client</key>
 	<true/>
 </dict>
