@@ -365,6 +365,15 @@ import HealthKit
       WCSession.default.activate()
       print("[AppDelegate] ✅ WCSession delegate 已重新绑定到 AppDelegate（修复 watch_connectivity 覆盖冲突）")
     }
+
+    // 【v1.98.0 修复】重新夺回 UNUserNotificationCenter delegate。
+    // 同 WCSession 修复思路：FlutterAppDelegate 或本地通知类插件在 super.application
+    // 时会把自己设为 UNUserNotificationCenter.current().delegate，覆盖掉 didFinishLaunching
+    // 中的设置，导致 willPresent（前台横幅）永远不被调用——App 在前台时收不到守护人
+    // 「报了平安」推送（后台/未运行反而能收，因为是 iOS 系统弹，不依赖 willPresent）。
+    // 这里在引擎就绪回调（super 之后）把 delegate 重新绑定回 AppDelegate。
+    UNUserNotificationCenter.current().delegate = self
+    print("[AppDelegate] ✅ UNUserNotificationCenter delegate 已重新绑定到 AppDelegate（修复前台推送横幅）")
   }
 
   // 处理来自 Watch 的消息
