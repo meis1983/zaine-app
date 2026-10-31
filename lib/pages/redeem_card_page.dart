@@ -77,7 +77,7 @@ class _RedeemCardPageState extends State<RedeemCardPage> {
         }
       }
 
-      final res = await CardService.redeemCard(cardCode: code, oneway: kIsChinaBuild);
+      final res = await CardService.redeemCard(cardCode: code);
       if (!mounted) return;
 
       if (res['success'] == true) {

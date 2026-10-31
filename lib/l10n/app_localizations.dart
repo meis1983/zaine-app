@@ -12311,6 +12311,150 @@ abstract class S {
   /// In zh_CN, this message translates to:
   /// **'状态'**
   String get z0924;
+
+  /// v1.98.0 home arrival feature
+  ///
+  /// In zh_CN, this message translates to:
+  /// **'到家提醒'**
+  String get homeArrivalTitle;
+
+  /// v1.98.0 home arrival feature
+  ///
+  /// In zh_CN, this message translates to:
+  /// **'回家第一时间，让牵挂你的人安心'**
+  String get homeArrivalDesc;
+
+  /// v1.98.0 home arrival feature
+  ///
+  /// In zh_CN, this message translates to:
+  /// **'开启到家提醒'**
+  String get homeArrivalEnable;
+
+  /// v1.98.1 home arrival permission / copy tweaks
+  ///
+  /// In zh_CN, this message translates to:
+  /// **'同时通知守护人'**
+  String get homeArrivalModeBNotify;
+
+  /// v1.98.1 home arrival permission / copy tweaks
+  ///
+  /// In zh_CN, this message translates to:
+  /// **'开启后，你一到家守护人就会收到「已安全到家」通知；关闭则只提醒你自己报平安。'**
+  String get homeArrivalModeBDetail;
+
+  /// v1.98.0 home arrival feature
+  ///
+  /// In zh_CN, this message translates to:
+  /// **'设置家的位置'**
+  String get homeArrivalSetHome;
+
+  /// v1.98.0 home arrival feature
+  ///
+  /// In zh_CN, this message translates to:
+  /// **'使用当前位置设为家'**
+  String get homeArrivalUseCurrent;
+
+  /// v1.98.0 home arrival feature
+  ///
+  /// In zh_CN, this message translates to:
+  /// **'家已设置'**
+  String get homeArrivalHomeSet;
+
+  /// v1.98.0 home arrival feature
+  ///
+  /// In zh_CN, this message translates to:
+  /// **'尚未设置家的位置'**
+  String get homeArrivalHomeNotSet;
+
+  /// v1.98.0 home arrival feature
+  ///
+  /// In zh_CN, this message translates to:
+  /// **'到家提醒需要「始终允许」定位权限，以便在后台检测你到家'**
+  String get homeArrivalNeedLocationPerm;
+
+  /// v1.98.0 home arrival feature
+  ///
+  /// In zh_CN, this message translates to:
+  /// **'记得先设置家的位置（一键用当前位置）'**
+  String get homeArrivalSetHomeHint;
+
+  /// v1.98.0 home arrival feature
+  ///
+  /// In zh_CN, this message translates to:
+  /// **'设置家位置失败'**
+  String get homeArrivalSetHomeFailed;
+
+  /// v1.98.0 home arrival feature
+  ///
+  /// In zh_CN, this message translates to:
+  /// **'到家啦 🏠'**
+  String get homeArrivalLocalTitle;
+
+  /// v1.98.0 home arrival feature
+  ///
+  /// In zh_CN, this message translates to:
+  /// **'记得报个平安，让守护你的人放心。'**
+  String get homeArrivalLocalBody;
+
+  /// v1.98.0 home arrival feature
+  ///
+  /// In zh_CN, this message translates to:
+  /// **'开启到家提醒？'**
+  String get homeArrivalNewUserTitle;
+
+  /// v1.98.0 home arrival feature
+  ///
+  /// In zh_CN, this message translates to:
+  /// **'回家时自动提醒你报平安，或让守护人知道你已安全到家。'**
+  String get homeArrivalNewUserBody;
+
+  /// v1.98.0 home arrival feature
+  ///
+  /// In zh_CN, this message translates to:
+  /// **'开启'**
+  String get homeArrivalNewUserEnable;
+
+  /// v1.98.0 home arrival feature
+  ///
+  /// In zh_CN, this message translates to:
+  /// **'稍后'**
+  String get homeArrivalNewUserLater;
+
+  /// v1.98.0 home arrival feature
+  ///
+  /// In zh_CN, this message translates to:
+  /// **'获取位置失败，请检查定位权限后重试'**
+  String get homeArrivalLocationFailed;
+
+  /// v1.98.0 home arrival pick home on Apple Maps
+  ///
+  /// In zh_CN, this message translates to:
+  /// **'在地图上选家'**
+  String get homeArrivalPickOnMap;
+
+  /// v1.98.1 home arrival permission / copy tweaks
+  ///
+  /// In zh_CN, this message translates to:
+  /// **'到家提醒需要「始终允许」定位权限，才能在 App 关闭时触发。请到 iPhone 设置 → 在呢+ → 位置 中选择「始终允许」。'**
+  String get homeArrivalNeedAlways;
+
+  /// v1.98.1 home arrival permission / copy tweaks
+  ///
+  /// In zh_CN, this message translates to:
+  /// **'去设置'**
+  String get homeArrivalGoSettings;
+
+  /// v1.98.1 home arrival permission / copy tweaks
+  ///
+  /// In zh_CN, this message translates to:
+  /// **'请在弹窗中选择「始终允许」，到家提醒才能在 App 关闭时生效。'**
+  String get homeArrivalAlwaysPrompt;
+
+  /// v1.98.1 home arrival permission / copy tweaks
+  ///
+  /// In zh_CN, this message translates to:
+  /// **'已开启始终定位，到家提醒生效 🏠'**
+  String get homeArrivalAlwaysGranted;
 }
 
 class _SDelegate extends LocalizationsDelegate<S> {

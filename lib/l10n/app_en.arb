@@ -7126,5 +7126,101 @@
     "placeholders": {
       "num": {}
     }
+  },
+  "homeArrivalTitle": "Home Arrival Reminder",
+  "@homeArrivalTitle": {
+    "description": "v1.98.0 home arrival feature"
+  },
+  "homeArrivalDesc": "The moment you get home, let your loved ones feel at ease",
+  "@homeArrivalDesc": {
+    "description": "v1.98.0 home arrival feature"
+  },
+  "homeArrivalEnable": "Enable home arrival alerts",
+  "@homeArrivalEnable": {
+    "description": "v1.98.0 home arrival feature"
+  },
+  "homeArrivalModeBNotify": "Also notify guardians",
+  "@homeArrivalModeBNotify": {
+    "description": "v1.98.1 home arrival permission / copy tweaks"
+  },
+  "homeArrivalModeBDetail": "On: guardians get a \"safe at home\" notification when you arrive; Off: only a local reminder for yourself.",
+  "@homeArrivalModeBDetail": {
+    "description": "v1.98.1 home arrival permission / copy tweaks"
+  },
+  "homeArrivalSetHome": "Set home location",
+  "@homeArrivalSetHome": {
+    "description": "v1.98.0 home arrival feature"
+  },
+  "homeArrivalUseCurrent": "Use current location",
+  "@homeArrivalUseCurrent": {
+    "description": "v1.98.0 home arrival feature"
+  },
+  "homeArrivalHomeSet": "Home set",
+  "@homeArrivalHomeSet": {
+    "description": "v1.98.0 home arrival feature"
+  },
+  "homeArrivalHomeNotSet": "Home location not set",
+  "@homeArrivalHomeNotSet": {
+    "description": "v1.98.0 home arrival feature"
+  },
+  "homeArrivalNeedLocationPerm": "Home arrival needs \"Always\" location access to detect arrival in background",
+  "@homeArrivalNeedLocationPerm": {
+    "description": "v1.98.0 home arrival feature"
+  },
+  "homeArrivalSetHomeHint": "Set your home location first (one tap with current location)",
+  "@homeArrivalSetHomeHint": {
+    "description": "v1.98.0 home arrival feature"
+  },
+  "homeArrivalSetHomeFailed": "Failed to set home location",
+  "@homeArrivalSetHomeFailed": {
+    "description": "v1.98.0 home arrival feature"
+  },
+  "homeArrivalLocalTitle": "You're home 🏠",
+  "@homeArrivalLocalTitle": {
+    "description": "v1.98.0 home arrival feature"
+  },
+  "homeArrivalLocalBody": "Remember to check in so your guardians know you're safe.",
+  "@homeArrivalLocalBody": {
+    "description": "v1.98.0 home arrival feature"
+  },
+  "homeArrivalNewUserTitle": "Enable home arrival alerts?",
+  "@homeArrivalNewUserTitle": {
+    "description": "v1.98.0 home arrival feature"
+  },
+  "homeArrivalNewUserBody": "Automatically remind you to check in, or let guardians know you're home safe.",
+  "@homeArrivalNewUserBody": {
+    "description": "v1.98.0 home arrival feature"
+  },
+  "homeArrivalNewUserEnable": "Enable",
+  "@homeArrivalNewUserEnable": {
+    "description": "v1.98.0 home arrival feature"
+  },
+  "homeArrivalNewUserLater": "Later",
+  "@homeArrivalNewUserLater": {
+    "description": "v1.98.0 home arrival feature"
+  },
+  "homeArrivalLocationFailed": "Failed to get location, check permission and retry",
+  "@homeArrivalLocationFailed": {
+    "description": "v1.98.0 home arrival feature"
+  },
+  "homeArrivalPickOnMap": "Pick on map",
+  "@homeArrivalPickOnMap": {
+    "description": "v1.98.0 home arrival pick home on Apple Maps"
+  },
+  "homeArrivalNeedAlways": "Home Arrival needs \"Always\" location access to trigger when the app is closed. Go to iPhone Settings → 在呢+ → Location and choose \"Always\".",
+  "@homeArrivalNeedAlways": {
+    "description": "v1.98.1 home arrival permission / copy tweaks"
+  },
+  "homeArrivalGoSettings": "Open Settings",
+  "@homeArrivalGoSettings": {
+    "description": "v1.98.1 home arrival permission / copy tweaks"
+  },
+  "homeArrivalAlwaysPrompt": "Choose \"Always\" in the popup so Home Arrival works when the app is closed.",
+  "@homeArrivalAlwaysPrompt": {
+    "description": "v1.98.1 home arrival permission / copy tweaks"
+  },
+  "homeArrivalAlwaysGranted": "Always location enabled — Home Arrival is active 🏠",
+  "@homeArrivalAlwaysGranted": {
+    "description": "v1.98.1 home arrival permission / copy tweaks"
   }
 }

@@ -19,6 +19,7 @@ import 'profile_page.dart';
 import 'contacts_page.dart';
 import '../l10n/i18n.dart';
 import '../utils/emergency_call.dart';
+import '../utils/phone_util.dart';
 
 class HelpPage extends StatefulWidget {
   const HelpPage({super.key});
@@ -535,7 +536,7 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
                 return;
               }
               final prefs = await SharedPreferences.getInstance();
-              final normalizedPhone = phone.replaceAll(RegExp(r'[^\d]'), '');
+              final normalizedPhone = PhoneUtil.normalize(phone);
               await prefs.setString('user_phone', normalizedPhone);
               setState(() => _myPhone = normalizedPhone);
               if (!ctx.mounted) return;
@@ -744,8 +745,9 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
     final now = DateTime.now();
     // 急救号码跟随设备地区（海外/港澳台/海外华裔统一按地区自适应，不再硬编码 120）
     final emergencyNum = EmergencyCall.localEmergencyNumber();
-    // 【修复 v1.94.x】手机号防御性清洗（兼容历史脏数据），只保留数字
-    final cleanPhone = myPhone.replaceAll(RegExp(r'[^\d]'), '');
+    // 【修复 v1.94.x / 2026-10-31 断点#1】手机号防御性清洗（兼容历史脏数据），
+    // 统一走 PhoneUtil.normalize 与后端格式对齐
+    final cleanPhone = PhoneUtil.normalize(myPhone);
     // 【v1.95.0+115 修复】日期与时间之间插入零宽空格(\u200B)：
     // 视觉不变，但打断 iOS SMS Data Detector 对"日期时间"模式的识别 → 时间戳不再显示无意义下划线
     // （手机号保持数字连续格式，Data Detector 仍识别为可拨打电话，予以保留）

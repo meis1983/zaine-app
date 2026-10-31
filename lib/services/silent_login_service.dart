@@ -12,6 +12,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:path_provider/path_provider.dart';
+import '../utils/phone_util.dart'; // 【2026-10-31 断点#1】统一手机号归一化
 
 /// 安全存储实例（用于 Token）
 const _secureStorage = FlutterSecureStorage(
@@ -129,7 +130,7 @@ class SilentLoginService {
         _uidFromToken = _map['user_id']?.toString();
       }
     } catch (_) {}
-    final _effectivePhone = (phone ?? '').replaceAll(RegExp(r'[^\d]'), '');
+    final _effectivePhone = PhoneUtil.normalize(phone);
     if (_uidFromToken != null && _uidFromToken.isNotEmpty) {
       await _secureStorage.write(key: 'user_id', value: _uidFromToken); // Keychain 主存储
       await prefs.setString('user_id', _uidFromToken); // SP 双写（兼容 40+ 处读取）

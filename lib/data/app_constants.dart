@@ -6,6 +6,7 @@ import 'dart:io';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import '../l10n/i18n.dart';
+import '../utils/phone_util.dart'; // 【2026-10-31 断点#1】统一手机号归一化
 
 class AppConstants {
   /// 版本号（运行时从 pubspec.yaml 读取，保证与构建版本一致）
@@ -70,8 +71,9 @@ class AppConstants {
 
   /// 联系人邀请链接
   /// 【修复 v1.75.0】使用更短路径 /i/c 替代 /landing/contacts_，缩短 15 字符避免短信换行
+  /// 【2026-10-31 断点#1】改走 PhoneUtil.normalize，与后端反查端格式一致
   static String contactsInviteUrl(String phone) =>
-      '$landingBaseUrl/i/c${phone.replaceAll(RegExp(r'[^0-9]'), '')}';
+      '$landingBaseUrl/i/c${PhoneUtil.normalize(phone)}';
 
   /// 【v1.76.0】签到里程碑分享二维码 — 跳转 Apple Store（不绑定守护关系，适合分享朋友圈/社群）
   static String get checkinMilestoneUrl => appStoreUrl;

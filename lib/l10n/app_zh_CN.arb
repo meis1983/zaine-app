@@ -7143,5 +7143,101 @@
     "placeholders": {
       "num": {}
     }
+  },
+  "homeArrivalTitle": "到家提醒",
+  "@homeArrivalTitle": {
+    "description": "v1.98.0 home arrival feature"
+  },
+  "homeArrivalDesc": "回家第一时间，让牵挂你的人安心",
+  "@homeArrivalDesc": {
+    "description": "v1.98.0 home arrival feature"
+  },
+  "homeArrivalEnable": "开启到家提醒",
+  "@homeArrivalEnable": {
+    "description": "v1.98.0 home arrival feature"
+  },
+  "homeArrivalModeBNotify": "同时通知守护人",
+  "@homeArrivalModeBNotify": {
+    "description": "v1.98.1 home arrival permission / copy tweaks"
+  },
+  "homeArrivalModeBDetail": "开启后，你一到家守护人就会收到「已安全到家」通知；关闭则只提醒你自己报平安。",
+  "@homeArrivalModeBDetail": {
+    "description": "v1.98.1 home arrival permission / copy tweaks"
+  },
+  "homeArrivalSetHome": "设置家的位置",
+  "@homeArrivalSetHome": {
+    "description": "v1.98.0 home arrival feature"
+  },
+  "homeArrivalUseCurrent": "使用当前位置设为家",
+  "@homeArrivalUseCurrent": {
+    "description": "v1.98.0 home arrival feature"
+  },
+  "homeArrivalHomeSet": "家已设置",
+  "@homeArrivalHomeSet": {
+    "description": "v1.98.0 home arrival feature"
+  },
+  "homeArrivalHomeNotSet": "尚未设置家的位置",
+  "@homeArrivalHomeNotSet": {
+    "description": "v1.98.0 home arrival feature"
+  },
+  "homeArrivalNeedLocationPerm": "到家提醒需要「始终允许」定位权限，以便在后台检测你到家",
+  "@homeArrivalNeedLocationPerm": {
+    "description": "v1.98.0 home arrival feature"
+  },
+  "homeArrivalSetHomeHint": "记得先设置家的位置（一键用当前位置）",
+  "@homeArrivalSetHomeHint": {
+    "description": "v1.98.0 home arrival feature"
+  },
+  "homeArrivalSetHomeFailed": "设置家位置失败",
+  "@homeArrivalSetHomeFailed": {
+    "description": "v1.98.0 home arrival feature"
+  },
+  "homeArrivalLocalTitle": "到家啦 🏠",
+  "@homeArrivalLocalTitle": {
+    "description": "v1.98.0 home arrival feature"
+  },
+  "homeArrivalLocalBody": "记得报个平安，让守护你的人放心。",
+  "@homeArrivalLocalBody": {
+    "description": "v1.98.0 home arrival feature"
+  },
+  "homeArrivalNewUserTitle": "开启到家提醒？",
+  "@homeArrivalNewUserTitle": {
+    "description": "v1.98.0 home arrival feature"
+  },
+  "homeArrivalNewUserBody": "回家时自动提醒你报平安，或让守护人知道你已安全到家。",
+  "@homeArrivalNewUserBody": {
+    "description": "v1.98.0 home arrival feature"
+  },
+  "homeArrivalNewUserEnable": "开启",
+  "@homeArrivalNewUserEnable": {
+    "description": "v1.98.0 home arrival feature"
+  },
+  "homeArrivalNewUserLater": "稍后",
+  "@homeArrivalNewUserLater": {
+    "description": "v1.98.0 home arrival feature"
+  },
+  "homeArrivalLocationFailed": "获取位置失败，请检查定位权限后重试",
+  "@homeArrivalLocationFailed": {
+    "description": "v1.98.0 home arrival feature"
+  },
+  "homeArrivalPickOnMap": "在地图上选家",
+  "@homeArrivalPickOnMap": {
+    "description": "v1.98.0 home arrival pick home on Apple Maps"
+  },
+  "homeArrivalNeedAlways": "到家提醒需要「始终允许」定位权限，才能在 App 关闭时触发。请到 iPhone 设置 → 在呢+ → 位置 中选择「始终允许」。",
+  "@homeArrivalNeedAlways": {
+    "description": "v1.98.1 home arrival permission / copy tweaks"
+  },
+  "homeArrivalGoSettings": "去设置",
+  "@homeArrivalGoSettings": {
+    "description": "v1.98.1 home arrival permission / copy tweaks"
+  },
+  "homeArrivalAlwaysPrompt": "请在弹窗中选择「始终允许」，到家提醒才能在 App 关闭时生效。",
+  "@homeArrivalAlwaysPrompt": {
+    "description": "v1.98.1 home arrival permission / copy tweaks"
+  },
+  "homeArrivalAlwaysGranted": "已开启始终定位，到家提醒生效 🏠",
+  "@homeArrivalAlwaysGranted": {
+    "description": "v1.98.1 home arrival permission / copy tweaks"
   }
 }

@@ -15,6 +15,7 @@ import 'pages/onboarding_page.dart';
 import 'services/deep_link_service.dart';
 import 'services/silent_login_service.dart';
 import 'services/push_service.dart'; // 【v1.98.0】APNs 推送令牌注册
+import 'services/home_arrival_service.dart'; // 【v1.98.0】到家围栏：注册原生回调 + 拉取启动期缓冲
 import 'services/membership_service.dart';
 import 'services/api/auth_service.dart';
 import 'services/platform/health_service.dart'; // 【v1.91.0】Watch 签到通道
@@ -91,6 +92,12 @@ void main() async {
   // 权限申请不在这里弹，登录成功后由 Onboarding 调 promptAndRegister）
   try {
     await PushService.instance.init().timeout(const Duration(seconds: 3));
+  } catch (_) {}
+
+  // 【v1.98.0】到家围栏：注册原生 MethodChannel 回调 + 拉取「被杀后由系统投递」的待处理到达事件。
+  // 内部以 Platform.isIOS 守卫（Android 先上，no-op）；超时保护避免阻塞启动。
+  try {
+    await HomeArrivalService.init().timeout(const Duration(seconds: 3));
   } catch (_) {}
 
   // 全局捕获 Flutter framework 级别的渲染错误（防止 release 模式下白屏无提示）

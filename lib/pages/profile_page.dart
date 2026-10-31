@@ -23,7 +23,6 @@ import 'settings_page.dart';
 // CN 构建由 build_ipa.sh 在编译前把本文件整体替换为 safety_settings_navigator_stub.dart
 //   （无 SafetySettingsPage import），trap 在构建结束后还原 → CN 二进制物理不含安全中心类符号。
 import 'safety_settings_navigator.dart';
-import '../config/app_config.dart';
 import 'statistics_page.dart';
 import '../widgets/guardian_achievement_badge.dart';
 import '../services/social/guardian_message_service.dart';
@@ -1825,23 +1824,22 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
               );
             },
           ),
-          // 【CN 合规】守护卡被移除后，恢复 App 内「我的守护码」发卡端（仅 CN 显示）。
-          // 与全球版 GuardianCardPage（分享卡）不同：仅出示配对码/二维码，无分享面板、无奖励。
-          if (kIsChinaBuild) ...[
-            Container(width: 1, height: 36, color: isDark ? Colors.white.withValues(alpha: 0.2) : Colors.grey.shade200),
-            _buildQuickActionItem(
-              icon: Icons.qr_code_rounded,
-              label: '我的守护码',
-              value: '出示给亲友',
-              iconBgColor: Colors.blue.shade100,
-              iconColor: Colors.blue.shade600,
-              onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const MyGuardianCodePage()),
-                );
-              },
-            ),
-          ],
+          // 【v1.98.1】"我的守护码"发卡端：海外版也露出（此前仅 CN 显示）。
+          // 该页纯本地出示二维码+明文+复制，无落地页分享/无裂变奖励，海外版用亦合规无负担。
+          // 让海外用户也能找到自己的守护码出示给亲友，对方在登录/兑换页输入码即可双向绑定。
+          Container(width: 1, height: 36, color: isDark ? Colors.white.withValues(alpha: 0.2) : Colors.grey.shade200),
+          _buildQuickActionItem(
+            icon: Icons.qr_code_rounded,
+            label: '我的守护码',
+            value: '出示给亲友',
+            iconBgColor: Colors.blue.shade100,
+            iconColor: Colors.blue.shade600,
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const MyGuardianCodePage()),
+              );
+            },
+          ),
           Container(width: 1, height: 36, color: isDark ? Colors.white.withValues(alpha: 20) : Colors.grey.shade200),
           _buildQuickActionItem(
             icon: Icons.feedback_rounded,

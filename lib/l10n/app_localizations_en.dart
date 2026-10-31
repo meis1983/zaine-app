@@ -7036,4 +7036,86 @@ class SEn extends S {
 
   @override
   String get z0924 => 'Status';
+
+  @override
+  String get homeArrivalTitle => 'Home Arrival Reminder';
+
+  @override
+  String get homeArrivalDesc =>
+      'The moment you get home, let your loved ones feel at ease';
+
+  @override
+  String get homeArrivalEnable => 'Enable home arrival alerts';
+
+  @override
+  String get homeArrivalModeBNotify => 'Also notify guardians';
+
+  @override
+  String get homeArrivalModeBDetail =>
+      'On: guardians get a \"safe at home\" notification when you arrive; Off: only a local reminder for yourself.';
+
+  @override
+  String get homeArrivalSetHome => 'Set home location';
+
+  @override
+  String get homeArrivalUseCurrent => 'Use current location';
+
+  @override
+  String get homeArrivalHomeSet => 'Home set';
+
+  @override
+  String get homeArrivalHomeNotSet => 'Home location not set';
+
+  @override
+  String get homeArrivalNeedLocationPerm =>
+      'Home arrival needs \"Always\" location access to detect arrival in background';
+
+  @override
+  String get homeArrivalSetHomeHint =>
+      'Set your home location first (one tap with current location)';
+
+  @override
+  String get homeArrivalSetHomeFailed => 'Failed to set home location';
+
+  @override
+  String get homeArrivalLocalTitle => 'You\'re home 🏠';
+
+  @override
+  String get homeArrivalLocalBody =>
+      'Remember to check in so your guardians know you\'re safe.';
+
+  @override
+  String get homeArrivalNewUserTitle => 'Enable home arrival alerts?';
+
+  @override
+  String get homeArrivalNewUserBody =>
+      'Automatically remind you to check in, or let guardians know you\'re home safe.';
+
+  @override
+  String get homeArrivalNewUserEnable => 'Enable';
+
+  @override
+  String get homeArrivalNewUserLater => 'Later';
+
+  @override
+  String get homeArrivalLocationFailed =>
+      'Failed to get location, check permission and retry';
+
+  @override
+  String get homeArrivalPickOnMap => 'Pick on map';
+
+  @override
+  String get homeArrivalNeedAlways =>
+      'Home Arrival needs \"Always\" location access to trigger when the app is closed. Go to iPhone Settings → 在呢+ → Location and choose \"Always\".';
+
+  @override
+  String get homeArrivalGoSettings => 'Open Settings';
+
+  @override
+  String get homeArrivalAlwaysPrompt =>
+      'Choose \"Always\" in the popup so Home Arrival works when the app is closed.';
+
+  @override
+  String get homeArrivalAlwaysGranted =>
+      'Always location enabled — Home Arrival is active 🏠';
 }

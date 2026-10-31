@@ -3,9 +3,11 @@ import UIKit
 import WatchConnectivity
 import UserNotifications
 import HealthKit
+import CoreLocation
+import MapKit
 
 @main
-@objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate, WCSessionDelegate {
+@objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate, WCSessionDelegate, CLLocationManagerDelegate {
   
   private var healthStore: HKHealthStore?
   private let fallMethodChannel = "zaine/healthkit"
@@ -28,7 +30,12 @@ import HealthKit
   /// App 被 Watch 冷启动唤醒时 Dart 可能尚未初始化，native invokeMethod 会丢失，
   /// 此时把 clientId 写入 UserDefaults，由 Flutter 侧轮询补发，彻底绕过 messenger 路由不确定性。
   private var watchChannelReady = false
-  
+
+  // v1.98.0 到家提醒：地理围栏存储属性（extension 不可声明，故置于主类体内）
+  private var geofenceChannel: FlutterMethodChannel?
+  private var locationManager: CLLocationManager?
+  private let geofenceRegionId = "home"
+
   override func application(
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
@@ -65,6 +72,12 @@ import HealthKit
     )
     UNUserNotificationCenter.current().setNotificationCategories([sosCategory])
     UNUserNotificationCenter.current().delegate = self
+
+    // 【v1.98.0 到家围栏】若系统因位置事件（进入家围栏）唤醒/重启 App（被杀后），
+    // 需重建 CLLocationManager + delegate 才能接收 didEnterRegion 回调。
+    if launchOptions?[UIApplication.LaunchOptionsKey.location] != nil {
+      self.restoreGeofenceIfNeeded()
+    }
 
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
@@ -353,6 +366,7 @@ import HealthKit
     self.setupHealthKitMethodChannel(messenger: messenger)
     self.setupWatchMethodChannel(messenger: messenger)
     self.setupPushMethodChannel(messenger: messenger)
+    self.setupGeofenceMethodChannel(messenger: messenger)
     print("[AppDelegate] ✅ 引擎就绪，Watch/HealthKit/Push MethodChannel 已在 didInitializeImplicitFlutterEngine 注册")
 
     // 【2026-07-16 修复】重新夺回 WCSession delegate。
@@ -1117,6 +1131,351 @@ extension AppDelegate {
       box.set("workout_count_7d", arr.count)
     }
     store.execute(q)
+  }
+
+  // MARK: - 地理围栏 Method Channel（v1.98.0 到家提醒）
+  /// Dart 调 startMonitoring/stopMonitoring/getPendingArrival；
+  /// 原生 didEnterRegion 检测进入家围栏后回传 onArrival（或缓冲待 Dart 拉取）。
+  /// 注：geofenceChannel / locationManager / geofenceRegionId 为主类（AppDelegate）存储属性，
+  ///     Swift extension 不允许声明存储属性，故声明在主类体内，此处仅调用。
+
+  private func setupGeofenceMethodChannel(messenger: FlutterBinaryMessenger) {
+    let channel = FlutterMethodChannel(name: "zaine/geofence", binaryMessenger: messenger)
+    self.geofenceChannel = channel
+    channel.setMethodCallHandler { [weak self] call, result in
+      guard let self = self else {
+        result(FlutterError(code: "UNAVAILABLE", message: "AppDelegate released", details: nil))
+        return
+      }
+      switch call.method {
+      case "startMonitoring":
+        guard let args = call.arguments as? [String: Any],
+              let lat = (args["lat"] as? NSNumber)?.doubleValue,
+              let lng = (args["lng"] as? NSNumber)?.doubleValue,
+              let radius = (args["radius"] as? NSNumber)?.doubleValue else {
+          result(FlutterError(code: "BAD_ARGS", message: "lat/lng/radius required", details: nil))
+          return
+        }
+        // 【v1.98.2 修复C】同步镜像开关/模式到 UserDefaults，
+        // 供 native didEnterRegion 独立判断（不依赖 Flutter 引擎存活）。
+        let enabled = (args["enabled"] as? Bool) ?? true
+        let modeB = (args["modeB"] as? Bool) ?? false
+        UserDefaults.standard.set(enabled, forKey: "home_arrival_enabled")
+        UserDefaults.standard.set(modeB, forKey: "home_arrival_mode_b")
+        self.startHomeGeofence(lat: lat, lng: lng, radius: radius)
+        result(nil)
+      case "stopMonitoring":
+        // 【v1.98.2 修复C】关闭时同步清掉 native UserDefaults 的 enabled 标志，
+        // 避免历史缓冲事件在功能已关后误触发本地通知。
+        UserDefaults.standard.set(false, forKey: "home_arrival_enabled")
+        UserDefaults.standard.set(false, forKey: "home_arrival_mode_b")
+        self.stopHomeGeofence()
+        result(nil)
+      case "getPendingArrival":
+        if let ts = UserDefaults.standard.object(forKey: "pending_home_arrival_ts") as? Double {
+          UserDefaults.standard.removeObject(forKey: "pending_home_arrival_ts")
+          result(["timestamp": ts])
+        } else {
+          result(nil)
+        }
+      case "openMapPicker":
+        self.openHomeMapPicker(result: result)
+      case "requestLocationAlways":
+        if locationManager == nil {
+          locationManager = CLLocationManager()
+          locationManager?.delegate = self
+        }
+        locationManager?.requestAlwaysAuthorization()
+        result(nil)
+      default:
+        result(FlutterMethodNotImplemented)
+      }
+    }
+    print("[AppDelegate] ✅ 地理围栏 MethodChannel 已注册 (zaine/geofence)")
+  }
+
+  private func startHomeGeofence(lat: Double, lng: Double, radius: Double) {
+    // 持久化，便于 App 被杀后重启恢复围栏
+    UserDefaults.standard.set(lat, forKey: "home_geofence_lat")
+    UserDefaults.standard.set(lng, forKey: "home_geofence_lng")
+    UserDefaults.standard.set(radius, forKey: "home_geofence_radius")
+
+    if locationManager == nil {
+      locationManager = CLLocationManager()
+      locationManager?.delegate = self
+    }
+    // 围栏需要「始终」授权才能在后台/被杀后触发；WhenInUse 仅前台/挂起可用
+    locationManager?.requestAlwaysAuthorization()
+
+    let center = CLLocationCoordinate2D(latitude: lat, longitude: lng)
+    let region = CLCircularRegion(center: center, radius: max(radius, 100), identifier: geofenceRegionId)
+    region.notifyOnEntry = true
+    region.notifyOnExit = false
+    locationManager?.startMonitoring(for: region)
+    print("[AppDelegate] ✅ 开始监控家围栏 lat=\(lat) lng=\(lng) radius=\(radius)")
+  }
+
+  private func stopHomeGeofence() {
+    if let manager = locationManager {
+      for region in manager.monitoredRegions {
+        manager.stopMonitoring(for: region)
+      }
+    }
+    UserDefaults.standard.removeObject(forKey: "home_geofence_lat")
+    UserDefaults.standard.removeObject(forKey: "home_geofence_lng")
+    UserDefaults.standard.removeObject(forKey: "home_geofence_radius")
+    print("[AppDelegate] ✅ 已停止家围栏监控")
+  }
+
+  /// App 被杀后由系统位置事件重启时，恢复家围栏监控（让 didEnterRegion 能再次投递）
+  private func restoreGeofenceIfNeeded() {
+    guard let lat = UserDefaults.standard.object(forKey: "home_geofence_lat") as? Double,
+          let lng = UserDefaults.standard.object(forKey: "home_geofence_lng") as? Double else {
+      return
+    }
+    let radius = UserDefaults.standard.object(forKey: "home_geofence_radius") as? Double ?? 150
+    startHomeGeofence(lat: lat, lng: lng, radius: radius)
+    print("[AppDelegate] ✅ 已恢复家围栏监控（系统位置重启）")
+  }
+
+  // MARK: - 苹果地图选点（v1.98.0 到家提醒 · 手动设家）
+  /// Dart 调 openMapPicker → 弹出原生 MKMapView（苹果地图），用户平移地图把准星对准家，
+  /// 点「确定家位置」→ 逆地理拿到地址 → 回传 {lat,lng,address}。零 Key、纯 Apple。
+  private func openHomeMapPicker(result: @escaping FlutterResult) {
+    let picker = HomeMapPickerViewController()
+    picker.onConfirm = { [weak self] lat, lng, address in
+      if let addr = address {
+        result(["lat": lat, "lng": lng, "address": addr])
+      } else {
+        result(["lat": lat, "lng": lng])
+      }
+    }
+    picker.onCancel = {
+      result(FlutterError(code: "CANCELLED", message: "user cancelled map picker", details: nil))
+    }
+    guard let top = topViewController() else {
+      result(FlutterError(code: "NO_ROOT", message: "no root view controller", details: nil))
+      return
+    }
+    top.present(picker, animated: true, completion: nil)
+  }
+
+  private func topViewController() -> UIViewController? {
+    guard let window = UIApplication.shared.connectedScenes
+      .compactMap({ $0 as? UIWindowScene })
+      .first(where: { $0.activationState == .foregroundActive })?
+      .windows.first(where: { $0.isKeyWindow }) else { return nil }
+    var vc = window.rootViewController
+    while let presented = vc?.presentedViewController {
+      vc = presented
+    }
+    return vc
+  }
+
+  // MARK: - CLLocationManagerDelegate
+  func locationManager(_ manager: CLLocationManager, didEnterRegion region: CLRegion) {
+    guard region.identifier == geofenceRegionId else { return }
+    print("[AppDelegate] 🏠 进入家围栏")
+
+    // 【v1.98.2 修复C】native 层直接处理到达事件，不依赖 Flutter 引擎是否存活。
+    // 这是兑现"App 被杀也能弹到家通知"的关键——iOS region monitoring 在后台唤醒 App 时，
+    // 引擎可能还未就绪，仅靠 geofenceChannel.invokeMethod 回传 Dart 会丢失事件。
+    //
+    // 策略：
+    //   1. 读 UserDefaults 镜像配置（home_arrival_enabled / home_arrival_mode_b），
+    //      这些由 Dart 端 setEnabled/setModeB 时通过 startMonitoring 顺带镜像到 UserDefaults。
+    //   2. 模式A（modeB=false）：native 直接发本地通知（UNUserNotificationCenter.add）
+    //      —— 不经过 Dart，App 被杀也能弹。
+    //   3. 模式B（modeB=true）：native 缓冲事件到 UserDefaults（pending_home_arrival_ts），
+    //      App 下次启动由 Dart 拉取上报后端；守护人的"已安全到家"由后端 APNs 推送，
+    //      APNs 投递到被杀的 App 是由 iOS 系统负责的，不依赖本地通知。
+    //   4. 同时尝试 invokeMethod onArrival（引擎就绪则即时处理，双保险）。
+    let ud = UserDefaults.standard
+    let enabled = ud.bool(forKey: "home_arrival_enabled")
+    let modeB = ud.bool(forKey: "home_arrival_mode_b")
+    print("[AppDelegate] 🏠 到家事件 enabled=\(enabled) modeB=\(modeB)")
+
+    if !enabled {
+      // 功能已关，忽略（避免历史缓冲事件误触发）
+      return
+    }
+
+    // 每日去重（native 侧也做一次，避免 App 反复进出围栏当天多次弹本地通知）
+    let now = Date()
+    let cal = Calendar.current
+    let todayKey = "home_arrival_last_local_notif_date"
+    if let lastStr = ud.string(forKey: todayKey) {
+      let fmt = DateFormatter()
+      fmt.dateFormat = "yyyy-MM-dd"
+      fmt.timeZone = TimeZone.current
+      if let lastDate = fmt.date(from: lastStr),
+         cal.isDate(lastDate, inSameDayAs: now) {
+        print("[AppDelegate] 🏠 今日已弹过本地通知，跳过")
+      } else {
+        _fireHomeArrivalLocalNotification(modeB: modeB, now: now, todayKey: todayKey)
+      }
+    } else {
+      _fireHomeArrivalLocalNotification(modeB: modeB, now: now, todayKey: todayKey)
+    }
+
+    // 缓冲事件，供 App 启动后 Dart 拉取（getPendingArrival）补发模式B后端上报
+    ud.set(now.timeIntervalSince1970, forKey: "pending_home_arrival_ts")
+
+    // 同时尝试即时回传 Dart（引擎就绪时双保险；引擎未就绪则忽略，不影响上面已发的通知/缓冲）
+    if let ch = geofenceChannel {
+      ch.invokeMethod("onArrival", arguments: nil)
+    }
+  }
+
+  /// 【v1.98.2 修复C】native 层直接发本地通知（模式A专用，不依赖 Flutter 引擎）。
+  /// 模式B 不在此发本地通知——守护人通过后端 APNs 收"已安全到家"，
+  /// 用户本人无需再弹一条"你到家了"的本地通知（避免重复打扰）。
+  private func _fireHomeArrivalLocalNotification(modeB: Bool, now: Date, todayKey: String) {
+    if modeB {
+      // 模式B：native 不弹本地通知（守护人由 APNs 收通知）
+      let fmt = DateFormatter()
+      fmt.dateFormat = "yyyy-MM-dd"
+      fmt.timeZone = TimeZone.current
+      UserDefaults.standard.set(fmt.string(from: now), forKey: todayKey)
+      return
+    }
+    // 模式A：native 直接弹本地通知
+    let content = UNMutableNotificationContent()
+    content.title = "到家啦 🏠"
+    content.body = "记得报个平安，让守护你的人放心。"
+    content.sound = .default
+    let req = UNNotificationRequest(
+      identifier: "home_arrival_native",
+      content: content,
+      trigger: nil  // 立即投递
+    )
+    UNUserNotificationCenter.current().add(req) { err in
+      if let e = err {
+        print("[AppDelegate] ❌ native 到家通知投递失败: \(e.localizedDescription)")
+      } else {
+        print("[AppDelegate] ✅ native 到家通知已投递（不依赖 Flutter 引擎）")
+      }
+    }
+    let fmt = DateFormatter()
+    fmt.dateFormat = "yyyy-MM-dd"
+    fmt.timeZone = TimeZone.current
+    UserDefaults.standard.set(fmt.string(from: now), forKey: todayKey)
+  }
+
+  func locationManager(_ manager: CLLocationManager,
+                       monitoringDidFailFor region: CLRegion?,
+                       withError error: Error) {
+    print("[AppDelegate] ❌ 家围栏监控失败: \(error.localizedDescription)")
+  }
+
+  /// 授权状态变更回调：用户在第 2 个系统弹窗里选了「始终允许」或「仅使用期间」后触发。
+  /// 回传给 Dart（onAuthChanged），Dart 据此决定功能是否生效。
+  /// 使用 iOS 14+ 现代签名（旧 didChangeAuthorizationStatus: 已废弃）。
+  func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+    let status = manager.authorizationStatus
+    let s: String
+    switch status {
+    case .authorizedAlways:        s = "always"
+    case .authorizedWhenInUse:     s = "whileInUse"
+    case .denied:                  s = "denied"
+    case .restricted:              s = "restricted"
+    @unknown default:              s = "notDetermined"
+    }
+    geofenceChannel?.invokeMethod("onAuthChanged", arguments: s)
+    print("[AppDelegate] 📍 定位授权变更: \(s)")
+  }
+}
+
+// MARK: - 苹果地图选点页（v1.98.0）
+/// 全屏原生 MKMapView：中心固定准星，用户平移地图把家对准准星；
+/// 点「确定家位置」逆地理编码回传；点「取消」回调 onCancel。零 Key、纯 Apple Maps。
+class HomeMapPickerViewController: UIViewController {
+  var onConfirm: ((_ lat: Double, _ lng: Double, _ address: String?) -> Void)?
+  var onCancel: (() -> Void)?
+
+  private var mapView: MKMapView!
+  private var pinView: UIImageView!
+  private let geocoder = CLGeocoder()
+  private var didCenterOnUser = false
+
+  override func viewDidLoad() {
+    super.viewDidLoad()
+    view.backgroundColor = .systemBackground
+
+    mapView = MKMapView(frame: view.bounds)
+    mapView.showsUserLocation = true
+    mapView.delegate = self
+    mapView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+    view.addSubview(mapView)
+
+    pinView = UIImageView(image: UIImage(systemName: "mappin.circle.fill"))
+    pinView.tintColor = .systemOrange
+    pinView.translatesAutoresizingMaskIntoConstraints = false
+    view.addSubview(pinView)
+    NSLayoutConstraint.activate([
+      pinView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+      pinView.centerYAnchor.constraint(equalTo: view.centerYAnchor, constant: -20),
+    ])
+
+    setupTopBar()
+  }
+
+  private func setupTopBar() {
+    let bar = UIToolbar()
+    bar.translatesAutoresizingMaskIntoConstraints = false
+    let cancel = UIBarButtonItem(title: "取消", style: .plain, target: self, action: #selector(cancelTapped))
+    let flex = UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil)
+    let locate = UIBarButtonItem(title: "我的位置", style: .plain, target: self, action: #selector(locateTapped))
+    let done = UIBarButtonItem(title: "确定家位置", style: .done, target: self, action: #selector(doneTapped))
+    bar.items = [cancel, flex, locate, flex, done]
+    view.addSubview(bar)
+    NSLayoutConstraint.activate([
+      bar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+      bar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+      bar.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
+    ])
+  }
+
+  private func centerMap(on coord: CLLocationCoordinate2D, animated: Bool) {
+    let span = MKCoordinateSpan(latitudeDelta: 0.005, longitudeDelta: 0.005)
+    mapView.setRegion(MKCoordinateRegion(center: coord, span: span), animated: animated)
+  }
+
+  @objc private func cancelTapped() {
+    dismiss(animated: true) { [weak self] in self?.onCancel?() }
+  }
+
+  @objc private func locateTapped() {
+    if let loc = mapView.userLocation.location?.coordinate {
+      centerMap(on: loc, animated: true)
+    }
+  }
+
+  @objc private func doneTapped() {
+    let coord = mapView.centerCoordinate
+    let loc = CLLocation(latitude: coord.latitude, longitude: coord.longitude)
+    geocoder.reverseGeocodeLocation(loc) { [weak self] placemarks, _ in
+      var address: String?
+      if let pm = placemarks?.first {
+        address = [pm.name, pm.locality, pm.administrativeArea]
+          .compactMap { $0 }
+          .joined(separator: " ")
+      }
+      DispatchQueue.main.async {
+        self?.dismiss(animated: true) {
+          self?.onConfirm?(coord.latitude, coord.longitude, address)
+        }
+      }
+    }
+  }
+}
+
+extension HomeMapPickerViewController: MKMapViewDelegate {
+  func mapView(_ mapView: MKMapView, didUpdate userLocation: MKUserLocation) {
+    if !didCenterOnUser {
+      didCenterOnUser = true
+      centerMap(on: userLocation.coordinate, animated: false)
+    }
   }
 }
 

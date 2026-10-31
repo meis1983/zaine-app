@@ -7,6 +7,7 @@ import 'dart:convert';
 import '../config/app_config.dart';
 import '../theme/theme_helper.dart';
 import '../utils/contact_parser.dart';
+import '../utils/phone_util.dart';
 import '../services/membership_service.dart';
 import '../services/api/contact_service.dart';
 import '../services/api/card_service.dart';
@@ -1397,15 +1398,13 @@ class _AddContactDialogState extends State<AddContactDialog> {
                         ),
                         validator: (v) {
                           if (v == null || v.isEmpty) return tr.s357;
-                          // 【v1.93.5 修复】放宽手机号验证：清洗后验证，兼容国际号和前缀
-                          final cleaned = v.trim().replaceAll(RegExp(r'^(\+86|86|\s|-|\(|\))'), '');
+                          // 【v1.93.5 / 2026-10-31 断点#1】统一走 PhoneUtil 校验：
+                          // 归一化后 7-15 位纯数字即合法（覆盖中国大陆 + 国际号）
+                          final cleaned = PhoneUtil.normalize(v);
                           if (cleaned.isEmpty) return tr.s357;
-                          // 中国手机号严格验证
-                          if (RegExp(r'^1[3-9]\d{9}$').hasMatch(cleaned)) return null;
                           // 编辑模式：手机号未修改时，允许非标准格式（如国际号）
                           if (widget.existingContact != null && v == widget.existingContact!['phone']) return null;
-                          // 新增模式：允许6-15位数字（国际号兼容）
-                          if (RegExp(r'^\d{6,15}$').hasMatch(cleaned)) return null;
+                          if (PhoneUtil.isValid(v)) return null;
                           return tr.s358;
                         },
                       ),
@@ -1550,12 +1549,11 @@ class _AddContactDialogState extends State<AddContactDialog> {
                             final relation = _isCustomRelation
                                 ? _customRelationController.text.trim()
                                 : _selectedRelation;
-                            // 【修复 2026-07-12 议题A】存储前归一化手机号：去 +86/空格/横杠/括号，只留数字，
-                            // 保证与注册端 User.phone（纯 11 位数字）格式一致，避免「已注册却显示未注册」
-                            final normalizedPhone = _phoneController.text
-                                .trim()
-                                .replaceAll(RegExp(r'[^\d]'), '')
-                                .replaceFirst(RegExp(r'^86'), '');
+                            // 【修复 2026-07-12 议题A / 2026-10-31 断点#1】存储前归一化手机号，
+                            // 与后端 normalize_phone 语义 1:1 对齐，保证与注册端 User.phone 格式一致，
+                            // 避免「已注册却显示未注册」；海外号（带国家码）也正确保留。
+                            final normalizedPhone =
+                                PhoneUtil.normalize(_phoneController.text);
                             Navigator.of(context).pop(<String, dynamic>{
                               'name': _nameController.text.trim(),
                               'phone': normalizedPhone,

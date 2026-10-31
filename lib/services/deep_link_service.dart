@@ -90,7 +90,10 @@ class DeepLinkService {
     // [v1.76.0] 紧急联系人邀请链接：/i/c{phone}
     if (path.startsWith('/i/c') && path.length > 4) {
       final phone = path.substring(4); // 去掉 /i/c 前缀
-      if (phone.isNotEmpty && phone.contains(RegExp(r'^\d+$'))) {
+      // 【2026-10-31 语义澄清】原 `phone.contains(RegExp(r'^\d+$'))` 功能正确
+      // （Dart 中非全局 RegExp 的 String.contains 等价于 hasMatch），
+      // 但可读性差、易被误读为子串匹配。改用 RegExp.hasMatch 意图更明确。
+      if (phone.isNotEmpty && RegExp(r'^\d+$').hasMatch(phone)) {
         if (kDebugMode) debugPrint('[DeepLink] 发现紧急联系人邀请: phone=$phone');
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString(_pendingInvitePhoneKey, phone);

@@ -104,4 +104,17 @@ class NotifyService {
       if (message != null && message.isNotEmpty) 'message': message,
     });
   }
+
+  /// 到家位置提醒 · 模式 B：自动通知守护人"已安全到家" + 自动记一笔签到
+  ///
+  /// 仅在用户开启"到家自动通知守护人"后、App 检测到进入家围栏时调用。
+  /// 模式 A（本地提醒本人报平安）不调用本接口。
+  /// [tzOffsetMinutes] 设备时区偏移（分钟），默认 480 = 中国 +8，用于后端按本地日去重。
+  static Future<Map<String, dynamic>> notifyGuardiansAboutHomeArrival({
+    int tzOffsetMinutes = 480,
+  }) async {
+    return ApiService.post('/api/notify/home-arrival', body: {
+      'tz_offset': tzOffsetMinutes,
+    });
+  }
 }

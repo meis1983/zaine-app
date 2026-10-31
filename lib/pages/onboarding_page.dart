@@ -21,6 +21,7 @@ import '../services/api/card_service.dart'; // 新增
 import '../widgets/guardian_ritual.dart'; // 【修复 v1.9.95】统一守护仪式封装
 import 'scan_guardian_code_page.dart'; // 【CN 179】登录页渐进披露：扫码填守护码
 import '../widgets/guardian_consent_dialog.dart'; // 【CN 179】共享合规同意弹窗
+import '../utils/phone_util.dart'; // 【2026-10-31 断点#1】统一手机号归一化
 
 /// 开机引导页 — 5页专业引导
 /// 核心定位：这不是签到App，这是日常平安守护与亲友互助工具
@@ -1515,14 +1516,12 @@ class _OnboardingPageState extends State<OnboardingPage> {
     _loginCompleted = false;
     _loginError = ''; // 清除之前的错误提示
 
-    var phone = _phoneController.text.trim().replaceAll(RegExp(r'[^0-9]'), '');
-    // 【v1.97.x 防幽灵账号】剥离 +86 国际前缀，与后端 normalize_phone 对齐，
+    // 【v1.97.x 防幽灵账号 / 2026-10-31 断点#1】统一走 PhoneUtil.normalize，
+    // 与后端 normalize_phone 语义 1:1 对齐（剥离 +86 / 00 国际前缀），
     // 避免带空格/+86 的手机号被 quick_login 当成新账号静默创建
-    if (phone.length == 13 && phone.startsWith('86')) {
-      phone = phone.substring(2);
-    }
+    final phone = PhoneUtil.normalize(_phoneController.text);
     // 【v1.9.78】支持国际手机号（最少6位，最长15位）
-    if (phone.isEmpty || phone.replaceAll(RegExp(r'[^0-9]'), '').length < 6) {
+    if (!PhoneUtil.isValid(phone)) {
       ScaffoldMessenger.of(context).showSnackBar(
          SnackBar(
             content: Text(tr.s985), backgroundColor: Colors.orange),
@@ -1730,8 +1729,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
 
     try {
       developer.log('[190 LOGIN] 兑现登录页守护码: $code', name: 'zaine.login');
-      final res = await CardService.redeemCard(
-              cardCode: code, oneway: kIsChinaBuild)
+      final res = await CardService.redeemCard(cardCode: code)
           .timeout(const Duration(seconds: 12),
               onTimeout: () => <String, dynamic>{'success': false});
 

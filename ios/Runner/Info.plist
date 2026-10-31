@@ -55,9 +55,9 @@
 	<key>NSHealthUpdateUsageDescription</key>
 	<string>Zaine needs to read your health data to enable daily check-in reports and menstrual cycle tracking.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>Zaine needs your location when you trigger an emergency SOS so your emergency contacts can receive it.</string>
+	<string>Zaine uses your location for emergency SOS sharing and for Home Arrival alerts (a geofence that detects when you get home, so your guardians can be notified). Location is only accessed when you trigger SOS or enable Home Arrival.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Zaine needs your location when you trigger an emergency SOS.</string>
+	<string>Zaine uses your location to share it with emergency contacts during SOS, and to set your home location for Home Arrival alerts.</string>
 	<key>NSPhoneUsageDescription</key>
 	<string>Zaine needs to call your emergency contacts in urgent situations.</string>
 	<key>NSPhotoLibraryUsageDescription</key>

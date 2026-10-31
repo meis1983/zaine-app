@@ -22,6 +22,7 @@ import '../membership_service.dart';
 import '../guardian_card_service.dart';
 import '../platform/health_service.dart';
 import '../../l10n/i18n.dart';
+import '../../utils/phone_util.dart'; // 【2026-10-31 断点#1】统一手机号归一化
 
 /// 安全存储实例（单例）
 const _secureStorage = FlutterSecureStorage(
@@ -145,8 +146,9 @@ class AuthService {
         // 【修复 v1.97.x 多账号串号根因】登录成功后清除残留的静默登录凭证(pending_token)，
         // 防止下次启动时静默登录用陈旧 token 覆盖本次刚登录的正确 token（切账号后才坏的真凶）。
         await SilentLoginService.clearPendingLogin();
-        // 【修复 v1.94.x】手机号归一化为纯数字（去除 +、空格、横线），避免 SOS 短信出现 ++
-        final normalizedPhone = phone.replaceAll(RegExp(r'[^\d]'), '');
+        // 【修复 v1.94.x / 2026-10-31 断点#1】手机号归一化为纯数字（去 +、空格、横线、国际前缀），
+        // 与后端 normalize_phone 语义一致，避免 SOS 短信出现 ++ / 反查失配
+        final normalizedPhone = PhoneUtil.normalize(phone);
         // 【修复 v1.77.0】敏感信息存储到 Keychain（安全，主存储）
         await _secureStorage.write(key: 'user_phone', value: normalizedPhone);
         await _secureStorage.write(key: 'user_id', value: res['userId'] ?? '');

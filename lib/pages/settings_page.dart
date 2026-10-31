@@ -12,6 +12,7 @@ import '../theme/theme_helper.dart';
 import '../data/app_constants.dart';
 import '../services/membership_service.dart';
 import '../services/checkin_reminder_service.dart'; // 【v1.97.1+157】id=0/id=3 提醒排程（含签到闸门）
+import '../services/home_arrival_service.dart'; // 【v1.98.0】到家围栏：配置读写 + 原生桥接 + 定位权限
 import '../widgets/developer_mode.dart';
 import '../config/feature_flags.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -42,15 +43,29 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
   bool _isProfileComplete = false; // 【修复 v1.17.1】健康档案完整性标记
   ZaiNeThemeMode _currentTheme = ZaiNeThemeMode.light;
 
+  // —— 到家提醒（v1.98.0）——
+  bool _homeArrivalEnabled = false;
+  bool _homeArrivalModeB = false; // false=仅提醒本人(本地通知) true=同时通知守护人
+  bool _homeSet = false;
+  String? _homeAddress;
+  bool _locationAlways = false; // 定位是否为「始终允许」（围栏后台触发的前提）
+
   @override
   void initState() {
     super.initState();
     _loadSettings();
     themeNotifier.addListener(_onThemeChanged);
+    // 【v1.98.0】监听原生定位授权变更（用户在第2个系统弹窗选了始终/仅使用期间后回传）
+    HomeArrivalService.onAuthChanged = _handleAuthChanged;
+    // 【v1.98.0】新用户一次性引导开启到家提醒（仅海外版、仅一次）
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _maybeShowHomeArrivalNewUserPrompt();
+    });
   }
 
   @override
   void dispose() {
+    HomeArrivalService.onAuthChanged = null;
     themeNotifier.removeListener(_onThemeChanged);
     super.dispose();
   }
@@ -105,6 +120,15 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
     }
     // 【修复 v1.17.1】检查健康档案是否真正填写完整（与 newbie_task_card 逻辑一致）
     _isProfileComplete = _checkProfileComplete(profileJson);
+
+    // 【v1.98.0】加载到家提醒配置
+    _homeArrivalEnabled = await HomeArrivalService.isEnabled();
+    _homeArrivalModeB = await HomeArrivalService.isModeB();
+    _homeSet = await HomeArrivalService.hasHomeSet();
+    _homeAddress = await HomeArrivalService.getHomeAddress();
+    _locationAlways = _homeArrivalEnabled
+        ? await HomeArrivalService.isLocationAlways()
+        : false;
 
     if (!mounted) return;
     setState(() {
@@ -165,6 +189,351 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
       // 关闭提醒 → 取消所有签到通知
       await _cancelAllNotifications();
     }
+  }
+
+  // —— 到家提醒（v1.98.0）——
+  /// 开启时强制「始终允许」定位：否则围栏无法在 App 关闭时触发，功能形同虚设。
+  /// 流程：已是 Always → 直接生效；否则先乐观开启 + 弹系统 Always 升级窗，
+  ///       待用户在弹窗选择后由 _handleAuthChanged 最终裁定（选错则回退关闭）。
+  Future<void> _toggleHomeArrival(bool value) async {
+    if (!mounted) return;
+    if (!value) {
+      setState(() => _homeArrivalEnabled = false);
+      await HomeArrivalService.setEnabled(enabled: false, modeB: _homeArrivalModeB);
+      return;
+    }
+
+    final always = await HomeArrivalService.isLocationAlways();
+    if (always) {
+      setState(() => _homeArrivalEnabled = true);
+      await HomeArrivalService.setEnabled(enabled: true, modeB: _homeArrivalModeB);
+      _refreshLocationAlways();
+      _maybeHintSetHome();
+      return;
+    }
+
+    // 非 Always：乐观开启并请求系统「始终允许」弹窗（第 2 个系统弹窗，带始终允许选项）
+    setState(() => _homeArrivalEnabled = true);
+    await HomeArrivalService.setEnabled(enabled: true, modeB: _homeArrivalModeB);
+    await HomeArrivalService.requestLocationAlways();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(tr.homeArrivalAlwaysPrompt),
+        backgroundColor: ZaiNeColors.brandOrange,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.small)),
+        duration: const Duration(seconds: 4),
+      ),
+    );
+    _maybeHintSetHome();
+  }
+
+  /// 用户在系统弹窗选完定位权限后，由原生 onAuthChanged 回调触发：
+  /// 选了始终允许 → 真正生效；选了仅使用期间/拒绝 → 回退关闭并提示。
+  Future<void> _handleAuthChanged() async {
+    final always = await HomeArrivalService.isLocationAlways();
+    if (!mounted) return;
+    setState(() => _locationAlways = always);
+    if (always) {
+      await HomeArrivalService.setEnabled(enabled: true, modeB: _homeArrivalModeB);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(tr.homeArrivalAlwaysGranted),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.small)),
+          ),
+        );
+      }
+    } else {
+      // 未授予始终允许 → 功能无法后台触发，回退关闭
+      setState(() => _homeArrivalEnabled = false);
+      await HomeArrivalService.setEnabled(enabled: false, modeB: _homeArrivalModeB);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(tr.homeArrivalNeedLocationPerm),
+            backgroundColor: Colors.orange,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.small)),
+          ),
+        );
+      }
+    }
+  }
+
+  void _refreshLocationAlways() async {
+    final always = await HomeArrivalService.isLocationAlways();
+    if (mounted) setState(() => _locationAlways = always);
+  }
+
+  void _maybeHintSetHome() {
+    if (!mounted) return;
+    if (!_homeSet) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(tr.homeArrivalSetHomeHint),
+          backgroundColor: ZaiNeColors.brandOrange,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.small)),
+        ),
+      );
+    }
+  }
+
+  Future<void> _setHomeArrivalModeB(bool value) async {
+    if (!mounted) return;
+    setState(() => _homeArrivalModeB = value);
+    await HomeArrivalService.setEnabled(enabled: _homeArrivalEnabled, modeB: value);
+  }
+
+  Future<void> _setHomeByCurrentLocation() async {
+    try {
+      await HomeArrivalService.setHomeByCurrentLocation();
+      final addr = await HomeArrivalService.getHomeAddress();
+      if (!mounted) return;
+      setState(() {
+        _homeSet = true;
+        _homeAddress = addr;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(tr.homeArrivalHomeSet),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.small)),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${tr.homeArrivalSetHomeFailed}: $e'),
+          backgroundColor: Colors.orange,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  Future<void> _setHomeByMapPicker() async {
+    try {
+      await HomeArrivalService.setHomeByMapPicker();
+      final addr = await HomeArrivalService.getHomeAddress();
+      if (!mounted) return;
+      setState(() {
+        _homeSet = true;
+        _homeAddress = addr;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(tr.homeArrivalHomeSet),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.small)),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      // 用户在原生地图页取消选点会抛 CANCELLED，不当错误处理
+      if (e.toString().contains('CANCELLED')) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${tr.homeArrivalSetHomeFailed}: $e'),
+          backgroundColor: Colors.orange,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  Widget _buildHomeArrivalSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle(tr.homeArrivalTitle),
+        Card(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.card)),
+          child: Column(
+            children: [
+              SwitchListTile(
+                title: Text(tr.homeArrivalEnable),
+                subtitle: Text(tr.homeArrivalDesc),
+                value: _homeArrivalEnabled,
+                onChanged: _toggleHomeArrival,
+                activeThumbColor: ZaiNeColors.brandOrange,
+              ),
+              AnimatedSize(
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeInOut,
+                alignment: Alignment.topCenter,
+                child: _homeArrivalEnabled
+                    ? Column(
+                        key: const ValueKey('home_arrival_options'),
+                        children: [
+                          const Divider(height: 1),
+                          SwitchListTile(
+                            title: Text(tr.homeArrivalModeBNotify),
+                            subtitle: Text(tr.homeArrivalModeBDetail),
+                            value: _homeArrivalModeB,
+                            onChanged: _setHomeArrivalModeB,
+                            activeThumbColor: ZaiNeColors.brandOrange,
+                          ),
+                          const Divider(height: 1),
+                          // 设家：状态行 + 两个等宽按钮（避免塞进 trailing 被挤压导致竖排错乱）
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                            child: Row(
+                              children: [
+                                Icon(Icons.home_outlined, color: Colors.orange.shade700),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        _homeSet ? tr.homeArrivalHomeSet : tr.homeArrivalSetHome,
+                                        style: const TextStyle(fontWeight: FontWeight.w600),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        _homeSet
+                                            ? (_homeAddress ?? tr.homeArrivalHomeSet)
+                                            : tr.homeArrivalHomeNotSet,
+                                        style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                if (_homeSet)
+                                  const Icon(Icons.check_circle_outline, color: Colors.green),
+                              ],
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: OutlinedButton.icon(
+                                    icon: const Icon(Icons.map_outlined, size: 18),
+                                    label: Text(tr.homeArrivalPickOnMap),
+                                    onPressed: _setHomeByMapPicker,
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: Colors.orange.shade700,
+                                      side: BorderSide(color: Colors.orange.shade200),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: OutlinedButton.icon(
+                                    icon: const Icon(Icons.my_location, size: 18),
+                                    label: Text(tr.homeArrivalUseCurrent),
+                                    onPressed: _setHomeByCurrentLocation,
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: Colors.orange.shade700,
+                                      side: BorderSide(color: Colors.orange.shade200),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          // 权限不足提示：功能需「始终允许」才能在 App 关闭时触发
+                          if (_homeArrivalEnabled && !_locationAlways)
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                              child: Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Colors.orange.shade50,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: Colors.orange.shade200),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Icon(Icons.warning_amber_rounded,
+                                            color: Colors.orange.shade700, size: 18),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            tr.homeArrivalNeedAlways,
+                                            style: TextStyle(
+                                                color: Colors.orange.shade900, fontSize: 13),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Align(
+                                      alignment: Alignment.centerRight,
+                                      child: TextButton(
+                                        onPressed: () => HomeArrivalService.openAppSettings(),
+                                        child: Text(tr.homeArrivalGoSettings),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                        ],
+                      )
+                    : const SizedBox.shrink(key: ValueKey('empty')),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // —— 新用户一次性引导（v1.98.0）——
+  Future<void> _maybeShowHomeArrivalNewUserPrompt() async {
+    if (AppConfig.isChinaRegion) return;
+    if (!await HomeArrivalService.shouldShowNewUserPrompt()) return;
+    if (!mounted) return;
+    _showHomeArrivalNewUserPrompt();
+  }
+
+  void _showHomeArrivalNewUserPrompt() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.card)),
+        title: Row(
+          children: [
+            Icon(Icons.home_outlined, color: Colors.orange.shade700),
+            const SizedBox(width: ZaiNeSpacing.sm),
+            Text(tr.homeArrivalNewUserTitle),
+          ],
+        ),
+        content: Text(tr.homeArrivalNewUserBody),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              HomeArrivalService.markNewUserPrompted();
+            },
+            child: Text(tr.homeArrivalNewUserLater),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await HomeArrivalService.markNewUserPrompted();
+              await _toggleHomeArrival(true);
+            },
+            child: Text(tr.homeArrivalNewUserEnable),
+          ),
+        ],
+      ),
+    );
   }
 
   /// 初始化通知插件（单例模式）
@@ -1248,6 +1617,12 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
           ),
 
           const SizedBox(height: ZaiNeSpacing.xl),
+
+          // 到家提醒（v1.98.0）
+          if (!AppConfig.isChinaRegion) ...[
+            _buildHomeArrivalSection(),
+            const SizedBox(height: ZaiNeSpacing.xl),
+          ],
 
           // 求助设置
           _buildSectionTitle(tr.s071),

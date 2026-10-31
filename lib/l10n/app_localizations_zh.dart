@@ -6807,6 +6807,79 @@ class SZh extends S {
 
   @override
   String get z0924 => '状态';
+
+  @override
+  String get homeArrivalTitle => '到家提醒';
+
+  @override
+  String get homeArrivalDesc => '回家第一时间，让牵挂你的人安心';
+
+  @override
+  String get homeArrivalEnable => '开启到家提醒';
+
+  @override
+  String get homeArrivalModeBNotify => '同时通知守护人';
+
+  @override
+  String get homeArrivalModeBDetail => '开启后，你一到家守护人就会收到「已安全到家」通知；关闭则只提醒你自己报平安。';
+
+  @override
+  String get homeArrivalSetHome => '设置家的位置';
+
+  @override
+  String get homeArrivalUseCurrent => '使用当前位置设为家';
+
+  @override
+  String get homeArrivalHomeSet => '家已设置';
+
+  @override
+  String get homeArrivalHomeNotSet => '尚未设置家的位置';
+
+  @override
+  String get homeArrivalNeedLocationPerm => '到家提醒需要「始终允许」定位权限，以便在后台检测你到家';
+
+  @override
+  String get homeArrivalSetHomeHint => '记得先设置家的位置（一键用当前位置）';
+
+  @override
+  String get homeArrivalSetHomeFailed => '设置家位置失败';
+
+  @override
+  String get homeArrivalLocalTitle => '到家啦 🏠';
+
+  @override
+  String get homeArrivalLocalBody => '记得报个平安，让守护你的人放心。';
+
+  @override
+  String get homeArrivalNewUserTitle => '开启到家提醒？';
+
+  @override
+  String get homeArrivalNewUserBody => '回家时自动提醒你报平安，或让守护人知道你已安全到家。';
+
+  @override
+  String get homeArrivalNewUserEnable => '开启';
+
+  @override
+  String get homeArrivalNewUserLater => '稍后';
+
+  @override
+  String get homeArrivalLocationFailed => '获取位置失败，请检查定位权限后重试';
+
+  @override
+  String get homeArrivalPickOnMap => '在地图上选家';
+
+  @override
+  String get homeArrivalNeedAlways =>
+      '到家提醒需要「始终允许」定位权限，才能在 App 关闭时触发。请到 iPhone 设置 → 在呢+ → 位置 中选择「始终允许」。';
+
+  @override
+  String get homeArrivalGoSettings => '去设置';
+
+  @override
+  String get homeArrivalAlwaysPrompt => '请在弹窗中选择「始终允许」，到家提醒才能在 App 关闭时生效。';
+
+  @override
+  String get homeArrivalAlwaysGranted => '已开启始终定位，到家提醒生效 🏠';
 }
 
 /// The translations for Chinese, as used in China (`zh_CN`).
@@ -13612,6 +13685,79 @@ class SZhCn extends SZh {
 
   @override
   String get z0924 => '状态';
+
+  @override
+  String get homeArrivalTitle => '到家提醒';
+
+  @override
+  String get homeArrivalDesc => '回家第一时间，让牵挂你的人安心';
+
+  @override
+  String get homeArrivalEnable => '开启到家提醒';
+
+  @override
+  String get homeArrivalModeBNotify => '同时通知守护人';
+
+  @override
+  String get homeArrivalModeBDetail => '开启后，你一到家守护人就会收到「已安全到家」通知；关闭则只提醒你自己报平安。';
+
+  @override
+  String get homeArrivalSetHome => '设置家的位置';
+
+  @override
+  String get homeArrivalUseCurrent => '使用当前位置设为家';
+
+  @override
+  String get homeArrivalHomeSet => '家已设置';
+
+  @override
+  String get homeArrivalHomeNotSet => '尚未设置家的位置';
+
+  @override
+  String get homeArrivalNeedLocationPerm => '到家提醒需要「始终允许」定位权限，以便在后台检测你到家';
+
+  @override
+  String get homeArrivalSetHomeHint => '记得先设置家的位置（一键用当前位置）';
+
+  @override
+  String get homeArrivalSetHomeFailed => '设置家位置失败';
+
+  @override
+  String get homeArrivalLocalTitle => '到家啦 🏠';
+
+  @override
+  String get homeArrivalLocalBody => '记得报个平安，让守护你的人放心。';
+
+  @override
+  String get homeArrivalNewUserTitle => '开启到家提醒？';
+
+  @override
+  String get homeArrivalNewUserBody => '回家时自动提醒你报平安，或让守护人知道你已安全到家。';
+
+  @override
+  String get homeArrivalNewUserEnable => '开启';
+
+  @override
+  String get homeArrivalNewUserLater => '稍后';
+
+  @override
+  String get homeArrivalLocationFailed => '获取位置失败，请检查定位权限后重试';
+
+  @override
+  String get homeArrivalPickOnMap => '在地图上选家';
+
+  @override
+  String get homeArrivalNeedAlways =>
+      '到家提醒需要「始终允许」定位权限，才能在 App 关闭时触发。请到 iPhone 设置 → 在呢+ → 位置 中选择「始终允许」。';
+
+  @override
+  String get homeArrivalGoSettings => '去设置';
+
+  @override
+  String get homeArrivalAlwaysPrompt => '请在弹窗中选择「始终允许」，到家提醒才能在 App 关闭时生效。';
+
+  @override
+  String get homeArrivalAlwaysGranted => '已开启始终定位，到家提醒生效 🏠';
 }
 
 /// The translations for Chinese, as used in Hong Kong (`zh_HK`).
@@ -20417,6 +20563,79 @@ class SZhHk extends SZh {
 
   @override
   String get z0924 => '狀態';
+
+  @override
+  String get homeArrivalTitle => '到家提醒';
+
+  @override
+  String get homeArrivalDesc => '回家第一时间，让牵挂你的人安心';
+
+  @override
+  String get homeArrivalEnable => '开启到家提醒';
+
+  @override
+  String get homeArrivalModeBNotify => '同时通知守护人';
+
+  @override
+  String get homeArrivalModeBDetail => '开启后，你一到家守护人就会收到「已安全到家」通知；关闭则只提醒你自己报平安。';
+
+  @override
+  String get homeArrivalSetHome => '设置家的位置';
+
+  @override
+  String get homeArrivalUseCurrent => '使用当前位置设为家';
+
+  @override
+  String get homeArrivalHomeSet => '家已设置';
+
+  @override
+  String get homeArrivalHomeNotSet => '尚未设置家的位置';
+
+  @override
+  String get homeArrivalNeedLocationPerm => '到家提醒需要「始终允许」定位权限，以便在后台检测你到家';
+
+  @override
+  String get homeArrivalSetHomeHint => '记得先设置家的位置（一键用当前位置）';
+
+  @override
+  String get homeArrivalSetHomeFailed => '设置家位置失败';
+
+  @override
+  String get homeArrivalLocalTitle => '到家啦 🏠';
+
+  @override
+  String get homeArrivalLocalBody => '记得报个平安，让守护你的人放心。';
+
+  @override
+  String get homeArrivalNewUserTitle => '开启到家提醒？';
+
+  @override
+  String get homeArrivalNewUserBody => '回家时自动提醒你报平安，或让守护人知道你已安全到家。';
+
+  @override
+  String get homeArrivalNewUserEnable => '开启';
+
+  @override
+  String get homeArrivalNewUserLater => '稍后';
+
+  @override
+  String get homeArrivalLocationFailed => '获取位置失败，请检查定位权限后重试';
+
+  @override
+  String get homeArrivalPickOnMap => '在地图上选家';
+
+  @override
+  String get homeArrivalNeedAlways =>
+      '到家提醒需要「始终允许」定位权限，才能在 App 关闭时触发。请到 iPhone 设置 → 在呢+ → 位置 中选择「始终允许」。';
+
+  @override
+  String get homeArrivalGoSettings => '去设置';
+
+  @override
+  String get homeArrivalAlwaysPrompt => '请在弹窗中选择「始终允许」，到家提醒才能在 App 关闭时生效。';
+
+  @override
+  String get homeArrivalAlwaysGranted => '已开启始终定位，到家提醒生效 🏠';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -27222,4 +27441,77 @@ class SZhTw extends SZh {
 
   @override
   String get z0924 => '狀態';
+
+  @override
+  String get homeArrivalTitle => '到家提醒';
+
+  @override
+  String get homeArrivalDesc => '回家第一时间，让牵挂你的人安心';
+
+  @override
+  String get homeArrivalEnable => '开启到家提醒';
+
+  @override
+  String get homeArrivalModeBNotify => '同时通知守护人';
+
+  @override
+  String get homeArrivalModeBDetail => '开启后，你一到家守护人就会收到「已安全到家」通知；关闭则只提醒你自己报平安。';
+
+  @override
+  String get homeArrivalSetHome => '设置家的位置';
+
+  @override
+  String get homeArrivalUseCurrent => '使用当前位置设为家';
+
+  @override
+  String get homeArrivalHomeSet => '家已设置';
+
+  @override
+  String get homeArrivalHomeNotSet => '尚未设置家的位置';
+
+  @override
+  String get homeArrivalNeedLocationPerm => '到家提醒需要「始终允许」定位权限，以便在后台检测你到家';
+
+  @override
+  String get homeArrivalSetHomeHint => '记得先设置家的位置（一键用当前位置）';
+
+  @override
+  String get homeArrivalSetHomeFailed => '设置家位置失败';
+
+  @override
+  String get homeArrivalLocalTitle => '到家啦 🏠';
+
+  @override
+  String get homeArrivalLocalBody => '记得报个平安，让守护你的人放心。';
+
+  @override
+  String get homeArrivalNewUserTitle => '开启到家提醒？';
+
+  @override
+  String get homeArrivalNewUserBody => '回家时自动提醒你报平安，或让守护人知道你已安全到家。';
+
+  @override
+  String get homeArrivalNewUserEnable => '开启';
+
+  @override
+  String get homeArrivalNewUserLater => '稍后';
+
+  @override
+  String get homeArrivalLocationFailed => '获取位置失败，请检查定位权限后重试';
+
+  @override
+  String get homeArrivalPickOnMap => '在地图上选家';
+
+  @override
+  String get homeArrivalNeedAlways =>
+      '到家提醒需要「始终允许」定位权限，才能在 App 关闭时触发。请到 iPhone 设置 → 在呢+ → 位置 中选择「始终允许」。';
+
+  @override
+  String get homeArrivalGoSettings => '去设置';
+
+  @override
+  String get homeArrivalAlwaysPrompt => '请在弹窗中选择「始终允许」，到家提醒才能在 App 关闭时生效。';
+
+  @override
+  String get homeArrivalAlwaysGranted => '已开启始终定位，到家提醒生效 🏠';
 }
