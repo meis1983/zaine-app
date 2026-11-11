@@ -7044,6 +7044,12 @@ class SEn extends S {
   String get z0924 => 'Status';
 
   @override
+  String get z1000 => 'Expand';
+
+  @override
+  String get z1001 => 'Collapse';
+
+  @override
   String get homeArrivalTitle => 'Home Arrival Reminder';
 
   @override

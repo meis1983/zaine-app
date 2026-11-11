@@ -7121,6 +7121,14 @@
   "@z0924": {
     "description": "auto i18n extracted"
   },
+  "z1000": "展開",
+  "@z1000": {
+    "description": "auto i18n extracted"
+  },
+  "z1001": "收起",
+  "@z1001": {
+    "description": "auto i18n extracted"
+  },
   "s1180": "朋友發你守護碼了？點此綁定",
   "@s1180": {
     "description": "auto i18n extracted"

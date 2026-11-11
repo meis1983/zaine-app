@@ -6815,6 +6815,12 @@ class SZh extends S {
   String get z0924 => '状态';
 
   @override
+  String get z1000 => '展开';
+
+  @override
+  String get z1001 => '收起';
+
+  @override
   String get homeArrivalTitle => '到家提醒';
 
   @override
@@ -13741,6 +13747,12 @@ class SZhCn extends SZh {
 
   @override
   String get z0924 => '状态';
+
+  @override
+  String get z1000 => '展开';
+
+  @override
+  String get z1001 => '收起';
 
   @override
   String get homeArrivalTitle => '到家提醒';
@@ -20671,6 +20683,12 @@ class SZhHk extends SZh {
   String get z0924 => '狀態';
 
   @override
+  String get z1000 => '展開';
+
+  @override
+  String get z1001 => '收起';
+
+  @override
   String get homeArrivalTitle => '到家提醒';
 
   @override
@@ -27597,6 +27615,12 @@ class SZhTw extends SZh {
 
   @override
   String get z0924 => '狀態';
+
+  @override
+  String get z1000 => '展開';
+
+  @override
+  String get z1001 => '收起';
 
   @override
   String get homeArrivalTitle => '到家提醒';

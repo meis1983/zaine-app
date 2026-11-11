@@ -239,6 +239,8 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
   Map<String, int> _peaceRequestIdByReceiver = {};
   // 【留言功能 v1】receiver_id -> 「需要帮助」时附带的选填留言（status=2 且非空时展示）
   Map<String, String> _peaceMessageByReceiver = {};
+  // 【v1.98.4 横滑卡片】被展开留言的 receiver_id 集合（点留言框展开/收起全文）
+  Set<String> _expandedRids = {};
   Timer? _refreshTimer; // 定期刷新定时器
 
   // 【v1.97.4 状态引擎上提】生命体征守护状态卡数据
@@ -2443,7 +2445,13 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                 ),
               )
             else
-              ..._sortedGuardedByMe.map((person) {
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children:
+                      _sortedGuardedByMe.map((person) {
                 final name = _guardedDisplayName(person);
                 final checkedIn = person['checked_in_today'] == true;
                 final isPending = person['last_signin_at'] == null; // 待激活：已注册但未登录 App
@@ -2454,9 +2462,11 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                 final peaceMsg = _peaceMessageByReceiver[rid];
                 // 【C4】该被守护人对我发起的平安确认的响应状态（0待确认/1已确认/2需要帮助）
                 final peaceStatus = _peaceStatusByReceiver[rid];
-                return Container(
-                  margin: const EdgeInsets.only(bottom: ZaiNeSpacing.cardXs),
-                  padding: const EdgeInsets.all(ZaiNeSpacing.lg),
+                return SizedBox(
+                  width: 200,
+                  child: Container(
+                  margin: const EdgeInsets.only(right: 10),
+                  padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
                     color: ZaiNeColors.cardBg(),
                     borderRadius: BorderRadius.circular(ZaiNeRadius.card),
@@ -2486,7 +2496,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                         },
                         guardedColor,
                       ),
-                      const SizedBox(width: ZaiNeSpacing.lg),
+                      const SizedBox(width: 10),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -2517,6 +2527,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                             ),
                             const SizedBox(height: 4),
                             // 状态行：仅签到态（chip 已挪走、boundAt 下移独立行）
+                            // 【v1.98.4 横滑卡】状态文字包 Flexible+ellipsis，150px 窄卡英文不溢出
                             Row(
                               children: [
                                 Icon(
@@ -2531,16 +2542,20 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                                       : (checkedIn ? Colors.green : Colors.grey[400]),
                                 ),
                                 const SizedBox(width: 4),
-                                Text(
-                                  isPending
-                                      ? tr.s369
-                                      : (checkedIn ? tr.signInButtonCheckedIn : tr.s370),
-                                  style: TextStyle(
-                                    fontSize: ZaiNeFontSize.micro,
-                                    color: isPending
-                                        ? Colors.orange[700]
-                                        : (checkedIn ? Colors.green : Colors.grey[500]),
-                                    fontWeight: FontWeight.w600,
+                                Flexible(
+                                  child: Text(
+                                    isPending
+                                        ? tr.s369
+                                        : (checkedIn ? tr.signInButtonCheckedIn : tr.s370),
+                                    overflow: TextOverflow.ellipsis,
+                                    maxLines: 1,
+                                    style: TextStyle(
+                                      fontSize: ZaiNeFontSize.micro,
+                                      color: isPending
+                                          ? Colors.orange[700]
+                                          : (checkedIn ? Colors.green : Colors.grey[500]),
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -2558,45 +2573,84 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                             ],
                             // 【留言功能 v1 + V2】任一状态下含留言/轻量状态均展示气泡（仅发送给守护者，合规）
                             // 需要帮助(status=2)用警示红；我没事/其他(status=1)用沉静蓝
+                            // 【v1.98.4 横滑卡·A 方案】默认 2 行 + 省略号，点气泡展开/收起全文；保证卡片等高
                             if (peaceMsg != null && peaceMsg.isNotEmpty) ...[
                               const SizedBox(height: 8),
-                              Container(
-                                width: double.infinity,
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                                decoration: BoxDecoration(
-                                  color: peaceStatus == 2
-                                      ? const Color(0xFFA32D2D).withValues(alpha: 0.08)
-                                      : Colors.blue.withValues(alpha: 0.06),
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(
+                              GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    if (_expandedRids.contains(rid)) {
+                                      _expandedRids.remove(rid);
+                                    } else {
+                                      _expandedRids.add(rid);
+                                    }
+                                  });
+                                },
+                                child: Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                  decoration: BoxDecoration(
                                     color: peaceStatus == 2
-                                        ? const Color(0xFFA32D2D).withValues(alpha: 0.18)
-                                        : Colors.blue.withValues(alpha: 0.16),
-                                    width: 1,
+                                        ? const Color(0xFFA32D2D).withValues(alpha: 0.08)
+                                        : Colors.blue.withValues(alpha: 0.06),
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(
+                                      color: peaceStatus == 2
+                                          ? const Color(0xFFA32D2D).withValues(alpha: 0.18)
+                                          : Colors.blue.withValues(alpha: 0.16),
+                                      width: 1,
+                                    ),
                                   ),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      peaceStatus == 2 ? tr.z0917 : tr.z0924, // 留言 / 状态
-                                      style: TextStyle(
-                                        fontSize: ZaiNeFontSize.micro,
-                                        fontWeight: FontWeight.w600,
-                                        color: peaceStatus == 2
-                                            ? const Color(0xFFA32D2D)
-                                            : Colors.blue[700],
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        peaceStatus == 2 ? tr.z0917 : tr.z0924, // 留言 / 状态
+                                        style: TextStyle(
+                                          fontSize: ZaiNeFontSize.micro,
+                                          fontWeight: FontWeight.w600,
+                                          color: peaceStatus == 2
+                                              ? const Color(0xFFA32D2D)
+                                              : Colors.blue[700],
+                                        ),
                                       ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      peaceMsg,
-                                      style: TextStyle(
-                                        fontSize: ZaiNeFontSize.micro,
-                                        color: Colors.grey[700],
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        peaceMsg,
+                                        maxLines: _expandedRids.contains(rid) ? null : 2,
+                                        overflow: _expandedRids.contains(rid)
+                                            ? null
+                                            : TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontSize: ZaiNeFontSize.micro,
+                                          color: Colors.grey[700],
+                                        ),
                                       ),
-                                    ),
-                                  ],
+                                      if (!_expandedRids.contains(rid) &&
+                                          peaceMsg.length > 24) ...[
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          tr.z1000, // 展开
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            color: Colors.blue[600],
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
+                                      if (_expandedRids.contains(rid)) ...[
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          tr.z1001, // 收起
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            color: Colors.blue[600],
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
                                 ),
                               ),
                             ],
@@ -2690,8 +2744,11 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                       ),
                     ],
                   ),
+                ),
                 );
-              }),
+              }).toList(),
+                ),
+              ),
           ],
         ),
       ),

@@ -1978,21 +1978,12 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
                   ],
                 ),
                 const SizedBox(height: ZaiNeSpacing.xxs),
-                Container(
-                  height: 48,
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  decoration: BoxDecoration(
-                    color: fieldBg,
-                    borderRadius: BorderRadius.circular(ZaiNeRadius.small),
-                    border: Border.all(color: borderColor, width: 1),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(child: _buildGenderChip(tr.s179)),
-                      const SizedBox(width: ZaiNeSpacing.xs),
-                      Expanded(child: _buildGenderChip(tr.s284)),
-                    ],
-                  ),
+                Row(
+                  children: [
+                    Expanded(child: _buildGenderChip(tr.s179)),
+                    const SizedBox(width: ZaiNeSpacing.sm),
+                    Expanded(child: _buildGenderChip(tr.s284)),
+                  ],
                 ),
                 const SizedBox(height: ZaiNeSpacing.md),
                 // 血型（整行：label 在上，下拉整行宽）
@@ -2098,26 +2089,35 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
 
   Widget _buildGenderChip(String gender) {
     final isSelected = _gender == gender;
+    final borderColor = ZaiNeColors.scaffoldBg() == const Color(0xFF121212)
+        ? Colors.white.withValues(alpha: 20)
+        : Colors.grey.shade200;
+    final fieldBg = ZaiNeColors.scaffoldBg() == const Color(0xFF121212)
+        ? const Color(0xFF1A1A2A)
+        : const Color(0xFFFAFAFA);
     return GestureDetector(
       onTap: () => setState(() => _gender = gender),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        height: 44,
         decoration: BoxDecoration(
-          color: isSelected ? ZaiNeColors.brandOrange.withValues(alpha: 31) : Colors.transparent,
-          borderRadius: BorderRadius.circular(ZaiNeRadius.button),
+          color: isSelected ? ZaiNeColors.brandOrange : fieldBg,
+          borderRadius: BorderRadius.circular(ZaiNeRadius.small),
           border: Border.all(
-            color: isSelected ? ZaiNeColors.brandOrange : (ZaiNeColors.scaffoldBg() == const Color(0xFF121212) ? Colors.white.withValues(alpha: 31) : Colors.grey.shade300),
+            color: isSelected ? ZaiNeColors.brandOrange : borderColor,
+            width: 1,
           ),
         ),
-        child: Text(
-          gender,
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-            color: isSelected ? ZaiNeColors.brandOrange : ZaiNeColors.textSecondary(),
+        child: Center(
+          child: Text(
+            gender,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+              color: isSelected ? Colors.white : ZaiNeColors.textSecondary(),
+            ),
+            overflow: TextOverflow.ellipsis,
+            maxLines: 1,
           ),
-          overflow: TextOverflow.ellipsis,
-          maxLines: 1,
         ),
       ),
     );

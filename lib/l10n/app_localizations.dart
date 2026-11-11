@@ -12324,6 +12324,18 @@ abstract class S {
   /// **'状态'**
   String get z0924;
 
+  /// auto i18n extracted
+  ///
+  /// In zh_CN, this message translates to:
+  /// **'展开'**
+  String get z1000;
+
+  /// auto i18n extracted
+  ///
+  /// In zh_CN, this message translates to:
+  /// **'收起'**
+  String get z1001;
+
   /// v1.98.0 home arrival feature
   ///
   /// In zh_CN, this message translates to:

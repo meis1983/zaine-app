@@ -7121,6 +7121,14 @@
   "@z0924": {
     "description": "auto i18n extracted"
   },
+  "z1000": "Expand",
+  "@z1000": {
+    "description": "auto i18n extracted"
+  },
+  "z1001": "Collapse",
+  "@z1001": {
+    "description": "auto i18n extracted"
+  },
   "s1180": "Got a guardian code from a friend? Tap to connect",
   "@s1180": {
     "description": "auto i18n extracted"
