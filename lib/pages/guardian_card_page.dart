@@ -51,7 +51,7 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
 
   // 当前卡片的裂变参数（后端发卡成功后更新）
   String _currentShareUrl = '';
-  String _currentCardCode = '';  // 【新增 v1.9.78】当前守护卡安全码
+  String _currentCardCode = '';  // 【新增 v1.9.78】当前守护卡码
 
   // 邀请统计（P4）
   int _invitedCount = 0;
@@ -451,7 +451,7 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
         });
       }
 
-      // ====== 第二步：调用后端发卡，获取安全码 ======
+      // ====== 第二步：调用后端发卡，获取守护卡码 ======
       final sendResult = await GuardianCardService.sendCardWithBackend(
         message: _currentMessage,
         recipientName: _recipientName.isNotEmpty ? _recipientName : null,
@@ -511,7 +511,7 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
         setState(() {
           _currentShareUrl = landingUrl;
           _currentCardCode = cardCode;
-          if (kDebugMode) debugPrint('[GuardianCard] 二维码URL已更新: $_currentShareUrl, 安全码: $_currentCardCode');
+          if (kDebugMode) debugPrint('[GuardianCard] 二维码URL已更新: $_currentShareUrl, 守护卡码: $_currentCardCode');
           final newAvailable = sendResult['available_cards'] as int?;
           if (newAvailable != null) _availableCards = newAvailable;
         });
@@ -1923,12 +1923,18 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
                               ),
                             ),
                             const SizedBox(width: ZaiNeSpacing.xs),
-                            Text(
-                              timeLeft,
-                              style: TextStyle(
-                                fontSize: ZaiNeFontSize.micro,
-                                color: timeColor,
-                                fontWeight: FontWeight.w500,
+                            // 【修复 v1.98.2】窄屏溢出：timeLeft 用 Expanded 包裹并省略，
+                            // 防止"剩 X 小时 Y 分"与"即将过期"在小屏被挤出/遮挡
+                            Expanded(
+                              child: Text(
+                                timeLeft,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: ZaiNeFontSize.micro,
+                                  color: timeColor,
+                                  fontWeight: FontWeight.w500,
+                                ),
                               ),
                             ),
                             if (isUrgent) ...[
@@ -1945,7 +1951,7 @@ class _GuardianCardPageState extends State<GuardianCardPage> {
                           ],
                         ],
                       ),
-                      // 【新增 v1.9.78】安全码持久化显示：退出发送页后仍可找到
+                      // 【新增 v1.9.78】守护卡码持久化显示：退出发送页后仍可找到
                       if (!isExpired && cardCode.isNotEmpty) ...[
                         const SizedBox(height: ZaiNeSpacing.sm),
                         GestureDetector(

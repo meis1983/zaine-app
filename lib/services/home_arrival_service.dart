@@ -14,6 +14,7 @@
 //           Android 暂未接入（本版本 iOS 先上），Platform.isIOS 守卫后 no-op。
 
 import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -23,7 +24,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../l10n/i18n.dart';
 import 'api/notify_service.dart';
 import 'platform/location_service.dart';
-import 'checkin_reminder_service.dart';
 
 class HomeArrivalService {
   static const MethodChannel _channel = MethodChannel('zaine/geofence');
@@ -58,11 +58,32 @@ class HomeArrivalService {
     } catch (e) {
       debugPrint('[HomeArrival] 拉取待处理到达事件失败(非致命): $e');
     }
+    // 【v1.98.2 修复D】每次启动用当前代码参数重注册家围栏。
+    // iOS 会缓存已监控区域，若不在启动时重注册，旧区域（旧参数，如 notifyOnExit=false）
+    // 会残留，导致升级后 native 的新设置不生效——这正是"装了新包也不触发"的隐患。
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final enabled = prefs.getBool(_kEnabled) ?? false;
+      if (enabled && prefs.getDouble(_kLat) != null && prefs.getDouble(_kLng) != null) {
+        await _startMonitoring(prefs);
+        debugPrint('[HomeArrival] ✅ 启动时重注册家围栏（应用最新 notifyOnExit 等参数）');
+      }
+    } catch (e) {
+      debugPrint('[HomeArrival] 启动时重注册围栏失败(非致命): $e');
+    }
   }
 
   static Future<dynamic> _onNativeCall(MethodCall call) async {
     if (call.method == 'onArrival') {
       await _handleArrival();
+      // 【v1.98.2 修复】前台 onArrival 已真正处理（模式B POST / 模式A 原生已弹），
+      // 清掉原生 pending，避免诊断页「待上报守护人事件」残留历史时间戳。
+      // 引擎未就绪时 onArrival 不会被触达，此时 pending 保留给 getPendingArrival 冷启动补发。
+      try {
+        await _channel.invokeMethod('clearPendingArrival');
+      } catch (e) {
+        debugPrint('[HomeArrival] 清除 pending 失败(非致命): $e');
+      }
     } else if (call.method == 'onAuthChanged') {
       // 【v1.98.2 修复B】授权变更后若已升 Always 且功能已开，自动重启围栏。
       // 解决"用户先开功能（此时 WhenInUse 围栏哑）→ 后升 Always → 围栏不会自动激活"。
@@ -79,6 +100,38 @@ class HomeArrivalService {
       onAuthChanged?.call();
     }
     return null;
+  }
+
+  /// 【v1.98.2 诊断页】拉取原生围栏诊断信息（纯只读，不触发任何行为）。
+  /// 返回字段含 authStatus / homeRegionRegistered / savedLat/Lng / enabled / modeB /
+  /// lastEnterTs / lastNotifTs / pendingArrivalTs 等，供诊断页直读，免去 Mac 控制台。
+  static Future<Map<String, dynamic>?> getDiagnostics() async {
+    if (!Platform.isIOS) return null;
+    try {
+      final res = await _channel.invokeMethod<dynamic>('getDiagnostics');
+      if (res is Map) {
+        return Map<String, dynamic>.from(
+          res.map((k, v) => MapEntry(k.toString(), v)),
+        );
+      }
+    } catch (e) {
+      return <String, dynamic>{'error': e.toString()};
+    }
+    return null;
+  }
+
+  /// 【v1.98.2 诊断】读取最近一次 /home-arrival 上报响应（含 apns_enabled/guardian_ids/device_tokens），
+  /// 供诊断页展示后端推送链路事实。返回 null 表示尚未上报过。
+  static Future<Map<String, dynamic>?> getLastArrivalResult() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString('home_arrival_last_result');
+      if (raw == null) return null;
+      return Map<String, dynamic>.from(jsonDecode(raw) as Map);
+    } catch (e) {
+      debugPrint('[HomeArrival] 读取上次上报结果失败(非致命): $e');
+      return null;
+    }
   }
 
   /// 当前定位授权是否为「始终允许」（Only Always 才能让围栏在 App 关闭时触发）。
@@ -245,31 +298,23 @@ class HomeArrivalService {
     if (modeB) {
       // 模式 B：仅通知守护人（后端不自动签到）
       try {
-        await NotifyService.notifyGuardiansAboutHomeArrival(
+        final resp = await NotifyService.notifyGuardiansAboutHomeArrival(
           tzOffsetMinutes: DateTime.now().timeZoneOffset.inMinutes,
         );
-        debugPrint('[HomeArrival] 模式B 已通知守护人（到家）');
+        // 【v1.98.2 诊断】存储最近一次到家上报响应，供诊断页展示后端链路事实
+        // （apns_enabled / guardian_ids / device_tokens），无需 curl 即可定位收不到推送的根因。
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('home_arrival_last_result', jsonEncode(resp));
+        } catch (_) {}
+        debugPrint('[HomeArrival] 模式B 已通知守护人（到家）: $resp');
       } catch (e) {
         debugPrint('[HomeArrival] 模式B 上报失败: $e');
       }
     } else {
-      // 模式 A：本地通知提醒本人报平安
-      await CheckInReminderService.init();
-      await CheckInReminderService.notifications.show(
-        7,
-        tr.homeArrivalLocalTitle,
-        tr.homeArrivalLocalBody,
-        const NotificationDetails(
-          iOS: DarwinNotificationDetails(),
-          android: AndroidNotificationDetails(
-            'home_arrival',
-            '到家提醒',
-            importance: Importance.high,
-            priority: Priority.high,
-          ),
-        ),
-      );
-      debugPrint('[HomeArrival] 模式A 已弹本地通知');
+      // 模式 A 的本地通知由原生 didEnterRegion → _fireHomeArrivalLocalNotification 统一发送
+      // （覆盖 App 被杀/前台/后台，且带每日去重），此处不再发，避免与上一步双发。
+      debugPrint('[HomeArrival] 模式A 由原生统一弹本地通知（Dart 侧不重复发）');
     }
   }
 }

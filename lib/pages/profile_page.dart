@@ -1802,6 +1802,7 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
         ],
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildQuickActionItem(
             icon: Icons.palette_rounded,
@@ -1830,8 +1831,8 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
           Container(width: 1, height: 36, color: isDark ? Colors.white.withValues(alpha: 0.2) : Colors.grey.shade200),
           _buildQuickActionItem(
             icon: Icons.qr_code_rounded,
-            label: '我的守护码',
-            value: '出示给亲友',
+            label: tr.s1190,
+            value: tr.s1212,
             iconBgColor: Colors.blue.shade100,
             iconColor: Colors.blue.shade600,
             onTap: () {
@@ -1968,57 +1969,60 @@ class _ProfilePageState extends State<ProfilePage> with DeveloperMode<ProfilePag
                 ),
                 const SizedBox(height: ZaiNeSpacing.md),
 
-                // 性别 + 血型 横排（紧凑型）
+                // 性别（整行：label 在上，Male/Female 两个 chip 平分）
                 Row(
                   children: [
-                    // 性别选择器
-                    Expanded(
-                      child: Container(
-                        height: 48,
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        decoration: BoxDecoration(
-                          color: fieldBg,
-                          borderRadius: BorderRadius.circular(ZaiNeRadius.small),
-                          border: Border.all(color: borderColor, width: 1),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(Icons.wc_outlined, size: 16, color: Colors.pink.shade400),
-                            const SizedBox(width: ZaiNeSpacing.sm),
-                            Text(tr.s283, style: TextStyle(fontSize: 13, color: labelColor)),
-                            const Spacer(),
-                            _buildGenderChip(tr.s179),
-                            const SizedBox(width: ZaiNeSpacing.xs),
-                            _buildGenderChip(tr.s284),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: ZaiNeSpacing.cardXs),
-                    // 血型选择器
-                    Expanded(
-                      child: Container(
-                        height: 48,
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        decoration: BoxDecoration(
-                          color: fieldBg,
-                          borderRadius: BorderRadius.circular(ZaiNeRadius.small),
-                          border: Border.all(color: borderColor, width: 1),
-                        ),
-                        child: DropdownButtonHideUnderline(
-                          child: DropdownButton<String>(
-                            value: _bloodType,
-                            isExpanded: true,
-                            icon: Icon(Icons.arrow_drop_down, size: 18, color: labelColor),
-                            items: [tr.s013, tr.s180, tr.s181, tr.s182, tr.s183, tr.s184]
-                                .map((t) => DropdownMenuItem(value: t, child: Text(t, style: TextStyle(fontSize: 13, color: ZaiNeColors.textPrimary()))))
-                                .toList(),
-                            onChanged: (v) => setState(() => _bloodType = v!),
-                          ),
-                        ),
-                      ),
-                    ),
+                    Icon(Icons.wc_outlined, size: 16, color: Colors.pink.shade400),
+                    const SizedBox(width: ZaiNeSpacing.sm),
+                    Text(tr.s283, style: TextStyle(fontSize: 13, color: labelColor)),
                   ],
+                ),
+                const SizedBox(height: ZaiNeSpacing.xxs),
+                Container(
+                  height: 48,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  decoration: BoxDecoration(
+                    color: fieldBg,
+                    borderRadius: BorderRadius.circular(ZaiNeRadius.small),
+                    border: Border.all(color: borderColor, width: 1),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(child: _buildGenderChip(tr.s179)),
+                      const SizedBox(width: ZaiNeSpacing.xs),
+                      Expanded(child: _buildGenderChip(tr.s284)),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: ZaiNeSpacing.md),
+                // 血型（整行：label 在上，下拉整行宽）
+                Row(
+                  children: [
+                    Icon(Icons.bloodtype, size: 16, color: Colors.red.shade400),
+                    const SizedBox(width: ZaiNeSpacing.sm),
+                    Text(tr.z0723, style: TextStyle(fontSize: 13, color: labelColor)),
+                  ],
+                ),
+                const SizedBox(height: ZaiNeSpacing.xxs),
+                Container(
+                  height: 48,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  decoration: BoxDecoration(
+                    color: fieldBg,
+                    borderRadius: BorderRadius.circular(ZaiNeRadius.small),
+                    border: Border.all(color: borderColor, width: 1),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: _bloodType,
+                      isExpanded: true,
+                      icon: Icon(Icons.arrow_drop_down, size: 18, color: labelColor),
+                      items: [tr.s013, tr.s180, tr.s181, tr.s182, tr.s183, tr.s184]
+                          .map((t) => DropdownMenuItem(value: t, child: Text(t, style: TextStyle(fontSize: 13, color: ZaiNeColors.textPrimary()))))
+                          .toList(),
+                      onChanged: (v) => setState(() => _bloodType = v!),
+                    ),
+                  ),
                 ),
                 const SizedBox(height: ZaiNeSpacing.md),
                 _buildModernField(

@@ -55,9 +55,41 @@ class _RedeemCardPageState extends State<RedeemCardPage> {
     });
 
     try {
-      // 【CN合规】被添加方"单独同意"门禁（个保法第29条：敏感个人信息需单独同意）
-      // 先查卡信息获取邀请人，展示独立同意弹窗；用户拒绝则不建立关系。
-      // 全球版（kIsChinaBuild=false）跳过此门禁，沿用原流程。
+      // 【v1.98.2 修复】优先走「我的守护码」专用路径：先查守护码，命中则走守护码兑换；
+      // 未命中(invalid_code)再回退守护卡逻辑。彻底消除"扫码成、手输败"的数据歧义。
+      final secCheck = await CardService.checkSecurityCode(code);
+      if (!mounted) return;
+
+      if (secCheck['success'] == true) {
+        // 命中「我的守护码」：CN 版需单独同意门禁（个保法第29条）
+        final senderName = secCheck['sender_name']?.toString() ?? 'TA';
+        if (kIsChinaBuild) {
+          final agreed = await showGuardianConsentDialog(context, senderName);
+          if (!mounted) return;
+          if (!agreed) {
+            // 用户拒绝，不建立守护关系，不调用 redeemSecurityCode
+            setState(() => _errorText = tr.s1204);
+            return;
+          }
+        }
+        final res = await CardService.redeemSecurityCode(code);
+        if (!mounted) return;
+        if (res['success'] == true) {
+          final senderName = res['sender_name']?.toString() ?? 'TA';
+          try {
+            await SyncService.pullFromServer();
+          } catch (_) {
+            // 静默失败，不影响用户体验
+          }
+          if (!mounted) return;
+          _showSuccessDialog(senderName);
+        } else {
+          setState(() => _errorText = res['message']?.toString() ?? tr.s1011);
+        }
+        return;
+      }
+
+      // 未命中守护码 → 回退守护卡逻辑（含 CN 单独同意门禁）
       if (kIsChinaBuild) {
         final check = await CardService.checkCard(code);
         if (!mounted) return;
@@ -67,12 +99,11 @@ class _RedeemCardPageState extends State<RedeemCardPage> {
           return;
         }
         final senderName = check['sender_name']?.toString() ?? 'TA';
-        // 共享合规组件，与登录页渐进披露入口同一份实现
         final agreed = await showGuardianConsentDialog(context, senderName);
         if (!mounted) return;
         if (!agreed) {
           // 用户拒绝，不建立守护关系，不调用 redeemCard
-          setState(() => _errorText = '您已拒绝，未建立守护关系');
+          setState(() => _errorText = tr.s1204);
           return;
         }
       }
@@ -83,8 +114,6 @@ class _RedeemCardPageState extends State<RedeemCardPage> {
       if (res['success'] == true) {
         final senderName = res['sender_name']?.toString() ?? 'TA';
 
-        // 【修改 v1.17.1】去掉信封动画，兑换成功后直接弹出确认框
-        // 信封动画保留在 onboarding（落地页注册）和 home_page（DeepLink唤醒）两个场景
         try {
           await SyncService.pullFromServer();
         } catch (_) {
@@ -140,7 +169,7 @@ class _RedeemCardPageState extends State<RedeemCardPage> {
             const SizedBox(height: ZaiNeSpacing.md),
             Text(
               kIsChinaBuild
-                  ? '$senderName 已成功成为您的守护者'
+                  ? tr.s1206(senderName)
                   : tr.s1013(senderName),
               textAlign: TextAlign.center,
               style: TextStyle(
@@ -236,7 +265,7 @@ class _RedeemCardPageState extends State<RedeemCardPage> {
                 child: OutlinedButton.icon(
                   onPressed: _isLoading ? null : _scanCode,
                   icon: const Icon(Icons.qr_code_scanner, size: 18),
-                  label: const Text('扫描对方的守护码'),
+                  label: Text(tr.s1205),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: ZaiNeColors.brandOrange,
                     side: BorderSide(color: ZaiNeColors.brandOrange.withValues(alpha: 0.5)),

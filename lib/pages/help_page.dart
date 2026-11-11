@@ -529,7 +529,10 @@ class _HelpPageState extends State<HelpPage> with TickerProviderStateMixin {
           ElevatedButton(
             onPressed: () async {
               final phone = controller.text.trim();
-              if (phone.length < 11) {
+              // 【2026-11-03 断点#4 修复】原硬编码 `length < 11` 只适配中国大陆 11 位号，
+              // 海外号（香港 8 位、新加坡 8 位、瑞典 7-9 位、美国 10 位等）会被拒。
+              // 统一走 PhoneUtil.isValid（归一化后 7-15 位即合法）。
+              if (!PhoneUtil.isValid(phone)) {
                 ScaffoldMessenger.of(context).showSnackBar(
                    SnackBar(content: Text(tr.s860), backgroundColor: Colors.orange),
                 );

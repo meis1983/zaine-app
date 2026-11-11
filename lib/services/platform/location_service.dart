@@ -2,12 +2,14 @@
 // 位置服务（v1.7: 新增逆地理编码；v1.97.8: 海外去高德——逆地理编码统一走系统原生）
 
 import 'dart:async';
+import 'dart:ui' show Locale, PlatformDispatcher;
 import 'package:flutter/foundation.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../l10n/i18n.dart';
+import '../../l10n/locale_notifier.dart';
 
 class LocationService {
   static const String _diagProviderKey = 'geocode_last_provider';
@@ -212,8 +214,44 @@ class LocationService {
     }
   }
 
+  /// 根据 App 当前语言（或系统语言）决定逆地理编码的语言标识，
+  /// 让 SOS 地址跟随界面语言，避免英文界面显示中文地址的中英混杂问题。
+  /// 返回形如 'en_US' / 'zh_CN' / 'zh_TW' / 'zh_HK' 的 localeIdentifier。
+  static String _geocodeLocaleIdentifier() {
+    Locale? locale = localeNotifier.locale;
+    String languageCode;
+    String? countryCode;
+    if (locale == null) {
+      // 跟随系统：用设备当前 locale（避免上次强制设置残留导致中英错配）
+      final sys = PlatformDispatcher.instance.locale;
+      languageCode = sys.languageCode;
+      countryCode = sys.countryCode;
+    } else {
+      languageCode = locale.languageCode;
+      countryCode = locale.countryCode;
+    }
+    if (languageCode == 'en') return 'en_US';
+    if (languageCode == 'zh') {
+      if (countryCode == 'TW') return 'zh_TW';
+      if (countryCode == 'HK') return 'zh_HK';
+      return 'zh_CN';
+    }
+    // 其它语言：直接用语言代码（如 ja、ko、de…），尽量带上国家码
+    return countryCode != null && countryCode.isNotEmpty
+        ? '${languageCode}_$countryCode'
+        : languageCode;
+  }
+
   static Future<String?> _reverseGeocodeNative(double latitude, double longitude) async {
     try {
+      // 【修复】逆地理语言跟随界面语言：英文界面 → 英文地址，杜绝中英混杂
+      final localeId = _geocodeLocaleIdentifier();
+      try {
+        await setLocaleIdentifier(localeId);
+      } catch (e) {
+        if (kDebugMode) debugPrint('[LocationService] setLocaleIdentifier 失败（非致命）: $e');
+      }
+
       final placemarks = await placemarkFromCoordinates(
         latitude,
         longitude,

@@ -13,6 +13,7 @@ import '../data/app_constants.dart';
 import '../services/membership_service.dart';
 import '../services/checkin_reminder_service.dart'; // 【v1.97.1+157】id=0/id=3 提醒排程（含签到闸门）
 import '../services/home_arrival_service.dart'; // 【v1.98.0】到家围栏：配置读写 + 原生桥接 + 定位权限
+import 'diagnostic_page.dart'; // 【v1.98.2 诊断页】地理围栏状态直读（调试）
 import '../widgets/developer_mode.dart';
 import '../config/feature_flags.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -486,6 +487,17 @@ class _SettingsPageState extends State<SettingsPage> with DeveloperMode<Settings
                         ],
                       )
                     : const SizedBox.shrink(key: ValueKey('empty')),
+              ),
+              ListTile(
+                leading: const Icon(Icons.bug_report_outlined, color: Colors.grey),
+                title: const Text('地理围栏诊断（调试）'),
+                subtitle: const Text('查看定位授权 / 围栏注册 / 最近触发记录'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const DiagnosticPage()),
+                  );
+                },
               ),
             ],
           ),

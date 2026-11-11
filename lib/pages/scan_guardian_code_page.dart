@@ -9,6 +9,8 @@ import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../l10n/i18n.dart';
+
 class ScanGuardianCodePage extends StatefulWidget {
   const ScanGuardianCodePage({super.key});
 
@@ -63,7 +65,7 @@ class _ScanGuardianCodePageState extends State<ScanGuardianCodePage> {
     if (candidate == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('未能从图片中识别守护码，请手动输入或重新选择')),
+          SnackBar(content: Text(tr.s1207)),
         );
       }
       return;
@@ -91,7 +93,7 @@ class _ScanGuardianCodePageState extends State<ScanGuardianCodePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('扫描守护码'),
+        title: Text(tr.s1208),
         centerTitle: true,
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
@@ -118,7 +120,7 @@ class _ScanGuardianCodePageState extends State<ScanGuardianCodePage> {
             left: 24,
             right: 24,
             child: Text(
-              '将对方出示的守护码 / 二维码置于框内',
+              tr.s1209,
               textAlign: TextAlign.center,
               style: const TextStyle(color: Colors.white, fontSize: 14, shadows: [
                 Shadow(color: Colors.black54, blurRadius: 4),
@@ -130,7 +132,7 @@ class _ScanGuardianCodePageState extends State<ScanGuardianCodePage> {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _handled ? null : _pickFromAlbum,
         icon: const Icon(Icons.photo_library),
-        label: const Text('从相册选取'),
+        label: Text(tr.s1210),
         backgroundColor: Colors.orange,
       ),
     );

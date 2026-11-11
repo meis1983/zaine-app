@@ -434,10 +434,20 @@ class _AddFenceDialogState extends State<_AddFenceDialog> {
             TextField(
               controller: _radiusController,
               keyboardType: TextInputType.number,
+              textInputAction: TextInputAction.done,
+              onSubmitted: (_) => FocusScope.of(context).unfocus(),
               decoration: InputDecoration(
                 labelText: tr.s668,
                 hintText: tr.s669,
-                suffix:  Text(tr.s670),
+                prefixText: tr.s670,
+                // 【修复 v1.98.2】iOS numberPad 无"完成"键 → 加"完成"按钮，解决数字键盘"关不掉"
+                suffix: GestureDetector(
+                  onTap: () => FocusScope.of(context).unfocus(),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: Text(tr.z0487, style: TextStyle(color: Colors.blue, fontWeight: FontWeight.w600)),
+                  ),
+                ),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.input)),
                 isDense: true,
               ),
@@ -453,6 +463,8 @@ class _AddFenceDialogState extends State<_AddFenceDialog> {
                 TextField(
                   controller: _latController,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (_) => FocusScope.of(context).unfocus(),
                   decoration: InputDecoration(
                     labelText: tr.s672,
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.input)),
@@ -463,6 +475,8 @@ class _AddFenceDialogState extends State<_AddFenceDialog> {
                 TextField(
                   controller: _lngController,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (_) => FocusScope.of(context).unfocus(),
                   decoration: InputDecoration(
                     labelText: tr.s673,
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.input)),

@@ -6749,6 +6749,18 @@ abstract class S {
   /// **'我的守护码'**
   String get s1190;
 
+  /// 扫码页：从相册选图按钮
+  ///
+  /// In zh_CN, this message translates to:
+  /// **'从相册选取'**
+  String get s1210;
+
+  /// 我的页：我的守护码入口副标题
+  ///
+  /// In zh_CN, this message translates to:
+  /// **'出示给亲友'**
+  String get s1212;
+
   /// auto i18n extracted
   ///
   /// In zh_CN, this message translates to:
@@ -12455,6 +12467,90 @@ abstract class S {
   /// In zh_CN, this message translates to:
   /// **'已开启始终定位，到家提醒生效 🏠'**
   String get homeArrivalAlwaysGranted;
+
+  /// 我的守护码页：生成失败提示
+  ///
+  /// In zh_CN, this message translates to:
+  /// **'生成守护码失败，请稍后重试'**
+  String get s1196;
+
+  /// 我的守护码页：网络异常
+  ///
+  /// In zh_CN, this message translates to:
+  /// **'网络异常，请稍后重试'**
+  String get s1197;
+
+  /// 我的守护码页：复制成功
+  ///
+  /// In zh_CN, this message translates to:
+  /// **'守护码已复制'**
+  String get s1198;
+
+  /// 我的守护码页：分享失败
+  ///
+  /// In zh_CN, this message translates to:
+  /// **'分享失败，请重试'**
+  String get s1199;
+
+  /// 我的守护码页：重试按钮
+  ///
+  /// In zh_CN, this message translates to:
+  /// **'重试'**
+  String get s1200;
+
+  /// 我的守护码页：复制按钮 label
+  ///
+  /// In zh_CN, this message translates to:
+  /// **'复制守护码'**
+  String get s1201;
+
+  /// 我的守护码页：说明文字第 1 行
+  ///
+  /// In zh_CN, this message translates to:
+  /// **'将此守护码出示给您想守护的亲友。对方在 App 内「输入守护码」录入并确认后，即与您建立守护关系。'**
+  String get s1202;
+
+  /// 我的守护码页：说明文字第 2 行
+  ///
+  /// In zh_CN, this message translates to:
+  /// **'建立后，仅在对方主动发起求助时，您可获取其当时的位置；您可随时在守护人列表中解除关系。'**
+  String get s1203;
+
+  /// 输入守护码页：用户拒绝单独同意
+  ///
+  /// In zh_CN, this message translates to:
+  /// **'您已拒绝，未建立守护关系'**
+  String get s1204;
+
+  /// 输入守护码页：扫码按钮 label
+  ///
+  /// In zh_CN, this message translates to:
+  /// **'扫描对方的守护码'**
+  String get s1205;
+
+  /// 输入守护码页：绑定成功（带对方昵称）
+  ///
+  /// In zh_CN, this message translates to:
+  /// **'{senderName} 已成功成为您的守护者'**
+  String s1206(Object senderName);
+
+  /// 扫码页：图片识别失败
+  ///
+  /// In zh_CN, this message translates to:
+  /// **'未能从图片中识别守护码，请手动输入或重新选择'**
+  String get s1207;
+
+  /// 扫码页：AppBar 标题
+  ///
+  /// In zh_CN, this message translates to:
+  /// **'扫描守护码'**
+  String get s1208;
+
+  /// 扫码页：取景框提示
+  ///
+  /// In zh_CN, this message translates to:
+  /// **'将对方出示的守护码 / 二维码置于框内'**
+  String get s1209;
 }
 
 class _SDelegate extends LocalizationsDelegate<S> {

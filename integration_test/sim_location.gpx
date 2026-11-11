@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="zaine-screenshot" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>Shanghai-Moving</name>
+    <trkseg>
+      <trkpt lat="31.2304" lon="121.4737"><time>2026-01-01T00:00:00Z</time></trkpt>
+      <trkpt lat="31.2307" lon="121.4740"><time>2026-01-01T00:00:01Z</time></trkpt>
+      <trkpt lat="31.2310" lon="121.4742"><time>2026-01-01T00:00:02Z</time></trkpt>
+      <trkpt lat="31.2313" lon="121.4745"><time>2026-01-01T00:00:03Z</time></trkpt>
+      <trkpt lat="31.2316" lon="121.4747"><time>2026-01-01T00:00:04Z</time></trkpt>
+      <trkpt lat="31.2319" lon="121.4750"><time>2026-01-01T00:00:05Z</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

@@ -2492,6 +2492,14 @@
   "@s1190": {
     "description": "auto i18n extracted"
   },
+  "s1210": "Pick from album",
+  "@s1210": {
+    "description": "Album picker: pick from album"
+  },
+  "s1212": "Show to family & friends",
+  "@s1212": {
+    "description": "My page: my guardian code entry subtitle"
+  },
   "s1191": "Scan the QR code above, or enter this code in Zaine\nto connect with me",
   "@s1191": {
     "description": "auto i18n extracted"
@@ -7222,5 +7230,35 @@
   "homeArrivalAlwaysGranted": "Always location enabled — Home Arrival is active 🏠",
   "@homeArrivalAlwaysGranted": {
     "description": "v1.98.1 home arrival permission / copy tweaks"
-  }
+  },
+  "s1196": "Failed to generate guardian code, please retry",
+  "@s1196": { "description": "My guardian code page: generation failed" },
+  "s1197": "Network error, please try again later",
+  "@s1197": { "description": "My guardian code page: network error" },
+  "s1198": "Guardian code copied",
+  "@s1198": { "description": "My guardian code page: copy success" },
+  "s1199": "Sharing failed, please retry",
+  "@s1199": { "description": "My guardian code page: share failed" },
+  "s1200": "Retry",
+  "@s1200": { "description": "My guardian code page: retry button" },
+  "s1201": "Copy guardian code",
+  "@s1201": { "description": "My guardian code page: copy button label" },
+  "s1202": "Show this guardian code to the family or friend you want to guard. Once they enter and confirm it in Zaine's \"Enter guardian code\" page, a guardian relationship is established.",
+  "@s1202": { "description": "My guardian code page: instruction line 1" },
+  "s1203": "After it's set up, you can see their location only when they actively request help. You can end the relationship anytime in the guardian list.",
+  "@s1203": { "description": "My guardian code page: instruction line 2" },
+  "s1204": "Declined. No guardian relationship established",
+  "@s1204": { "description": "Redeem page: user declined consent" },
+  "s1205": "Scan their guardian code",
+  "@s1205": { "description": "Redeem page: scan button label" },
+  "s1206": "{senderName} is now your guardian",
+  "@s1206": { "description": "Redeem page: bind success (with sender name)", "placeholders": { "senderName": {} } },
+  "s1207": "Couldn't read a guardian code from the image. Please enter it manually or pick another",
+  "@s1207": { "description": "Scan page: image recognition failed" },
+  "s1208": "Scan guardian code",
+  "@s1208": { "description": "Scan page: AppBar title" },
+  "s1209": "Place the other person's guardian code / QR code inside the frame",
+  "@s1209": { "description": "Scan page: viewfinder hint" },
+  "s1210": "Pick from album",
+  "@s1210": { "description": "Scan page: pick from album button" }
 }

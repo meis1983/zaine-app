@@ -24,6 +24,7 @@ import 'package:image_gallery_saver/image_gallery_saver.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../services/api/card_service.dart';
 import '../theme/theme_helper.dart';
@@ -45,9 +46,10 @@ class _MyGuardianCodePageState extends State<MyGuardianCodePage> {
   final GlobalKey _posterKey = GlobalKey();
   bool _busy = false;
 
-  // 【CN合规 177】静态内存缓存：配对码一经生成即固化为本会话常量，
-  // 后续每次进入本页直接命中缓存，不再查询服务端、不再新建卡片，
-  // 保证「我的守护码」每次打开都展示同一个码（可复用），且进入即显示不闪烁。
+  // 【CN合规 177 + v1.98.2 方案A】配对码缓存：
+  // - _cachedCode：会话内内存缓存（同一次 App 运行秒显、不闪烁）；
+  // - 持久化到 SharedPreferences（按 user_id 隔离）：App 重启 / 重装后仍能秒显同一个码，
+  //   不再回服务端新建卡片（旧逻辑因 status 比较写错，每次都新建 → 每次变码、还撞码）。
   static String? _cachedCode;
 
   @override
@@ -56,42 +58,87 @@ class _MyGuardianCodePageState extends State<MyGuardianCodePage> {
     _loadCode();
   }
 
-  // 优先复用已有未过期配对码，避免每次打开都新建卡片污染列表
+  /// 取本地持久化缓存键（按账号隔离，切号不串码）
+  static Future<String> _cacheKey() async {
+    final prefs = await SharedPreferences.getInstance();
+    final uid = prefs.getString('user_id');
+    return (uid != null && uid.isNotEmpty) ? 'my_guardian_code_$uid' : 'my_guard_code';
+  }
+
+  Future<void> _persistCode(String code) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(await _cacheKey(), code);
+    } catch (_) {}
+  }
+
+  // 【v1.98.2 方案A】优先复用稳定守护码，避免每次打开都新建卡片导致变码/撞码
   Future<void> _loadCode() async {
-    // 命中内存缓存：直接展示，跳过一切网络请求
+    // 1) 命中内存缓存：秒显（防闪烁），但仍需与服务器对账，确保显示的是当前有效码
     if (_cachedCode != null && _cachedCode!.isNotEmpty) {
       _code = _cachedCode;
       _loading = false;
       if (mounted) setState(() {});
+      _syncFromServer();
       return;
     }
+    // 2) 命中本地持久化缓存：App 重启后秒显、不闪烁、不变码
     try {
-      final list = await CardService.listMyCards();
-      final cards = (list['cards'] as List?) ?? [];
-      for (final c in cards) {
-        final code = (c['card_code'] ?? '').toString();
-        final status = (c['status'] ?? '').toString();
-        if (code.isNotEmpty && (status == 'pending' || status == 'activated')) {
+      final prefs = await SharedPreferences.getInstance();
+      final localCode = prefs.getString(await _cacheKey());
+      if (localCode != null && localCode.isNotEmpty) {
+        _code = localCode;
+        _cachedCode = localCode;
+        _loading = false;
+        if (mounted) setState(() {});
+        // 后台静默向服务端核对（保证与 30 天稳定码一致），不一致则更新缓存
+        _syncFromServer();
+        return;
+      }
+    } catch (_) {}
+
+    // 3) 本地无缓存 → 向服务端获取（服务端保证每用户一个稳定码）
+    try {
+      final res = await CardService.getMySecurityCode();
+      if (res['success'] == true) {
+        final code = (res['code'] ?? '').toString();
+        if (code.isNotEmpty) {
           _code = code;
           _cachedCode = code;
-          break;
+          await _persistCode(code);
+        } else {
+          _error = tr.s1196;
         }
+      } else {
+        _error = tr.s1196;
       }
     } catch (_) {
-      // 列表获取失败不阻断，继续尝试新建
-    }
-    if (_code == null || _code!.isEmpty) {
-      try {
-        final res = await CardService.sendCard(message: '想和你建立守护关系');
-        _code = (res['card_code'] ?? '').toString();
-        _cachedCode = _code;
-      } catch (_) {
-        _error = '生成守护码失败，请稍后重试';
-      }
+      _error = tr.s1197;
     }
     if (mounted) {
       _loading = false;
       setState(() {});
+    }
+  }
+
+  /// 【v1.98.2 修复C】本地缓存不再神圣：始终以服务器当前有效码为准。
+  /// 拉到服务器码后与本地比对，不一致（本地为过期/失效旧码）则更新显示与缓存，
+  /// 保证扫码与手输使用的是同一个服务器活码，消除"扫码成、手输败"的错位。
+  Future<void> _syncFromServer() async {
+    try {
+      final res = await CardService.getMySecurityCode();
+      if (res['success'] == true) {
+        final serverCode = (res['code'] ?? '').toString();
+        if (serverCode.isNotEmpty && serverCode != _code) {
+          _code = serverCode;
+          _cachedCode = serverCode;
+          await _persistCode(serverCode);
+          if (mounted) setState(() {});
+        }
+      }
+      // 服务器码与本地一致则保持；服务器异常则保留本地缓存（仍可展示）
+    } catch (_) {
+      // 静默失败：本地缓存仍可用
     }
   }
 
@@ -104,7 +151,7 @@ class _MyGuardianCodePageState extends State<MyGuardianCodePage> {
     await Clipboard.setData(ClipboardData(text: _displayCode));
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('守护码已复制'), duration: Duration(seconds: 2)),
+        SnackBar(content: Text(tr.s1198), duration: Duration(seconds: 2)),
       );
     }
   }
@@ -169,7 +216,7 @@ class _MyGuardianCodePageState extends State<MyGuardianCodePage> {
       await file.writeAsBytes(bytes);
       await Share.shareXFiles([XFile(file.path)], subject: tr.s1190);
     } catch (e) {
-      if (mounted) _snack('分享失败，请重试', Colors.orange);
+      if (mounted) _snack(tr.s1199, Colors.orange);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -184,7 +231,7 @@ class _MyGuardianCodePageState extends State<MyGuardianCodePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('我的守护码')),
+      appBar: AppBar(title: Text(tr.s1190)),
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
         child: Column(
@@ -196,10 +243,9 @@ class _MyGuardianCodePageState extends State<MyGuardianCodePage> {
                 color: ZaiNeColors.brandOrangeLight,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Text(
-                '将此守护码出示给您想守护的亲友。对方在 App 内「输入守护码」录入并确认后，即与您建立守护关系。\n\n'
-                '建立后，仅在对方主动发起求助时，您可获取其当时的位置；您可随时在守护人列表中解除关系。',
-                style: TextStyle(fontSize: 14, height: 1.6),
+              child: Text(
+                '${tr.s1202}\n\n${tr.s1203}',
+                style: const TextStyle(fontSize: 14, height: 1.6),
               ),
             ),
             const SizedBox(height: 24),
@@ -221,7 +267,7 @@ class _MyGuardianCodePageState extends State<MyGuardianCodePage> {
                       });
                       _loadCode();
                     },
-                    child: const Text('重试'),
+                    child: Text(tr.s1200),
                   ),
                 ],
               )
@@ -266,7 +312,7 @@ class _MyGuardianCodePageState extends State<MyGuardianCodePage> {
               TextButton.icon(
                 onPressed: _copy,
                 icon: const Icon(Icons.copy, size: 16),
-                label: const Text('复制守护码'),
+                label: Text(tr.s1201),
               ),
             ],
           ],

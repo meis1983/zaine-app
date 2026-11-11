@@ -362,41 +362,38 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
                   borderRadius: BorderRadius.circular(ZaiNeRadius.small),
                 ),
               ),
+              // 【v1.97.8-217】按钮内红心+文字必须整体居中。
+              // 教训：Row 在 ElevatedButton 的"无限宽"约束下，外层 Center 无法真正居中，
+              // 红心被钉最左（216/217/220/241/242 连续翻车）。
+              // 终极修法：用 Text.rich + WidgetSpan 把红心内联进文字流，整块文本
+              // textAlign:center 居中——与按钮约束彻底解耦，中英文一致、长英文仍
+              // maxLines 2 折行+ellipsis。
               child: Center(
-                // 【v1.97.8-217】同订阅页：min+Flexible 会让 Row 撑满按钮宽、
-                // center 失效图标靠左。去 Flexible，文字自然宽+ellipsis。
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    _reporting
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                          )
-                        : const Icon(Icons.favorite, size: 18),
-                    const SizedBox(width: ZaiNeSpacing.sm),
-                    // 【v1.97.8-220】Flexible(fit: loose)：文字自然宽布局（短文案时 Center
-                    // 正常整体居中），空间不足才收缩 → maxLines 2 换行生效，长英文分两段
-                    // 显示、杜绝右溢出。勿改回默认 Flexible（tight 强制撑满 → Row 全宽 →
-                    // center 失效图标钉最左，216/217 两轮教训）；也勿裸 Text（219 教训：
-                    // min 模式不给宽度约束，ellipsis 不触发，394pt 自然宽直接画出按钮外）。
-                    Flexible(
-                      fit: FlexFit.loose,
-                      child: Text(
-                        _reporting ? tr.s784 : tr.s785,
-                        // 【v1.97.8-220】两行换行后恢复 bodySm 14
-                        // （micro 12 是 219 无约束溢出的权宜，非终态）
-                        style: const TextStyle(
-                          fontSize: ZaiNeFontSize.bodySm,
-                        ),
-                        textAlign: TextAlign.center,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
+                child: Text.rich(
+                  TextSpan(
+                    children: [
+                      WidgetSpan(
+                        alignment: PlaceholderAlignment.middle,
+                        child: _reporting
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Icon(Icons.favorite, size: 16, color: Colors.white),
                       ),
-                    ),
-                  ],
+                      TextSpan(
+                        text: _reporting ? ' ${tr.s784}' : ' ${tr.s785}',
+                        style: const TextStyle(fontSize: ZaiNeFontSize.bodySm),
+                      ),
+                    ],
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ),

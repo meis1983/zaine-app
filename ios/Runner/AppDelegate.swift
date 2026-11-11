@@ -73,11 +73,11 @@ import MapKit
     UNUserNotificationCenter.current().setNotificationCategories([sosCategory])
     UNUserNotificationCenter.current().delegate = self
 
-    // 【v1.98.0 到家围栏】若系统因位置事件（进入家围栏）唤醒/重启 App（被杀后），
-    // 需重建 CLLocationManager + delegate 才能接收 didEnterRegion 回调。
-    if launchOptions?[UIApplication.LaunchOptionsKey.location] != nil {
-      self.restoreGeofenceIfNeeded()
-    }
+    // 【v1.98.2 修复】无论何种方式启动都重建家围栏：
+    // 若只在"系统位置事件唤醒"时才恢复，正常点图标冷启动会跳过，
+    // 进程内无 CLLocationManager/delegate，后台/锁屏跨越家围栏时 didEnterRegion 无人接收，
+    // 导致本人与守护人都收不到到家提醒。无条件恢复 + 幂等注册，安全无副作用。
+    self.restoreGeofenceIfNeeded()
 
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
@@ -604,17 +604,15 @@ import MapKit
       }
   }
   
-  // 【v1.98.0】远程推送前台展示（守护人收「报了平安」时往往正打开 App，横幅不可丢）
+  // 【v1.98.0 / v1.98.2 修复】前台展示：远程推送 + 本地通知都弹横幅。
+  // 原实现只放行 UNPushNotificationTrigger，本地通知（如到家提醒 home_arrival_native，
+  // trigger 为 nil 的非推送通知）会走 super 被静音——App 前台时本人收不到到家提醒。
   override func userNotificationCenter(
       _ center: UNUserNotificationCenter,
       willPresent notification: UNNotification,
       withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
   ) {
-      if notification.request.trigger is UNPushNotificationTrigger {
-          completionHandler([.banner, .list, .sound])
-          return
-      }
-      super.userNotificationCenter(center, willPresent: notification, withCompletionHandler: completionHandler)
+      completionHandler([.banner, .list, .sound])
   }
 
   // 【v1.97.3 SOS 后台】用户点按 SOS 通知(或"立即求助"按钮) → App 回到前台 → 驱动 Flutter SOS 流程
@@ -1178,6 +1176,13 @@ extension AppDelegate {
         } else {
           result(nil)
         }
+      case "clearPendingArrival":
+        // 【v1.98.2 修复】前台 onArrival 路径处理完成后清掉 pending，
+        // 避免诊断页「待上报守护人事件」残留显示历史时间戳。
+        // 注意：仅在引擎就绪、onArrival 已真正触达 Dart 时才清；
+        // 若引擎未就绪导致 onArrival 调用被丢弃，则保留 pending 供 getPendingArrival 冷启动补发。
+        UserDefaults.standard.removeObject(forKey: "pending_home_arrival_ts")
+        result(nil)
       case "openMapPicker":
         self.openHomeMapPicker(result: result)
       case "requestLocationAlways":
@@ -1187,6 +1192,50 @@ extension AppDelegate {
         }
         locationManager?.requestAlwaysAuthorization()
         result(nil)
+      case "getDiagnostics":
+        // 【v1.98.2 诊断页】一次性返回围栏相关状态，供 App 内诊断页展示，无需 Mac 控制台。
+        let status: CLAuthorizationStatus
+        if let lm = locationManager {
+          status = lm.authorizationStatus
+        } else {
+          status = CLLocationManager.authorizationStatus()
+        }
+        let statusStr: String
+        switch status {
+        case .authorizedAlways:   statusStr = "always"
+        case .authorizedWhenInUse: statusStr = "whileInUse"
+        case .denied:            statusStr = "denied"
+        case .restricted:        statusStr = "restricted"
+        case .notDetermined:     statusStr = "notDetermined"
+        @unknown default:        statusStr = "unknown"
+        }
+        var homeRegistered = false
+        var center: [String: Any]? = nil
+        if let regions = locationManager?.monitoredRegions {
+          for r in regions {
+            if r.identifier == self.geofenceRegionId, let cr = r as? CLCircularRegion {
+              homeRegistered = true
+              center = ["lat": cr.center.latitude, "lng": cr.center.longitude, "radius": cr.radius]
+            }
+          }
+        }
+        let ud = UserDefaults.standard
+        let diag: [String: Any] = [
+          "authStatus": statusStr,
+          "monitoredRegionCount": (locationManager?.monitoredRegions.count ?? 0),
+          "homeRegionRegistered": homeRegistered,
+          "homeRegionCenter": center ?? NSNull(),
+          "savedLat": ud.object(forKey: "home_geofence_lat") ?? NSNull(),
+          "savedLng": ud.object(forKey: "home_geofence_lng") ?? NSNull(),
+          "savedRadius": ud.object(forKey: "home_geofence_radius") ?? NSNull(),
+          "enabled": ud.bool(forKey: "home_arrival_enabled"),
+          "modeB": ud.bool(forKey: "home_arrival_mode_b"),
+          "lastEnterTs": ud.object(forKey: "last_home_enter_ts") ?? NSNull(),
+          "lastExitTs": ud.object(forKey: "last_home_exit_ts") ?? NSNull(),
+          "lastNotifTs": ud.object(forKey: "last_home_notif_ts") ?? NSNull(),
+          "pendingArrivalTs": ud.object(forKey: "pending_home_arrival_ts") ?? NSNull()
+        ]
+        result(diag)
       default:
         result(FlutterMethodNotImplemented)
       }
@@ -1210,8 +1259,13 @@ extension AppDelegate {
     let center = CLLocationCoordinate2D(latitude: lat, longitude: lng)
     let region = CLCircularRegion(center: center, radius: max(radius, 100), identifier: geofenceRegionId)
     region.notifyOnEntry = true
-    region.notifyOnExit = false
+    region.notifyOnExit = true
     locationManager?.startMonitoring(for: region)
+    // 【诊断】打印当前定位授权状态：非 Always(3) 时围栏无法在后台/被杀后触发
+    let auth = locationManager?.authorizationStatus.rawValue ?? -1
+    print("[AppDelegate] 🔍 围栏启动前定位授权 rawValue=\(auth)（3=Always 4=WhenInUse 2=Denied）")
+    // 【诊断】立即请求一次状态判定，控制台会输出 inside/outside，便于确认"是否需要先离开再回来"
+    locationManager?.requestState(for: region)
     print("[AppDelegate] ✅ 开始监控家围栏 lat=\(lat) lng=\(lng) radius=\(radius)")
   }
 
@@ -1300,6 +1354,9 @@ extension AppDelegate {
       return
     }
 
+    // 【v1.98.2 诊断】记录最近一次进入围栏时间（供诊断页确认系统是否真的回调了 didEnterRegion）
+    ud.set(Date().timeIntervalSince1970, forKey: "last_home_enter_ts")
+
     // 每日去重（native 侧也做一次，避免 App 反复进出围栏当天多次弹本地通知）
     let now = Date()
     let cal = Calendar.current
@@ -1325,6 +1382,17 @@ extension AppDelegate {
     if let ch = geofenceChannel {
       ch.invokeMethod("onArrival", arguments: nil)
     }
+  }
+
+  /// 【v1.98.2 修复D】原生 didExitRegion：记录"最近离开家围栏"诊断时间戳。
+  /// 仅记录，不发任何通知——离开不是用户事件。
+  /// 关键修复：配合 notifyOnExit=true，iOS 会主动维护围栏 inside/outside 状态机，
+  /// 离开被检测到后，再次进入才会可靠地触发 didEnterRegion（否则 OS 可能认为你一直"在内部"，
+  /// 导致 re-entry 漏触发、lastEnterTs 不更新，正是本次"走出去再回来不触发"的根因）。
+  func locationManager(_ manager: CLLocationManager, didExitRegion region: CLRegion) {
+    guard region.identifier == geofenceRegionId else { return }
+    print("[AppDelegate] 🚪 离开家围栏")
+    UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: "last_home_exit_ts")
   }
 
   /// 【v1.98.2 修复C】native 层直接发本地通知（模式A专用，不依赖 Flutter 引擎）。
@@ -1354,6 +1422,7 @@ extension AppDelegate {
         print("[AppDelegate] ❌ native 到家通知投递失败: \(e.localizedDescription)")
       } else {
         print("[AppDelegate] ✅ native 到家通知已投递（不依赖 Flutter 引擎）")
+        UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: "last_home_notif_ts")
       }
     }
     let fmt = DateFormatter()
@@ -1366,6 +1435,21 @@ extension AppDelegate {
                        monitoringDidFailFor region: CLRegion?,
                        withError error: Error) {
     print("[AppDelegate] ❌ 家围栏监控失败: \(error.localizedDescription)")
+  }
+
+  /// 【诊断】状态判定回调：startMonitoring 后立即触发（不受 notifyOnEntry/Exit 开关影响），
+  /// 报告设备当前在围栏内/外。inside → 你正站在家里，必须离开再回来才会触发到达；
+  /// outside → 进入即触发。这是判断"是否需要先走出去"的关键日志。
+  func locationManager(_ manager: CLLocationManager, didDetermineState state: CLRegionState, for region: CLRegion) {
+    guard region.identifier == geofenceRegionId else { return }
+    let s: String
+    switch state {
+    case .inside:  s = "inside（已在围栏内，需离开再回来才会触发到达通知）"
+    case .outside: s = "outside（在围栏外，进入后将触发到达通知）"
+    case .unknown: s = "unknown（系统尚未判定）"
+    @unknown default: s = "unknown"
+    }
+    print("[AppDelegate] 🏠 围栏状态判定 state=\(s)")
   }
 
   /// 授权状态变更回调：用户在第 2 个系统弹窗里选了「始终允许」或「仅使用期间」后触发。

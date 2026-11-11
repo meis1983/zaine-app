@@ -3827,6 +3827,12 @@ class SEn extends S {
   String get s1190 => 'My guardian code';
 
   @override
+  String get s1210 => 'Pick from album';
+
+  @override
+  String get s1212 => 'Show to family & friends';
+
+  @override
   String get s1191 =>
       'Scan the QR code above, or enter this code in Zaine\nto connect with me';
 
@@ -7118,4 +7124,52 @@ class SEn extends S {
   @override
   String get homeArrivalAlwaysGranted =>
       'Always location enabled — Home Arrival is active 🏠';
+
+  @override
+  String get s1196 => 'Failed to generate guardian code, please retry';
+
+  @override
+  String get s1197 => 'Network error, please try again later';
+
+  @override
+  String get s1198 => 'Guardian code copied';
+
+  @override
+  String get s1199 => 'Sharing failed, please retry';
+
+  @override
+  String get s1200 => 'Retry';
+
+  @override
+  String get s1201 => 'Copy guardian code';
+
+  @override
+  String get s1202 =>
+      'Show this guardian code to the family or friend you want to guard. Once they enter and confirm it in Zaine\'s \"Enter guardian code\" page, a guardian relationship is established.';
+
+  @override
+  String get s1203 =>
+      'After it\'s set up, you can see their location only when they actively request help. You can end the relationship anytime in the guardian list.';
+
+  @override
+  String get s1204 => 'Declined. No guardian relationship established';
+
+  @override
+  String get s1205 => 'Scan their guardian code';
+
+  @override
+  String s1206(Object senderName) {
+    return '$senderName is now your guardian';
+  }
+
+  @override
+  String get s1207 =>
+      'Couldn\'t read a guardian code from the image. Please enter it manually or pick another';
+
+  @override
+  String get s1208 => 'Scan guardian code';
+
+  @override
+  String get s1209 =>
+      'Place the other person\'s guardian code / QR code inside the frame';
 }

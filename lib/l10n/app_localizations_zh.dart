@@ -3698,6 +3698,12 @@ class SZh extends S {
   String get s1190 => '我的守护码';
 
   @override
+  String get s1210 => '从相册选取';
+
+  @override
+  String get s1212 => '出示给亲友';
+
+  @override
   String get s1191 => '扫一扫上面的二维码，或在「在呢」中输入守护码\n即可与我建立守护关系';
 
   @override
@@ -6880,6 +6886,50 @@ class SZh extends S {
 
   @override
   String get homeArrivalAlwaysGranted => '已开启始终定位，到家提醒生效 🏠';
+
+  @override
+  String get s1196 => '生成守护码失败，请稍后重试';
+
+  @override
+  String get s1197 => '网络异常，请稍后重试';
+
+  @override
+  String get s1198 => '守护码已复制';
+
+  @override
+  String get s1199 => '分享失败，请重试';
+
+  @override
+  String get s1200 => '重试';
+
+  @override
+  String get s1201 => '复制守护码';
+
+  @override
+  String get s1202 => '将此守护码出示给您想守护的亲友。对方在 App 内「输入守护码」录入并确认后，即与您建立守护关系。';
+
+  @override
+  String get s1203 => '建立后，仅在对方主动发起求助时，您可获取其当时的位置；您可随时在守护人列表中解除关系。';
+
+  @override
+  String get s1204 => '您已拒绝，未建立守护关系';
+
+  @override
+  String get s1205 => '扫描对方的守护码';
+
+  @override
+  String s1206(Object senderName) {
+    return '$senderName 已成功成为您的守护者';
+  }
+
+  @override
+  String get s1207 => '未能从图片中识别守护码，请手动输入或重新选择';
+
+  @override
+  String get s1208 => '扫描守护码';
+
+  @override
+  String get s1209 => '将对方出示的守护码 / 二维码置于框内';
 }
 
 /// The translations for Chinese, as used in China (`zh_CN`).
@@ -10576,6 +10626,12 @@ class SZhCn extends SZh {
   String get s1190 => '我的守护码';
 
   @override
+  String get s1210 => '从相册选取';
+
+  @override
+  String get s1212 => '出示给亲友';
+
+  @override
   String get s1191 => '扫一扫上面的二维码，或在「在呢」中输入守护码\n即可与我建立守护关系';
 
   @override
@@ -13758,6 +13814,50 @@ class SZhCn extends SZh {
 
   @override
   String get homeArrivalAlwaysGranted => '已开启始终定位，到家提醒生效 🏠';
+
+  @override
+  String get s1196 => '生成守护码失败，请稍后重试';
+
+  @override
+  String get s1197 => '网络异常，请稍后重试';
+
+  @override
+  String get s1198 => '守护码已复制';
+
+  @override
+  String get s1199 => '分享失败，请重试';
+
+  @override
+  String get s1200 => '重试';
+
+  @override
+  String get s1201 => '复制守护码';
+
+  @override
+  String get s1202 => '将此守护码出示给您想守护的亲友。对方在 App 内「输入守护码」录入并确认后，即与您建立守护关系。';
+
+  @override
+  String get s1203 => '建立后，仅在对方主动发起求助时，您可获取其当时的位置；您可随时在守护人列表中解除关系。';
+
+  @override
+  String get s1204 => '您已拒绝，未建立守护关系';
+
+  @override
+  String get s1205 => '扫描对方的守护码';
+
+  @override
+  String s1206(Object senderName) {
+    return '$senderName 已成功成为您的守护者';
+  }
+
+  @override
+  String get s1207 => '未能从图片中识别守护码，请手动输入或重新选择';
+
+  @override
+  String get s1208 => '扫描守护码';
+
+  @override
+  String get s1209 => '将对方出示的守护码 / 二维码置于框内';
 }
 
 /// The translations for Chinese, as used in Hong Kong (`zh_HK`).
@@ -17454,6 +17554,12 @@ class SZhHk extends SZh {
   String get s1190 => '我的守護碼';
 
   @override
+  String get s1210 => '從相簿選取';
+
+  @override
+  String get s1212 => '出示給親友';
+
+  @override
   String get s1191 => '掃一掃上面的 QR Code，或在「在呢」中輸入守護碼\n即可與我建立守護關係';
 
   @override
@@ -20636,6 +20742,50 @@ class SZhHk extends SZh {
 
   @override
   String get homeArrivalAlwaysGranted => '已开启始终定位，到家提醒生效 🏠';
+
+  @override
+  String get s1196 => '產生守護碼失敗，請稍後重試';
+
+  @override
+  String get s1197 => '網絡異常，請稍後重試';
+
+  @override
+  String get s1198 => '守護碼已複製';
+
+  @override
+  String get s1199 => '分享失敗，請重試';
+
+  @override
+  String get s1200 => '重試';
+
+  @override
+  String get s1201 => '複製守護碼';
+
+  @override
+  String get s1202 => '將此守護碼出示給您想守護的親友。對方在 App 內「輸入守護碼」錄入並確認後，即與您建立守護關係。';
+
+  @override
+  String get s1203 => '建立後，僅在對方主動發起求助時，您可獲取其當時的位置；您可隨時在守護人列表中解除關係。';
+
+  @override
+  String get s1204 => '您已拒絕，未建立守護關係';
+
+  @override
+  String get s1205 => '掃描對方的守護碼';
+
+  @override
+  String s1206(Object senderName) {
+    return '$senderName 已成功成為您的守護者';
+  }
+
+  @override
+  String get s1207 => '未能從圖片中識別守護碼，請手動輸入或重新選擇';
+
+  @override
+  String get s1208 => '掃描守護碼';
+
+  @override
+  String get s1209 => '將對方出示的守護碼 / QR Code 置於框內';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -24332,6 +24482,12 @@ class SZhTw extends SZh {
   String get s1190 => '我的守護碼';
 
   @override
+  String get s1210 => '從相簿選取';
+
+  @override
+  String get s1212 => '出示給親友';
+
+  @override
   String get s1191 => '掃一掃上面的 QR Code，或在「在呢」中輸入守護碼\n即可與我建立守護關係';
 
   @override
@@ -27514,4 +27670,48 @@ class SZhTw extends SZh {
 
   @override
   String get homeArrivalAlwaysGranted => '已开启始终定位，到家提醒生效 🏠';
+
+  @override
+  String get s1196 => '產生守護碼失敗，請稍後重試';
+
+  @override
+  String get s1197 => '網路異常，請稍後重試';
+
+  @override
+  String get s1198 => '守護碼已複製';
+
+  @override
+  String get s1199 => '分享失敗，請重試';
+
+  @override
+  String get s1200 => '重試';
+
+  @override
+  String get s1201 => '複製守護碼';
+
+  @override
+  String get s1202 => '將此守護碼出示給您想守護的親友。對方在 App 內「輸入守護碼」錄入並確認後，即與您建立守護關係。';
+
+  @override
+  String get s1203 => '建立後，僅在對方主動發起求助時，您可獲取其當時的位置；您可隨時在守護人列表中解除關係。';
+
+  @override
+  String get s1204 => '您已拒絕，未建立守護關係';
+
+  @override
+  String get s1205 => '掃描對方的守護碼';
+
+  @override
+  String s1206(Object senderName) {
+    return '$senderName 已成功成為您的守護者';
+  }
+
+  @override
+  String get s1207 => '未能從圖片中識別守護碼，請手動輸入或重新選擇';
+
+  @override
+  String get s1208 => '掃描守護碼';
+
+  @override
+  String get s1209 => '將對方出示的守護碼 / QR Code 置於框內';
 }

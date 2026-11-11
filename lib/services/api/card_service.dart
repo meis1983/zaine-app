@@ -155,6 +155,31 @@ class CardService {
     });
   }
 
+  /// 【v1.98.2 方案A】获取「我的守护码」稳定配对码（与守护卡物理分离）
+  /// 服务端保证：每用户一个、30 天稳定不变、全局唯一永不撞码、不消耗守护卡额度。
+  static Future<Map<String, dynamic>> getMySecurityCode() async {
+    return await ApiService.get('/api/card/security-code');
+  }
+
+  /// 【v1.98.2 修复】预校验「我的守护码」：走守护码专用端点（只查 user_security_codes）。
+  /// 命中返回持有者信息（sender_name 等）供单独同意弹窗；未命中(invalid_code)再回退守护卡。
+  static Future<Map<String, dynamic>> checkSecurityCode(String code) async {
+    return await ApiService.post(
+      '/api/card/check-security-code',
+      body: {'card_code': code},
+      auth: false,
+    );
+  }
+
+  /// 【v1.98.2 修复】用「我的守护码」直接建立守护关系（专用端点，只处理 user_security_codes，不碰守护卡）。
+  /// 彻底消除「输入守护码」页依赖守护卡接口 + 兜底查守护码的脆弱设计。
+  static Future<Map<String, dynamic>> redeemSecurityCode(String code) async {
+    return await ApiService.post(
+      '/api/card/redeem-security-code',
+      body: {'card_code': code},
+    );
+  }
+
   /// 【2026-07-12 议题B】我守护的人：我发出的已绑定普通守护卡（无人数上限），含收卡人每日签到状态
   static Future<Map<String, dynamic>> getGuardedByMe() async {
     try {

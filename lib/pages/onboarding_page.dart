@@ -371,14 +371,13 @@ class _LoginPageState extends State<_LoginPage>
                       inputBorder: InputBorder.none,
                       hintText: tr.s931,
                       maxLength: 15,
-                      countries: kIsChinaBuild
-                          ? const ['CN']
-                          : const [
-                              'CN', 'US', 'JP', 'KR', 'SG', 'HK', 'TW', 'MO',
-                              'GB', 'DE', 'FR', 'IT', 'ES', 'PT', 'NL', 'SE', 'NO', 'DK',
-                              'AU', 'NZ', 'CA', 'MY', 'TH', 'VN', 'PH', 'ID', 'IN',
-                              'BR', 'MX', 'AR', 'CL', 'CO', 'PE', 'ZA', 'EG', 'NG',
-                            ],
+                      // 【2026-11-03 方案B】CN 版锁定 +86（countries:['CN']）；
+                      // 海外版彻底放开——不传 countries 参数（null），选择器显示全球所有国家。
+                      // 理由：App 定位海外华人/留学生/出海者，用户分布天然分散，
+                      // 后端 normalize_phone 本来就接受任何国家号（7-15 位通用），
+                      // 前端放开后与后端完全对齐，零遗漏、零维护成本。
+                      // 选择器自带搜索框，体验可接受。
+                      countries: kIsChinaBuild ? const ['CN'] : null,
                     ),
                   ),
                   // 下拉箭头 ▼（叠加在区号右侧）—— 仅海外版显示；CN 版锁定 +86 不提供国家选择
@@ -458,68 +457,10 @@ class _LoginPageState extends State<_LoginPage>
           ],
 
           // 【新增 v1.9.78】条件显示：输入守护码入口
-          // 仅在无 deep link pending card 时显示（直接从 App Store 下载的场景）
-          // 【CN 合规】CN 版隐藏此入口：原逻辑依赖登录后"静默自动绑定"（processPendingCardCode），
-          //   该路径在 CN 已被禁用（需用户经 RedeemCardPage 单独同意）。隐藏可避免"虚假绑定成功"。
-          //   CN 用户改走「我的 → 输入守护码」(RedeemCardPage，带单独同意)。
-          if (!kIsChinaBuild && !_isCheckingPending && !_hasPendingCard) ...[
-            GestureDetector(
-              onTap: _showCardCodeInput,
-              child: Container(
-                width: double.infinity,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.lg, vertical: ZaiNeSpacing.lg),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [ZaiNeColors.brandOrangeLight, Color(0xFFFFF0E8)],
-                  ),
-                  borderRadius: BorderRadius.circular(ZaiNeRadius.card),
-                  border: Border.all(
-                      color: ZaiNeColors.brandOrange.withValues(alpha: 0.2)),
-                
-                  boxShadow: ZaiNeShadows.card,),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: ZaiNeColors.brandOrange.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(ZaiNeRadius.small),
-                      
-                        boxShadow: ZaiNeShadows.card,),
-                      child: const Icon(Icons.card_giftcard,
-                          color: ZaiNeColors.brandOrange, size: 18),
-                    ),
-                    const SizedBox(width: ZaiNeSpacing.md),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            tr.s932,
-                            style: TextStyle(
-                                fontSize: ZaiNeFontSize.bodySm,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.grey.shade800),
-                          ),
-                          const SizedBox(height: ZaiNeSpacing.xs),
-                           Text(
-                            tr.s933,
-                            style: TextStyle(
-                                fontSize: ZaiNeFontSize.caption, color: ZaiNeColors.brandOrange),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const Icon(Icons.chevron_right,
-                        color: ZaiNeColors.brandOrange, size: 18),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: ZaiNeSpacing.lg),
-          ],
+          // 【2026-11-03 删除】原海外版"输入守护码"橙色大卡片入口（L464-521）已移除。
+          // 理由：真正从此入口登录绑定的人很少，且制造路径冗余；用户登录后
+          // 可走「我的 → 输入守护码」(RedeemCardPage) 或扫码完成绑定，路径更干净。
+          // CN 版渐进披露入口（L526 _buildGuardianCodeEntry）保留不动（全球版 kIsChinaBuild=false 时不会渲染）。
 
           // 【CN 179】渐进披露守护码入口（替代 178 的橙色大卡片）
           //   默认：一行浅灰文字「我有守护码 ⌄」，高约 24px，不跳转、不挡手机号
@@ -717,175 +658,9 @@ class _LoginPageState extends State<_LoginPage>
 
   /// 【新增 v1.9.78】输入守护码 BottomSheet
   /// 用户输入后存入 pending-card-code，登录时自动携带并绑定
-  void _showCardCodeInput() {
-    final controller = TextEditingController();
-    String? errorText;
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (ctx, setSheetState) {
-            final bottomInset = MediaQuery.of(ctx).viewInsets.bottom;
-            return Padding(
-              padding: EdgeInsets.only(bottom: bottomInset),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: ZaiNeColors.cardBg(),
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-                
-                  boxShadow: ZaiNeShadows.card,),
-                padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Center(
-                      child: Container(
-                        width: 40,
-                        height: 4,
-                        decoration: BoxDecoration(
-                            color: Colors.grey.shade300,
-                            borderRadius: BorderRadius.circular(ZaiNeRadius.small)
-                      ),
-                      ),
-                    ),
-                    const SizedBox(height: ZaiNeSpacing.xl),
-                    Row(
-                      children: [
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                              color: ZaiNeColors.brandOrangeLight,
-                              borderRadius: BorderRadius.circular(ZaiNeRadius.small)
-                          ),
-                          child: const Icon(Icons.vpn_key,
-                              color: ZaiNeColors.brandOrange, size: 20),
-                        ),
-                        const SizedBox(width: ZaiNeSpacing.md),
-                         Expanded(
-                          child: Text(
-                            tr.s935,
-                            style: TextStyle(
-                                fontSize: ZaiNeFontSize.subtitle, fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: ZaiNeSpacing.sm),
-                    Text(
-                      tr.s936,
-                      style:
-                          TextStyle(fontSize: ZaiNeFontSize.caption, color: ZaiNeColors.textSecondary()),
-                    ),
-                    const SizedBox(height: ZaiNeSpacing.xl),
-                    TextField(
-                      controller: controller,
-                      textCapitalization: TextCapitalization.characters,
-                      maxLength: 16,
-                      style: const TextStyle(
-                          fontSize: ZaiNeFontSize.subtitle,
-                          letterSpacing: 3,
-                          fontWeight: FontWeight.bold),
-                      decoration: InputDecoration(
-                        hintText: tr.s937,
-                        hintStyle: TextStyle(
-                            fontSize: ZaiNeFontSize.body,
-                            color: ZaiNeColors.textHint(),
-                            letterSpacing: 2),
-                        errorText: errorText,
-                        counterText: '',
-                        filled: true,
-                        fillColor: Colors.grey.shade50,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(ZaiNeRadius.small),
-                          borderSide: BorderSide(color: ZaiNeColors.borderColor()),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(ZaiNeRadius.small),
-                          borderSide: BorderSide(color: ZaiNeColors.borderColor()),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(ZaiNeRadius.small),
-                          borderSide:
-                              const BorderSide(color: ZaiNeColors.brandOrange),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: ZaiNeSpacing.lg, vertical: ZaiNeSpacing.lg),
-                      ),
-                    ),
-                    const SizedBox(height: ZaiNeSpacing.xl),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: () async {
-                          final code = controller.text
-                              .trim()
-                              .toUpperCase()
-                              .replaceAll(' ', '');
-                          if (code.isEmpty) {
-                            setSheetState(() => errorText = tr.s938);
-                            return;
-                          }
-                          if (code.length < 4) {
-                            setSheetState(() => errorText = tr.s939);
-                            return;
-                          }
-                          // 验证守护码是否有效
-                          setSheetState(() => errorText = null);
-                          try {
-                            final checkRes = await CardService.checkCard(code);
-                            if (checkRes['success'] != true) {
-                              setSheetState(() =>
-                                  errorText = checkRes['message'] ?? tr.s940);
-                              return;
-                            }
-                          } catch (e) {
-                            setSheetState(() => errorText = tr.s941);
-                            return;
-                          }
-
-                          final prefs = await SharedPreferences.getInstance();
-                          await prefs.setString('pending_card_code', code);
-                          await prefs.setString('pending-card-code', code);
-                          if (kDebugMode) debugPrint('[Onboarding] 暂存守护码: $code');
-
-                          if (mounted && ctx.mounted) {
-                            setState(() => _hasPendingCard = true);
-                            Navigator.pop(ctx);
-                          }
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                               SnackBar(
-                                content: Text(tr.s942),
-                                backgroundColor: ZaiNeColors.brandOrange,
-                                behavior: SnackBarBehavior.floating,
-                              ),
-                            );
-                          }
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: ZaiNeColors.brandOrange,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: ZaiNeSpacing.lg),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ZaiNeRadius.card)),
-                        ),
-                        child:  Text(tr.s943,
-                            style: TextStyle(
-                                fontSize: ZaiNeFontSize.body, fontWeight: FontWeight.bold)),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
+  // 【2026-11-03 删除】原 _showCardCodeInput() 方法（L661-829，168行）已移除。
+  // 它是登录页"输入守护码"橙色卡片的弹窗实现，随橙色卡片入口一起下线。
+  // 用户现在统一走「我的 → 输入守护码」(RedeemCardPage) 完成绑定。
 
   // 【暂隐 v1.82.0】Apple Sign In 处理逻辑（等能力配置好后再启用）
   // ignore: unused_element
@@ -1461,7 +1236,11 @@ class _OnboardingPageState extends State<OnboardingPage> {
 
   /// ===== 第5页底部按钮：手机号直接登录 =====
   Widget _buildLoginBottomButton() {
-    final phoneValid = _phoneController.text.trim().length >= 11;
+    // 【2026-11-03 断点#4 修复】原硬编码 `length >= 11` 只适配中国大陆 11 位号，
+    // 海外号（香港 8 位、新加坡 8 位、瑞典 7-9 位、美国 10 位等）会被按钮永久灰掉。
+    // 统一走 PhoneUtil.isValid（归一化后 7-15 位即合法，覆盖 ITU-T E.164 全号段），
+    // 与 _quickLogin() 内的实际校验保持一致，消除"按钮能点→校验不过"或反之的矛盾。
+    final phoneValid = PhoneUtil.isValid(_phoneController.text);
     final canLogin = phoneValid && !_isLoggingIn;
 
     return ElevatedButton(
