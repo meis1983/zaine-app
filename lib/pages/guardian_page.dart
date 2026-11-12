@@ -454,6 +454,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
         final Map<String, dynamic> resultsMap = batchRes['results'];
         final updatedGuardians = <Map<String, dynamic>>[];
         for (final c in contacts) {
+          final bool isMutual = c['is_mutual'] == true;
           final phone = (c['phone'] ?? '').toString();
           final name = (c['name'] ?? tr.s373).toString();
           final relation = (c['relation'] == null || c['relation'].toString().isEmpty) ? tr.s374 : c['relation'].toString();
@@ -494,6 +495,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
           'name': name,
           'phone': phone,
           'relation': relation,
+          'is_mutual': isMutual,
           'isRegistered': true,
           'userId': foundUserId,
           'checkedInToday': checkedInToday,
@@ -513,6 +515,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
           'name': name,
           'phone': phone,
           'relation': relation,
+          'is_mutual': isMutual,
           'isRegistered': false,
           'userId': null,
           'checkedInToday': prefs.getBool('contact_checked_in_today_phone_$phone') ?? false,
@@ -530,6 +533,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
           'name': name,
           'phone': phone,
           'relation': relation,
+          'is_mutual': isMutual,
           'isRegistered': cachedIsReg,
           'userId': cachedUid,
           'checkedInToday': prefs.getBool('contact_checked_in_today_phone_$phone') ?? false,
@@ -578,6 +582,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
     // 兜底方案：如果批量查询失败，使用原有的并行单点查询逻辑（保持鲁棒性）
     // 第4步：并行查询所有联系人的注册状态 + 签到状态
     final statusFutures = contacts.map((c) async {
+      final bool isMutual = c['is_mutual'] == true;
       final name = (c['name'] ?? tr.s373).toString();
       final phone = (c['phone'] ?? '').toString();
       final relation = (c['relation'] ?? tr.s374).toString();
@@ -656,6 +661,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
         'name': name,
         'phone': phone,
         'relation': relation,
+        'is_mutual': isMutual,
         'isRegistered': isRegistered,
         'userId': foundUserId,
         'checkedInToday': checkedInToday,
@@ -789,7 +795,17 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
         .whereType<String>()
         .where((id) => id.isNotEmpty)
         .toSet();
-    _mutualUserIds = guardianIds.intersection(guardedIds);
+    final mutual = guardianIds.intersection(guardedIds);
+    // 【修复 1.98.x】守护码 / 普通卡双向兑换建立的互为守护：后端在联系人上标 is_mutual。
+    // 这类关系虽不落在「我守护的人」(出向)，但双方应可在 App 内互发平安确认，
+    // 因此把 is_mutual 的联系人并入互护集合，使徽标 / 绿框 / 排序 / 计数正确点亮。
+    for (final g in _guardians) {
+      if (g['is_mutual'] == true) {
+        final id = g['userId']?.toString();
+        if (id != null && id.isNotEmpty) mutual.add(id);
+      }
+    }
+    _mutualUserIds = mutual;
   }
 
   /// 【v1.97.3+166 双向视觉】互护优先排序：互相守护的排到列表最前（各自原相对顺序保持不变）
@@ -2761,6 +2777,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
   /// 【v1.97.3+173】图标换成"双心相扣"（A 候选）：两心错位重叠，左深紫右浅紫，
   /// 28×20 固定尺寸，配 Tooltip "互为守护"；不再用 handshake_rounded（语义偏商务握手）。
   /// 位置（173）：从状态行尾移到姓名行紧贴名字，状态行不再放这个徽标。
+
   Widget _buildMutualBadge(bool isMutual) {
     if (!isMutual) return const SizedBox.shrink();
     return Tooltip(
@@ -2939,9 +2956,12 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
               ),
             ),
             // 【v1.97.3+171 操作列】电话/消息 次按钮（仅图标圆形）
-            // 【方案A v1.97.1+160】移除多态胶囊：平安/提醒/邀请动作统一迁到「我守护的人」卡片
-            //   原因：原设计按钮在「守护我的人」但响应 chip 在「我守护的人」，错位
-            //   「守护我的人」= 别人主动守护我，保留电话/短信即可，不需要我主动发请求
+            // 【方案A v1.97.1+160】原设计：平安/提醒/邀请动作统一迁到「我守护的人」卡片，
+            //   「守护我的人」= 别人主动守护我，保留电话/短信即可。
+            // 【2026-11-12 守护圈重构·方案A 收尾】移除「守护我的人」的紫色平安确认按钮 + 平安状态chip + 回复留言气泡。
+            //   逻辑自洽：守护我的人 = 我看对方在线/签到即可；平安确认/回复只保留在「我守护的人」
+            //   （我守护 TA → 我发平安确认 → TA 回复在此可见）。守护我的人非我发请求入口，
+            //   无请求即无回复，且💜互护者的回复已在「我守护的人」呈现，此处展示纯冗余。此处仅留电话/短信次按钮。
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
