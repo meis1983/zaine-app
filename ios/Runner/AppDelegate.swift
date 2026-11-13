@@ -813,6 +813,9 @@ extension AppDelegate {
     // ⑦ 睡眠 / 正念
     c(.sleepAnalysis); c(.mindfulSession)
 
+    // ⑦-b 睡眠呼吸暂停（iOS 18 / watchOS 11+ 真实类型；旧设备 HealthKit 无此类型，缺则自动降级）
+    if #available(iOS 18.0, *) { c(.sleepApneaEvent) }
+
     // ⑧ 训练
     t.insert(HKObjectType.workoutType())
 
@@ -913,6 +916,11 @@ extension AppDelegate {
     // ---------- ⑦ 睡眠 / 正念 ----------
     zaiSleep(store, sleepStart, now, group, box)
     zaiMindful(store, d7, now, group, box)
+
+    // ⑦-b 睡眠呼吸暂停事件（近30天计数；iOS 18+ 才有此类型，guard 保证旧设备编译/运行安全）
+    if #available(iOS 18.0, *) {
+      zaiCount(store, .sleepApneaEvent, d30, now, group) { box.set("sleep_apnea_events_30d", $0) }
+    }
 
     // ---------- ⑧ 训练 ----------
     zaiWorkouts(store, d7, now, group, box)

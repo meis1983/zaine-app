@@ -32,6 +32,8 @@ import '../services/debug_log.dart'; // [192] 守护圈同步诊断（双通道�
 /// 蓝色调：用于「我守护的人」专区，与橙色「守护我的人」严格区分
 const Color _kGuardedBlue = Color(0xFF3F7CFF);
 
+/// 橙色调：已统一使用 ZaiNeColors.brandOrange（0xFFFF7F50），不再单独定义珊瑚红常量
+
 /// 【v1.97.3+167 今天时间流】今日事件流条目（纯本地聚合，不涉后端）
 class _FeedItem {
   final String type;
@@ -1515,6 +1517,50 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
 
               const SliverToBoxAdapter(child: SizedBox(height: ZaiNeSpacing.xl)),
 
+              // ====== 守护我的人（橙区：被守护视角，与蓝区「我守护的人」严格区分）======
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        margin: const EdgeInsets.only(top: 1),
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: ZaiNeColors.brandOrange.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.shield_rounded, size: 18, color: ZaiNeColors.brandOrange),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              tr.s1213,
+                              style: TextStyle(
+                                fontSize: ZaiNeFontSize.body,
+                                fontWeight: FontWeight.w700,
+                                color: ZaiNeColors.textPrimary(),
+                              ),
+                            ),
+                            Text(
+                              tr.s1214,
+                              style: TextStyle(
+                                fontSize: ZaiNeFontSize.micro,
+                                color: Colors.grey[500],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
               // ====== 守护者列表 ======
               if (_guardians.isEmpty)
                 SliverToBoxAdapter(
@@ -2283,6 +2329,17 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
     return nick.isNotEmpty ? nick : (recv.isNotEmpty ? recv : tr.s373);
   }
 
+  /// 【2026-11-13 守护圈收口·修复A】「守护我的人」显示名兜底。
+  /// 原 guardian['name'] ?? tr.s373 在 name 为【空字符串】（非 null）时不触发兜底 → 卡片空白。
+  /// 此处：备注非空用备注；否则回退手机号后4位（尾号 XXXX）；都无则「未命名」。
+  String _guardianDisplayName(Map<String, dynamic> guardian) {
+    final raw = (guardian['name']?.toString() ?? '').trim();
+    if (raw.isNotEmpty) return raw;
+    final phone = (guardian['phone']?.toString() ?? '').trim();
+    if (phone.length >= 4) return '尾号 ${phone.substring(phone.length - 4)}';
+    return tr.s373;
+  }
+
   Future<void> _editGuardedRemark(int receiverId, String remark) async {
     final prefs = await SharedPreferences.getInstance();
     if (remark.isEmpty) {
@@ -2398,7 +2455,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                     color: guardedColor.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Icon(Icons.volunteer_activism_rounded,
+                  child: Icon(Icons.person_rounded,
                       size: 18, color: guardedColor),
                 ),
                 const SizedBox(width: 10),
@@ -2542,40 +2599,41 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                               ],
                             ),
                             const SizedBox(height: 4),
-                            // 状态行：仅签到态（chip 已挪走、boundAt 下移独立行）
-                            // 【v1.98.4 横滑卡】状态文字包 Flexible+ellipsis，150px 窄卡英文不溢出
-                            Row(
-                              children: [
-                                Icon(
-                                  isPending
-                                      ? Icons.bedtime_outlined
-                                      : (checkedIn
-                                          ? Icons.check_circle_rounded
-                                          : Icons.radio_button_unchecked_rounded),
-                                  size: 14,
-                                  color: isPending
-                                      ? Colors.orange[500]
-                                      : (checkedIn ? Colors.green : Colors.grey[400]),
-                                ),
-                                const SizedBox(width: 4),
-                                Flexible(
-                                  child: Text(
+                            // 状态行：仅签到态 —— 去重规则：互护者已在上栏「守护我的人」显示，
+                            //   下栏不再重复；仅「非互护（单向守护）」时显示，避免重复又不遗漏
+                            if (!isMutual)
+                              Row(
+                                children: [
+                                  Icon(
                                     isPending
-                                        ? tr.s369
-                                        : (checkedIn ? tr.signInButtonCheckedIn : tr.s370),
-                                    overflow: TextOverflow.ellipsis,
-                                    maxLines: 1,
-                                    style: TextStyle(
-                                      fontSize: ZaiNeFontSize.micro,
-                                      color: isPending
-                                          ? Colors.orange[700]
-                                          : (checkedIn ? Colors.green : Colors.grey[500]),
-                                      fontWeight: FontWeight.w600,
+                                        ? Icons.bedtime_outlined
+                                        : (checkedIn
+                                            ? Icons.check_circle_rounded
+                                            : Icons.radio_button_unchecked_rounded),
+                                    size: 14,
+                                    color: isPending
+                                        ? Colors.orange[500]
+                                        : (checkedIn ? Colors.green : Colors.grey[400]),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Flexible(
+                                    child: Text(
+                                      isPending
+                                          ? tr.s369
+                                          : (checkedIn ? tr.signInButtonCheckedIn : tr.s370),
+                                      overflow: TextOverflow.ellipsis,
+                                      maxLines: 1,
+                                      style: TextStyle(
+                                        fontSize: ZaiNeFontSize.micro,
+                                        color: isPending
+                                            ? Colors.orange[700]
+                                            : (checkedIn ? Colors.green : Colors.grey[500]),
+                                        fontWeight: FontWeight.w600,
+                                      ),
                                     ),
                                   ),
-                                ),
-                              ],
-                            ),
+                                ],
+                              ),
                             // 绑定日期独立行（小字灰，避免与签到态挤一行）
                             if (boundAt.isNotEmpty) ...[
                               const SizedBox(height: 2),
@@ -2774,7 +2832,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
   /// 【v1.97.3+166 双向视觉】互为守护徽标（无文字，仅双心图标+tooltip）
   /// 非互为守护返回空占位以保持布局稳定
   ///
-  /// 【v1.97.3+173】图标换成"双心相扣"（A 候选）：两心错位重叠，左深紫右浅紫，
+  /// 【v1.97.3+173】图标换成"双心相扣"（A 候选）：两心错位重叠，左深粉红右浅粉红，
   /// 28×20 固定尺寸，配 Tooltip "互为守护"；不再用 handshake_rounded（语义偏商务握手）。
   /// 位置（173）：从状态行尾移到姓名行紧贴名字，状态行不再放这个徽标。
 
@@ -2789,22 +2847,22 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
           alignment: Alignment.center,
           clipBehavior: Clip.none,
           children: [
-            // 左心：深品牌紫，外移 -4 让出重叠空间
+            // 左心：深粉红，外移 -4 让出重叠空间
             Transform.translate(
               offset: const Offset(-4, 0),
               child: const Icon(
                 Icons.favorite,
                 size: 18,
-                color: Color(0xFF7C4DFF),
+                color: Color(0xFFE91E63),
               ),
             ),
-            // 右心：浅紫 0.6 透，外移 +4 与左心错位形成"相扣"感
+            // 右心：浅粉红 0.85 透，外移 +4 与左心错位形成"相扣"感
             Transform.translate(
               offset: const Offset(4, 0),
               child: Icon(
                 Icons.favorite,
                 size: 18,
-                color: const Color(0xFFA78DFF).withValues(alpha: 0.85),
+                color: const Color(0xFFF48FB1).withValues(alpha: 0.85),
               ),
             ),
           ],
@@ -2929,7 +2987,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                     children: [
                       Flexible(
                         child: Text(
-                          guardian['name'] ?? tr.s373,
+                          _guardianDisplayName(guardian),
                           overflow: TextOverflow.ellipsis,
                           maxLines: 1,
                           style: const TextStyle(
@@ -2970,7 +3028,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                   tooltip: tr.s455,
                   onTap: () {
                     HapticFeedback.lightImpact();
-                    _callGuardian((guardian['name'] ?? tr.s374).toString(),
+                    _callGuardian(_guardianDisplayName(guardian),
                         (guardian['phone'] ?? '').toString());
                   },
                 ),
@@ -2980,7 +3038,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                   tooltip: tr.s331,
                   onTap: () {
                     HapticFeedback.mediumImpact();
-                    _sendSMSToGuardian((guardian['name'] ?? tr.s374).toString(),
+                    _sendSMSToGuardian(_guardianDisplayName(guardian),
                         (guardian['phone'] ?? '').toString());
                   },
                 ),
@@ -3733,7 +3791,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
       ),
       child: Center(
         child: Text(
-          (guardian['name'] ?? tr.s373).toString().substring(0, 1),
+          _guardianDisplayName(guardian).substring(0, 1),
           style: TextStyle(
             fontSize: ZaiNeFontSize.title,
             fontWeight: FontWeight.bold,

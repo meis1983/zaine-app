@@ -553,9 +553,8 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
       crossAxisSpacing: 16,
       childAspectRatio: 1.1,
       children: [
-        // ★ 头牌：独居风险最强的信号不是任何生理指标，而是「一动没动」。
-        //   Apple 健康 App 永远不会做这个判定，因为它不是安全产品。
-        _buildActivityCard(),
+        // 核心三件套（心率/血压/血氧）常驻首屏；睡眠见下方独立卡；
+        // 活动量/步行稳定性归入「更多指标」折叠区，避免首屏过载
         _buildMetricCard(
           title: tr.s440,
           value: _metrics['heart_rate'] != null ? '${_metrics['heart_rate']} bpm' : '--',
@@ -563,6 +562,16 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
           color: Colors.red,
           subtitle: _hrRangeText(),
           isAlert: _alerts.any((a) => a.contains(tr.s440)),
+        ),
+        _buildMetricCard(
+          title: tr.s796,
+          value: (_metrics['bp_systolic'] != null && _metrics['bp_diastolic'] != null)
+              ? '${_parseValue(_metrics['bp_systolic']).toInt()}/${_parseValue(_metrics['bp_diastolic']).toInt()}'
+              : '--',
+          icon: Icons.speed,
+          color: Colors.deepPurple,
+          subtitle: tr.s797,
+          isAlert: _alerts.any((a) => a.contains(tr.s796)),
         ),
         _buildMetricCard(
           title: tr.s441,
@@ -574,56 +583,11 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
           subtitle: tr.s794,
           isAlert: _alerts.any((a) => a.contains(tr.s441)),
         ),
-        // Apple 官方的 Walking Steadiness 本就是为跌倒风险设计，
-        // 对独居长者场景高度对口，是我们最该抓住的一项。
-        _buildMetricCard(
-          title: tr.s795,
-          value: _metrics['walking_steadiness_pct'] != null
-              ? '${_parseValue(_metrics['walking_steadiness_pct']).toStringAsFixed(0)}%'
-              : '--',
-          icon: Icons.accessibility_new,
-          color: Colors.indigo,
-          subtitle: _steadinessText(),
-          isAlert: _parseValue(_metrics['walking_steadiness_pct']) > 0 &&
-              _parseValue(_metrics['walking_steadiness_pct']) < 50,
-        ),
-        // 血压：Apple Watch S9 本身支持，但需 iOS 26。
-        // 未开通时保持展示、不置灰 —— 用户明确要求保留入口。
-        _buildMetricCard(
-          title: tr.s796,
-          value: (_metrics['bp_systolic'] != null && _metrics['bp_diastolic'] != null)
-              ? '${_parseValue(_metrics['bp_systolic']).toInt()}/${_parseValue(_metrics['bp_diastolic']).toInt()}'
-              : '--',
-          icon: Icons.speed,
-          color: Colors.deepPurple,
-          subtitle: tr.s797,
-          isAlert: _alerts.any((a) => a.contains(tr.s796)),
-        ),
       ],
     );
   }
 
   /// 今日活动卡：步数 / 运动 / 站立 三合一，是「无活动」判定的可视化载体
-  Widget _buildActivityCard() {
-    final steps = _parseValue(_metrics['steps']).toInt();
-    final exercise = _parseValue(
-            _metrics['exercise_minutes'] ?? _metrics['ring_exercise_min'])
-        .toInt();
-    final stand = _parseValue(_metrics['ring_stand_hours']).toInt();
-    final hasData = _metrics['steps'] != null || _metrics['ring_stand_hours'] != null;
-
-    final isQuiet = _signal?.inactiveHours != null && _signal!.inactiveHours > 0;
-
-    return _buildMetricCard(
-      title: tr.s798,
-      value: hasData ? tr.s799(steps) : '--',
-      icon: Icons.directions_walk,
-      color: Colors.green,
-      subtitle: hasData ? tr.s800(exercise, stand) : tr.s801,
-      isAlert: isQuiet,
-    );
-  }
-
   String _hrRangeText() {
     final min = _parseValue(_metrics['heart_rate_min']).toInt();
     final max = _parseValue(_metrics['heart_rate_max']).toInt();
@@ -1066,6 +1030,7 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
                   ZaiNeSpacing.section, ZaiNeSpacing.section),
               child: Column(
                 children: [
+                  _buildApneaRow(),
                   _buildMiniRow(tr.s830, _fmt(_metrics['resting_heart_rate'], 'bpm'),
                       Icons.monitor_heart_outlined, Colors.orange),
                   _buildMiniRow(tr.s831, _fmt(_metrics['hrv'], 'ms', decimals: 0),
@@ -1087,8 +1052,20 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
                       Icons.straighten_rounded,
                       Colors.blue),
                   _buildMiniRow(tr.s837, _fmt(_metrics['active_energy'], tr.s838),
-                      Icons.local_fire_department_outlined, Colors.deepOrange,
-                      isLast: true),
+                      Icons.local_fire_department_outlined, Colors.deepOrange),
+                  // 次级指标（核心四件套之外）折叠于此：步行稳定性 + 今日活动
+                  _buildMiniRow(
+                      tr.s795,
+                      _metrics['walking_steadiness_pct'] != null
+                          ? '${_parseValue(_metrics['walking_steadiness_pct']).toStringAsFixed(0)}%'
+                          : '--',
+                      Icons.accessibility_new, Colors.indigo),
+                  _buildMiniRow(
+                      tr.s798,
+                      (_metrics['steps'] != null || _metrics['ring_stand_hours'] != null)
+                          ? tr.s799(_parseValue(_metrics['steps']).toInt())
+                          : '--',
+                      Icons.directions_walk, Colors.green, isLast: true),
                 ],
               ),
             ),
@@ -1096,6 +1073,44 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
                 _showMore ? CrossFadeState.showSecond : CrossFadeState.showFirst,
             duration: const Duration(milliseconds: 220),
             sizeCurve: Curves.easeOutCubic,
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 睡眠呼吸暂停：iOS 18 / watchOS 11+ 真实 HealthKit 类型（HKCategoryTypeIdentifierSleepApneaEvent）。
+  /// 开发者本人的旧 iPhone / 未升 watchOS 的设备看不到，但用新硬件的用户即显示。
+  /// 无数据（无事件或未授权）显「暂无数据」。置于 L2 展开首行并高亮，作为本页必备板块。
+  Widget _buildApneaRow() {
+    final dynamic raw = _metrics['sleep_apnea_events_30d'];
+    final int n = raw is int ? raw : _parseValue(raw).toInt();
+    final bool has = n > 0;
+    final Color accent = const Color(0xFF185FA5);
+    return Container(
+      padding: const EdgeInsets.symmetric(
+          vertical: ZaiNeSpacing.md, horizontal: ZaiNeSpacing.md),
+      margin: const EdgeInsets.only(bottom: ZaiNeSpacing.sm),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE6F1FB),
+        borderRadius: BorderRadius.circular(ZaiNeRadius.small),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.air_rounded, size: 18, color: accent),
+          const SizedBox(width: ZaiNeSpacing.md),
+          Expanded(
+            child: Text(tr.s1216,
+                style: const TextStyle(
+                    fontSize: ZaiNeFontSize.bodySm, fontWeight: FontWeight.w600)),
+          ),
+          Text(
+            has ? tr.s1217(n) : tr.s811,
+            style: TextStyle(
+              fontSize: ZaiNeFontSize.bodySm,
+              fontWeight: has ? FontWeight.w600 : FontWeight.normal,
+              color: has ? accent : ZaiNeColors.textSecondary(),
+            ),
           ),
         ],
       ),

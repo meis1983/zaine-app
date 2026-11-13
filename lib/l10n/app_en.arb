@@ -774,7 +774,9 @@
   "s445": "Auto-guard off · Tap to view full vital signs",
   "s446": "Synced just now",
   "s449": "Guarding",
-  "s450": "Guardian cards I sent · Mutual guardians (no limit)",
+  "s450": "You guard them · send peace check-ins & see replies",
+  "s1213": "People Who Guard Me",
+  "s1214": "They're guarding you · see if they're safe & online",
   "s451": "No one guarded yet",
   "s452": "Send a guardian card, and they'll appear in the list once they sign up",
   "s454": "Mutual Guardians",
@@ -7268,5 +7270,11 @@
   "s1209": "Place the other person's guardian code / QR code inside the frame",
   "@s1209": { "description": "Scan page: viewfinder hint" },
   "s1210": "Pick from album",
-  "@s1210": { "description": "Scan page: pick from album button" }
+  "@s1210": { "description": "Scan page: pick from album button" },
+  "s1215": "Sleep",
+  "@s1215": { "description": "Home health card / vitals: sleep" },
+  "s1216": "Sleep apnea",
+  "@s1216": { "description": "Vitals page L2: sleep apnea events" },
+  "s1217": "Last 30 days: {p1}",
+  "@s1217": { "description": "Vitals page L2: last 30 days sleep apnea count" }
 }

@@ -23,6 +23,8 @@ import '../services/api/notify_service.dart'; // [方案C] 被守护者主动求
 import '../services/api/card_service.dart';
 import '../services/deep_link_service.dart';
 import '../services/platform/health_service.dart'; // 新增
+import '../services/api/user_service.dart'; // 【v1.98.5】首页紧凑健康卡
+import 'health_overview_page.dart'; // 【v1.98.5】首页健康卡跳健康概览页
 import '../widgets/guardian_ritual.dart'; // 【修复 v1.9.95】统一守护仪式封装
 import '../main.dart';
 import '../theme/theme_helper.dart';
@@ -56,6 +58,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   int _totalDays = 0;
   int _weeklyDays = 0;
   int _daysSinceLastCheckin = 0; // 断签天数，>0 表示回归
+  /// 【v1.98.5】首页紧凑健康卡：今日体征（心率/血氧/血压/睡眠），无数据显 --
+  Map<String, dynamic> _homeMetrics = {};
   /// 【修复 v1.91.0】签到数据是否就绪。
   /// 首次启动时如果本地无任何缓存，会立即渲染 0 出现"短暂显示 0 天"的视觉错。
   /// 引入这个标志位：在本地无缓存且服务端未返回前，签到数字区域显示占位 skeleton。
@@ -109,6 +113,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     // 【v1.94.0 新增】监听 Watch 签到酷炫确认横幅
     HealthService.watchCheckinCelebration.addListener(_onWatchCheckinCelebration);
     _initialize();
+    // 【v1.98.5】首页紧凑健康卡：冷启动拉取今日体征（无数据显 --）
+    unawaited(_loadHomeHealth());
     // 【v1.97.1+157】App 冷启动即按当前签到状态重排提醒（已签到→撤销，未签到→排程）
     unawaited(_rescheduleCheckInReminders());
   }
@@ -1625,6 +1631,11 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
 
               const SizedBox(height: ZaiNeSpacing.xl),
 
+              // ====== 【v1.98.5】首页紧凑健康卡（心率/血氧/血压/睡眠）======
+              _buildHomeHealthCard(),
+
+              const SizedBox(height: ZaiNeSpacing.xl),
+
               // ====== 签到日历热力图 ======
               _buildCheckInCalendar(),
 
@@ -1634,6 +1645,135 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         ),
       ),
     );
+  }
+
+  /// 【v1.98.5】首页紧凑健康卡：心率 / 血氧 / 血压 / 睡眠 四项，无数据显 --
+  /// 点整卡跳健康概览页（守护指标页）
+  Widget _buildHomeHealthCard() {
+    final String hrText = _homeMetrics['heart_rate'] != null
+        ? '${_hpNum(_homeMetrics['heart_rate']).toInt()} bpm'
+        : '--';
+    final String boText = _hpSpo2(_homeMetrics['blood_oxygen']);
+    final sys = _homeMetrics['bp_systolic'];
+    final dia = _homeMetrics['bp_diastolic'];
+    final String bpText = (sys != null && dia != null)
+        ? '${_hpNum(sys).toInt()}/${_hpNum(dia).toInt()}'
+        : '--';
+    final int sleepMin = _hpNum(_homeMetrics['sleep_asleep']).toInt();
+    final String sleepText = sleepMin > 0
+        ? (sleepMin >= 60 ? '${sleepMin ~/ 60}h${sleepMin % 60}m' : '${sleepMin}m')
+        : '--';
+
+    return GestureDetector(
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => const HealthOverviewPage()),
+      ),
+      child: Container(
+        padding: const EdgeInsets.all(ZaiNeSpacing.section),
+        decoration: BoxDecoration(
+          color: ZaiNeColors.cardBg(),
+          borderRadius: BorderRadius.circular(ZaiNeRadius.card),
+          boxShadow: ZaiNeShadows.card,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.favorite_rounded, size: 18, color: ZaiNeColors.brandOrange),
+                const SizedBox(width: ZaiNeSpacing.sm),
+                Text(
+                  tr.s411,
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: ZaiNeFontSize.body),
+                ),
+                const Spacer(),
+                Icon(Icons.chevron_right_rounded, color: ZaiNeColors.textSecondary()),
+              ],
+            ),
+            const SizedBox(height: ZaiNeSpacing.lg),
+            Row(
+              children: [
+                _buildHomeVitalItem(tr.s440, hrText, Colors.red),
+                _buildHomeVitalItem(tr.s441, boText, Colors.blue),
+                _buildHomeVitalItem(tr.s796, bpText, Colors.deepPurple),
+                _buildHomeVitalItem(tr.s1215, sleepText, Colors.teal),
+              ],
+            ),
+            const SizedBox(height: ZaiNeSpacing.sm),
+            Text(
+              tr.s436,
+              style: TextStyle(color: ZaiNeColors.textSecondary(), fontSize: ZaiNeFontSize.micro),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHomeVitalItem(String label, String value, Color color) {
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.circle, size: 8, color: color),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: TextStyle(color: ZaiNeColors.textSecondary(), fontSize: ZaiNeFontSize.micro),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: ZaiNeFontSize.subtitle,
+              fontWeight: FontWeight.bold,
+              color: Colors.black,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  double _hpNum(dynamic v) {
+    if (v == null) return 0;
+    return double.tryParse(v.toString()) ?? 0;
+  }
+
+  /// 血氧(SpO2)归一化：HealthKit 可能返回 0.0–1.0 分数或 0–100 百分比，统一百分比；
+  /// 超出合理区间(70%–100%)或脏数据视为无数据，显 --
+  String _hpSpo2(dynamic v) {
+    final raw = _hpNum(v);
+    if (raw <= 0) return '--';
+    final pct = raw <= 1.0 ? raw * 100 : raw;
+    if (pct >= 70 && pct <= 100) return '${pct.toStringAsFixed(0)}%';
+    return '--';
+  }
+
+  /// 【v1.98.5】首页紧凑健康卡：拉取今日体征（心率/血压/血氧），无数据显 --
+  Future<void> _loadHomeHealth() async {
+    try {
+      // 1. 服务端已同步的体征（稳定）
+      final res = await UserService.getProfile();
+      if (res['success'] == true && res['health_metrics'] != null) {
+        _homeMetrics = Map<String, dynamic>.from(res['health_metrics']);
+      }
+      // 2. 本地 HealthKit 最新镜像（覆盖服务端）
+      final summary = await HealthService.getHealthSummary().timeout(
+        const Duration(seconds: 6),
+        onTimeout: () => <String, dynamic>{},
+      );
+      if (summary.isNotEmpty) {
+        _homeMetrics.addAll(summary);
+      }
+      if (mounted) setState(() {});
+    } catch (e) {
+      if (kDebugMode) debugPrint('[HomePage] 加载首页体征失败: $e');
+    }
   }
 
   /// 紧急求助卡片

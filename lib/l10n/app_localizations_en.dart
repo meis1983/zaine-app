@@ -1388,7 +1388,13 @@ class SEn extends S {
   String get s449 => 'Guarding';
 
   @override
-  String get s450 => 'Guardian cards I sent · Mutual guardians (no limit)';
+  String get s450 => 'You guard them · send peace check-ins & see replies';
+
+  @override
+  String get s1213 => 'People Who Guard Me';
+
+  @override
+  String get s1214 => 'They\'re guarding you · see if they\'re safe & online';
 
   @override
   String get s451 => 'No one guarded yet';
@@ -7178,4 +7184,15 @@ class SEn extends S {
   @override
   String get s1209 =>
       'Place the other person\'s guardian code / QR code inside the frame';
+
+  @override
+  String get s1215 => 'Sleep';
+
+  @override
+  String get s1216 => 'Sleep apnea';
+
+  @override
+  String s1217(Object p1) {
+    return 'Last 30 days: $p1';
+  }
 }

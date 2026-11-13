@@ -1344,7 +1344,13 @@ class SZh extends S {
   String get s449 => '守护中';
 
   @override
-  String get s450 => '我守护的人 · 已建立守护关系';
+  String get s450 => '你守护着他们 · 可发平安确认、看对方回复';
+
+  @override
+  String get s1213 => '守护我的人';
+
+  @override
+  String get s1214 => '他们守护着你 · 看对方是否平安在线';
 
   @override
   String get s451 => '还没有守护的人';
@@ -6936,6 +6942,17 @@ class SZh extends S {
 
   @override
   String get s1209 => '将对方出示的守护码 / 二维码置于框内';
+
+  @override
+  String get s1215 => '睡眠';
+
+  @override
+  String get s1216 => '睡眠呼吸暂停';
+
+  @override
+  String s1217(Object p1) {
+    return '近30天 $p1 次';
+  }
 }
 
 /// The translations for Chinese, as used in China (`zh_CN`).
@@ -8278,7 +8295,13 @@ class SZhCn extends SZh {
   String get s449 => '守护中';
 
   @override
-  String get s450 => '我守护的人 · 已建立守护关系';
+  String get s450 => '你守护着他们 · 可发平安确认、看对方回复';
+
+  @override
+  String get s1213 => '守护我的人';
+
+  @override
+  String get s1214 => '他们守护着你 · 看对方是否平安在线';
 
   @override
   String get s451 => '还没有守护的人';
@@ -13870,6 +13893,17 @@ class SZhCn extends SZh {
 
   @override
   String get s1209 => '将对方出示的守护码 / 二维码置于框内';
+
+  @override
+  String get s1215 => '睡眠';
+
+  @override
+  String get s1216 => '睡眠呼吸暂停';
+
+  @override
+  String s1217(Object p1) {
+    return '近30天 $p1 次';
+  }
 }
 
 /// The translations for Chinese, as used in Hong Kong (`zh_HK`).
@@ -15212,7 +15246,13 @@ class SZhHk extends SZh {
   String get s449 => '守護中';
 
   @override
-  String get s450 => '我守護的人 · 已建立守護關係';
+  String get s450 => '你守護著他們 · 可發平安確認、看對方回覆';
+
+  @override
+  String get s1213 => '守護我的人';
+
+  @override
+  String get s1214 => '他們守護著你 · 看對方是否平安在線';
 
   @override
   String get s451 => '還沒有守護的人';
@@ -20804,6 +20844,17 @@ class SZhHk extends SZh {
 
   @override
   String get s1209 => '將對方出示的守護碼 / QR Code 置於框內';
+
+  @override
+  String get s1215 => '睡眠';
+
+  @override
+  String get s1216 => '睡眠呼吸暫停';
+
+  @override
+  String s1217(Object p1) {
+    return '近30天 $p1 次';
+  }
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -22146,7 +22197,13 @@ class SZhTw extends SZh {
   String get s449 => '守護中';
 
   @override
-  String get s450 => '我守護的人 · 已建立守護關係';
+  String get s450 => '你守護著他們 · 可發平安確認、看對方回覆';
+
+  @override
+  String get s1213 => '守護我的人';
+
+  @override
+  String get s1214 => '他們守護著你 · 看對方是否平安在線';
 
   @override
   String get s451 => '還沒有守護的人';
@@ -27738,4 +27795,15 @@ class SZhTw extends SZh {
 
   @override
   String get s1209 => '將對方出示的守護碼 / QR Code 置於框內';
+
+  @override
+  String get s1215 => '睡眠';
+
+  @override
+  String get s1216 => '睡眠呼吸中止症';
+
+  @override
+  String s1217(Object p1) {
+    return '近30天 $p1 次';
+  }
 }

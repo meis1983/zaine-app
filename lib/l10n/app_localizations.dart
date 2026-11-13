@@ -2588,8 +2588,20 @@ abstract class S {
   /// No description provided for @s450.
   ///
   /// In zh_CN, this message translates to:
-  /// **'我守护的人 · 已建立守护关系'**
+  /// **'你守护着他们 · 可发平安确认、看对方回复'**
   String get s450;
+
+  /// No description provided for @s1213.
+  ///
+  /// In zh_CN, this message translates to:
+  /// **'守护我的人'**
+  String get s1213;
+
+  /// No description provided for @s1214.
+  ///
+  /// In zh_CN, this message translates to:
+  /// **'他们守护着你 · 看对方是否平安在线'**
+  String get s1214;
 
   /// No description provided for @s451.
   ///
@@ -12563,6 +12575,24 @@ abstract class S {
   /// In zh_CN, this message translates to:
   /// **'将对方出示的守护码 / 二维码置于框内'**
   String get s1209;
+
+  /// 首页健康卡/守护指标：睡眠
+  ///
+  /// In zh_CN, this message translates to:
+  /// **'睡眠'**
+  String get s1215;
+
+  /// 守护指标页 L2：睡眠呼吸暂停事件
+  ///
+  /// In zh_CN, this message translates to:
+  /// **'睡眠呼吸暂停'**
+  String get s1216;
+
+  /// 守护指标页 L2：近30天睡眠呼吸暂停次数
+  ///
+  /// In zh_CN, this message translates to:
+  /// **'近30天 {p1} 次'**
+  String s1217(Object p1);
 }
 
 class _SDelegate extends LocalizationsDelegate<S> {
