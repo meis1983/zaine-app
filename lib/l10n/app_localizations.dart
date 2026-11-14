@@ -12593,6 +12593,12 @@ abstract class S {
   /// In zh_CN, this message translates to:
   /// **'近30天 {p1} 次'**
   String s1217(Object p1);
+
+  /// 守护圈卡片：对方回复平安确认的时间
+  ///
+  /// In zh_CN, this message translates to:
+  /// **'· {t} 回复'**
+  String s1218(Object t);
 }
 
 class _SDelegate extends LocalizationsDelegate<S> {

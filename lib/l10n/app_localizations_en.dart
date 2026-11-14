@@ -7195,4 +7195,9 @@ class SEn extends S {
   String s1217(Object p1) {
     return 'Last 30 days: $p1';
   }
+
+  @override
+  String s1218(Object t) {
+    return '· Replied $t';
+  }
 }

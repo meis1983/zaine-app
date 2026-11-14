@@ -241,6 +241,8 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
   Map<String, int> _peaceRequestIdByReceiver = {};
   // 【留言功能 v1】receiver_id -> 「需要帮助」时附带的选填留言（status=2 且非空时展示）
   Map<String, String> _peaceMessageByReceiver = {};
+  // 【v1.98.5】receiver_id -> 对方回复平安确认的时间（confirmed_at，ISO 字符串），用于卡片「回复」行
+  Map<String, String> _peaceConfirmedAtByReceiver = {};
   // 【v1.98.4 横滑卡片】被展开留言的 receiver_id 集合（点留言框展开/收起全文）
   Set<String> _expandedRids = {};
   Timer? _refreshTimer; // 定期刷新定时器
@@ -2326,7 +2328,14 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
     }
     final nick = (person['nickname']?.toString() ?? '').trim();
     final recv = (person['receiver_name']?.toString() ?? '').trim();
-    return nick.isNotEmpty ? nick : (recv.isNotEmpty ? recv : tr.s373);
+    if (nick.isNotEmpty) return nick;
+    if (recv.isNotEmpty) return recv;
+    // 【v1.98.5】昵称/对方名皆空时，兜底用掩码手机号（如 133****4392），避免卡片空白
+    final phone = (person['phone']?.toString() ?? '').trim();
+    if (phone.length >= 7) {
+      return '${phone.substring(0, 3)}****${phone.substring(phone.length - 4)}';
+    }
+    return tr.s373;
   }
 
   /// 【2026-11-13 守护圈收口·修复A】「守护我的人」显示名兜底。
@@ -2436,6 +2445,49 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
         ],
       ),
     );
+  }
+
+  /// 【v1.98.5】守护圈卡片状态小标签（待激活/今日已签到/已报平安/需要帮助/平安确认中）
+  /// 统一风格：浅色底 + 同色图标 + 同色字，左对齐，随 Wrap 自动换行
+  Widget _buildStatusChip(String label, Color color, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: color),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 【v1.98.5】将后端 confirmed_at(UTC ISO) 转本地时间：今日显 HH:mm，否则显 MM-DD HH:mm
+  String _fmtReplyTime(String iso) {
+    final dt = DateTime.tryParse(iso);
+    if (dt == null) return iso;
+    final local = dt.toLocal();
+    final now = DateTime.now();
+    final hm =
+        '${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
+    if (local.year == now.year && local.month == now.month && local.day == now.day) {
+      return hm;
+    }
+    final md =
+        '${local.month.toString().padLeft(2, '0')}-${local.day.toString().padLeft(2, '0')}';
+    return '$md $hm';
   }
 
   Widget _buildGuardedByMeSection() {
@@ -2590,59 +2642,50 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                                 ),
                                 const SizedBox(width: ZaiNeSpacing.xs),
                                 _buildMutualBadge(isMutual),
-                                // 【方案A v1.97.1+160】chip 挪到名字行末尾，避免被 Row 末尾挤截
-                                // 【方案三 v1.97.1+160】status=0（待确认/已处理归零）不渲染 chip，处理完更"安静"
-                                if (peaceStatus != null && peaceStatus != 0) ...[
-                                  const SizedBox(width: 8),
-                                  _buildPeaceStatusChip(peaceStatus),
-                                ],
                               ],
                             ),
-                            const SizedBox(height: 4),
-                            // 状态行：仅签到态 —— 去重规则：互护者已在上栏「守护我的人」显示，
-                            //   下栏不再重复；仅「非互护（单向守护）」时显示，避免重复又不遗漏
-                            if (!isMutual)
-                              Row(
+                            const SizedBox(height: 6),
+                            // 【v1.98.5】合并状态 chips：待激活/今日已签到/已报平安/需要帮助/平安确认中，左对齐同行，超宽自动换行
+                            Wrap(
+                              spacing: 6,
+                              runSpacing: 6,
+                              children: [
+                                if (isPending)
+                                  _buildStatusChip(tr.s369, Colors.orange, Icons.bedtime_outlined),
+                                if (checkedIn)
+                                  _buildStatusChip(tr.signInButtonCheckedIn, Colors.green, Icons.check_circle_rounded),
+                                if (peaceStatus == 1)
+                                  _buildStatusChip(tr.z0909, Colors.green, Icons.verified_user_rounded),
+                                if (peaceStatus == 2)
+                                  _buildStatusChip(tr.z0904, Colors.red, Icons.warning_amber_rounded),
+                                if (peaceStatus == 0)
+                                  _buildStatusChip(tr.z0908, const Color(0xFF757575), Icons.hourglass_empty_rounded),
+                              ],
+                            ),
+                            // 绑定时间 + 对方回复时间（小字灰，超宽换行）
+                            if (boundAt.isNotEmpty || _peaceConfirmedAtByReceiver[rid] != null) ...[
+                              const SizedBox(height: 4),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 2,
                                 children: [
-                                  Icon(
-                                    isPending
-                                        ? Icons.bedtime_outlined
-                                        : (checkedIn
-                                            ? Icons.check_circle_rounded
-                                            : Icons.radio_button_unchecked_rounded),
-                                    size: 14,
-                                    color: isPending
-                                        ? Colors.orange[500]
-                                        : (checkedIn ? Colors.green : Colors.grey[400]),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Flexible(
-                                    child: Text(
-                                      isPending
-                                          ? tr.s369
-                                          : (checkedIn ? tr.signInButtonCheckedIn : tr.s370),
-                                      overflow: TextOverflow.ellipsis,
-                                      maxLines: 1,
+                                  if (boundAt.isNotEmpty)
+                                    Text(
+                                      tr.s563(boundAt),
                                       style: TextStyle(
                                         fontSize: ZaiNeFontSize.micro,
-                                        color: isPending
-                                            ? Colors.orange[700]
-                                            : (checkedIn ? Colors.green : Colors.grey[500]),
-                                        fontWeight: FontWeight.w600,
+                                        color: Colors.grey[400],
                                       ),
                                     ),
-                                  ),
+                                  if (_peaceConfirmedAtByReceiver[rid] != null)
+                                    Text(
+                                      tr.s1218(_fmtReplyTime(_peaceConfirmedAtByReceiver[rid]!)),
+                                      style: TextStyle(
+                                        fontSize: ZaiNeFontSize.micro,
+                                        color: Colors.grey[400],
+                                      ),
+                                    ),
                                 ],
-                              ),
-                            // 绑定日期独立行（小字灰，避免与签到态挤一行）
-                            if (boundAt.isNotEmpty) ...[
-                              const SizedBox(height: 2),
-                              Text(
-                                tr.s563(boundAt),
-                                style: TextStyle(
-                                  fontSize: ZaiNeFontSize.micro,
-                                  color: Colors.grey[400],
-                                ),
                               ),
                             ],
                             // 【留言功能 v1 + V2】任一状态下含留言/轻量状态均展示气泡（仅发送给守护者，合规）
@@ -2731,33 +2774,40 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                             // 【方案A v1.97.1+160】"请求报平安" 主按钮（向被守护人发起）
                             // 【方案三 v1.97.1+160】status=2（需要帮助）时前置「已联系」按钮，标记已处理归零
                             const SizedBox(height: 10),
+                            // 【v1.98.5】按钮改用 Wrap+右对齐：status=2 时「已联系」+「平安」并排也不会溢出卡片；
+                            // 「已联系」收敛为浅绿描边小按钮，降低视觉权重（保留功能）
                             Align(
                               alignment: Alignment.centerRight,
                               child: Builder(builder: (context) {
                                 final rid = person['receiver_id']?.toString() ?? '';
-                                return Row(
-                                  mainAxisSize: MainAxisSize.min,
+                                return Wrap(
+                                  alignment: WrapAlignment.end,
+                                  spacing: 8,
+                                  runSpacing: 8,
                                   children: [
                                     if (peaceStatus == 2) ...[
                                       GestureDetector(
                                         onTap: () => _acknowledgePeace(rid, name),
                                         child: Container(
                                           padding: const EdgeInsets.symmetric(
-                                              horizontal: 14, vertical: 6),
+                                              horizontal: 12, vertical: 5),
                                           decoration: BoxDecoration(
-                                            color: Colors.green,
+                                            color: Colors.green.withValues(alpha: 0.1),
                                             borderRadius: BorderRadius.circular(16),
+                                            border: Border.all(
+                                                color: Colors.green.withValues(alpha: 0.5),
+                                                width: 1),
                                           ),
                                           child: Row(
                                             mainAxisSize: MainAxisSize.min,
                                             children: [
                                               const Icon(Icons.check_circle_rounded,
-                                                  size: 14, color: Colors.white),
+                                                  size: 13, color: Colors.green),
                                               const SizedBox(width: 4),
                                               Text(
                                                 tr.z0910, // 已联系
                                                 style: const TextStyle(
-                                                  color: Colors.white,
+                                                  color: Colors.green,
                                                   fontSize: 12,
                                                   fontWeight: FontWeight.w600,
                                                 ),
@@ -2766,7 +2816,6 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                                           ),
                                         ),
                                       ),
-                                      const SizedBox(width: 8),
                                     ],
                                     GestureDetector(
                                       onTap: () {
@@ -2798,7 +2847,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
                                                 size: 14, color: Colors.white),
                                             const SizedBox(width: 4),
                                             Text(
-                                              tr.s456, // "平安" 文案（与原守护我的人胶囊同文案）
+                                              tr.s456,
                                               style: const TextStyle(
                                                 color: Colors.white,
                                                 fontSize: 12,
@@ -3305,6 +3354,7 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
       final Map<String, int> map = {};
       final Map<String, int> reqMap = {};
       final Map<String, String> msgMap = {};
+      final Map<String, String> confirmedAtMap = {};
       // get_sent 已按 requested_at desc，故同一 user 取最先遇到（最新）的状态
       for (final item in list) {
         if (item is! Map) continue;
@@ -3322,12 +3372,18 @@ class _GuardianPageState extends State<GuardianPage> with WidgetsBindingObserver
         if (msg != null && msg.toString().isNotEmpty) {
           msgMap.putIfAbsent(uid, () => msg.toString());
         }
+        // 【v1.98.5】记录最新一条的回复时间（confirmed_at，对方确认/需要帮助时写入）
+        final ca = item['confirmed_at'];
+        if (ca != null && ca.toString().isNotEmpty) {
+          confirmedAtMap.putIfAbsent(uid, () => ca.toString());
+        }
       }
       if (!mounted) return;
       setState(() {
         _peaceStatusByReceiver = map;
         _peaceRequestIdByReceiver = reqMap;
         _peaceMessageByReceiver = msgMap;
+        _peaceConfirmedAtByReceiver = confirmedAtMap;
       });
     } catch (e) {
       if (kDebugMode) debugPrint('[GuardianPage] 平安确认响应状态加载失败(忽略): $e');

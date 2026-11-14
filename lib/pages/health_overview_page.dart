@@ -583,8 +583,24 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
           subtitle: tr.s794,
           isAlert: _alerts.any((a) => a.contains(tr.s441)),
         ),
+        // 【v1.98.5】第4格：睡眠呼吸暂停（iOS18/watchOS11+ 真实 HealthKit 类型）
+        _buildMetricCard(
+          title: tr.s1216,
+          value: _apneaCount().toString(),
+          icon: Icons.air_rounded,
+          color: const Color(0xFF185FA5),
+          subtitle: tr.s1217(_apneaCount()),
+          isAlert: false,
+        ),
       ],
     );
+  }
+
+  /// 睡眠呼吸暂停事件数（近30天），iOS18/watchOS11+ 由原生桥写入 sleep_apnea_events_30d
+  int _apneaCount() {
+    final raw = _metrics['sleep_apnea_events_30d'];
+    if (raw is int) return raw;
+    return _parseValue(raw).toInt();
   }
 
   /// 今日活动卡：步数 / 运动 / 站立 三合一，是「无活动」判定的可视化载体
@@ -1030,7 +1046,6 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
                   ZaiNeSpacing.section, ZaiNeSpacing.section),
               child: Column(
                 children: [
-                  _buildApneaRow(),
                   _buildMiniRow(tr.s830, _fmt(_metrics['resting_heart_rate'], 'bpm'),
                       Icons.monitor_heart_outlined, Colors.orange),
                   _buildMiniRow(tr.s831, _fmt(_metrics['hrv'], 'ms', decimals: 0),
@@ -1073,44 +1088,6 @@ class _HealthOverviewPageState extends State<HealthOverviewPage> {
                 _showMore ? CrossFadeState.showSecond : CrossFadeState.showFirst,
             duration: const Duration(milliseconds: 220),
             sizeCurve: Curves.easeOutCubic,
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// 睡眠呼吸暂停：iOS 18 / watchOS 11+ 真实 HealthKit 类型（HKCategoryTypeIdentifierSleepApneaEvent）。
-  /// 开发者本人的旧 iPhone / 未升 watchOS 的设备看不到，但用新硬件的用户即显示。
-  /// 无数据（无事件或未授权）显「暂无数据」。置于 L2 展开首行并高亮，作为本页必备板块。
-  Widget _buildApneaRow() {
-    final dynamic raw = _metrics['sleep_apnea_events_30d'];
-    final int n = raw is int ? raw : _parseValue(raw).toInt();
-    final bool has = n > 0;
-    final Color accent = const Color(0xFF185FA5);
-    return Container(
-      padding: const EdgeInsets.symmetric(
-          vertical: ZaiNeSpacing.md, horizontal: ZaiNeSpacing.md),
-      margin: const EdgeInsets.only(bottom: ZaiNeSpacing.sm),
-      decoration: BoxDecoration(
-        color: const Color(0xFFE6F1FB),
-        borderRadius: BorderRadius.circular(ZaiNeRadius.small),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.air_rounded, size: 18, color: accent),
-          const SizedBox(width: ZaiNeSpacing.md),
-          Expanded(
-            child: Text(tr.s1216,
-                style: const TextStyle(
-                    fontSize: ZaiNeFontSize.bodySm, fontWeight: FontWeight.w600)),
-          ),
-          Text(
-            has ? tr.s1217(n) : tr.s811,
-            style: TextStyle(
-              fontSize: ZaiNeFontSize.bodySm,
-              fontWeight: has ? FontWeight.w600 : FontWeight.normal,
-              color: has ? accent : ZaiNeColors.textSecondary(),
-            ),
           ),
         ],
       ),

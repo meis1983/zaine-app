@@ -6953,6 +6953,11 @@ class SZh extends S {
   String s1217(Object p1) {
     return '近30天 $p1 次';
   }
+
+  @override
+  String s1218(Object t) {
+    return '· $t 回复';
+  }
 }
 
 /// The translations for Chinese, as used in China (`zh_CN`).
@@ -13903,6 +13908,11 @@ class SZhCn extends SZh {
   @override
   String s1217(Object p1) {
     return '近30天 $p1 次';
+  }
+
+  @override
+  String s1218(Object t) {
+    return '· $t 回复';
   }
 }
 
@@ -20855,6 +20865,11 @@ class SZhHk extends SZh {
   String s1217(Object p1) {
     return '近30天 $p1 次';
   }
+
+  @override
+  String s1218(Object t) {
+    return '· $t 回覆';
+  }
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -27805,5 +27820,10 @@ class SZhTw extends SZh {
   @override
   String s1217(Object p1) {
     return '近30天 $p1 次';
+  }
+
+  @override
+  String s1218(Object t) {
+    return '· $t 回覆';
   }
 }

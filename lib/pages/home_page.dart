@@ -58,7 +58,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   int _totalDays = 0;
   int _weeklyDays = 0;
   int _daysSinceLastCheckin = 0; // 断签天数，>0 表示回归
-  /// 【v1.98.5】首页紧凑健康卡：今日体征（心率/血氧/血压/睡眠），无数据显 --
+  /// 【v1.98.5】首页紧凑健康卡：今日体征（心率/血压/血氧）三项，睡眠见守护指标页
   Map<String, dynamic> _homeMetrics = {};
   /// 【修复 v1.91.0】签到数据是否就绪。
   /// 首次启动时如果本地无任何缓存，会立即渲染 0 出现"短暂显示 0 天"的视觉错。
@@ -1647,8 +1647,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     );
   }
 
-  /// 【v1.98.5】首页紧凑健康卡：心率 / 血氧 / 血压 / 睡眠 四项，无数据显 --
-  /// 点整卡跳健康概览页（守护指标页）
+  /// 【v1.98.5】首页紧凑健康卡：心率 / 血压 / 血氧 三项，无数据显 --
+  /// 点整卡跳健康概览页（守护指标页）；睡眠在该页完整展示
   Widget _buildHomeHealthCard() {
     final String hrText = _homeMetrics['heart_rate'] != null
         ? '${_hpNum(_homeMetrics['heart_rate']).toInt()} bpm'
@@ -1658,10 +1658,6 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     final dia = _homeMetrics['bp_diastolic'];
     final String bpText = (sys != null && dia != null)
         ? '${_hpNum(sys).toInt()}/${_hpNum(dia).toInt()}'
-        : '--';
-    final int sleepMin = _hpNum(_homeMetrics['sleep_asleep']).toInt();
-    final String sleepText = sleepMin > 0
-        ? (sleepMin >= 60 ? '${sleepMin ~/ 60}h${sleepMin % 60}m' : '${sleepMin}m')
         : '--';
 
     return GestureDetector(
@@ -1694,9 +1690,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
             Row(
               children: [
                 _buildHomeVitalItem(tr.s440, hrText, Colors.red),
-                _buildHomeVitalItem(tr.s441, boText, Colors.blue),
                 _buildHomeVitalItem(tr.s796, bpText, Colors.deepPurple),
-                _buildHomeVitalItem(tr.s1215, sleepText, Colors.teal),
+                _buildHomeVitalItem(tr.s441, boText, Colors.blue),
               ],
             ),
             const SizedBox(height: ZaiNeSpacing.sm),

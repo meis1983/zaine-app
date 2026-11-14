@@ -7276,5 +7276,7 @@
   "s1216": "Sleep apnea",
   "@s1216": { "description": "Vitals page L2: sleep apnea events" },
   "s1217": "Last 30 days: {p1}",
-  "@s1217": { "description": "Vitals page L2: last 30 days sleep apnea count" }
+  "@s1217": { "description": "Vitals page L2: last 30 days sleep apnea count" },
+  "s1218": "· Replied {t}",
+  "@s1218": { "description": "Guardian card: time the other party replied to the peace check-in" }
 }
