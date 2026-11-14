@@ -11,6 +11,7 @@ import '../services/api_service.dart';
 import '../services/membership_service.dart';
 import '../services/api/checkin_service.dart';
 import '../services/api/auth_service.dart';
+import '../services/api/notify_service.dart';
 import '../services/platform/health_service.dart';
 import '../services/api/sync_service.dart';
 import '../pages/onboarding_page.dart';
@@ -218,6 +219,20 @@ mixin DeveloperMode<T extends StatefulWidget> on State<T> {
                   subtitle: Text(tr.z0786),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () { Navigator.pop(ctx); showHealthDiagnostics(); },
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 24),
+                ),
+                const Divider(height: 1, indent: 24, endIndent: 24),
+                // 模拟体征异常推送（验证守护圈自动通知链路）
+                ListTile(
+                  leading: Container(
+                    width: 40, height: 40,
+                    decoration: BoxDecoration(color: Colors.red.shade50, borderRadius: BorderRadius.circular(10)),
+                    child: Icon(Icons.monitor_heart_rounded, color: Colors.red.shade600, size: 20),
+                  ),
+                  title: Text('模拟体征异常推送', style: TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: Text('走真实链路通知守护圈（APNs）'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () { Navigator.pop(ctx); unawaited(simulateHealthAlert()); },
                   contentPadding: const EdgeInsets.symmetric(horizontal: 24),
                 ),
                 const Divider(height: 1, indent: 24, endIndent: 24),
@@ -1075,5 +1090,37 @@ mixin DeveloperMode<T extends StatefulWidget> on State<T> {
         ],
       ),
     );
+  }
+
+  /// 模拟体征异常推送：走真实链路 /api/notify/health-alert → 后端解析守护人 → APNs 推「XX 的健康出现异常」
+  /// 用于验证「生命体征守护异常时自动通知守护圈」在真机上的全链路推送
+  /// （正常体征永不触发阈值，故提供此调试入口，仅 Debug/开发者模式可用，Release 已屏蔽）
+  Future<void> simulateHealthAlert() async {
+    try {
+      final res = await NotifyService.sendHealthAlert(['测试：心率异常 130 bpm']);
+      if (!mounted) return;
+      if (res['success'] == true) {
+        HapticFeedback.mediumImpact();
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: const Text('已触发体征异常推送，请检查守护人设备是否收到 APNs 通知'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(10))),
+        ));
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('触发失败：${res['error'] ?? '未知错误'}'),
+          backgroundColor: Colors.orange,
+          behavior: SnackBarBehavior.floating,
+        ));
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('触发异常：$e'),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+      ));
+    }
   }
 }
